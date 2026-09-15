@@ -1381,7 +1381,7 @@ function absenceCard(a, opts = {}) {
     <div class="a-h"><span><b>${esc(m?.name || a.memberName || '—')}</b> <span class="muted">· ${esc(SEC[a.section]?.name || '')} · ${what}</span></span><span class="st-pill st-${a.status}">${label}</span></div>
     <div class="a-d">${dates.map(s => `<span>${wdShort(s.date)} ${ddmm(s.date)}</span>`).join('') || '<span>Sessió esborrada</span>'}</div>
     ${a.reason ? `<div class="a-r">${esc(a.reason)}</div>` : ''}
-    <div class="muted mono" style="font-size:11.5px">Enviat el ${a.createdAt ? `${ddmm(a.createdAt.slice(0, 10))} a les ${a.createdAt.slice(11, 16)}` : '—'}</div>
+    <div class="muted mono" style="font-size:11.5px">Enviat el ${a.createdAt ? (d => `${pad(d.getDate())}/${pad(d.getMonth() + 1)} a les ${pad(d.getHours())}:${pad(d.getMinutes())}`)(new Date(a.createdAt)) : '—'}</div>
     ${btns ? `<div class="a-b">${btns}</div>` : ''}
   </div>`;
 }
