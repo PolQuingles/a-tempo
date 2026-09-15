@@ -1,0 +1,1741 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cor Present</title>
+<meta name="description" content="Llista d’assistència del cor per cordes i produccions.">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#5A3577">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Cor Present">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,500..700;1,6..96,500..700&family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#F6F4F8; --surface:#FFFFFF; --surface-2:#F0EDF3; --line:#E3DEE8; --line-strong:#CFC7D7;
+  --ink:#1D1822; --ink-2:#4A4350; --muted:#756E7C;
+  --accent:#5A3577; --accent-ink:#FFFFFF; --accent-soft:#EEE6F4; --accent-line:#D6C6E3;
+  --p:#1F9A57; --p-ink:#FFFFFF; --p-soft:#DDF2E5;
+  --r:#62BDEB; --r-ink:#06324A; --r-soft:#DCEFFA;
+  --fj:#F0A52A; --fj-ink:#3A2600; --fj-soft:#FCEDD3;
+  --fnj:#D8433E; --fnj-ink:#FFFFFF; --fnj-soft:#FAE0DF;
+  --np:#948D9A; --np-ink:#FFFFFF; --np-soft:#ECE9EF;
+  --overlay:rgba(29,24,34,.42);
+  --shadow:0 1px 2px rgba(29,24,34,.05), 0 10px 30px rgba(29,24,34,.10);
+  --f-display:"Bodoni Moda", "Didot", "Bodoni 72", Georgia, serif;
+  --f-ui:"Hanken Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --r-sm:8px; --r-md:12px; --r-lg:18px;
+  --nav-h:64px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#131016; --surface:#1C1820; --surface-2:#26212B; --line:#322C38; --line-strong:#463F4E;
+    --ink:#EFEAF3; --ink-2:#CAC2D1; --muted:#9C94A4;
+    --accent:#C9A7E6; --accent-ink:#1E1027; --accent-soft:#2D2337; --accent-line:#4A3A5A;
+    --p:#36B96F; --p-ink:#04210F; --p-soft:#17301F;
+    --r:#6CC4EF; --r-ink:#062A3D; --r-soft:#15293A;
+    --fj:#F2AE3D; --fj-ink:#2E1E00; --fj-soft:#35290F;
+    --fnj:#EC5E58; --fnj-ink:#2A0605; --fnj-soft:#3A1917;
+    --np:#8A8390; --np-ink:#141117; --np-soft:#2B2631;
+    --overlay:rgba(0,0,0,.6);
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 12px 32px rgba(0,0,0,.45);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#131016; --surface:#1C1820; --surface-2:#26212B; --line:#322C38; --line-strong:#463F4E;
+  --ink:#EFEAF3; --ink-2:#CAC2D1; --muted:#9C94A4;
+  --accent:#C9A7E6; --accent-ink:#1E1027; --accent-soft:#2D2337; --accent-line:#4A3A5A;
+  --p:#36B96F; --p-ink:#04210F; --p-soft:#17301F;
+  --r:#6CC4EF; --r-ink:#062A3D; --r-soft:#15293A;
+  --fj:#F2AE3D; --fj-ink:#2E1E00; --fj-soft:#35290F;
+  --fnj:#EC5E58; --fnj-ink:#2A0605; --fnj-soft:#3A1917;
+  --np:#8A8390; --np-ink:#141117; --np-soft:#2B2631;
+  --overlay:rgba(0,0,0,.6);
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 12px 32px rgba(0,0,0,.45);
+  color-scheme: dark;
+}
+
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:15px;line-height:1.45;-webkit-tap-highlight-color:transparent;
+  padding-inline:16px;padding-block:0 calc(var(--nav-h) + 24px + env(safe-area-inset-bottom))}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+input,select,textarea{font:inherit;color:var(--ink)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+.wrap{max-width:760px;margin-inline:auto}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.num{font-variant-numeric:tabular-nums}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ---------- App bar ---------- */
+.appbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:14px 10px}
+.brand{display:flex;align-items:baseline;gap:10px;min-width:0}
+.brand-mark{font-family:var(--f-display);font-style:italic;font-weight:600;font-size:22px;letter-spacing:-.01em;color:var(--accent);white-space:nowrap}
+.brand-choir{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sync{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:var(--surface);white-space:nowrap}
+.sync i{width:7px;height:7px;border-radius:50%;background:var(--p);flex:none}
+.sync[data-state="saving"] i{background:var(--fj);animation:pulse 1s infinite}
+.sync[data-state="local"] i{background:var(--np)}
+.sync[data-state="error"] i{background:var(--fnj)}
+.sync[data-state="loading"] i{background:var(--line-strong);animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.35}}
+
+.banner{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--ink);border-radius:var(--r-md);padding:10px 12px;font-size:13px;margin-block:0 12px}
+.banner b{font-weight:600}
+.banner.warn{background:var(--fnj-soft);border-color:transparent}
+
+/* ---------- Bottom nav ---------- */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;background:color-mix(in srgb, var(--surface) 92%, transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+.tabs-in{max-width:760px;margin-inline:auto;display:grid;grid-template-columns:repeat(4,1fr);height:var(--nav-h)}
+.tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11.5px;font-weight:600;color:var(--muted);letter-spacing:.01em}
+.tab svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.tab[aria-current="page"]{color:var(--accent)}
+.tab[aria-current="page"] .tab-ico{background:var(--accent-soft)}
+.tab-ico{display:grid;place-items:center;width:52px;height:28px;border-radius:999px;transition:background .15s}
+
+/* ---------- Common ---------- */
+.page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding-block:8px 14px;flex-wrap:wrap}
+h1,h2,h3{margin:0;text-wrap:balance}
+.h1{font-family:var(--f-display);font-weight:600;font-size:30px;line-height:1.08;letter-spacing:-.015em}
+.h2{font-family:var(--f-display);font-weight:600;font-size:21px;line-height:1.15}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.muted{color:var(--muted)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:0 14px;border-radius:999px;font-weight:600;font-size:14px;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);white-space:nowrap}
+.btn:active{transform:translateY(1px)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn-ghost{border-color:transparent;background:transparent;color:var(--accent)}
+.btn-danger{background:var(--fnj);border-color:var(--fnj);color:var(--fnj-ink)}
+.btn-danger-ghost{border-color:transparent;color:var(--fnj)}
+.btn-sm{min-height:34px;padding:0 12px;font-size:13px}
+.btn[disabled]{opacity:.45;pointer-events:none}
+.icon-btn{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;color:var(--muted)}
+.icon-btn:hover{background:var(--surface-2)}
+.icon-btn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+.chips{display:flex;gap:8px;overflow-x:auto;padding-block:2px 12px;margin-inline:-16px;padding-inline:16px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;min-height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line-strong);background:var(--surface);font-size:13.5px;font-weight:600;color:var(--ink-2);white-space:nowrap}
+.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg)}
+.section-title{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-block:26px 10px}
+
+/* ---------- Roll call ---------- */
+.ctx{position:sticky;top:0;z-index:20;background:var(--bg);margin-inline:-16px;padding-inline:16px;padding-block:4px 10px;border-bottom:1px solid transparent}
+.ctx.stuck{border-bottom-color:var(--line)}
+.session{display:grid;grid-template-columns:40px 1fr 40px;align-items:center;gap:4px}
+.session-main{text-align:center;padding:6px 4px;border-radius:var(--r-md);min-width:0}
+.session-main:hover{background:var(--surface-2)}
+.session-prod{display:block;font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.session-date{display:block;font-family:var(--f-display);font-weight:600;font-size:25px;line-height:1.12;letter-spacing:-.01em;margin-block:2px}
+.session-meta{display:flex;justify-content:center;align-items:center;gap:6px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.badge{display:inline-flex;align-items:center;height:20px;padding:0 7px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.03em;background:var(--accent);color:var(--accent-ink)}
+.badge.soft{background:var(--surface-2);color:var(--ink-2)}
+.nav-arrow{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:var(--ink-2);border:1px solid var(--line)}
+.nav-arrow svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.nav-arrow[disabled]{opacity:.3}
+
+.voices{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:10px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:3px}
+.voice{position:relative;display:flex;flex-direction:column;align-items:center;gap:0;padding:5px 2px 6px;border-radius:9px;color:var(--ink-2)}
+.voice-l{font-family:var(--f-display);font-style:italic;font-weight:600;font-size:22px;line-height:1}
+.voice-n{font-size:11px;font-weight:600;letter-spacing:.01em;margin-top:2px}
+.voice-c{font-family:var(--f-mono);font-size:10.5px;color:var(--muted);margin-top:1px}
+.voice[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
+.voice[aria-selected="true"] .voice-c{color:inherit;opacity:.8}
+.voice .done{position:absolute;top:5px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--p)}
+.voice.off{opacity:.45}
+
+.leader{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;color:var(--muted);margin-block:14px 8px;flex-wrap:wrap}
+.leader b{color:var(--ink);font-weight:600}
+
+.tally{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:12px}
+.stack{display:flex;height:10px;border-radius:999px;overflow:hidden;background:var(--surface-2)}
+.stack span{display:block;height:100%}
+.stack .s-P{background:var(--p)} .stack .s-R{background:var(--r)} .stack .s-FJ{background:var(--fj)} .stack .s-FNJ{background:var(--fnj)} .stack .s-NP{background:var(--np)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:12.5px;color:var(--ink-2)}
+.legend span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.legend i{width:9px;height:9px;border-radius:3px;flex:none}
+.legend b{font-family:var(--f-mono);font-weight:500;color:var(--ink)}
+.i-P{background:var(--p)} .i-R{background:var(--r)} .i-FJ{background:var(--fj)} .i-FNJ{background:var(--fnj)} .i-NP{background:var(--np)} .i-none{background:transparent;border:1.5px dashed var(--line-strong)}
+.tally-foot{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap}
+.progress-txt{font-size:13px;color:var(--muted)}
+.progress-txt b{font-family:var(--f-mono);font-weight:500;color:var(--ink)}
+
+.roster{list-style:none;margin:14px 0 0;padding:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden}
+.row{padding:12px 12px 12px;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+summary::-webkit-details-marker{display:none}
+.row-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:9px}
+.who{display:flex;align-items:baseline;gap:8px;min-width:0;flex-wrap:wrap}
+.name{font-weight:600;font-size:16px;line-height:1.25}
+.tag{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+.state{font-size:12.5px;color:var(--muted);white-space:nowrap}
+.state.warn{color:var(--r-ink);background:var(--r-soft);padding:1px 7px;border-radius:999px}
+.row[data-s="none"] .name{color:var(--ink-2)}
+
+.seg{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}
+.opt{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:46px;padding:4px 2px;border-radius:10px;background:var(--surface-2);font-size:11.5px;font-weight:600;color:var(--ink-2);line-height:1.05;text-align:center;transition:background .12s, color .12s, transform .08s}
+.opt i{width:8px;height:8px;border-radius:50%}
+.opt:active{transform:scale(.96)}
+.opt.o-P i{background:var(--p)} .opt.o-R i{background:var(--r)} .opt.o-FJ i{background:var(--fj)} .opt.o-FNJ i{background:var(--fnj)} .opt.o-NP i{background:var(--np)}
+.opt[aria-checked="true"] i{background:currentColor;opacity:.9}
+.opt.o-P[aria-checked="true"]{background:var(--p);color:var(--p-ink)}
+.opt.o-R[aria-checked="true"]{background:var(--r);color:var(--r-ink)}
+.opt.o-FJ[aria-checked="true"]{background:var(--fj);color:var(--fj-ink)}
+.opt.o-FNJ[aria-checked="true"]{background:var(--fnj);color:var(--fnj-ink)}
+.opt.o-NP[aria-checked="true"]{background:var(--np);color:var(--np-ink)}
+.row.has-mark .opt[aria-checked="false"]{opacity:.62}
+
+.extra{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px;padding:10px;border-radius:10px}
+.extra.x-R{background:var(--r-soft)}
+.extra.x-FJ{background:var(--fj-soft)}
+.extra.x-FNJ{background:var(--fnj-soft)}
+.extra label{font-size:12.5px;font-weight:600;color:var(--ink-2)}
+.mins{display:flex;gap:6px;flex-wrap:wrap}
+.min-chip{min-width:44px;height:34px;padding:0 8px;border-radius:8px;background:var(--surface);border:1px solid var(--line);font-family:var(--f-mono);font-size:13px}
+.min-chip[aria-pressed="true"]{background:var(--r);border-color:var(--r);color:var(--r-ink);font-weight:500}
+.min-input{width:74px;height:34px;border-radius:8px;border:1px solid var(--line-strong);background:var(--surface);padding:0 8px;font-family:var(--f-mono);font-size:16px;text-align:center}
+.note-input{flex:1 1 180px;min-width:0;height:36px;border-radius:8px;border:1px solid var(--line-strong);background:var(--surface);padding:0 10px;font-size:16px}
+
+.group-h{display:flex;justify-content:space-between;align-items:center;margin-block:22px 0;padding-inline:2px}
+details.np-group{margin-top:0}
+details.np-group summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 2px;font-size:13.5px;font-weight:600;color:var(--ink-2)}
+details.np-group summary::-webkit-details-marker{display:none}
+details.np-group summary .chev{transition:transform .2s}
+details.np-group[open] summary .chev{transform:rotate(180deg)}
+.chev{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
+
+.empty{text-align:center;padding:48px 16px;color:var(--muted)}
+.empty .h2{color:var(--ink);margin-bottom:8px}
+.empty p{max-width:34ch;margin:0 auto 18px}
+.staff{display:block;width:120px;height:30px;margin:0 auto 18px;color:var(--accent-line)}
+
+/* ---------- Calendar ---------- */
+.cal-prod{margin-top:22px}
+.cal-prod-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding-inline:2px;margin-bottom:6px}
+.cal-month{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);padding:14px 2px 6px}
+.cal-list{list-style:none;margin:0;padding:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden}
+.cal-row{display:flex;align-items:center;border-top:1px solid var(--line)}
+.cal-row:first-child{border-top:0}
+.cal-main{flex:1;display:grid;grid-template-columns:44px 1fr auto;align-items:center;gap:12px;padding:10px 4px 10px 12px;text-align:left;min-width:0}
+.cal-date{display:flex;flex-direction:column;align-items:center;line-height:1}
+.cal-date b{font-family:var(--f-display);font-weight:600;font-size:24px}
+.cal-date small{font-family:var(--f-mono);font-size:10.5px;color:var(--muted);margin-top:3px;text-transform:lowercase}
+.cal-info{min-width:0}
+.cal-type{display:block;font-weight:600;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal-type em{font-style:normal;font-family:var(--f-mono);font-weight:400;font-size:12.5px;color:var(--muted);margin-left:4px}
+.cal-place{display:block;font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+.vmarks{display:flex;gap:3px}
+.vm{width:19px;height:19px;border-radius:50%;display:grid;place-items:center;font-family:var(--f-display);font-style:italic;font-weight:600;font-size:11px;border:1.5px solid var(--line-strong);color:var(--muted)}
+.vm.full{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.vm.part{border-color:var(--accent);color:var(--accent);background:linear-gradient(to top, var(--accent-soft) 50%, transparent 50%)}
+.vm.off{border-style:dotted;opacity:.4}
+.cal-pct{font-family:var(--f-mono);font-size:12px;color:var(--ink-2)}
+.cal-row.is-today{background:var(--accent-soft)}
+.cal-row.is-today .cal-date b{color:var(--accent)}
+.cal-row.is-past .cal-date b{color:var(--ink-2)}
+.cal-row .icon-btn{margin-right:4px;flex:none}
+.type-concert .cal-type{color:var(--accent)}
+
+/* ---------- Stats ---------- */
+.kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+@media (min-width:640px){.kpis{grid-template-columns:repeat(4,1fr)}}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:12px 14px}
+.kpi-v{font-family:var(--f-display);font-weight:600;font-size:32px;line-height:1.05;letter-spacing:-.01em;font-variant-numeric:lining-nums tabular-nums}
+.kpi-v small{font-family:var(--f-ui);font-size:14px;font-weight:600;color:var(--muted);margin-left:2px}
+.kpi-l{font-size:12.5px;color:var(--muted);margin-top:4px}
+.kpi.alert .kpi-v{color:var(--fnj)}
+
+.bars{display:grid;gap:12px;padding:14px}
+.bar-row{display:grid;grid-template-columns:92px 1fr 44px;align-items:center;gap:10px;font-size:13.5px}
+.bar-row .lbl{display:flex;align-items:baseline;gap:6px;font-weight:600}
+.bar-row .lbl em{font-family:var(--f-display);font-style:italic;font-size:17px;color:var(--accent)}
+.bar-row .val{font-family:var(--f-mono);font-size:13px;text-align:right}
+
+.trend-wrap{overflow-x:auto;padding:14px 14px 10px}
+.trend{position:relative;height:170px;display:flex;align-items:flex-end;gap:6px;padding-left:34px;min-width:100%}
+.trend .grid{position:absolute;left:34px;right:0;border-top:1px dashed var(--line);pointer-events:none}
+.trend .grid span{position:absolute;left:-34px;top:-8px;width:28px;text-align:right;font-family:var(--f-mono);font-size:10px;color:var(--muted)}
+.tcol{position:relative;flex:1 0 16px;max-width:38px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:stretch}
+.tbar{display:flex;flex-direction:column-reverse;border-radius:4px 4px 2px 2px;overflow:hidden;width:100%}
+.tbar span{display:block;width:100%}
+.tcol:hover .tbar, .tcol:focus-visible .tbar{outline:2px solid var(--ink);outline-offset:1px}
+.tlabels{display:flex;gap:6px;padding-left:34px;margin-top:6px;min-width:100%}
+.tlabels span{flex:1 0 16px;max-width:38px;font-family:var(--f-mono);font-size:9.5px;color:var(--muted);text-align:center;white-space:nowrap;overflow:visible}
+.trend-note{font-size:12px;color:var(--muted);padding:0 14px 12px}
+
+.alerts{list-style:none;margin:0;padding:0}
+.alerts li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid var(--line)}
+.alerts li:first-child{border-top:0}
+.pill{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap}
+.pill.fnj{background:var(--fnj-soft);color:var(--fnj)}
+.pill.r{background:var(--r-soft);color:var(--r-ink)}
+
+.sortbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.mtable{list-style:none;margin:0;padding:0}
+.mrow{border-top:1px solid var(--line)}
+.mrow:first-child{border-top:0}
+.mrow button{width:100%;display:grid;grid-template-columns:1fr auto;gap:6px 12px;align-items:center;padding:11px 14px;text-align:left}
+.mrow .mname{display:flex;align-items:baseline;gap:8px;min-width:0;font-weight:600}
+.mrow .mname em{font-family:var(--f-display);font-style:italic;color:var(--accent);font-size:15px}
+.mrow .mname span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mrow .mpct{font-family:var(--f-mono);font-size:14px;font-weight:500;text-align:right}
+.mrow .stack{grid-column:1 / -1;height:6px}
+.mrow .mcounts{grid-column:1 / -1;display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.mrow .mcounts span{display:inline-flex;align-items:center;gap:5px}
+.mrow .mcounts i{width:7px;height:7px;border-radius:2px}
+.mrow .mcounts b{font-family:var(--f-mono);font-weight:500;color:var(--ink-2)}
+
+.hist{display:grid;grid-template-columns:repeat(auto-fill,minmax(34px,1fr));gap:6px}
+.hcell{display:flex;flex-direction:column;align-items:center;gap:3px;font-family:var(--f-mono);font-size:9.5px;color:var(--muted)}
+.hcell i{width:100%;height:22px;border-radius:5px;background:var(--surface-2);border:1px dashed var(--line-strong)}
+.hcell i.s-P{background:var(--p);border:0} .hcell i.s-R{background:var(--r);border:0} .hcell i.s-FJ{background:var(--fj);border:0} .hcell i.s-FNJ{background:var(--fnj);border:0} .hcell i.s-NP{background:var(--np);border:0}
+.notes-list{list-style:none;margin:0;padding:0;font-size:13.5px}
+.notes-list li{padding:8px 0;border-top:1px solid var(--line);display:flex;gap:10px}
+.notes-list li:first-child{border-top:0}
+
+/* ---------- Manage ---------- */
+.subtabs{display:grid;grid-template-columns:repeat(3,1fr);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px;margin-bottom:6px}
+.subtab{min-height:36px;border-radius:999px;font-size:13.5px;font-weight:600;color:var(--ink-2)}
+.subtab[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+.list{list-style:none;margin:0;padding:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden}
+.li{border-top:1px solid var(--line)}
+.li:first-child{border-top:0}
+.li > button{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;text-align:left;min-height:52px}
+.li .t{font-weight:600}
+.li .s{font-size:12.5px;color:var(--muted)}
+.li .dim{opacity:.55}
+.sec-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-block:22px 8px;padding-inline:2px}
+.sec-h .h2 em{font-style:italic;color:var(--accent);margin-right:6px}
+.prod-card > button{display:block;padding:14px}
+.prod-card .h2{font-size:20px}
+.prod-meta{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px;font-size:12.5px;color:var(--muted)}
+.prod-meta b{font-family:var(--f-mono);font-weight:500;color:var(--ink-2)}
+
+.kv{display:grid;gap:14px}
+.setting{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px;border-top:1px solid var(--line);flex-wrap:wrap}
+.setting:first-child{border-top:0}
+.setting .t{font-weight:600}
+.setting .s{font-size:12.5px;color:var(--muted);max-width:44ch}
+
+/* ---------- Sheet ---------- */
+.sheet-back{position:fixed;inset:0;z-index:50;background:var(--overlay);display:flex;align-items:flex-end;justify-content:center;animation:fade .18s ease}
+.sheet{width:100%;max-width:560px;max-height:92vh;display:flex;flex-direction:column;background:var(--surface);color:var(--ink);border-radius:20px 20px 0 0;box-shadow:var(--shadow);animation:up .22s cubic-bezier(.2,.8,.2,1)}
+@media (min-width:700px){.sheet-back{align-items:center}.sheet{border-radius:20px;max-height:86vh}}
+.sheet-h{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px 10px;border-bottom:1px solid var(--line)}
+.sheet-h .h2{font-size:20px}
+.sheet-b{padding:16px;overflow-y:auto;overscroll-behavior:contain}
+.sheet-f{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;padding:12px 16px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line)}
+.sheet-f .spacer{flex:1}
+.grip{width:36px;height:4px;border-radius:4px;background:var(--line-strong);margin:8px auto 0}
+@keyframes fade{from{opacity:0}}
+@keyframes up{from{transform:translateY(24px);opacity:.6}}
+
+.field{display:grid;gap:6px}
+.field > span{font-size:12.5px;font-weight:600;color:var(--ink-2)}
+.field small{font-size:12px;color:var(--muted)}
+.inp{width:100%;min-height:44px;border-radius:10px;border:1px solid var(--line-strong);background:var(--surface);padding:0 12px;font-size:16px}
+textarea.inp{padding:10px 12px;min-height:120px;resize:vertical;line-height:1.4}
+.inp:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.toggle-row{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:44px}
+.switch{position:relative;width:48px;height:28px;flex:none}
+.switch input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.switch span{position:absolute;inset:0;border-radius:999px;background:var(--line-strong);transition:background .15s;pointer-events:none}
+.switch span::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .15s}
+.switch input:checked + span{background:var(--accent)}
+.switch input:checked + span::after{transform:translateX(20px)}
+.switch input:focus-visible + span{outline:2px solid var(--accent);outline-offset:2px}
+.pickers{display:flex;flex-wrap:wrap;gap:6px}
+.pick{min-height:38px;min-width:44px;padding:0 12px;border-radius:10px;border:1px solid var(--line-strong);background:var(--surface);font-weight:600;font-size:13.5px;color:var(--ink-2)}
+.pick[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.pick .vl{font-family:var(--f-display);font-style:italic;font-size:16px}
+.fieldset{border:1px solid var(--line);border-radius:var(--r-md);padding:12px;display:grid;gap:12px}
+.fieldset legend{padding:0 6px;font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.mini-list{list-style:none;margin:0;padding:0;max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:var(--r-md)}
+.mini-list li{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 6px 6px 12px;border-top:1px solid var(--line);font-size:13.5px}
+.mini-list li:first-child{border-top:0}
+.mini-list .mono{font-size:12.5px;color:var(--muted)}
+.picklist{list-style:none;margin:0;padding:0}
+.picklist li + li{border-top:1px solid var(--line)}
+.picklist button{width:100%;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 4px;text-align:left}
+.picklist button[aria-current="true"]{color:var(--accent);font-weight:700}
+.picklist .d{font-weight:600}
+.picklist .m{font-size:12.5px;color:var(--muted)}
+.summary-pre{width:100%;min-height:220px;font-family:var(--f-mono);font-size:13px;line-height:1.5;border-radius:10px;border:1px solid var(--line-strong);background:var(--surface-2);padding:12px;white-space:pre-wrap;resize:vertical}
+
+/* ---------- Toast ---------- */
+.toast{position:fixed;left:50%;bottom:calc(var(--nav-h) + 16px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:60;display:flex;align-items:center;gap:14px;max-width:calc(100% - 32px);background:var(--ink);color:var(--bg);border-radius:12px;padding:10px 14px;font-size:14px;box-shadow:var(--shadow);animation:up .2s ease}
+.toast button{color:var(--accent-line);font-weight:700;text-transform:uppercase;font-size:12.5px;letter-spacing:.05em}
+:root[data-theme="dark"] .toast button{color:var(--accent-ink)}
+
+@media (min-width:700px){
+  .session-date{font-size:30px}
+  .opt{font-size:12.5px}
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none !important;transition:none !important}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="appbar">
+    <div class="brand"><span class="brand-mark">Cor Present</span><span class="brand-choir" id="choir-name"></span></div>
+    <button class="sync" id="sync" data-act="sync-info" data-state="loading"><i></i><span>Connectant…</span></button>
+  </header>
+  <div id="banner"></div>
+  <main id="view" aria-live="polite"></main>
+</div>
+
+<nav class="tabs" aria-label="Seccions">
+  <div class="tabs-in">
+    <button class="tab" data-act="tab" data-tab="llista"><span class="tab-ico"><svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M3.5 6l1.2 1.2L7 4.8M3.5 12l1.2 1.2L7 10.8M3.5 18l1.2 1.2L7 16.8"/></svg></span>Llista</button>
+    <button class="tab" data-act="tab" data-tab="calendari"><span class="tab-ico"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></span>Calendari</button>
+    <button class="tab" data-act="tab" data-tab="stats"><span class="tab-ico"><svg viewBox="0 0 24 24"><path d="M5 20V11M10 20V5M15 20v-7M20 20V8"/></svg></span>Estadístiques</button>
+    <button class="tab" data-act="tab" data-tab="gestio"><span class="tab-ico"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19.5c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><path d="M16 5.2a3 3 0 010 5.6M18 14.8c1.5.7 2.4 2.2 2.6 4.7"/></svg></span>Gestió</button>
+  </div>
+</nav>
+<div id="sheet-root"></div>
+<div id="toast-root"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="config.js"></script>
+<script>
+(() => {
+'use strict';
+
+/* ================= Constants ================= */
+const SECTIONS = [
+  { id: 'S', name: 'Sopranos' },
+  { id: 'C', name: 'Contralts' },
+  { id: 'T', name: 'Tenors' },
+  { id: 'B', name: 'Baixos' },
+];
+const SEC = Object.fromEntries(SECTIONS.map(s => [s.id, s]));
+const STATUS = {
+  P:   { label: 'Assisteix',               short: 'Present' },
+  R:   { label: 'Retard',                  short: 'Retard' },
+  FNJ: { label: 'Falta no justificada',    short: 'No just.' },
+  FJ:  { label: 'Falta justificada',       short: 'Justif.' },
+  NP:  { label: 'No fa aquesta producció', short: 'No fa' },
+};
+const ORDER = ['P', 'R', 'FNJ', 'FJ', 'NP'];
+const TYPES = ['Assaig', 'Assaig parcial', 'Assaig general', 'Concert', 'Altres'];
+const WEEKDAYS = [ ['1','dl'], ['2','dt'], ['3','dc'], ['4','dj'], ['5','dv'], ['6','ds'], ['0','dg'] ];
+const LATE_CHIPS = [5, 10, 15, 20, 30];
+const LS_UI = 'corpresent:ui:v1';
+const COLS = ['members', 'productions', 'attendance'];
+
+const ICON = {
+  left: '<svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>',
+  right: '<svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>',
+  more: '<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></svg>',
+  close: '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  chev: '<svg class="chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>',
+  go: '<svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>',
+};
+
+/* ================= Utils ================= */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const uid = (p = '') => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const clone = o => JSON.parse(JSON.stringify(o));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const pad = n => String(n).padStart(2, '0');
+const isoDate = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const TODAY = isoDate(new Date());
+const parseISO = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const fmtD = (s, o) => { try { return new Intl.DateTimeFormat('ca-ES', o).format(parseISO(s)); } catch { return s; } };
+const capz = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+const longDate = s => capz(fmtD(s, { weekday: 'long', day: 'numeric', month: 'long' }));
+const shortDate = s => fmtD(s, { day: 'numeric', month: 'short' });
+const ddmm = s => s ? `${s.slice(8, 10)}/${s.slice(5, 7)}` : '';
+const wdShort = s => fmtD(s, { weekday: 'short' });
+const monthYear = s => capz(fmtD(s, { month: 'long', year: 'numeric' }));
+const pct = v => v == null ? '—' : Math.round(v * 100) + '%';
+const kpiPct = v => v == null ? '—' : `${Math.round(v * 100)}<small>%</small>`;
+const byName = (a, b) => a.name.localeCompare(b.name, 'ca');
+
+/* ================= State ================= */
+const S = {
+  mode: 'loading',          // loading | shared | local
+  ready: false,
+  error: null,
+  config: { name: '', alertFNJ: 3, demo: false },
+  members: new Map(),
+  productions: new Map(),
+  attendance: new Map(),
+};
+const ui = {
+  tab: 'llista', section: 'S', sessionId: null,
+  calProd: 'all', calPast: false,
+  statsProd: null, statsSec: '', statsSort: 'pct',
+  manage: 'cantaires',
+};
+function loadUI() {
+  try { Object.assign(ui, JSON.parse(localStorage.getItem(LS_UI) || '{}')); } catch {}
+  ui.sessionId = null;
+}
+function saveUI() {
+  try { localStorage.setItem(LS_UI, JSON.stringify({ tab: ui.tab, section: ui.section, calProd: ui.calProd, statsSec: ui.statsSec, statsSort: ui.statsSort, manage: ui.manage })); } catch {}
+}
+
+/* ================= Persistence (Firebase Firestore) ================= */
+// Every choir lives under cors/<clau>. The clau travels in the link (#k=…): whoever has the link can read and edit.
+const LS_KEY = 'corpresent:clau';
+let db = null;
+let fs = null;
+let CHOIR_KEY = null;
+const queue = new Map();   // path -> { data | null, timer }  (debounce window)
+let inflight = 0;
+
+function readKey() {
+  const m = location.hash.match(/k=([A-Za-z0-9_-]{24,64})/);
+  if (m) { try { localStorage.setItem(LS_KEY, m[1]); } catch {} return m[1]; }
+  let saved = null;
+  try { saved = localStorage.getItem(LS_KEY); } catch {}
+  if (saved && /^[A-Za-z0-9_-]{24,64}$/.test(saved)) { history.replaceState(null, '', `#k=${saved}`); return saved; }
+  return null;
+}
+function newKey() {
+  const b = new Uint8Array(18);
+  crypto.getRandomValues(b);
+  return btoa(String.fromCharCode(...b)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+const shareUrl = () => `${location.origin}${location.pathname}#k=${CHOIR_KEY}`;
+window.addEventListener('hashchange', () => { const m = location.hash.match(/k=([A-Za-z0-9_-]{24,64})/); if (m && m[1] !== CHOIR_KEY) location.reload(); });
+
+const isDirty = path => queue.has(path);
+
+/** Write one document (data) or delete it (null). Local state must already be updated. */
+function persist(col, id, data, delay = 350) {
+  const path = `${col}/${id}`;
+  const q = queue.get(path) || {};
+  clearTimeout(q.timer);
+  q.data = data === null ? null : clone(data);
+  q.timer = setTimeout(() => flush(path), delay);
+  queue.set(path, q);
+  updateSync();
+}
+function flush(path) {
+  const q = queue.get(path);
+  if (!q || !db) return;
+  queue.delete(path);
+  inflight++;
+  updateSync();
+  // Firestore applies the write to its local cache at once (works offline) and syncs when there is signal.
+  const p = q.data === null ? db.doc(path).delete() : db.doc(path).set(q.data);
+  p.then(() => { S.syncErr = false; })
+   .catch(writeFailed)
+   .finally(() => { inflight--; updateSync(); });
+}
+function flushAll() { for (const path of [...queue.keys()]) { clearTimeout(queue.get(path).timer); flush(path); } }
+function writeFailed(e) {
+  const code = e && e.code;
+  if (code === 'permission-denied') { S.error = 'No tens permís per desar. Revisa que l’enllaç del cor sigui correcte.'; renderBanner(); }
+  else if (code === 'resource-exhausted') toast('S’ha arribat al límit diari de la base de dades. Torna-ho a provar demà.');
+  else toast('Un canvi no s’ha pogut desar. Torna-ho a provar.');
+  S.syncErr = true; updateSync();
+}
+const pendingWrites = () => queue.size + inflight;
+
+function updateSync() {
+  const el = $('#sync');
+  let state = 'ok', text = 'Sincronitzat';
+  if (S.mode === 'loading') { state = 'loading'; text = 'Connectant…'; }
+  else if (S.mode === 'nokey' || S.mode === 'setup') { state = 'local'; text = 'Sense cor'; }
+  else if (!navigator.onLine) { state = 'local'; text = pendingWrites() ? 'Sense connexió · pendent' : 'Sense connexió'; }
+  else if (pendingWrites()) { state = 'saving'; text = 'Desant…'; }
+  else if (S.syncErr) { state = 'error'; text = 'Error en desar'; }
+  el.dataset.state = state;
+  el.lastElementChild.textContent = text;
+}
+window.addEventListener('online', updateSync);
+window.addEventListener('offline', updateSync);
+window.addEventListener('pagehide', flushAll);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushAll(); });
+
+function subscribe() {
+  const loaded = new Set();
+  const markLoaded = k => { loaded.add(k); if (loaded.size === COLS.length + 1 && !S.ready) { S.ready = true; render(); } };
+  for (const col of COLS) {
+    db.collection(col).onSnapshot(snap => {
+      const next = new Map();
+      for (const d of snap.docs) {
+        const path = `${col}/${d.id}`;
+        if (isDirty(path)) { if (S[col].has(d.id)) next.set(d.id, S[col].get(d.id)); }
+        else next.set(d.id, d.data());
+      }
+      for (const [id, v] of S[col]) if (!next.has(id) && isDirty(`${col}/${id}`) && queue.get(`${col}/${id}`)?.data !== null) next.set(id, v);
+      S[col] = next;
+      markLoaded(col);
+      if (S.ready) scheduleRender();
+    }, onDbError);
+  }
+  db.doc('config/main').onSnapshot(snap => {
+    if (!isDirty('config/main')) S.config = { name: '', alertFNJ: 3, demo: false, ...(snap.exists ? snap.data() : {}) };
+    markLoaded('config');
+    if (S.ready) scheduleRender();
+  }, onDbError);
+}
+function onDbError(e) {
+  const code = e && e.code;
+  S.error = code === 'permission-denied'
+    ? 'No es pot accedir a les dades d’aquest cor. Comprova que l’enllaç sigui complet.'
+    : 'S’ha perdut la connexió amb les dades. Recarrega la pàgina.';
+  if (!S.ready) { S.ready = true; }
+  render();
+}
+
+/* ================= Derived data ================= */
+function membersOf(sec, includeInactive = false) {
+  return [...S.members.values()]
+    .filter(m => (!sec || m.section === sec) && (includeInactive || m.active !== false))
+    .sort((a, b) => (b.leader ? 1 : 0) - (a.leader ? 1 : 0) || byName(a, b));
+}
+function productionsSorted() {
+  return [...S.productions.values()].sort((a, b) => (a.start || '').localeCompare(b.start || ''));
+}
+function allSessions(prodId) {
+  const out = [];
+  for (const p of S.productions.values()) {
+    if (prodId && prodId !== 'all' && p.id !== prodId) continue;
+    for (const s of (p.sessions || [])) out.push({ ...s, prodId: p.id });
+  }
+  return out.sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')));
+}
+function sessionById(id) {
+  for (const p of S.productions.values()) {
+    const s = (p.sessions || []).find(x => x.id === id);
+    if (s) return { ...s, prodId: p.id };
+  }
+  return null;
+}
+const attKey = (sid, sec) => `${sid}_${sec}`;
+const attDoc = (sid, sec) => S.attendance.get(attKey(sid, sec));
+const isExcluded = (prodId, mid) => !!(S.productions.get(prodId)?.excluded || []).includes(mid);
+const convoked = (s, sec) => !s.sections || !s.sections.length || s.sections.includes(sec);
+function effMark(session, member) {
+  const m = attDoc(session.id, member.section)?.marks?.[member.id];
+  if (m && m.s) return m;
+  if (isExcluded(session.prodId, member.id)) return { s: 'NP', auto: true };
+  return null;
+}
+const hasData = (s, sec) => { const d = attDoc(s.id, sec); return !!(d && d.marks && Object.keys(d.marks).length); };
+function progress(session, sec) {
+  const ms = membersOf(sec);
+  let done = 0;
+  for (const m of ms) if (effMark(session, m)) done++;
+  return { done, total: ms.length };
+}
+function defaultSession(list) {
+  if (!list.length) return null;
+  const today = list.find(s => s.date === TODAY);
+  if (today) return today;
+  const past = list.filter(s => s.date < TODAY);
+  return past.length ? past[past.length - 1] : list[0];
+}
+function currentProductionId() {
+  const ps = productionsSorted();
+  const now = ps.find(p => p.start <= TODAY && (p.end || '9999') >= TODAY);
+  if (now) return now.id;
+  const withData = ps.filter(p => allSessions(p.id).some(s => SECTIONS.some(x => hasData(s, x.id))));
+  return (withData.pop() || ps[0])?.id || null;
+}
+const emptyCounts = () => ({ P: 0, R: 0, FJ: 0, FNJ: 0, NP: 0, min: 0 });
+const rate = c => { const d = c.P + c.R + c.FJ + c.FNJ; return d ? (c.P + c.R) / d : null; };
+const punctuality = c => { const d = c.P + c.R; return d ? c.P / d : null; };
+
+function computeStats(prodId, secFilter) {
+  const sessions = allSessions(prodId).filter(s => s.date <= TODAY);
+  const members = [...S.members.values()].filter(m => !secFilter || m.section === secFilter);
+  const per = new Map(members.map(m => [m.id, { m, ...emptyCounts(), hist: [], notes: [] }]));
+  const tot = emptyCounts();
+  const bySec = Object.fromEntries(SECTIONS.map(s => [s.id, emptyCounts()]));
+  const bySession = [];
+  for (const s of sessions) {
+    const c = emptyCounts();
+    let any = false;
+    for (const m of members) {
+      if (!convoked(s, m.section)) continue;
+      const mk = hasData(s, m.section) ? effMark(s, m) : null;
+      const rec = per.get(m.id);
+      rec.hist.push({ s, mk });
+      if (!mk) continue;
+      any = true;
+      c[mk.s]++; tot[mk.s]++; rec[mk.s]++; bySec[m.section][mk.s]++;
+      if (mk.s === 'R') { const mn = +mk.min || 0; c.min += mn; tot.min += mn; rec.min += mn; bySec[m.section].min += mn; }
+      if (mk.note) rec.notes.push({ s, mk });
+    }
+    if (any) bySession.push({ s, c });
+  }
+  const rows = [...per.values()].filter(r => r.m.active !== false || (r.P + r.R + r.FJ + r.FNJ + r.NP) > 0);
+  return { sessions, counted: bySession, tot, bySec, rows };
+}
+
+/* ================= Mutations ================= */
+function setMark(session, member, patch) {
+  const key = attKey(session.id, member.section);
+  const doc = clone(S.attendance.get(key) || { sessionId: session.id, section: member.section, marks: {} });
+  doc.marks = doc.marks || {};
+  if (patch === null) delete doc.marks[member.id];
+  else doc.marks[member.id] = { ...(doc.marks[member.id] || {}), ...patch };
+  const m = doc.marks[member.id];
+  if (m) {
+    if (m.s !== 'R') delete m.min;
+    if (m.s !== 'FJ' && m.s !== 'FNJ') delete m.note;
+    for (const k of Object.keys(m)) if (m[k] === undefined || m[k] === '') delete m[k];
+  }
+  doc.updatedAt = new Date().toISOString();
+  S.attendance.set(key, doc);
+  persist('attendance', key, doc);
+}
+function saveMember(m) { S.members.set(m.id, m); persist('members', m.id, m, 50); }
+function saveProduction(p) { S.productions.set(p.id, p); persist('productions', p.id, p, 50); }
+function saveConfig(patch) { S.config = { ...S.config, ...patch }; persist('config', 'main', S.config, 200); }
+
+async function removeMany(paths, label) {
+  for (const [col, id] of paths) { S[col].delete(id); persist(col, id, null, 20); }
+  if (S.mode === 'shared') {
+    toast(label || 'Esborrant…');
+    await sleep(50);
+  }
+}
+
+/* ================= Rendering ================= */
+let renderQueued = false;
+let deferred = false;
+function scheduleRender() {
+  if (renderQueued) return;
+  renderQueued = true;
+  requestAnimationFrame(() => {
+    renderQueued = false;
+    const a = document.activeElement;
+    if (a && $('#view').contains(a) && a.matches('input, textarea, select')) { deferred = true; return; }
+    render();
+  });
+}
+document.addEventListener('focusout', () => { if (deferred) { deferred = false; setTimeout(scheduleRender, 60); } });
+
+function render() {
+  $('#choir-name').textContent = S.config.name || '';
+  $$('.tab').forEach(t => t.setAttribute('aria-current', t.dataset.tab === ui.tab ? 'page' : 'false'));
+  updateSync();
+  renderBanner();
+  const v = $('#view');
+  $('.tabs').hidden = S.mode === 'nokey' || S.mode === 'setup';
+  if (S.mode === 'setup') {
+    v.innerHTML = `<div class="empty">${staffSvg()}<h2 class="h2">Falta connectar la base de dades</h2><p>Omple el fitxer <span class="mono">config.js</span> amb la configuració del teu projecte de Firebase.</p></div>`;
+    return;
+  }
+  if (S.mode === 'nokey') {
+    v.innerHTML = `<div class="empty" style="padding-top:36px">${staffSvg()}<h2 class="h1" style="margin-bottom:12px">Llista d’assistència del cor</h2>
+      <p style="max-width:38ch">Si ets cap de corda, obre l’<b>enllaç del cor</b> que t’han enviat: el reconeixerà i el recordarà en aquest mòbil.</p>
+      <p style="max-width:38ch;margin-bottom:22px">Si portes la gestió del cor i encara no en tens cap, crea’l ara.</p>
+      <button class="btn btn-primary" data-act="create-choir">Crea un cor nou</button></div>`;
+    return;
+  }
+  if (S.mode === 'loading' || (S.mode === 'shared' && !S.ready)) {
+    v.innerHTML = `<div class="empty">${staffSvg()}<p>Carregant la llista del cor…</p></div>`;
+    return;
+  }
+  const html = { llista: viewRoll, calendari: viewCalendar, stats: viewStats, gestio: viewManage }[ui.tab]();
+  v.innerHTML = html;
+  afterRender();
+}
+function renderBanner() {
+  const b = $('#banner');
+  let h = '';
+  if (S.error) h += `<div class="banner warn"><span>${esc(S.error)}</span><button class="btn btn-sm" data-act="reload">Recarrega</button></div>`;
+  if (S.config.demo && S.ready !== false && S.mode !== 'loading') h += `<div class="banner"><span><b>Dades d’exemple.</b> Quan vulguis començar amb el teu cor, esborra-les.</span><button class="btn btn-sm" data-act="wipe-demo">Esborra l’exemple</button></div>`;
+  b.innerHTML = h;
+}
+const staffSvg = () => `<svg class="staff" viewBox="0 0 120 30" aria-hidden="true"><g stroke="currentColor" stroke-width="1">${[3, 9, 15, 21, 27].map(y => `<line x1="0" x2="120" y1="${y}" y2="${y}"/>`).join('')}</g><g fill="currentColor"><ellipse cx="34" cy="18" rx="4.2" ry="3" transform="rotate(-20 34 18)"/><ellipse cx="60" cy="12" rx="4.2" ry="3" transform="rotate(-20 60 12)"/><ellipse cx="86" cy="6" rx="4.2" ry="3" transform="rotate(-20 86 6)"/></g></svg>`;
+
+function stackBar(c, cls = '') {
+  const total = c.P + c.R + c.FJ + c.FNJ + (c.NP || 0) + (c.none || 0);
+  if (!total) return `<div class="stack ${cls}"></div>`;
+  return `<div class="stack ${cls}" role="img" aria-label="${ORDER.map(k => `${STATUS[k].label}: ${c[k] || 0}`).join(', ')}">${['P', 'R', 'FJ', 'FNJ', 'NP'].map(k => c[k] ? `<span class="s-${k}" style="width:${(c[k] / total) * 100}%"></span>` : '').join('')}</div>`;
+}
+
+/* ---------- View: Roll call ---------- */
+function viewRoll() {
+  const list = allSessions();
+  if (!S.members.size || !list.length) {
+    return `<div class="empty">${staffSvg()}<h2 class="h2">Encara no hi ha res per passar llista</h2>
+      <p>${!S.members.size ? 'Afegeix els cantaires de cada corda' : 'Crea una producció amb les seves sessions d’assaig'} per començar.</p>
+      <span style="display:inline-flex;gap:8px;flex-wrap:wrap;justify-content:center">
+        <button class="btn btn-primary" data-act="tab" data-tab="gestio">Ves a Gestió</button>
+        ${!S.members.size && !S.productions.size ? '<button class="btn" data-act="load-demo">Prova amb dades d’exemple</button>' : ''}
+      </span></div>`;
+  }
+  let cur = ui.sessionId && list.find(s => s.id === ui.sessionId);
+  if (!cur) { cur = defaultSession(list); ui.sessionId = cur.id; }
+  const idx = list.indexOf(cur);
+  const prod = S.productions.get(cur.prodId);
+  const sec = ui.section;
+
+  const voices = SECTIONS.map(x => {
+    const on = convoked(cur, x.id);
+    const pr = progress(cur, x.id);
+    const complete = on && pr.total && pr.done === pr.total;
+    return `<button class="voice ${on ? '' : 'off'}" role="tab" aria-selected="${x.id === sec}" data-act="section" data-sec="${x.id}">
+      ${complete ? '<span class="done" aria-label="Completa"></span>' : ''}
+      <span class="voice-l">${x.id}</span><span class="voice-n">${x.name}</span>
+      <span class="voice-c">${on ? `${pr.done}/${pr.total}` : 'no conv.'}</span></button>`;
+  }).join('');
+
+  const isToday = cur.date === TODAY;
+  const head = `<div class="ctx" id="ctx">
+    <div class="session">
+      <button class="nav-arrow" data-act="sess-step" data-dir="-1" ${idx <= 0 ? 'disabled' : ''} aria-label="Sessió anterior">${ICON.left}</button>
+      <button class="session-main" data-act="sess-pick" aria-label="Canvia de sessió">
+        <span class="session-prod">${esc(prod?.name || '')}</span>
+        <span class="session-date">${longDate(cur.date)}</span>
+        <span class="session-meta">${esc(cur.type || 'Assaig')}${cur.time ? ` · <span class="mono">${esc(cur.time)}</span>` : ''}${cur.place ? ` · ${esc(cur.place)}` : ''}
+          ${isToday ? '<span class="badge">Avui</span>' : ''}</span>
+      </button>
+      <button class="nav-arrow" data-act="sess-step" data-dir="1" ${idx >= list.length - 1 ? 'disabled' : ''} aria-label="Sessió següent">${ICON.right}</button>
+    </div>
+    <div class="voices" role="tablist" aria-label="Corda">${voices}</div>
+  </div>`;
+
+  if (!convoked(cur, sec)) {
+    return head + `<div class="empty"><h2 class="h2">${SEC[sec].name}: no convocats</h2><p>Aquesta sessió només és per a ${cur.sections.map(x => SEC[x].name.toLowerCase()).join(', ')}.</p>
+      <button class="btn" data-act="session-edit" data-sid="${cur.id}">Edita la sessió</button></div>`;
+  }
+
+  const all = membersOf(sec);
+  if (!all.length) {
+    return head + `<div class="empty"><h2 class="h2">No hi ha ${SEC[sec].name.toLowerCase()}</h2><p>Afegeix els cantaires d’aquesta corda per poder passar llista.</p>
+      <button class="btn btn-primary" data-act="member-bulk" data-sec="${sec}">Afegeix cantaires</button></div>`;
+  }
+  const inProd = all.filter(m => !isExcluded(cur.prodId, m.id));
+  const out = all.filter(m => isExcluded(cur.prodId, m.id));
+  const leader = all.find(m => m.leader);
+
+  const c = { ...emptyCounts(), none: 0 };
+  for (const m of all) { const mk = effMark(cur, m); if (mk) { c[mk.s]++; if (mk.s === 'R') c.min += +mk.min || 0; } else c.none++; }
+  const done = all.length - c.none;
+
+  return head + `
+  <div class="leader">
+    <span>Cap de corda: <b>${leader ? esc(leader.name) : '—'}</b></span>
+    <span class="mono">${done}/${all.length} marcats</span>
+  </div>
+  <div class="tally" id="tally">${tallyInner(c, inProd.some(m => !effMark(cur, m)))}</div>
+  <ul class="roster" id="roster">${inProd.map(m => rowHtml(cur, m)).join('')}</ul>
+  ${out.length ? `<details class="np-group" ${out.some(m => effMark(cur, m)?.s !== 'NP') ? 'open' : ''}>
+      <summary><span>No fan aquesta producció (${out.length})</span>${ICON.chev}</summary>
+      <ul class="roster" style="margin-top:0">${out.map(m => rowHtml(cur, m)).join('')}</ul>
+    </details>` : ''}
+  <p class="muted" style="font-size:12.5px;text-align:center;margin-top:18px">Toca l’estat marcat una altra vegada per desmarcar-lo.</p>`;
+}
+function tallyInner(c, pendingInProd) {
+  const legend = ORDER.map(k => `<span><i class="i-${k}"></i>${STATUS[k].short} <b>${c[k]}</b></span>`).join('')
+    + (c.none ? `<span><i class="i-none"></i>Pendents <b>${c.none}</b></span>` : '');
+  return `${stackBar(c)}
+    <div class="legend">${legend}</div>
+    <div class="tally-foot">
+      <span class="progress-txt">${c.min ? `Retard acumulat <b>${c.min}′</b>` : (c.R ? 'Retards sense minuts' : 'Sense retards')}</span>
+      <span style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-sm" data-act="summary">Resum</button>
+        <button class="btn btn-sm btn-primary" data-act="mark-rest" ${pendingInProd ? '' : 'disabled'}>Resta com a presents</button>
+      </span>
+    </div>`;
+}
+function rowHtml(session, m) {
+  const mk = effMark(session, m);
+  const s = mk?.s || 'none';
+  let state = 'Pendent', warn = false;
+  if (mk) {
+    if (s === 'R') { if (mk.min) state = `Retard ${mk.min}′`; else { state = 'Indica els minuts'; warn = true; } }
+    else state = mk.auto ? 'No fa la producció' : STATUS[s].label;
+  }
+  const opts = ORDER.map(k => `<button class="opt o-${k}" role="radio" aria-checked="${s === k}" aria-label="${STATUS[k].label}" data-act="mark" data-s="${k}"><i></i>${STATUS[k].short}</button>`).join('');
+  let extra = '';
+  if (s === 'R') {
+    extra = `<div class="extra x-R"><label for="min-${m.id}">Minuts</label>
+      <div class="mins">${LATE_CHIPS.map(n => `<button class="min-chip" aria-pressed="${+mk.min === n}" data-act="min" data-min="${n}">${n}</button>`).join('')}</div>
+      <input class="min-input" id="min-${m.id}" type="number" inputmode="numeric" min="1" max="240" placeholder="—" value="${mk.min || ''}" data-bind="min" aria-label="Minuts de retard"></div>`;
+  } else if ((s === 'FJ' || s === 'FNJ') && !mk.auto) {
+    extra = `<div class="extra x-${s}"><label for="note-${m.id}">Motiu</label>
+      <input class="note-input" id="note-${m.id}" type="text" maxlength="120" placeholder="Opcional" value="${esc(mk.note || '')}" data-bind="note"></div>`;
+  }
+  return `<li class="row ${mk ? 'has-mark' : ''}" data-mid="${m.id}" data-s="${s}">
+    <div class="row-top"><span class="who"><span class="name">${esc(m.name)}</span>${m.leader ? '<span class="tag">Cap de corda</span>' : ''}</span>
+      <span class="state ${warn ? 'warn' : ''}">${state}</span></div>
+    <div class="seg" role="radiogroup" aria-label="Assistència de ${esc(m.name)}">${opts}</div>
+    ${extra}</li>`;
+}
+function refreshRow(mid) {
+  const cur = sessionById(ui.sessionId);
+  const m = S.members.get(mid);
+  const li = $(`.row[data-mid="${mid}"]`);
+  if (!cur || !m || !li) return render();
+  const tmp = document.createElement('ul');
+  tmp.innerHTML = rowHtml(cur, m);
+  li.replaceWith(tmp.firstElementChild);
+  // tally, counters
+  const all = membersOf(ui.section);
+  const c = { ...emptyCounts(), none: 0 };
+  for (const x of all) { const mk = effMark(cur, x); if (mk) { c[mk.s]++; if (mk.s === 'R') c.min += +mk.min || 0; } else c.none++; }
+  const tally = $('#tally');
+  if (tally) tally.innerHTML = tallyInner(c, all.some(x => !isExcluded(cur.prodId, x.id) && !effMark(cur, x)));
+  const lead = $('.leader .mono');
+  if (lead) lead.textContent = `${all.length - c.none}/${all.length} marcats`;
+  const vb = $(`.voice[data-sec="${ui.section}"]`);
+  if (vb) {
+    const pr = progress(cur, ui.section);
+    vb.querySelector('.voice-c').textContent = `${pr.done}/${pr.total}`;
+    const dot = vb.querySelector('.done');
+    if (pr.total && pr.done === pr.total) { if (!dot) vb.insertAdjacentHTML('afterbegin', '<span class="done" aria-label="Completa"></span>'); }
+    else if (dot) dot.remove();
+  }
+}
+
+/* ---------- View: Calendar ---------- */
+function viewCalendar() {
+  const prods = productionsSorted();
+  if (ui.calProd !== 'all' && !S.productions.has(ui.calProd)) ui.calProd = 'all';
+  const chips = `<div class="chips" role="group" aria-label="Filtra per producció">
+    <button class="chip" aria-pressed="${ui.calProd === 'all'}" data-act="cal-prod" data-id="all">Totes</button>
+    ${prods.map(p => `<button class="chip" aria-pressed="${ui.calProd === p.id}" data-act="cal-prod" data-id="${p.id}">${esc(p.name)}</button>`).join('')}
+  </div>`;
+  const head = `<div class="page-head"><h1 class="h1">Calendari</h1>
+    <span style="display:flex;gap:8px"><button class="btn btn-sm" data-act="cal-past">${ui.calPast ? 'Amaga passades' : 'Mostra passades'}</button>
+    <button class="btn btn-sm btn-primary" data-act="session-new">+ Sessió</button></span></div>`;
+  if (!prods.length) return head + `<div class="empty">${staffSvg()}<h2 class="h2">Cap producció</h2><p>Les sessions s’organitzen per produccions. Crea’n una per començar.</p><button class="btn btn-primary" data-act="prod-new">Nova producció</button></div>`;
+
+  const shown = ui.calProd === 'all' ? prods : prods.filter(p => p.id === ui.calProd);
+  let body = '';
+  let hiddenPast = 0;
+  for (const p of shown) {
+    let sessions = allSessions(p.id);
+    const total = sessions.length;
+    if (!ui.calPast) { const before = sessions.length; sessions = sessions.filter(s => s.date >= TODAY); hiddenPast += before - sessions.length; }
+    if (ui.calProd === 'all' && !sessions.length) continue;
+    let rows = '', month = '';
+    for (const s of sessions) {
+      const m = s.date.slice(0, 7);
+      if (m !== month) { if (rows) rows += '</ul>'; month = m; rows += `<div class="cal-month">${monthYear(s.date)}</div><ul class="cal-list">`; }
+      rows += calRow(s);
+    }
+    if (rows) rows += '</ul>';
+    body += `<section class="cal-prod">
+      <div class="cal-prod-h"><h2 class="h2">${esc(p.name)}</h2><span class="mono muted" style="font-size:12px">${total} sessions</span></div>
+      ${rows || `<p class="muted">No queden sessions pendents. ${ui.calPast ? '' : 'Mostra les passades per veure-les.'}</p>`}
+    </section>`;
+  }
+  if (!body) body = `<div class="empty"><p>No hi ha sessions properes${hiddenPast ? ` (${hiddenPast} ja passades)` : ''}.</p><button class="btn" data-act="cal-past">Mostra passades</button></div>`;
+  return head + chips + body;
+}
+function calRow(s) {
+  const marks = SECTIONS.map(x => {
+    if (!convoked(s, x.id)) return `<span class="vm off" title="${x.name}: no convocats">${x.id}</span>`;
+    const pr = progress(s, x.id);
+    const cls = pr.total && pr.done === pr.total ? 'full' : pr.done ? 'part' : '';
+    return `<span class="vm ${cls}" title="${x.name}: ${pr.done}/${pr.total}">${x.id}</span>`;
+  }).join('');
+  const c = emptyCounts();
+  for (const x of SECTIONS) if (convoked(s, x.id) && hasData(s, x.id)) for (const m of membersOf(x.id)) { const mk = effMark(s, m); if (mk) c[mk.s]++; }
+  const r = rate(c);
+  const cls = [s.date === TODAY ? 'is-today' : '', s.date < TODAY ? 'is-past' : '', s.type === 'Concert' ? 'type-concert' : ''].join(' ');
+  return `<li class="cal-row ${cls}" data-date="${s.date}">
+    <button class="cal-main" data-act="open-session" data-sid="${s.id}">
+      <span class="cal-date"><b>${+s.date.slice(8, 10)}</b><small>${wdShort(s.date)}</small></span>
+      <span class="cal-info"><span class="cal-type">${esc(s.type || 'Assaig')}<em>${esc(s.time || '')}</em></span><span class="cal-place">${esc(s.place || '')}${s.note ? ` · ${esc(s.note)}` : ''}</span></span>
+      <span class="cal-right"><span class="vmarks" aria-label="Llista per cordes">${marks}</span>${r != null ? `<span class="cal-pct">${pct(r)}</span>` : ''}</span>
+    </button>
+    <button class="icon-btn" data-act="session-edit" data-sid="${s.id}" aria-label="Edita la sessió">${ICON.more}</button>
+  </li>`;
+}
+
+/* ---------- View: Stats ---------- */
+function viewStats() {
+  const prods = productionsSorted();
+  if (!prods.length) return `<div class="page-head"><h1 class="h1">Estadístiques</h1></div><div class="empty">${staffSvg()}<p>Quan hi hagi produccions amb llistes passades, veuràs aquí l’assistència.</p></div>`;
+  if (!ui.statsProd || !S.productions.has(ui.statsProd)) ui.statsProd = currentProductionId();
+  const prod = S.productions.get(ui.statsProd);
+  const st = computeStats(prod.id, ui.statsSec);
+  const chips = `<div class="chips" role="group" aria-label="Producció">${prods.map(p => `<button class="chip" aria-pressed="${p.id === prod.id}" data-act="stats-prod" data-id="${p.id}">${esc(p.name)}</button>`).join('')}</div>`;
+  const secChips = `<div class="chips" role="group" aria-label="Corda" style="padding-bottom:4px">
+    <button class="chip" aria-pressed="${!ui.statsSec}" data-act="stats-sec" data-sec="">Tot el cor</button>
+    ${SECTIONS.map(x => `<button class="chip" aria-pressed="${ui.statsSec === x.id}" data-act="stats-sec" data-sec="${x.id}">${x.name}</button>`).join('')}</div>`;
+  const head = `<div class="page-head"><div><div class="eyebrow">Estadístiques</div><h1 class="h1">${esc(prod.name)}</h1></div>
+    <button class="btn btn-sm" data-act="export-csv">Exporta CSV</button></div>`;
+
+  const all = allSessions(prod.id);
+  if (!st.counted.length) {
+    return head + chips + secChips + `<div class="empty"><p>Encara no s’ha passat llista en cap sessió d’aquesta producció${all.length ? ` (${all.length} sessions programades, la primera el ${shortDate(all[0].date)})` : ''}.</p></div>`;
+  }
+  const t = st.tot;
+  const fnjAlert = st.rows.filter(r => r.FNJ >= (+S.config.alertFNJ || 3)).sort((a, b) => b.FNJ - a.FNJ);
+  const kpis = `<div class="kpis">
+    <div class="kpi"><div class="kpi-v">${kpiPct(rate(t))}</div><div class="kpi-l">Assistència</div></div>
+    <div class="kpi"><div class="kpi-v">${kpiPct(punctuality(t))}</div><div class="kpi-l">Puntualitat</div></div>
+    <div class="kpi"><div class="kpi-v">${t.min}<small>min</small></div><div class="kpi-l">Retard acumulat · ${t.R} retards</div></div>
+    <div class="kpi ${t.FNJ ? 'alert' : ''}"><div class="kpi-v">${t.FNJ}</div><div class="kpi-l">Faltes no justificades · ${t.FJ} just.</div></div>
+  </div>
+  <p class="muted" style="font-size:12.5px;margin:10px 2px 0">${st.counted.length} de ${all.length} sessions amb llista · Assistència = presents i retards sobre convocats (sense comptar «no fa»).</p>`;
+
+  const dist = `<div class="panel" style="padding:14px;margin-top:14px">${stackBar(t)}<div class="legend">${ORDER.map(k => `<span><i class="i-${k}"></i>${STATUS[k].label} <b>${t[k]}</b></span>`).join('')}</div></div>`;
+
+  const secBars = !ui.statsSec ? `<div class="section-title"><h2 class="h2">Per cordes</h2><span class="eyebrow">assistència</span></div>
+    <div class="panel bars">${SECTIONS.map(x => {
+      const c = st.bySec[x.id]; const r = rate(c);
+      return `<div class="bar-row"><span class="lbl"><em>${x.id}</em>${x.name.slice(0, 7)}${x.name.length > 7 ? '.' : ''}</span>${stackBar(c)}<span class="val">${pct(r)}</span></div>`;
+    }).join('')}</div>` : '';
+
+  // trend chart: stacked columns per session, normalized to counted marks (excluding NP)
+  const cols = st.counted.map(({ s, c }) => {
+    const d = c.P + c.R + c.FJ + c.FNJ;
+    const seg = k => d ? `<span class="s-${k}" style="height:${(c[k] / d) * 100}%;background:var(--${k.toLowerCase()})"></span>` : '';
+    return `<button class="tcol" data-act="open-session" data-sid="${s.id}" title="${shortDate(s.date)} · ${s.type || 'Assaig'} · ${pct(rate(c))}" aria-label="${longDate(s.date)}: ${pct(rate(c))}">
+      <span class="tbar" style="height:100%">${['P', 'R', 'FJ', 'FNJ'].map(seg).join('')}</span></button>`;
+  }).join('');
+  const every = Math.max(1, Math.ceil(st.counted.length / 8));
+  const labels = st.counted.map(({ s }, i) => `<span>${i % every === 0 ? ddmm(s.date) : ''}</span>`).join('');
+  const minW = st.counted.length * 22 + 34;
+  const trend = `<div class="section-title"><h2 class="h2">Sessió a sessió</h2><span class="eyebrow">toca per obrir</span></div>
+    <div class="panel"><div class="trend-wrap"><div style="min-width:${minW}px">
+      <div class="trend">${[100, 75, 50, 25].map(v => `<div class="grid" style="bottom:${v}%"><span>${v}%</span></div>`).join('')}${cols}</div>
+      <div class="tlabels">${labels}</div></div></div>
+      <div class="trend-note legend" style="margin:0;padding:0 14px 12px">${['P', 'R', 'FJ', 'FNJ'].map(k => `<span><i class="i-${k}"></i>${STATUS[k].short}</span>`).join('')}</div></div>`;
+
+  const alerts = fnjAlert.length ? `<div class="section-title"><h2 class="h2">Cal fer seguiment</h2><span class="eyebrow">≥ ${S.config.alertFNJ || 3} faltes no just.</span></div>
+    <div class="panel"><ul class="alerts">${fnjAlert.map(r => `<li><span><b>${esc(r.m.name)}</b> <span class="muted">· ${SEC[r.m.section].name}</span></span><button class="pill fnj" data-act="member-stats" data-mid="${r.m.id}">${r.FNJ} FNJ</button></li>`).join('')}</ul></div>` : '';
+
+  const sorters = { pct: 'Assistència', name: 'Nom', late: 'Retards' };
+  const rows = [...st.rows].sort((a, b) => {
+    if (ui.statsSort === 'name') return byName(a.m, b.m);
+    if (ui.statsSort === 'late') return b.min - a.min || b.R - a.R;
+    const ra = rate(a), rb = rate(b);
+    return (ra ?? 2) - (rb ?? 2) || byName(a.m, b.m);
+  });
+  const table = `<div class="section-title"><h2 class="h2">Cantaires</h2>
+      <div class="sortbar">${Object.entries(sorters).map(([k, l]) => `<button class="chip" style="min-height:30px;font-size:12.5px" aria-pressed="${ui.statsSort === k}" data-act="stats-sort" data-k="${k}">${l}</button>`).join('')}</div></div>
+    <div class="panel"><ul class="mtable">${rows.map(r => {
+      const counted = r.P + r.R + r.FJ + r.FNJ;
+      return `<li class="mrow"><button data-act="member-stats" data-mid="${r.m.id}">
+        <span class="mname"><em>${r.m.section}</em><span>${esc(r.m.name)}</span></span>
+        <span class="mpct">${counted ? pct(rate(r)) : (r.NP ? 'No fa' : '—')}</span>
+        ${stackBar(r)}
+        <span class="mcounts">
+          <span><i class="i-P"></i><b>${r.P}</b></span>
+          <span><i class="i-R"></i><b>${r.R}</b>${r.min ? ` · ${r.min}′` : ''}</span>
+          <span><i class="i-FNJ"></i><b>${r.FNJ}</b></span>
+          <span><i class="i-FJ"></i><b>${r.FJ}</b></span>
+          ${r.NP ? `<span><i class="i-NP"></i><b>${r.NP}</b></span>` : ''}
+        </span></button></li>`;
+    }).join('')}</ul></div>`;
+
+  return head + chips + secChips + kpis + dist + secBars + trend + alerts + table;
+}
+
+/* ---------- View: Manage ---------- */
+function viewManage() {
+  const tabs = [['cantaires', 'Cantaires'], ['produccions', 'Produccions'], ['config', 'Configuració']];
+  const head = `<div class="page-head"><h1 class="h1">Gestió</h1></div>
+    <div class="subtabs" role="tablist">${tabs.map(([k, l]) => `<button class="subtab" role="tab" aria-selected="${ui.manage === k}" data-act="manage" data-k="${k}">${l}</button>`).join('')}</div>`;
+  if (ui.manage === 'produccions') return head + manageProductions();
+  if (ui.manage === 'config') return head + manageConfig();
+  return head + manageMembers();
+}
+function manageMembers() {
+  return SECTIONS.map(x => {
+    const ms = membersOf(x.id, true);
+    const active = ms.filter(m => m.active !== false).length;
+    return `<div class="sec-h"><h2 class="h2"><em>${x.id}</em>${x.name} <span class="mono muted" style="font-size:13px;font-weight:400">${active}</span></h2>
+      <span style="display:flex;gap:4px"><button class="btn btn-sm btn-ghost" data-act="member-bulk" data-sec="${x.id}">Afegeix</button></span></div>
+      ${ms.length ? `<ul class="list">${ms.map(m => `<li class="li"><button data-act="member-edit" data-mid="${m.id}">
+        <span class="${m.active === false ? 'dim' : ''}"><span class="t">${esc(m.name)}</span>${m.leader ? ' <span class="tag">Cap de corda</span>' : ''}
+        ${m.active === false ? '<br><span class="s">De baixa</span>' : m.phone ? `<br><span class="s mono">${esc(m.phone)}</span>` : ''}</span>
+        <span class="icon-btn" aria-hidden="true">${ICON.go}</span></button></li>`).join('')}</ul>`
+        : `<div class="panel" style="padding:14px;color:var(--muted);font-size:13.5px">Cap cantaire en aquesta corda.</div>`}`;
+  }).join('');
+}
+function manageProductions() {
+  const ps = productionsSorted();
+  return `<div class="sec-h"><span class="muted" style="font-size:13.5px">${ps.length} produccions</span><button class="btn btn-sm btn-primary" data-act="prod-new">+ Producció</button></div>
+    ${ps.length ? `<div style="display:grid;gap:10px">${ps.map(p => {
+      const ss = p.sessions || [];
+      const past = ss.filter(s => s.date <= TODAY).length;
+      const status = p.end && p.end < TODAY ? 'Acabada' : p.start > TODAY ? 'Propera' : 'En curs';
+      return `<div class="panel prod-card"><button data-act="prod-edit" data-pid="${p.id}" style="width:100%;text-align:left">
+        <div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><h2 class="h2">${esc(p.name)}</h2><span class="badge ${status === 'En curs' ? '' : 'soft'}">${status}</span></div>
+        <div class="prod-meta"><span>${p.start ? shortDate(p.start) : '?'} – ${p.end ? shortDate(p.end) : '?'}</span><span><b>${ss.length}</b> sessions · <b>${past}</b> fetes</span><span><b>${(p.excluded || []).length}</b> no la fan</span></div>
+      </button></div>`;
+    }).join('')}</div>` : `<div class="empty"><p>Crea la primera producció (p. ex. «Concert de Nadal») i genera’n les sessions d’assaig.</p></div>`}`;
+}
+function manageConfig() {
+  return `<div class="panel" style="margin-top:16px">
+    <div class="setting"><div><div class="t">Enllaç per als caps de corda</div><div class="s">Qui tingui l’enllaç pot passar llista i editar. Els canvis es veuen a l’instant a tots els mòbils.</div></div><button class="btn btn-sm btn-primary" data-act="share">Comparteix</button></div>
+  </div>
+  <div class="panel" style="margin-top:12px">
+    <div class="setting" style="display:grid;gap:10px">
+      <label class="field"><span>Nom del cor</span><input class="inp" id="cfg-name" type="text" maxlength="60" value="${esc(S.config.name || '')}" data-bind="cfg-name" placeholder="p. ex. Cor de Cambra de Sant Cugat"></label>
+    </div>
+    <div class="setting">
+      <div><div class="t">Avís de seguiment</div><div class="s">Assenyala a Estadístiques qui acumula aquest nombre de faltes no justificades en una producció.</div></div>
+      <input class="inp" id="cfg-alert" type="number" inputmode="numeric" min="1" max="20" style="width:80px;text-align:center" value="${+S.config.alertFNJ || 3}" data-bind="cfg-alert">
+    </div>
+  </div>
+  <div class="sec-h"><h2 class="h2">Dades</h2></div>
+  <div class="panel">
+    ${S.members.size ? '' : '<div class="setting"><div><div class="t">Dades d’exemple</div><div class="s">Carrega un cor fictici amb llistes passades per provar l’app.</div></div><button class="btn btn-sm" data-act="load-demo">Carrega</button></div>'}
+    <div class="setting"><div><div class="t">Còpia de seguretat</div><div class="s">Descarrega tots els cantaires, produccions i llistes en un fitxer JSON.</div></div><button class="btn btn-sm" data-act="export-json">Exporta</button></div>
+    <div class="setting"><div><div class="t">Restaura una còpia</div><div class="s">Substitueix totes les dades actuals per les del fitxer.</div></div>
+      <label class="btn btn-sm" for="import-file">Importa…</label><input id="import-file" type="file" accept="application/json,.json" class="sr" data-bind="import"></div>
+    <div class="setting"><div><div class="t">Esborra-ho tot</div><div class="s">Elimina cantaires, produccions i llistes. No es pot desfer.</div></div><button class="btn btn-sm btn-danger-ghost" data-act="wipe-all">Esborra</button></div>
+  </div>`;
+}
+
+function afterRender() {
+  if (ui.tab === 'calendari' && !ui._calScrolled) {
+    ui._calScrolled = true;
+    const t = $('.cal-row.is-today') || $$('.cal-row').find(r => r.dataset.date >= TODAY);
+    if (t && ui.calPast) t.scrollIntoView({ block: 'center' });
+  }
+  const ctx = $('#ctx');
+  if (ctx) onScroll();
+}
+function onScroll() {
+  const ctx = $('#ctx');
+  if (ctx) ctx.classList.toggle('stuck', ctx.getBoundingClientRect().top <= 0 && window.scrollY > 40);
+}
+window.addEventListener('scroll', onScroll, { passive: true });
+
+/* ================= Sheets ================= */
+let sheetClose = null;
+function openSheet({ title, body, foot = '', onMount, wide }) {
+  closeSheet();
+  const root = $('#sheet-root');
+  root.innerHTML = `<div class="sheet-back" data-sheet-back>
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(title)}" ${wide ? 'style="max-width:680px"' : ''}>
+      <div class="sheet-h"><h2 class="h2">${esc(title)}</h2><button class="icon-btn" data-act="sheet-close" aria-label="Tanca">${ICON.close}</button></div>
+      <div class="sheet-b">${body}</div>
+      ${foot ? `<div class="sheet-f">${foot}</div>` : ''}
+    </div></div>`;
+  const back = root.firstElementChild;
+  const prevFocus = document.activeElement;
+  back.addEventListener('click', e => { if (e.target === back) closeSheet(); });
+  const onKey = e => { if (e.key === 'Escape') closeSheet(); };
+  document.addEventListener('keydown', onKey);
+  document.body.style.overflow = 'hidden';
+  sheetClose = () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = ''; root.innerHTML = ''; prevFocus?.focus?.({ preventScroll: true }); };
+  const first = back.querySelector('.sheet-b input:not([type=checkbox]):not([type=file]), .sheet-b textarea');
+  if (onMount) onMount(back.querySelector('.sheet'));
+  if (first && window.matchMedia('(hover:hover)').matches) first.focus();
+  else back.querySelector('[data-act="sheet-close"]').focus({ preventScroll: true });
+}
+function closeSheet() { if (sheetClose) { const f = sheetClose; sheetClose = null; f(); } }
+
+function confirmSheet(title, text, ok = 'Confirma', danger = true) {
+  return new Promise(resolve => {
+    let done = false;
+    const finish = v => { if (done) return; done = true; closeSheet(); resolve(v); };
+    openSheet({
+      title, body: `<p style="margin:0">${text}</p>`,
+      foot: `<button class="btn" id="cf-no">Cancel·la</button><button class="btn ${danger ? 'btn-danger' : 'btn-primary'}" id="cf-yes">${esc(ok)}</button>`,
+      onMount: el => {
+        el.querySelector('#cf-no').onclick = () => finish(false);
+        el.querySelector('#cf-yes').onclick = () => finish(true);
+        const prev = sheetClose;
+        sheetClose = () => { prev(); if (!done) { done = true; resolve(false); } };
+      },
+    });
+  });
+}
+
+let toastTimer = null;
+function toast(msg, action) {
+  const root = $('#toast-root');
+  clearTimeout(toastTimer);
+  root.innerHTML = `<div class="toast" role="status"><span>${esc(msg)}</span>${action ? `<button id="toast-act">${esc(action.label)}</button>` : ''}</div>`;
+  if (action) $('#toast-act').onclick = () => { root.innerHTML = ''; action.run(); };
+  toastTimer = setTimeout(() => { root.innerHTML = ''; }, action ? 6000 : 2600);
+}
+
+/* ---------- Sheet: session picker ---------- */
+function sheetSessionPicker() {
+  const list = allSessions();
+  let body = '';
+  for (const p of productionsSorted()) {
+    const ss = list.filter(s => s.prodId === p.id);
+    if (!ss.length) continue;
+    body += `<div class="eyebrow" style="margin:14px 0 4px">${esc(p.name)}</div><ul class="picklist">${ss.map(s => {
+      const prs = SECTIONS.filter(x => convoked(s, x.id)).map(x => progress(s, x.id));
+      const done = prs.reduce((a, b) => a + b.done, 0), tot = prs.reduce((a, b) => a + b.total, 0);
+      return `<li><button data-act="pick-session" data-sid="${s.id}" aria-current="${s.id === ui.sessionId}" id="pick-${s.id}">
+        <span><span class="d">${longDate(s.date)}</span>${s.date === TODAY ? ' <span class="badge">Avui</span>' : ''}<br><span class="m">${esc(s.type || 'Assaig')} · ${esc(s.time || '')}${s.place ? ' · ' + esc(s.place) : ''}</span></span>
+        <span class="mono m">${done ? `${done}/${tot}` : ''}</span></button></li>`;
+    }).join('')}</ul>`;
+  }
+  openSheet({
+    title: 'Tria la sessió', body,
+    foot: `<button class="btn btn-ghost" data-act="pick-today">Ves a avui</button><span class="spacer"></span><button class="btn btn-primary" data-act="session-new">+ Nova sessió</button>`,
+    onMount: el => { const c = el.querySelector('[aria-current="true"]'); if (c) setTimeout(() => c.scrollIntoView({ block: 'center' }), 30); },
+  });
+}
+
+/* ---------- Sheet: summary ---------- */
+function summaryText(session, secs) {
+  const prod = S.productions.get(session.prodId);
+  const lines = [`${prod?.name || ''} — ${session.type || 'Assaig'} ${ddmm(session.date)}${session.time ? ' ' + session.time : ''}`];
+  for (const sec of secs) {
+    if (!convoked(session, sec)) continue;
+    const ms = membersOf(sec);
+    const groups = { P: [], R: [], FNJ: [], FJ: [], NP: [], none: [] };
+    for (const m of ms) { const mk = effMark(session, m); groups[mk ? mk.s : 'none'].push({ m, mk }); }
+    lines.push('', `${SEC[sec].name.toUpperCase()} · ${groups.P.length + groups.R.length}/${ms.length - groups.NP.length} hi són`);
+    if (groups.R.length) lines.push(`Retards: ${groups.R.map(({ m, mk }) => `${m.name}${mk.min ? ` (${mk.min}′)` : ''}`).join(', ')}`);
+    if (groups.FNJ.length) lines.push(`Faltes no justificades: ${groups.FNJ.map(({ m, mk }) => m.name + (mk.note ? ` (${mk.note})` : '')).join(', ')}`);
+    if (groups.FJ.length) lines.push(`Faltes justificades: ${groups.FJ.map(({ m, mk }) => m.name + (mk.note ? ` (${mk.note})` : '')).join(', ')}`);
+    if (groups.none.length) lines.push(`Sense marcar: ${groups.none.map(({ m }) => m.name).join(', ')}`);
+    if (!groups.R.length && !groups.FNJ.length && !groups.FJ.length && !groups.none.length) lines.push('Tothom present i puntual.');
+  }
+  return lines.join('\n');
+}
+function sheetSummary() {
+  const cur = sessionById(ui.sessionId);
+  if (!cur) return;
+  let scope = 'sec';
+  const text = () => summaryText(cur, scope === 'sec' ? [ui.section] : SECTIONS.map(x => x.id));
+  openSheet({
+    title: 'Resum de la llista',
+    body: `<div class="pickers" style="margin-bottom:10px">
+        <button class="pick" aria-pressed="true" data-scope="sec">${SEC[ui.section].name}</button>
+        <button class="pick" aria-pressed="false" data-scope="all">Tot el cor</button></div>
+      <textarea class="summary-pre" id="summary-text" readonly>${esc(text())}</textarea>
+      <p class="muted" style="font-size:12.5px;margin:8px 0 0">Copia’l i envia’l al grup de WhatsApp o a la direcció.</p>`,
+    foot: `<button class="btn btn-primary" id="copy-summary">Copia el resum</button>`,
+    onMount: el => {
+      el.querySelectorAll('[data-scope]').forEach(b => b.onclick = () => {
+        scope = b.dataset.scope;
+        el.querySelectorAll('[data-scope]').forEach(x => x.setAttribute('aria-pressed', x === b));
+        el.querySelector('#summary-text').value = text();
+      });
+      el.querySelector('#copy-summary').onclick = async () => {
+        const ta = el.querySelector('#summary-text');
+        try { await navigator.clipboard.writeText(ta.value); toast('Resum copiat'); }
+        catch { ta.focus(); ta.select(); try { document.execCommand('copy') ? toast('Resum copiat') : toast('Selecciona el text i copia’l'); } catch { toast('Selecciona el text i copia’l'); } }
+      };
+    },
+  });
+}
+
+/* ---------- Sheet: session edit ---------- */
+function sheetSession(sid, presetProd) {
+  const existing = sid ? sessionById(sid) : null;
+  const prods = productionsSorted();
+  if (!prods.length) { toast('Primer crea una producció'); ui.tab = 'gestio'; ui.manage = 'produccions'; closeSheet(); render(); return; }
+  const cur = existing || { id: uid('s'), date: TODAY, time: '20:30', type: 'Assaig', place: '', note: '', sections: [], prodId: presetProd || (ui.calProd !== 'all' ? ui.calProd : currentProductionId()) };
+  const secs = new Set(cur.sections && cur.sections.length ? cur.sections : SECTIONS.map(x => x.id));
+  openSheet({
+    title: existing ? 'Edita la sessió' : 'Nova sessió',
+    body: `<div class="kv">
+      <label class="field"><span>Producció</span><select class="inp" id="se-prod">${prods.map(p => `<option value="${p.id}" ${p.id === cur.prodId ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select></label>
+      <div class="row2"><label class="field"><span>Data</span><input class="inp" id="se-date" type="date" value="${cur.date}"></label>
+      <label class="field"><span>Hora</span><input class="inp" id="se-time" type="time" value="${esc(cur.time || '')}"></label></div>
+      <label class="field"><span>Tipus</span><select class="inp" id="se-type">${TYPES.map(t => `<option ${t === cur.type ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
+      <label class="field"><span>Lloc</span><input class="inp" id="se-place" type="text" maxlength="60" value="${esc(cur.place || '')}" placeholder="Sala d’assaig"></label>
+      <div class="field"><span>Cordes convocades</span><div class="pickers" id="se-secs">${SECTIONS.map(x => `<button type="button" class="pick" aria-pressed="${secs.has(x.id)}" data-sec="${x.id}"><span class="vl">${x.id}</span> ${x.name}</button>`).join('')}</div></div>
+      <label class="field"><span>Nota</span><input class="inp" id="se-note" type="text" maxlength="80" value="${esc(cur.note || '')}" placeholder="p. ex. Portar partitures del Gloria"></label>
+    </div>`,
+    foot: `${existing ? '<button class="btn btn-danger-ghost" id="se-del">Esborra</button>' : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="se-save">Desa</button>`,
+    onMount: el => {
+      el.querySelectorAll('#se-secs .pick').forEach(b => b.onclick = () => {
+        const on = b.getAttribute('aria-pressed') !== 'true';
+        if (!on && el.querySelectorAll('#se-secs .pick[aria-pressed="true"]').length === 1) return;
+        b.setAttribute('aria-pressed', on);
+      });
+      el.querySelector('#se-save').onclick = () => {
+        const date = el.querySelector('#se-date').value;
+        if (!date) { toast('Indica la data de la sessió'); return; }
+        const chosen = $$('#se-secs .pick[aria-pressed="true"]', el).map(b => b.dataset.sec);
+        const next = {
+          id: cur.id, date, time: el.querySelector('#se-time').value, type: el.querySelector('#se-type').value,
+          place: el.querySelector('#se-place').value.trim(), note: el.querySelector('#se-note').value.trim(),
+        };
+        if (chosen.length && chosen.length < 4) next.sections = chosen;
+        const prodId = el.querySelector('#se-prod').value;
+        if (existing && existing.prodId !== prodId) {
+          const old = clone(S.productions.get(existing.prodId));
+          old.sessions = (old.sessions || []).filter(s => s.id !== cur.id);
+          saveProduction(old);
+        }
+        const p = clone(S.productions.get(prodId));
+        p.sessions = (p.sessions || []).filter(s => s.id !== cur.id).concat(next).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+        saveProduction(p);
+        closeSheet();
+        toast(existing ? 'Sessió desada' : 'Sessió creada');
+        render();
+      };
+      const del = el.querySelector('#se-del');
+      if (del) del.onclick = async () => {
+        const marked = SECTIONS.some(x => hasData(existing, x.id));
+        const ok = await confirmSheet('Esborrar la sessió?', `${longDate(existing.date)}${marked ? ' ja té llista passada; també se n’esborrarà l’assistència.' : ''}`, 'Esborra la sessió');
+        if (!ok) return;
+        const p = clone(S.productions.get(existing.prodId));
+        p.sessions = (p.sessions || []).filter(s => s.id !== existing.id);
+        saveProduction(p);
+        removeMany(SECTIONS.map(x => ['attendance', attKey(existing.id, x.id)]).filter(([, k]) => S.attendance.has(k)));
+        if (ui.sessionId === existing.id) ui.sessionId = null;
+        toast('Sessió esborrada');
+        render();
+      };
+    },
+  });
+}
+
+/* ---------- Sheet: member ---------- */
+function sheetMember(mid) {
+  const existing = mid ? S.members.get(mid) : null;
+  const m = existing ? clone(existing) : { id: uid('m'), name: '', section: ui.section, leader: false, active: true, phone: '', notes: '' };
+  openSheet({
+    title: existing ? 'Cantaire' : 'Nou cantaire',
+    body: `<div class="kv">
+      <label class="field"><span>Nom i cognoms</span><input class="inp" id="me-name" type="text" maxlength="60" value="${esc(m.name)}" autocomplete="off"></label>
+      <div class="field"><span>Corda</span><div class="pickers" id="me-sec">${SECTIONS.map(x => `<button type="button" class="pick" aria-pressed="${m.section === x.id}" data-sec="${x.id}"><span class="vl">${x.id}</span> ${x.name}</button>`).join('')}</div></div>
+      <div class="toggle-row"><span><b>Cap de corda</b><br><span class="muted" style="font-size:12.5px">Passa llista de la seva corda</span></span><label class="switch"><input type="checkbox" id="me-leader" ${m.leader ? 'checked' : ''}><span></span></label></div>
+      <div class="toggle-row"><span><b>Actiu</b><br><span class="muted" style="font-size:12.5px">Desactiva’l si és baixa; conserva l’historial</span></span><label class="switch"><input type="checkbox" id="me-active" ${m.active !== false ? 'checked' : ''}><span></span></label></div>
+      <label class="field"><span>Telèfon</span><input class="inp" id="me-phone" type="tel" maxlength="20" value="${esc(m.phone || '')}"></label>
+      <label class="field"><span>Notes</span><input class="inp" id="me-notes" type="text" maxlength="120" value="${esc(m.notes || '')}"></label>
+    </div>`,
+    foot: `${existing ? '<button class="btn btn-danger-ghost" id="me-del">Esborra</button>' : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="me-save">Desa</button>`,
+    onMount: el => {
+      el.querySelectorAll('#me-sec .pick').forEach(b => b.onclick = () => { el.querySelectorAll('#me-sec .pick').forEach(x => x.setAttribute('aria-pressed', x === b)); });
+      el.querySelector('#me-save').onclick = () => {
+        const name = el.querySelector('#me-name').value.trim();
+        if (!name) { toast('Escriu el nom del cantaire'); return; }
+        const section = el.querySelector('#me-sec .pick[aria-pressed="true"]').dataset.sec;
+        if (existing && existing.section !== section && [...S.attendance.values()].some(d => d.section === existing.section && d.marks?.[m.id])) {
+          toast('Canvi de corda desat. Les llistes antigues queden a la corda anterior.');
+        }
+        const next = { ...m, name, section, leader: el.querySelector('#me-leader').checked, active: el.querySelector('#me-active').checked, phone: el.querySelector('#me-phone').value.trim(), notes: el.querySelector('#me-notes').value.trim() };
+        if (next.leader) for (const o of membersOf(section, true)) if (o.id !== next.id && o.leader) saveMember({ ...o, leader: false });
+        saveMember(next);
+        closeSheet();
+        render();
+      };
+      const del = el.querySelector('#me-del');
+      if (del) del.onclick = async () => {
+        const ok = await confirmSheet('Esborrar el cantaire?', `S’esborrarà <b>${esc(existing.name)}</b> i deixarà de sortir a les estadístiques. Si només és una baixa, desactiva’l.`, 'Esborra');
+        if (!ok) return;
+        S.members.delete(existing.id); persist('members', existing.id, null, 20);
+        toast('Cantaire esborrat');
+        render();
+      };
+    },
+  });
+}
+function sheetBulk(sec) {
+  openSheet({
+    title: `Afegeix ${SEC[sec].name.toLowerCase()}`,
+    body: `<div class="kv">
+      <div class="field"><span>Corda</span><div class="pickers" id="bk-sec">${SECTIONS.map(x => `<button type="button" class="pick" aria-pressed="${sec === x.id}" data-sec="${x.id}"><span class="vl">${x.id}</span> ${x.name}</button>`).join('')}</div></div>
+      <label class="field"><span>Noms, un per línia</span><textarea class="inp" id="bk-names" placeholder="Anna Puig&#10;Laia Ferrer&#10;Marta Soler"></textarea><small>Pots enganxar-los directament des d’un full de càlcul.</small></label>
+    </div>`,
+    foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="bk-save">Afegeix</button>`,
+    onMount: el => {
+      el.querySelectorAll('#bk-sec .pick').forEach(b => b.onclick = () => { el.querySelectorAll('#bk-sec .pick').forEach(x => x.setAttribute('aria-pressed', x === b)); });
+      el.querySelector('#bk-save').onclick = async () => {
+        const section = el.querySelector('#bk-sec .pick[aria-pressed="true"]').dataset.sec;
+        const existingNames = new Set([...S.members.values()].map(m => m.name.toLowerCase()));
+        const names = [...new Set(el.querySelector('#bk-names').value.split(/\r?\n/).map(s => s.replace(/\t.*/, '').trim()).filter(Boolean))].filter(n => !existingNames.has(n.toLowerCase()));
+        if (!names.length) { toast('No hi ha noms nous per afegir'); return; }
+        closeSheet();
+        for (const name of names) { saveMember({ id: uid('m'), name, section, leader: false, active: true }); await sleep(8); }
+        toast(`${names.length} cantaires afegits a ${SEC[section].name}`);
+        render();
+      };
+    },
+  });
+}
+
+/* ---------- Sheet: member stats ---------- */
+function sheetMemberStats(mid) {
+  const m = S.members.get(mid);
+  if (!m) return;
+  const st = computeStats(ui.statsProd, m.section);
+  const r = st.rows.find(x => x.m.id === mid) || { ...emptyCounts(), hist: [], notes: [] };
+  const hist = r.hist.map(({ s, mk }) => `<button class="hcell" data-act="open-session" data-sid="${s.id}" title="${longDate(s.date)} · ${mk ? STATUS[mk.s].label + (mk.min ? ` ${mk.min}′` : '') : 'Sense llista'}"><i class="${mk ? 's-' + mk.s : ''}"></i>${ddmm(s.date)}</button>`).join('');
+  const prod = S.productions.get(ui.statsProd);
+  openSheet({
+    title: m.name,
+    body: `<div class="eyebrow" style="margin-bottom:10px">${SEC[m.section].name} · ${esc(prod?.name || '')}</div>
+      <div class="kpis" style="grid-template-columns:repeat(2,1fr)">
+        <div class="kpi"><div class="kpi-v">${pct(rate(r))}</div><div class="kpi-l">Assistència</div></div>
+        <div class="kpi"><div class="kpi-v">${r.min}<small>min</small></div><div class="kpi-l">${r.R} retards</div></div>
+        <div class="kpi ${r.FNJ ? 'alert' : ''}"><div class="kpi-v">${r.FNJ}</div><div class="kpi-l">Faltes no justificades</div></div>
+        <div class="kpi"><div class="kpi-v">${r.FJ}</div><div class="kpi-l">Faltes justificades</div></div>
+      </div>
+      <div class="section-title" style="margin-top:20px"><h3 class="eyebrow">Sessió a sessió</h3></div>
+      ${hist ? `<div class="hist">${hist}</div>` : '<p class="muted">Encara no hi ha sessions passades.</p>'}
+      <div class="legend">${ORDER.map(k => `<span><i class="i-${k}"></i>${STATUS[k].short}</span>`).join('')}<span><i class="i-none"></i>Sense llista</span></div>
+      ${r.notes.length ? `<div class="section-title" style="margin-top:20px"><h3 class="eyebrow">Motius registrats</h3></div>
+      <ul class="notes-list">${r.notes.map(({ s, mk }) => `<li><span class="mono muted">${ddmm(s.date)}</span><span><span class="pill ${mk.s === 'FNJ' ? 'fnj' : ''}" style="${mk.s === 'FJ' ? 'background:var(--fj-soft);color:var(--ink)' : ''}">${mk.s}</span> ${esc(mk.note)}</span></li>`).join('')}</ul>` : ''}
+      ${m.phone ? `<p style="margin-top:18px"><a class="btn btn-sm" href="tel:${esc(m.phone.replace(/\s/g, ''))}">Truca ${esc(m.phone)}</a></p>` : ''}`,
+  });
+}
+
+/* ---------- Sheet: production ---------- */
+function sheetProduction(pid) {
+  const existing = pid ? S.productions.get(pid) : null;
+  const d = existing ? clone(existing) : { id: uid('p'), name: '', start: TODAY, end: '', sessions: [], excluded: [] };
+  d.sessions = d.sessions || []; d.excluded = d.excluded || [];
+  const excluded = new Set(d.excluded);
+  const gen = { from: d.start || TODAY, to: d.end || '', days: new Set(['2', '4']), time: '20:30', type: 'Assaig', place: '' };
+
+  const sessionsList = () => d.sessions.length
+    ? `<ul class="mini-list" id="pe-sessions">${[...d.sessions].sort((a, b) => a.date.localeCompare(b.date)).map(s => `<li><span><span class="mono">${ddmm(s.date)} ${wdShort(s.date)}</span> · ${esc(s.type)} <span class="mono">${esc(s.time || '')}</span></span><button class="icon-btn" data-rm="${s.id}" aria-label="Treu la sessió">${ICON.close}</button></li>`).join('')}</ul>`
+    : '<p class="muted" style="margin:0;font-size:13.5px">Encara no hi ha sessions.</p>';
+
+  openSheet({
+    title: existing ? 'Edita la producció' : 'Nova producció', wide: true,
+    body: `<div class="kv">
+      <label class="field"><span>Nom</span><input class="inp" id="pe-name" type="text" maxlength="60" value="${esc(d.name)}" placeholder="p. ex. Concert de Nadal 2026"></label>
+      <div class="row2"><label class="field"><span>Inici</span><input class="inp" id="pe-start" type="date" value="${d.start || ''}"></label>
+      <label class="field"><span>Final</span><input class="inp" id="pe-end" type="date" value="${d.end || ''}"></label></div>
+
+      <fieldset class="fieldset"><legend>Sessions</legend>
+        <div id="pe-slist">${sessionsList()}</div>
+        <details id="pe-gen" ${d.sessions.length ? '' : 'open'}><summary class="btn btn-sm" style="list-style:none;width:max-content">Genera sessions recurrents</summary>
+          <div class="kv" style="margin-top:12px">
+            <div class="row2"><label class="field"><span>Des de</span><input class="inp" id="g-from" type="date" value="${gen.from}"></label>
+            <label class="field"><span>Fins a</span><input class="inp" id="g-to" type="date" value="${gen.to}"></label></div>
+            <div class="field"><span>Dies</span><div class="pickers" id="g-days">${WEEKDAYS.map(([v, l]) => `<button type="button" class="pick" aria-pressed="${gen.days.has(v)}" data-d="${v}">${l}</button>`).join('')}</div></div>
+            <div class="row2"><label class="field"><span>Hora</span><input class="inp" id="g-time" type="time" value="${gen.time}"></label>
+            <label class="field"><span>Tipus</span><select class="inp" id="g-type">${TYPES.map(t => `<option>${t}</option>`).join('')}</select></label></div>
+            <label class="field"><span>Lloc</span><input class="inp" id="g-place" type="text" maxlength="60" placeholder="Sala d’assaig"></label>
+            <button type="button" class="btn btn-sm btn-primary" id="g-run" style="width:max-content">Afegeix les sessions</button>
+          </div></details>
+      </fieldset>
+
+      <fieldset class="fieldset"><legend>Qui no fa aquesta producció</legend>
+        <p class="muted" style="margin:0;font-size:12.5px">Els marcats sortiran en gris («No fa») a totes les sessions i no comptaran a les estadístiques.</p>
+        ${SECTIONS.map(x => { const ms = membersOf(x.id); return ms.length ? `<div class="field"><span>${x.name}</span><div class="pickers">${ms.map(mm => `<button type="button" class="pick" data-ex="${mm.id}" aria-pressed="${excluded.has(mm.id)}">${esc(mm.name)}</button>`).join('')}</div></div>` : ''; }).join('')}
+      </fieldset>
+    </div>`,
+    foot: `${existing ? '<button class="btn btn-danger-ghost" id="pe-del">Esborra</button>' : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="pe-save">Desa</button>`,
+    onMount: el => {
+      const bindRm = () => el.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { d.sessions = d.sessions.filter(s => s.id !== b.dataset.rm); el.querySelector('#pe-slist').innerHTML = sessionsList(); bindRm(); });
+      bindRm();
+      el.querySelectorAll('#g-days .pick').forEach(b => b.onclick = () => b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') !== 'true'));
+      el.querySelectorAll('[data-ex]').forEach(b => b.onclick = () => b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') !== 'true'));
+      el.querySelector('#pe-start').onchange = e => { if (!el.querySelector('#g-from').value || !d.sessions.length) el.querySelector('#g-from').value = e.target.value; };
+      el.querySelector('#pe-end').onchange = e => { if (!el.querySelector('#g-to').value) el.querySelector('#g-to').value = e.target.value; };
+      el.querySelector('#g-run').onclick = () => {
+        const from = el.querySelector('#g-from').value, to = el.querySelector('#g-to').value;
+        const days = new Set($$('#g-days .pick[aria-pressed="true"]', el).map(b => +b.dataset.d));
+        if (!from || !to || to < from) { toast('Indica unes dates d’inici i final vàlides'); return; }
+        if (!days.size) { toast('Tria almenys un dia de la setmana'); return; }
+        const time = el.querySelector('#g-time').value, type = el.querySelector('#g-type').value, place = el.querySelector('#g-place').value.trim();
+        const have = new Set(d.sessions.map(s => s.date + s.time));
+        let n = 0;
+        for (let dt = parseISO(from); isoDate(dt) <= to && n < 200; dt.setDate(dt.getDate() + 1)) {
+          if (!days.has(dt.getDay())) continue;
+          const iso = isoDate(dt);
+          if (have.has(iso + time)) continue;
+          d.sessions.push({ id: uid('s'), date: iso, time, type, place, note: '' }); n++;
+        }
+        el.querySelector('#pe-slist').innerHTML = sessionsList(); bindRm();
+        toast(n ? `${n} sessions afegides. Recorda desar.` : 'No s’ha afegit cap sessió nova');
+      };
+      el.querySelector('#pe-save').onclick = () => {
+        const name = el.querySelector('#pe-name').value.trim();
+        if (!name) { toast('Posa un nom a la producció'); return; }
+        d.name = name;
+        d.start = el.querySelector('#pe-start').value || (d.sessions[0]?.date ?? TODAY);
+        d.end = el.querySelector('#pe-end').value;
+        d.excluded = $$('[data-ex][aria-pressed="true"]', el).map(b => b.dataset.ex);
+        d.sessions.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+        const removed = (existing?.sessions || []).filter(s => !d.sessions.some(x => x.id === s.id));
+        saveProduction(d);
+        if (removed.length) removeMany(removed.flatMap(s => SECTIONS.map(x => ['attendance', attKey(s.id, x.id)])).filter(([, k]) => S.attendance.has(k)));
+        closeSheet();
+        toast(existing ? 'Producció desada' : 'Producció creada');
+        render();
+      };
+      const del = el.querySelector('#pe-del');
+      if (del) del.onclick = async () => {
+        const ok = await confirmSheet('Esborrar la producció?', `S’esborraran <b>${esc(existing.name)}</b>, les seves ${(existing.sessions || []).length} sessions i tota l’assistència registrada.`, 'Esborra la producció');
+        if (!ok) return;
+        const att = (existing.sessions || []).flatMap(s => SECTIONS.map(x => ['attendance', attKey(s.id, x.id)])).filter(([, k]) => S.attendance.has(k));
+        S.productions.delete(existing.id); persist('productions', existing.id, null, 20);
+        await removeMany(att);
+        toast('Producció esborrada');
+        render();
+      };
+    },
+  });
+}
+
+/* ================= Import / export ================= */
+function offerFile(filename, text, mime) {
+  try {
+    const url = URL.createObjectURL(new Blob([text], { type: mime }));
+    const a = Object.assign(document.createElement('a'), { href: url, download: filename });
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  } catch { toast('No s’ha pogut preparar el fitxer'); }
+}
+function exportJSON() {
+  const data = { app: 'cor-present', version: 1, exportedAt: new Date().toISOString(), config: S.config,
+    members: [...S.members.values()], productions: [...S.productions.values()], attendance: Object.fromEntries(S.attendance) };
+  offerFile(`cor-present-${TODAY}.json`, JSON.stringify(data, null, 2), 'application/json');
+}
+function exportCSV() {
+  const prod = S.productions.get(ui.statsProd);
+  if (!prod) return;
+  const st = computeStats(prod.id, '');
+  const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const head = ['Nom', 'Corda', 'Assistència %', 'Assisteix', 'Retard', 'Minuts retard', 'Falta no justificada', 'Falta justificada', 'No fa', ...st.sessions.map(s => `${s.date} ${s.type || ''}`)];
+  const lines = [head.map(q).join(';')];
+  for (const r of st.rows.sort((a, b) => a.m.section.localeCompare(b.m.section) || byName(a.m, b.m))) {
+    const byS = new Map(r.hist.map(h => [h.s.id, h.mk]));
+    const rt = rate(r);
+    lines.push([r.m.name, SEC[r.m.section].name, rt == null ? '' : Math.round(rt * 100), r.P, r.R, r.min, r.FNJ, r.FJ, r.NP,
+      ...st.sessions.map(s => { const mk = byS.get(s.id); return mk ? (mk.s === 'R' && mk.min ? `R${mk.min}` : mk.s) : ''; })].map(q).join(';'));
+  }
+  const slug = prod.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  offerFile(`assistencia-${slug}.csv`, '﻿' + lines.join('\r\n'), 'text/csv');
+}
+async function importJSON(file) {
+  let data;
+  try { data = JSON.parse(await file.text()); } catch { toast('El fitxer no és una còpia vàlida de Cor Present'); return; }
+  if (!data || data.app !== 'cor-present' || !Array.isArray(data.members) || !Array.isArray(data.productions)) { toast('El fitxer no és una còpia vàlida de Cor Present'); return; }
+  const ok = await confirmSheet('Restaurar la còpia?', `Se substituiran les dades actuals per ${data.members.length} cantaires i ${data.productions.length} produccions del fitxer.`, 'Restaura');
+  if (!ok) return;
+  applyData(data, false);
+  toast('Còpia restaurada');
+}
+function applyData(data, demo) {
+  const incoming = { members: new Map(data.members.map(m => [m.id, m])), productions: new Map(data.productions.map(p => [p.id, p])), attendance: new Map(Object.entries(data.attendance || {})) };
+  for (const col of COLS) {
+    for (const id of [...S[col].keys()]) if (!incoming[col].has(id)) { S[col].delete(id); persist(col, id, null, 10); }
+  }
+  let i = 0;
+  for (const col of COLS) for (const [id, v] of incoming[col]) { S[col].set(id, v); persist(col, id, v, 10 + (i++ % 40) * 15); }
+  saveConfig({ ...(data.config || {}), demo });
+  ui.sessionId = null; ui.statsProd = null;
+  render();
+}
+async function loadDemo() {
+  try {
+    const res = await fetch('demo.json', { cache: 'no-store' });
+    if (!res.ok) throw new Error();
+    applyData(await res.json(), true);
+    ui.tab = 'llista'; render();
+    toast('Dades d’exemple carregades');
+  } catch { toast('No s’han pogut carregar les dades d’exemple'); }
+}
+function sheetShare() {
+  const url = shareUrl();
+  openSheet({
+    title: 'Comparteix el cor',
+    body: `<p style="margin-top:0">Envia aquest enllaç als caps de corda. Des del mòbil podran passar llista i editar-ho tot.</p>
+      <textarea class="summary-pre" id="share-url" readonly style="min-height:90px;word-break:break-all">${esc(url)}</textarea>
+      <p class="muted" style="font-size:12.5px;margin:10px 0 0"><b>Important:</b> qualsevol persona amb aquest enllaç pot veure i modificar les dades. No el publiquis a xarxes ni a grups oberts.</p>
+      <p class="muted" style="font-size:12.5px;margin:8px 0 0">Consell: obre’l al mòbil i, des del menú del navegador, tria «Afegeix a la pantalla d’inici» per tenir-lo com una app.</p>`,
+    foot: `${navigator.share ? '<button class="btn" id="share-native">Comparteix…</button>' : ''}<button class="btn btn-primary" id="share-copy">Copia l’enllaç</button>`,
+    onMount: el => {
+      el.querySelector('#share-copy').onclick = async () => {
+        const ta = el.querySelector('#share-url');
+        try { await navigator.clipboard.writeText(url); toast('Enllaç copiat'); }
+        catch { ta.focus(); ta.select(); try { document.execCommand('copy'); toast('Enllaç copiat'); } catch { toast('Selecciona l’enllaç i copia’l'); } }
+      };
+      const nat = el.querySelector('#share-native');
+      if (nat) nat.onclick = () => navigator.share({ title: S.config.name || 'Cor Present', text: 'Llista d’assistència del cor', url }).catch(() => {});
+    },
+  });
+}
+async function wipeAll(demo) {
+  const ok = await confirmSheet(demo ? 'Esborrar les dades d’exemple?' : 'Esborrar-ho tot?', demo
+    ? 'S’eliminaran els cantaires, produccions i llistes d’exemple perquè puguis començar amb el teu cor.'
+    : 'S’eliminaran tots els cantaires, produccions i llistes. Fes abans una còpia de seguretat si en vols conservar res.', 'Esborra-ho');
+  if (!ok) return;
+  const paths = COLS.flatMap(col => [...S[col].keys()].map(id => [col, id]));
+  let i = 0;
+  for (const [col, id] of paths) { S[col].delete(id); persist(col, id, null, 10 + (i++ % 40) * 15); }
+  saveConfig({ demo: false, ...(demo ? { name: '' } : {}) });
+  ui.sessionId = null; ui.statsProd = null;
+  ui.tab = 'gestio'; ui.manage = 'cantaires';
+  toast('Dades esborrades. Comença afegint cantaires.');
+  render();
+}
+
+/* ================= Events ================= */
+const actions = {
+  'tab': el => { ui.tab = el.dataset.tab; ui._calScrolled = false; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
+  'reload': () => location.reload(),
+  'share': () => sheetShare(),
+  'load-demo': () => loadDemo(),
+  'create-choir': () => createChoir(),
+  'sync-info': () => openSheet({
+    title: 'Estat de les dades',
+    body: S.mode === 'shared'
+      ? `<p style="margin-top:0">Les llistes es desen automàticament i es comparteixen en temps real amb tots els caps de corda.</p>
+         <p style="margin-top:0">Si et quedes sense cobertura, pots continuar passant llista: els canvis s’envien sols quan torni la connexió.</p>
+         <p class="muted" style="margin-bottom:0">${!navigator.onLine ? 'Ara mateix no hi ha connexió.' : pendingWrites() ? `Desant ${pendingWrites()} canvis…` : 'Tots els canvis estan desats.'}</p>`
+      : `<p style="margin:0">Encara no hi ha cap cor connectat en aquest dispositiu.</p>`,
+    foot: S.mode === 'shared' ? '<button class="btn btn-primary" data-act="share">Comparteix l’enllaç</button>' : '',
+  }),
+  'section': el => { ui.section = el.dataset.sec; saveUI(); render(); },
+  'sess-step': el => {
+    const list = allSessions(); const i = list.findIndex(s => s.id === ui.sessionId);
+    const n = list[i + +el.dataset.dir]; if (n) { ui.sessionId = n.id; render(); }
+  },
+  'sess-pick': () => sheetSessionPicker(),
+  'pick-session': el => { ui.sessionId = el.dataset.sid; closeSheet(); render(); },
+  'pick-today': () => { ui.sessionId = defaultSession(allSessions())?.id; closeSheet(); render(); },
+  'open-session': el => {
+    const s = sessionById(el.dataset.sid); if (!s) return;
+    ui.sessionId = s.id; ui.tab = 'llista';
+    if (!convoked(s, ui.section)) ui.section = (s.sections && s.sections[0]) || ui.section;
+    closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 });
+  },
+  'mark': el => {
+    const row = el.closest('.row'); const mid = row.dataset.mid;
+    const cur = sessionById(ui.sessionId); const m = S.members.get(mid);
+    const s = el.dataset.s;
+    const current = attDoc(cur.id, m.section)?.marks?.[mid];
+    if (current && current.s === s) setMark(cur, m, null);
+    else setMark(cur, m, { s });
+    if (navigator.vibrate) try { navigator.vibrate(8); } catch {}
+    refreshRow(mid);
+  },
+  'min': el => {
+    const mid = el.closest('.row').dataset.mid;
+    const cur = sessionById(ui.sessionId); const m = S.members.get(mid);
+    setMark(cur, m, { s: 'R', min: +el.dataset.min });
+    refreshRow(mid);
+  },
+  'mark-rest': () => {
+    const cur = sessionById(ui.sessionId);
+    const pending = membersOf(ui.section).filter(m => !isExcluded(cur.prodId, m.id) && !effMark(cur, m));
+    if (!pending.length) return;
+    const key = attKey(cur.id, ui.section);
+    const before = S.attendance.has(key) ? clone(S.attendance.get(key)) : null;
+    const doc = clone(before || { sessionId: cur.id, section: ui.section, marks: {} });
+    for (const m of pending) doc.marks[m.id] = { s: 'P' };
+    doc.updatedAt = new Date().toISOString();
+    S.attendance.set(key, doc); persist('attendance', key, doc);
+    render();
+    toast(`${pending.length} marcats com a presents`, { label: 'Desfés', run: () => {
+      if (before) { S.attendance.set(key, before); persist('attendance', key, before); }
+      else { const d = clone(S.attendance.get(key)); for (const m of pending) delete d.marks[m.id]; S.attendance.set(key, d); persist('attendance', key, d); }
+      render();
+    } });
+  },
+  'summary': () => sheetSummary(),
+  'cal-prod': el => { ui.calProd = el.dataset.id; saveUI(); render(); },
+  'cal-past': () => { ui.calPast = !ui.calPast; ui._calScrolled = false; render(); },
+  'session-new': () => sheetSession(null),
+  'session-edit': el => sheetSession(el.dataset.sid),
+  'stats-prod': el => { ui.statsProd = el.dataset.id; render(); },
+  'stats-sec': el => { ui.statsSec = el.dataset.sec; saveUI(); render(); },
+  'stats-sort': el => { ui.statsSort = el.dataset.k; saveUI(); render(); },
+  'member-stats': el => sheetMemberStats(el.dataset.mid),
+  'export-csv': () => exportCSV(),
+  'export-json': () => exportJSON(),
+  'manage': el => { ui.manage = el.dataset.k; saveUI(); render(); },
+  'member-edit': el => sheetMember(el.dataset.mid),
+  'member-bulk': el => sheetBulk(el.dataset.sec || ui.section),
+  'prod-new': () => sheetProduction(null),
+  'prod-edit': el => sheetProduction(el.dataset.pid),
+  'wipe-demo': () => wipeAll(true),
+  'wipe-all': () => wipeAll(false),
+  'sheet-close': () => closeSheet(),
+};
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]');
+  if (!el || el.disabled) return;
+  const fn = actions[el.dataset.act];
+  if (fn) { e.preventDefault(); fn(el, e); }
+});
+
+let bindTimer = null;
+document.addEventListener('input', e => {
+  const el = e.target.closest('[data-bind]');
+  if (!el) return;
+  const kind = el.dataset.bind;
+  if (kind === 'min' || kind === 'note') {
+    const mid = el.closest('.row').dataset.mid;
+    const cur = sessionById(ui.sessionId); const m = S.members.get(mid);
+    if (kind === 'min') {
+      const v = Math.max(0, Math.min(240, parseInt(el.value, 10) || 0));
+      setMark(cur, m, { s: 'R', min: v || undefined });
+      const row = el.closest('.row');
+      row.querySelectorAll('.min-chip').forEach(c => c.setAttribute('aria-pressed', +c.dataset.min === v));
+      const st = row.querySelector('.state'); st.textContent = v ? `Retard ${v}′` : 'Indica els minuts'; st.classList.toggle('warn', !v);
+    } else {
+      const s = attDoc(cur.id, m.section)?.marks?.[mid]?.s;
+      setMark(cur, m, { s, note: el.value.trim() || undefined });
+    }
+  } else if (kind === 'cfg-name' || kind === 'cfg-alert') {
+    clearTimeout(bindTimer);
+    bindTimer = setTimeout(() => {
+      if (kind === 'cfg-name') { saveConfig({ name: el.value.trim() }); $('#choir-name').textContent = S.config.name; }
+      else { const v = parseInt(el.value, 10); if (v > 0) saveConfig({ alertFNJ: v }); }
+    }, 500);
+  }
+});
+document.addEventListener('change', e => {
+  const el = e.target.closest('[data-bind="import"]');
+  if (el && el.files && el.files[0]) { importJSON(el.files[0]); el.value = ''; }
+  if (e.target.closest('[data-bind="min"]')) refreshRow(e.target.closest('.row').dataset.mid);
+});
+
+/* ================= Boot ================= */
+function connect() {
+  const base = `cors/${CHOIR_KEY}`;
+  db = { doc: p => fs.doc(`${base}/${p}`), collection: p => fs.collection(`${base}/${p}`) };
+  S.mode = 'shared';
+  render();
+  subscribe();
+}
+function init() {
+  loadUI();
+  const cfg = window.COR_FIREBASE;
+  if (!window.firebase || !cfg || !cfg.apiKey || String(cfg.apiKey).startsWith('POSA')) {
+    S.mode = 'setup'; render(); return;
+  }
+  firebase.initializeApp(cfg);
+  fs = firebase.firestore();
+  // Offline cache: roll call keeps working in rehearsal rooms with poor signal.
+  fs.enablePersistence({ synchronizeTabs: true }).catch(() => {});
+  CHOIR_KEY = readKey();
+  if (!CHOIR_KEY) { S.mode = 'nokey'; render(); return; }
+  connect();
+}
+function createChoir() {
+  CHOIR_KEY = newKey();
+  try { localStorage.setItem(LS_KEY, CHOIR_KEY); } catch {}
+  history.replaceState(null, '', `#k=${CHOIR_KEY}`);
+  S.config = { ...S.config, name: '' };
+  connect();
+  ui.tab = 'gestio'; ui.manage = 'config';
+  setTimeout(sheetShare, 400);
+}
+init();
+})();
+</script>
+</body>
+</html>

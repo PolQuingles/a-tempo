@@ -1,0 +1,11 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Cada cor viu a cors/<clau>. La clau només la té qui té l'enllaç (#k=...).
+    // Ningú pot llistar els cors existents; només es pot llegir o escriure dins d'una clau coneguda.
+    match /cors/{clau}/{col}/{docId} {
+      allow read, write: if clau.size() >= 24
+        && col in ['members', 'productions', 'attendance', 'config'];
+    }
+  }
+}
