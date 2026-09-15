@@ -2,8 +2,20 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Cada mòbil entra de manera anònima i registra el seu rol a cors/<cor>/access/<uid>
-    // amb la clau secreta de l'enllaç. El rol només val mentre la clau existeixi a claus/.
+    // ---- Qui és qui ----
+    // Equip (caps de corda, director, administració): entren amb Google i són a cors/<cor>/staff/<email>.
+    // Enllaços (#k=…): claus/<secret> diu el cor i el rol; cada mòbil anònim es registra a cors/<cor>/access/<uid>.
+    //   edit     → enllaç compartit d'edició (transició)
+    //   singer   → enllaç personal d'un cantaire (memberId)
+    //   calendar → lector del calendari per generar el fitxer .ics
+
+    function email() { return request.auth.token.get('email', '').lower(); }
+    function isStaff(c) {
+      return request.auth != null
+        && request.auth.token.get('email_verified', false) == true
+        && exists(/databases/$(database)/documents/cors/$(c)/staff/$(email()));
+    }
+    function staffRole(c) { return get(/databases/$(database)/documents/cors/$(c)/staff/$(email())).data.role; }
     function hasRole(c, roles) {
       let accP = /databases/$(database)/documents/cors/$(c)/access/$(request.auth.uid);
       return request.auth != null
@@ -11,48 +23,79 @@ service cloud.firestore {
         && get(accP).data.role in roles
         && exists(/databases/$(database)/documents/claus/$(get(accP).data.key));
     }
+    function myMember(c) { return get(/databases/$(database)/documents/cors/$(c)/access/$(request.auth.uid)).data.get('memberId', '-'); }
+    function canEdit(c) { return hasRole(c, ['edit']) || isStaff(c); }
+    function isAdmin(c) { return hasRole(c, ['edit']) || (isStaff(c) && staffRole(c) == 'admin'); }
+    function isSinger(c) { return hasRole(c, ['singer']); }
 
-    // claus/<secret> → { choirId, role }. Només qui coneix la clau la pot llegir; no es poden llistar.
     match /claus/{k} {
       allow get: if true;
       allow list: if false;
       allow create: if request.auth != null && k.size() >= 24
-        && request.resource.data.keys().hasOnly(['choirId', 'role', 'at'])
-        && request.resource.data.role in ['edit', 'view', 'singer']
-        && (hasRole(request.resource.data.choirId, ['edit'])
+        && request.resource.data.keys().hasOnly(['choirId', 'role', 'at', 'memberId'])
+        && request.resource.data.role in ['edit', 'singer', 'calendar']
+        && ((request.resource.data.role == 'singer' && canEdit(request.resource.data.choirId))
+            || isAdmin(request.resource.data.choirId)
             || (!exists(/databases/$(database)/documents/cors/$(request.resource.data.choirId)/config/main)
                 && existsAfter(/databases/$(database)/documents/cors/$(request.resource.data.choirId)/config/main)));
-      allow delete: if hasRole(resource.data.choirId, ['edit']);
+      allow delete: if (resource.data.role == 'singer' && canEdit(resource.data.choirId)) || isAdmin(resource.data.choirId);
+    }
+
+    match /staffIndex/{e} {
+      allow get: if request.auth != null && request.auth.token.get('email_verified', false) == true && email() == e;
+      allow create, update: if request.resource.data.keys().hasOnly(['choirId']) && isAdmin(request.resource.data.choirId);
+      allow delete: if isAdmin(resource.data.choirId);
     }
 
     match /cors/{c} {
       match /access/{u} {
         allow read: if request.auth != null && request.auth.uid == u;
         allow create, update: if request.auth != null && request.auth.uid == u
-          && request.resource.data.keys().hasOnly(['role', 'key', 'at'])
+          && request.resource.data.keys().hasOnly(['role', 'key', 'at', 'memberId'])
           && getAfter(/databases/$(database)/documents/claus/$(request.resource.data.key)).data.choirId == c
-          && getAfter(/databases/$(database)/documents/claus/$(request.resource.data.key)).data.role == request.resource.data.role;
+          && getAfter(/databases/$(database)/documents/claus/$(request.resource.data.key)).data.role == request.resource.data.role
+          && getAfter(/databases/$(database)/documents/claus/$(request.resource.data.key)).data.get('memberId', '') == request.resource.data.get('memberId', '');
         allow delete: if request.auth != null && request.auth.uid == u;
       }
       match /config/main {
         allow create: if request.auth != null && !exists(/databases/$(database)/documents/cors/$(c)/config/main);
       }
       match /{col}/{doc} {
-        allow read: if (col in ['members', 'productions', 'attendance', 'config'] && hasRole(c, ['edit', 'view']))
-                    || (col in ['members', 'productions', 'config'] && hasRole(c, ['singer']));
-        allow write: if col in ['members', 'productions', 'attendance', 'config'] && hasRole(c, ['edit']);
+        allow read: if (col in ['members', 'productions', 'attendance', 'config', 'staff', 'subs', 'rsvp'] && canEdit(c))
+                    || (col in ['members', 'productions', 'config'] && isSinger(c))
+                    || (col in ['productions', 'config'] && hasRole(c, ['calendar']));
+        allow write: if col in ['members', 'productions', 'attendance', 'config', 'subs', 'rsvp'] && canEdit(c);
+      }
+      match /staff/{e} {
+        allow write: if isAdmin(c);
       }
       match /secrets/{doc} {
-        allow read, write: if hasRole(c, ['edit']);
+        allow read, write: if canEdit(c);
+      }
+      // Substitut: pot passar llista d'aquella sessió i corda fins que caduca.
+      match /attendance/{id} {
+        allow read, write: if isSinger(c)
+          && exists(/databases/$(database)/documents/cors/$(c)/subs/$(id))
+          && get(/databases/$(database)/documents/cors/$(c)/subs/$(id)).data.memberId == myMember(c)
+          && request.time.toMillis() < get(/databases/$(database)/documents/cors/$(c)/subs/$(id)).data.until;
+      }
+      match /subs/{id} {
+        allow read: if isSinger(c) && resource.data.memberId == myMember(c);
       }
       match /absences/{id} {
-        allow read: if hasRole(c, ['edit', 'view'])
-                    || (hasRole(c, ['singer']) && resource.data.uid == request.auth.uid);
+        allow read: if canEdit(c) || (isSinger(c) && resource.data.memberId == myMember(c));
         allow create: if request.resource.data.uid == request.auth.uid
-          && (hasRole(c, ['edit']) || (hasRole(c, ['singer']) && request.resource.data.status == 'pending'));
-        allow update: if hasRole(c, ['edit']);
-        allow delete: if hasRole(c, ['edit'])
-          || (hasRole(c, ['singer']) && resource.data.uid == request.auth.uid && resource.data.status == 'pending');
+          && (canEdit(c) || (isSinger(c) && request.resource.data.status == 'pending' && request.resource.data.memberId == myMember(c)));
+        allow update: if canEdit(c);
+        allow delete: if canEdit(c)
+          || (isSinger(c) && resource.data.memberId == myMember(c) && resource.data.status == 'pending');
+      }
+      match /rsvp/{id} {
+        allow read: if isSinger(c) && resource.data.memberId == myMember(c);
+        allow create, update: if isSinger(c)
+          && request.resource.data.memberId == myMember(c)
+          && id == request.resource.data.sessionId + '_' + myMember(c)
+          && request.resource.data.answer in ['yes', 'no'];
       }
     }
   }
