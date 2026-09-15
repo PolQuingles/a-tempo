@@ -216,7 +216,7 @@ details.np-group[open] summary .chev{transform:rotate(180deg)}
 .chev{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
 
 .empty{text-align:center;padding:48px 16px;color:var(--muted)}
-.empty .h2{color:var(--ink);margin-bottom:8px}
+.empty .h2, .empty .h1{color:var(--ink);margin-bottom:8px}
 .empty p{max-width:34ch;margin:0 auto 18px}
 .staff{display:block;width:120px;height:30px;margin:0 auto 18px;color:var(--accent-line)}
 
@@ -1088,7 +1088,7 @@ function manageConfig() {
     <div class="setting"><div><div class="t">Enllaç per als caps de corda</div><div class="s">Qui tingui l’enllaç pot passar llista i editar. Els canvis es veuen a l’instant a tots els mòbils.</div></div><button class="btn btn-sm btn-primary" data-act="share">Comparteix</button></div>
   </div>
   <div class="panel" style="margin-top:12px">
-    <div class="setting" style="display:grid;gap:10px">
+    <div class="setting" style="display:grid;grid-template-columns:1fr;gap:10px">
       <label class="field"><span>Nom del cor</span><input class="inp" id="cfg-name" type="text" maxlength="60" value="${esc(S.config.name || '')}" data-bind="cfg-name" placeholder="p. ex. Cor de Cambra de Sant Cugat"></label>
     </div>
     <div class="setting">
