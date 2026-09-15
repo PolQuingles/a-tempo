@@ -706,10 +706,12 @@ const ROLE_HINT = {
 };
 const EDIT_ROLES = new Set(['admin', 'director', 'leader']);
 const roleLevel = r => EDIT_ROLES.has(r) ? 'edit' : 'read';
-const canEdit = () => S.role === 'edit';
-const isAdmin = () => S.role === 'edit' && (!S.me || S.me.role === 'admin');
+// «Mira-ho com un cantaire»: només canvia el que es veu en aquest mòbil, no els permisos.
+let PREVIEW = null;
+const canEdit = () => S.role === 'edit' && !PREVIEW;
+const isAdmin = () => S.role === 'edit' && !PREVIEW && (!S.me || S.me.role === 'admin');
 /** The member this account really is (from the account record or a personal link), if any. */
-const myId = () => (S.memberId && S.members.has(S.memberId)) ? S.memberId : null;
+const myId = () => { const id = PREVIEW ? PREVIEW.memberId : S.memberId; return id && S.members.has(id) ? id : null; };
 /** Narrow personal link: only «El meu espai», no access to the rest of the app. */
 const isLinkOnly = () => S.role === 'singer';
 const subKey = (sid, sec) => `${sid}_${sec}`;
@@ -1236,6 +1238,7 @@ function renderBanner() {
   const b = $('#banner');
   let h = '';
   if (S.error) h += `<div class="banner warn"><span>${esc(S.error)}</span><button class="btn btn-sm" data-act="reload">Recarrega</button></div>`;
+  if (PREVIEW) h += `<div class="banner"><span>Estàs veient l’app com <b>${esc(S.members.get(PREVIEW.memberId)?.name || '')}</b>. No pots canviar res.</span><button class="btn btn-sm" data-act="preview-off">Torna a l’edició</button></div>`;
   if (S.config.demo && canEdit() && S.mode === 'shared') h += `<div class="banner"><span><b>Dades d’exemple.</b> Quan vulguis començar amb el teu cor, esborra-les.</span><button class="btn btn-sm" data-act="wipe-demo">Esborra l’exemple</button></div>`;
   b.innerHTML = h;
 }
@@ -1775,7 +1778,7 @@ function manageConfig() {
   <div class="sec-h"><h2 class="h2">Persones</h2><button class="btn btn-sm btn-primary" data-act="staff-new">+ Persona</button></div>
   <div class="panel">
     <div class="setting"><div><div class="t">${withAccount} de ${members.length} cantaires ja tenen accés</div><div class="s">Tothom entra pel mateix enllaç amb el seu correu. Els cantaires i el Palau ho veuen tot en <b>mode lectura</b>; administració, direcció i caps de corda poden editar.</div></div>
-      <span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" data-act="share-app">Enllaç de l’app</button><button class="btn btn-sm" data-act="staff-bulk">Enganxa una llista</button></span></div>
+      <span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" data-act="share-app">Enllaç de l’app</button><button class="btn btn-sm" data-act="staff-bulk">Enganxa una llista</button><button class="btn btn-sm" data-act="preview-on">Mira-ho com un cantaire</button></span></div>
     ${people.length ? `<ul class="list" style="border:0;border-radius:0;border-top:1px solid var(--line)">${people.map(p => `<li class="li"><button data-act="staff-edit" data-email="${esc(p.email)}">
       <span><span class="t">${esc(p.name || p.email)}</span> <span class="role-tag">${esc(roleSummary(p))}</span><br><span class="s mono">${esc(p.email)}</span></span>
       <span class="icon-btn" aria-hidden="true">${ICON.go}</span></button></li>`).join('')}</ul>`
@@ -1997,7 +2000,7 @@ function sheetMyAttendance() {
 }
 /* ---------- View: Singer (avisos) ---------- */
 function myMemberId() {
-  if (S.memberId && S.members.has(S.memberId)) return S.memberId;
+  if (myId()) return myId();
   // Self-declared identity only helps whoever could write anyway; the rest is decided by the account.
   if (!canEdit()) return null;
   try { const id = localStorage.getItem(LS_ME); return id && S.members.has(id) ? id : null; } catch { return null; }
@@ -2009,7 +2012,7 @@ function openConvocations(me) {
 function viewSinger() {
   const me = S.members.get(myMemberId());
   if (!me) return `<div class="empty">${staffSvg()}<h2 class="h2">Compte sense cantaire</h2><p>El teu correu encara no està vinculat a cap fitxa de la plantilla. Demana-ho a l’administració del cor.</p></div>`;
-  const mine = [...S.absences.values()].sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+  const mine = [...S.absences.values()].filter(a => a.memberId === me.id).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
   const next = allSessions().filter(s => s.date >= TODAY && convoked(s, me.section))[0];
   const subs = mySubs();
   const convs = openConvocations(me);
@@ -2746,6 +2749,24 @@ function sheetStaffBulk() {
     },
   });
 }
+/** See the app the way a singer sees it: read-only, with their own space. */
+function sheetPreview() {
+  openSheet({
+    title: 'Mira-ho com un cantaire',
+    body: `<p style="margin-top:0">Tria un cantaire i veuràs l’app exactament com la veu ell: pot consultar-ho tot, però no pot canviar res. Només afecta aquest mòbil i se’n surt amb un botó.</p>
+      <label class="field"><span>Cantaire</span><select class="inp" id="pv-m">${memberOptions(myId() || '')}</select></label>`,
+    foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="pv-ok">Mira-ho</button>`,
+    onMount: el => {
+      el.querySelector('#pv-ok').onclick = () => {
+        const id = el.querySelector('#pv-m').value;
+        if (!id) { toast('Tria un cantaire'); return; }
+        PREVIEW = { memberId: id };
+        ui.tab = 'avisos'; ui.rollSec = null;
+        closeSheet(); render(); window.scrollTo({ top: 0 });
+      };
+    },
+  });
+}
 /** Once everybody has an account, the 69 personal links are no longer needed. */
 async function wipePersonalLinks() {
   const map = S.secretsMembers || {};
@@ -3330,8 +3351,8 @@ async function wipeAll(demo) {
 
 /* ================= Events ================= */
 const SUB_OK = new Set(['mark', 'min', 'mark-rest']);
-const ADMIN_ONLY = new Set(['staff-new', 'staff-edit', 'staff-bulk', 'edit-link-off', 'link-regen', 'brand-color', 'logo-remove', 'wipe-all', 'links-wipe', 'share-app']);
-const EDIT_ONLY = new Set(['mark', 'min', 'mark-rest', 'session-new', 'sub-set', 'ann-new', 'ann-edit', 'mat-new', 'mat-edit', 'poll-new', 'poll-edit', 'poll-results', 'poll-remind', 'rsvp-remind', 'links-generate', 'links-copy', 'links-wipe', 'member-link', 'share-app', 'staff-bulk', 'session-edit', 'member-edit', 'member-bulk', 'prod-new', 'prod-edit',
+const ADMIN_ONLY = new Set(['staff-new', 'staff-edit', 'staff-bulk', 'preview-on', 'edit-link-off', 'link-regen', 'brand-color', 'logo-remove', 'wipe-all', 'links-wipe', 'share-app']);
+const EDIT_ONLY = new Set(['mark', 'min', 'mark-rest', 'session-new', 'sub-set', 'ann-new', 'ann-edit', 'mat-new', 'mat-edit', 'poll-new', 'poll-edit', 'poll-results', 'poll-remind', 'rsvp-remind', 'links-generate', 'links-copy', 'links-wipe', 'member-link', 'share-app', 'staff-bulk', 'preview-on', 'session-edit', 'member-edit', 'member-bulk', 'prod-new', 'prod-edit',
   'wipe-demo', 'wipe-all', 'load-demo', 'export-json', 'abs-accept', 'abs-reject', 'abs-delete', 'link-regen', 'manage']);
 const actions = {
   'tab': el => { ui.tab = el.dataset.tab; ui.rollSec = null; ui._calScrolled = false; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
@@ -3342,6 +3363,8 @@ const actions = {
   'help': () => sheetHelp(),
   'staff-new': () => sheetStaff(null),
   'staff-bulk': () => sheetStaffBulk(),
+  'preview-on': () => sheetPreview(),
+  'preview-off': () => { PREVIEW = null; ui.tab = 'gestio'; ui.manage = 'config'; ui.rollSec = null; render(); window.scrollTo({ top: 0 }); },
   'share-app': () => sheetShareApp(),
   'links-wipe': () => wipePersonalLinks(),
   'staff-edit': el => sheetStaff(el.dataset.email),
