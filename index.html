@@ -525,6 +525,42 @@ textarea.inp{padding:10px 12px;min-height:120px;resize:vertical;line-height:1.4}
 .swatch[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 2px var(--surface)}
 .logo-prev{width:72px;height:72px;object-fit:contain;border-radius:14px;background:var(--surface-2);border:1px solid var(--line)}
 
+/* ---------- Board: announcements, materials, polls ---------- */
+.ann{padding:14px;border-top:1px solid var(--line);display:grid;gap:6px}
+.ann:first-child{border-top:0}
+.ann-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.ann-t{font-family:var(--f-display);font-weight:600;font-size:19px;line-height:1.2;text-wrap:balance}
+.ann-b{font-size:14.5px;line-height:1.5;color:var(--ink-2);white-space:pre-wrap;overflow-wrap:anywhere}
+.ann-b a{color:var(--accent)}
+.ann-m{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--muted)}
+.ann.pinned{background:var(--accent-soft)}
+.pin{font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent)}
+.mat{display:flex;align-items:center;gap:12px;padding:11px 14px;border-top:1px solid var(--line)}
+.mat:first-child{border-top:0}
+.mat-k{flex:none;width:38px;height:38px;border-radius:10px;display:grid;place-items:center;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;background:var(--surface-2);color:var(--ink-2)}
+.mat-k.partitura{background:var(--accent-soft);color:var(--accent)}
+.mat-k.audio{background:var(--r-soft);color:var(--r-ink)}
+.mat-k.video{background:var(--fj-soft);color:var(--fj-ink)}
+.mat-i{flex:1;min-width:0}
+.mat-i a{font-weight:600;color:var(--ink);text-decoration:none;display:block;overflow-wrap:anywhere}
+.mat-i a:hover{text-decoration:underline}
+.mat-i small{font-size:12px;color:var(--muted)}
+.poll{padding:14px;border-top:1px solid var(--line);display:grid;gap:10px}
+.poll:first-child{border-top:0}
+.opt-row{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;font-size:14px}
+.opt-row input{width:20px;height:20px;accent-color:var(--accent)}
+.opt-bar{grid-column:2 / 4;height:6px;border-radius:6px;background:var(--surface-2);overflow:hidden}
+.opt-bar span{display:block;height:100%;background:var(--accent)}
+.opt-row.best .opt-bar span{background:var(--p)}
+.opt-row .n{font-family:var(--f-mono);font-size:13px;color:var(--ink-2)}
+.my-att{padding:14px;display:grid;gap:10px}
+.my-att .big{font-family:var(--f-display);font-weight:600;font-size:40px;line-height:1}
+.my-att .big small{font-size:18px;color:var(--muted)}
+.dots{display:flex;flex-wrap:wrap;gap:4px}
+.dots i{width:14px;height:14px;border-radius:4px;background:var(--surface-2);border:1px dashed var(--line-strong)}
+.dots i.s-P{background:var(--p);border:0}.dots i.s-R{background:var(--r);border:0}.dots i.s-FJ{background:var(--fj);border:0}.dots i.s-FNJ{background:var(--fnj);border:0}.dots i.s-NP{background:var(--np);border:0}
+.remind-list li{align-items:center}
+
 @media (min-width:700px){
   .session-date{font-size:30px}
   .opt{font-size:12.5px}
@@ -636,6 +672,11 @@ const S = {
   staff: new Map(),       // email -> { email, name, role: admin|director|leader, section }
   subs: new Map(),        // <sessionId>_<corda> -> substitute for that roll call
   rsvp: new Map(),        // <sessionId>_<memberId> -> { answer: yes|no, note }
+  announcements: new Map(),
+  polls: new Map(),
+  pollVotes: new Map(),   // <pollId>_<memberId> -> { choices, note }
+  memberMarks: new Map(), // staff: per-singer copy of their own marks
+  myMarks: null,          // singer: my own marks
   secrets: null,
   secretsMembers: null,   // memberId -> personal link key
   me: null,               // staff record when signed in with Google
@@ -752,10 +793,11 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 
 function subscribe() {
   const staff = S.role === 'edit';
-  const wanted = ['members', 'productions', 'config', 'absences', 'subs', 'rsvp'];
-  if (staff) wanted.push('attendance', 'secrets', 'secretsMembers', 'staff');
+  const wanted = ['members', 'productions', 'config', 'absences', 'subs', 'rsvp', 'announcements', 'polls', 'pollVotes'];
+  if (staff) wanted.push('attendance', 'secrets', 'secretsMembers', 'staff', 'memberMarks');
+  else wanted.push('myMarks');
   const loaded = new Set();
-  const markLoaded = k => { loaded.add(k); if (loaded.size >= wanted.length && !S.ready) { S.ready = true; render(); } };
+  const markLoaded = k => { loaded.add(k); if (loaded.size >= wanted.length && !S.ready) { S.ready = true; render(); if (staff) scheduleMirror(); } };
   const onCol = col => snap => {
     const next = new Map();
     for (const d of snap.docs) {
@@ -766,15 +808,18 @@ function subscribe() {
     for (const [id, v] of S[col]) if (!next.has(id) && isDirty(`${col}/${id}`) && queue.get(`${col}/${id}`)?.data !== null) next.set(id, v);
     S[col] = next;
     if (col === 'subs' && !staff) watchSubAttendance();
+    if (staff && (col === 'attendance' || col === 'memberMarks' || col === 'members' || col === 'productions')) scheduleMirror();
     markLoaded(col);
     if (S.ready) scheduleRender();
   };
   const mine = col => staff ? db.collection(col) : db.collection(col).where('memberId', '==', S.memberId || '-');
-  for (const col of ['members', 'productions']) db.collection(col).onSnapshot(onCol(col), onDbError);
-  for (const col of ['absences', 'subs', 'rsvp']) mine(col).onSnapshot(onCol(col), e => { markLoaded(col); if (staff) onDbError(e); });
+  for (const col of ['members', 'productions', 'announcements', 'polls']) db.collection(col).onSnapshot(onCol(col), e => { markLoaded(col); if (col === 'members' || col === 'productions') onDbError(e); });
+  for (const col of ['absences', 'subs', 'rsvp', 'pollVotes']) mine(col).onSnapshot(onCol(col), e => { markLoaded(col); if (staff && col !== 'pollVotes') onDbError(e); });
+  if (!staff) db.doc(`memberMarks/${S.memberId || '-'}`).onSnapshot(snap => { S.myMarks = snap.exists ? snap.data() : null; markLoaded('myMarks'); if (S.ready) scheduleRender(); }, () => markLoaded('myMarks'));
   if (staff) {
     db.collection('attendance').onSnapshot(onCol('attendance'), onDbError);
     db.collection('staff').onSnapshot(onCol('staff'), () => markLoaded('staff'));
+    db.collection('memberMarks').onSnapshot(onCol('memberMarks'), () => markLoaded('memberMarks'));
     db.doc('secrets/main').onSnapshot(snap => { S.secrets = snap.exists ? snap.data() : null; markLoaded('secrets'); if (S.ready) scheduleRender(); }, () => markLoaded('secrets'));
     db.doc('secrets/members').onSnapshot(snap => { S.secretsMembers = snap.exists ? snap.data() : {}; markLoaded('secretsMembers'); if (S.ready) scheduleRender(); }, () => markLoaded('secretsMembers'));
   }
@@ -844,7 +889,13 @@ function sessionById(id) {
 const sessionProds = s => [s.prodId, ...(s.alsoIn || [])];
 const prodNames = s => sessionProds(s).map(id => S.productions.get(id)?.name).filter(Boolean).join(' + ');
 const attKey = (sid, sec) => `${sid}_${sec}`;
-const attDoc = (sid, sec) => S.attendance.get(attKey(sid, sec));
+const attDoc = (sid, sec) => S.attendance.get(attKey(sid, sec)) || myMarkDoc(sid, sec);
+function myMarkDoc(sid, sec) {
+  if (S.role !== 'singer' || !S.myMarks) return undefined;
+  const me = S.members.get(S.memberId);
+  const mk = me && me.section === sec && S.myMarks.marks?.[sid];
+  return mk ? { marks: { [me.id]: mk } } : undefined;
+}
 const isExcluded = (prodId, mid) => !!(S.productions.get(prodId)?.excluded || []).includes(mid);
 const convoked = (s, sec) => !s.sections || !s.sections.length || s.sections.includes(sec);
 const onLeave = (m, date) => (m.leaves || []).find(l => l.from && l.from <= date && (!l.to || l.to >= date));
@@ -1004,6 +1055,7 @@ function setMark(session, member, patch) {
   doc.updatedAt = new Date().toISOString();
   S.attendance.set(key, doc);
   persist('attendance', key, doc);
+  scheduleMirror();
 }
 function saveMember(m) { S.members.set(m.id, m); persist('members', m.id, m, 50); }
 function saveProduction(p) { S.productions.set(p.id, p); persist('productions', p.id, p, 50); }
@@ -1017,6 +1069,34 @@ async function removeMany(paths, label) {
   }
 }
 
+/* ---------- Per-singer copy of marks (so each singer can see only their own) ---------- */
+const canon = v => JSON.stringify(v, (k, x) => x && typeof x === 'object' && !Array.isArray(x) ? Object.fromEntries(Object.keys(x).sort().map(key => [key, x[key]])) : x);
+let mirrorTimer = null;
+function scheduleMirror() { if (!canEdit() || !S.ready) return; clearTimeout(mirrorTimer); mirrorTimer = setTimeout(reconcileMirrors, 4000); }
+function reconcileMirrors() {
+  if (!canEdit()) return;
+  const byMember = new Map();
+  for (const [key, d] of S.attendance) {
+    const sid = d.sessionId || key.slice(0, key.lastIndexOf('_'));
+    for (const [mid, mk] of Object.entries(d.marks || {})) {
+      if (!mk || !mk.s) continue;
+      const rec = { s: mk.s };
+      if (mk.min) rec.min = mk.min;
+      if (mk.note) rec.note = mk.note;
+      if (!byMember.has(mid)) byMember.set(mid, {});
+      byMember.get(mid)[sid] = rec;
+    }
+  }
+  let i = 0;
+  for (const m of S.members.values()) {
+    const next = { memberId: m.id, section: m.section, marks: byMember.get(m.id) || {} };
+    const prev = S.memberMarks.get(m.id);
+    if (prev && canon(prev.marks || {}) === canon(next.marks) && prev.section === next.section) continue;
+    if (!prev && !Object.keys(next.marks).length) continue;
+    S.memberMarks.set(m.id, next);
+    persist('memberMarks', m.id, next, 20 + (i++) * 25);
+  }
+}
 function saveAbsence(a) { S.absences.set(a.id, a); persist('absences', a.id, a, 30); }
 /** Accepting a «no vindré» notice marks those sessions as justified (unless already marked by hand). */
 function acceptAbsence(a) {
@@ -1051,16 +1131,17 @@ const TAB_ICONS = {
   calendari: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
   stats: '<path d="M5 20V11M10 20V5M15 20v-7M20 20V8"/>',
   gestio: '<circle cx="9" cy="8" r="3.2"/><path d="M3.5 19.5c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><path d="M16 5.2a3 3 0 010 5.6M18 14.8c1.5.7 2.4 2.2 2.6 4.7"/>',
-  avisos: '<path d="M6 16V11a6 6 0 0112 0v5l1.5 2h-15z"/><path d="M10 20.5a2.2 2.2 0 004 0"/>',
+  avisos: '<circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c.8-3.8 3.7-6 7.5-6s6.7 2.2 7.5 6"/>',
+  tauler: '<rect x="3.5" y="4" width="17" height="16" rx="2.5"/><path d="M7.5 9h9M7.5 13h9M7.5 17h5"/>',
 };
-const TAB_LABEL = { llista: 'Llista', calendari: 'Calendari', stats: 'Estadístiques', gestio: 'Gestió', avisos: 'Avisos' };
-const tabsForRole = () => S.role === 'singer' ? ['avisos', ...(mySubs().length ? ['llista'] : []), 'calendari'] : S.role === 'view' ? ['llista', 'calendari', 'stats'] : ['llista', 'calendari', 'stats', 'gestio'];
+const TAB_LABEL = { llista: 'Llista', calendari: 'Calendari', stats: 'Estadístiques', gestio: 'Gestió', avisos: 'El meu espai', tauler: 'Tauler' };
+const tabsForRole = () => S.role === 'singer' ? ['avisos', 'tauler', ...(mySubs().length ? ['llista'] : []), 'calendari'] : S.role === 'view' ? ['llista', 'calendari', 'stats'] : ['llista', 'calendari', 'stats', 'tauler', 'gestio'];
 function renderTabs() {
   const tabs = tabsForRole();
   if (!tabs.includes(ui.tab)) ui.tab = tabs[0];
   const badge = S.role === 'edit' ? pendingAbsences().length : 0;
   $('.tabs-in').innerHTML = tabs.map(t => `<button class="tab" data-act="tab" data-tab="${t}" aria-current="${t === ui.tab ? 'page' : 'false'}">
-    <span class="tab-ico"><svg viewBox="0 0 24 24">${TAB_ICONS[t]}</svg>${t === 'gestio' && badge ? `<span class="tab-badge">${badge}</span>` : ''}</span>${TAB_LABEL[t]}</button>`).join('');
+    <span class="tab-ico"><svg viewBox="0 0 24 24">${TAB_ICONS[t]}</svg>${t === 'gestio' && badge ? `<span class="tab-badge">${badge}</span>` : ''}${t === 'tauler' && boardBadge() ? `<span class="tab-badge">${boardBadge()}</span>` : ''}</span>${TAB_LABEL[t]}</button>`).join('');
 }
 /* ---------- Brand: logo and accent colour ---------- */
 function hexToHsl(hex) {
@@ -1126,7 +1207,7 @@ function render() {
     v.innerHTML = `<div class="empty">${staffSvg()}<p>Carregant la llista del cor…</p></div>`;
     return;
   }
-  const html = { llista: viewRoll, calendari: viewCalendar, stats: viewStats, gestio: viewManage, avisos: viewSinger }[ui.tab]();
+  const html = { llista: viewRoll, calendari: viewCalendar, stats: viewStats, gestio: viewManage, avisos: viewSinger, tauler: viewBoard }[ui.tab]();
   v.innerHTML = html;
   afterRender();
 }
@@ -1257,7 +1338,7 @@ function rsvpPanel(session) {
     <div class="panel rsvp-panel">
       <div class="rsvp-nums"><span><b style="color:var(--p)">${r.yes}</b><span>hi seran</span></span><span><b style="color:var(--fnj)">${r.no}</b><span>no hi seran</span></span><span><b style="color:var(--muted)">${r.none}</b><span>sense resposta</span></span></div>
       <div class="legend" style="margin:0">${SECTIONS.filter(x => r.bySec[x.id]).map(x => `<span><b>${x.id}</b> ${r.bySec[x.id].yes}✓ ${r.bySec[x.id].no}✗ ${r.bySec[x.id].none}?</span>`).join('')}</div>
-      <button class="btn btn-sm" data-act="rsvp-list" data-sid="${session.id}" style="justify-self:start">Veure les respostes</button>
+      <span style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-sm" data-act="rsvp-list" data-sid="${session.id}">Veure les respostes</button>${r.none && session.date >= TODAY ? `<button class="btn btn-sm btn-primary" data-act="rsvp-remind" data-sid="${session.id}">Recorda-ho als ${r.none} que falten</button>` : ''}</span>
     </div>`;
 }
 function viewRollSection(cur, list, sec, pendingBySec) {
@@ -1737,6 +1818,156 @@ function manageConfig() {
   </div>`;
 }
 
+/* ---------- View: Board (announcements, materials, polls) ---------- */
+const LS_SEEN = 'corpresent:tauler-vist';
+const MAT_KINDS = { partitura: 'Partitura', audio: 'Àudio', video: 'Vídeo', altres: 'Altres' };
+const linkify = t => esc(t).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
+const mySection = () => S.members.get(myMemberId())?.section || null;
+const forMe = x => canEdit() || !x.sections?.length || x.sections.includes(mySection());
+function visibleAnnouncements() {
+  return [...S.announcements.values()]
+    .filter(a => forMe(a) && (canEdit() || !a.until || a.until >= TODAY))
+    .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (b.createdAt || '').localeCompare(a.createdAt || ''));
+}
+const openPolls = () => [...S.polls.values()].filter(p => forMe(p) && !p.closed && (!p.closesAt || p.closesAt >= TODAY));
+function boardBadge() {
+  let seen = '';
+  try { seen = localStorage.getItem(LS_SEEN) || ''; } catch {}
+  const news = visibleAnnouncements().filter(a => (a.createdAt || '') > seen).length;
+  const polls = S.role === 'singer' ? openPolls().filter(p => !S.pollVotes.get(`${p.id}_${S.memberId}`)).length : 0;
+  return news + polls;
+}
+function viewBoard() {
+  if (!['anuncis', 'materials', 'enquestes'].includes(ui.board)) ui.board = 'anuncis';
+  if (ui.board === 'anuncis') { try { localStorage.setItem(LS_SEEN, new Date().toISOString()); } catch {} setTimeout(renderTabs, 0); }
+  const tabs = [['anuncis', 'Anuncis'], ['materials', 'Materials'], ['enquestes', 'Enquestes']];
+  const head = `<div class="page-head"><h1 class="h1">Tauler</h1></div>
+    <div class="subtabs" role="tablist" style="margin-bottom:10px">${tabs.map(([k, l]) => `<button class="subtab" role="tab" aria-selected="${ui.board === k}" data-act="board" data-k="${k}">${l}</button>`).join('')}</div>`;
+  if (ui.board === 'materials') return head + boardMaterials();
+  if (ui.board === 'enquestes') return head + boardPolls();
+  return head + boardAnnouncements();
+}
+function boardAnnouncements() {
+  const list = visibleAnnouncements();
+  const active = list.filter(a => !a.until || a.until >= TODAY);
+  const expired = list.filter(a => a.until && a.until < TODAY);
+  const card = a => `<article class="ann ${a.pinned ? 'pinned' : ''}">
+      <div class="ann-h"><h2 class="ann-t">${esc(a.title)}</h2>${canEdit() ? `<button class="icon-btn" data-act="ann-edit" data-id="${a.id}" aria-label="Edita l’anunci">${ICON.more}</button>` : ''}</div>
+      ${a.body ? `<div class="ann-b">${linkify(a.body)}</div>` : ''}
+      <div class="ann-m">${a.pinned ? '<span class="pin">Fixat</span>' : ''}<span>${esc(a.author || '')}</span><span class="mono">${a.createdAt ? ddmm(a.createdAt.slice(0, 10)) : ''}</span>
+        ${a.sections?.length ? `<span>Per a: ${a.sections.map(x => SEC[x].name).join(', ')}</span>` : ''}${a.until ? `<span>Fins al ${ddmm(a.until)}</span>` : ''}</div>
+    </article>`;
+  return `${canEdit() ? '<div class="sec-h" style="margin-top:6px"><span class="muted" style="font-size:13px">Els veuen tots els cantaires (o només les cordes triades).</span><button class="btn btn-sm btn-primary" data-act="ann-new">+ Anunci</button></div>' : ''}
+    ${active.length ? `<div class="panel">${active.map(card).join('')}</div>` : `<div class="empty"><p>No hi ha anuncis.</p></div>`}
+    ${canEdit() && expired.length ? `<details class="np-group"><summary><span>Caducats (${expired.length})</span>${ICON.chev}</summary><div class="panel">${expired.map(card).join('')}</div></details>` : ''}`;
+}
+function boardMaterials() {
+  const prods = productionsSorted();
+  if (!ui.matProd || !S.productions.has(ui.matProd)) ui.matProd = currentProductionId();
+  const prod = S.productions.get(ui.matProd);
+  if (!prod) return '<div class="empty"><p>Encara no hi ha produccions.</p></div>';
+  const me = S.members.get(myMemberId());
+  const onlyMine = S.role === 'singer' && ui.matMine !== false;
+  const items = (prod.materials || []).filter(x => !onlyMine || !me || ((!x.section || x.section === me.section) && (!x.part || !me.part || me.part.includes(x.part) || x.part.includes(me.part))));
+  const chips = `<div class="chips" role="group" aria-label="Producció">${prods.map(p => `<button class="chip" aria-pressed="${p.id === prod.id}" data-act="mat-prod" data-id="${p.id}"><i class="pdot prod-tone" style="--ph:${prodHue(p)}"></i>${esc(p.name)}${(p.materials || []).length ? ` · ${(p.materials || []).length}` : ''}</button>`).join('')}</div>`;
+  const tools = S.role === 'singer'
+    ? `<div class="sec-h" style="margin-top:4px"><span class="muted" style="font-size:13px">${onlyMine ? `Mostrant el material per a ${SEC[me.section].name.toLowerCase()}${me.part ? ` ${me.part}` : ''}` : 'Mostrant tot el material'}</span><button class="btn btn-sm btn-ghost" data-act="mat-mine">${onlyMine ? 'Mostra-ho tot' : 'Només la meva veu'}</button></div>`
+    : `<div class="sec-h" style="margin-top:4px"><span class="muted" style="font-size:13px">Enllaços a Drive, Dropbox, YouTube…</span><button class="btn btn-sm btn-primary" data-act="mat-new">+ Material</button></div>`;
+  const order = Object.keys(MAT_KINDS);
+  const sorted = [...items].sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind) || a.title.localeCompare(b.title, 'ca'));
+  const row = x => `<div class="mat"><span class="mat-k ${x.kind}">${MAT_KINDS[x.kind]?.slice(0, 4) || ''}</span>
+      <span class="mat-i"><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.title)}</a><small>${[MAT_KINDS[x.kind], x.section ? SEC[x.section].name : 'Tot el cor', x.part ? `veu ${esc(x.part)}` : ''].filter(Boolean).join(' · ')}</small></span>
+      ${canEdit() ? `<button class="icon-btn" data-act="mat-edit" data-pid="${prod.id}" data-id="${x.id}" aria-label="Edita">${ICON.more}</button>` : ''}</div>`;
+  return chips + tools + (sorted.length ? `<div class="panel">${sorted.map(row).join('')}</div>` : `<div class="empty"><p>Encara no hi ha material per a ${esc(prod.name)}.</p></div>`);
+}
+function pollExpected(p) {
+  return membersOf(null).filter(m => !p.sections?.length || p.sections.includes(m.section));
+}
+function pollResults(p) {
+  const counts = Object.fromEntries((p.options || []).map(o => [o.id, 0]));
+  let voters = 0;
+  for (const v of S.pollVotes.values()) {
+    if (v.pollId !== p.id) continue;
+    voters++;
+    for (const c of v.choices || []) if (c in counts) counts[c]++;
+  }
+  return { counts, voters, expected: pollExpected(p).length };
+}
+function boardPolls() {
+  const all = [...S.polls.values()].filter(forMe).sort((a, b) => (a.closed ? 1 : 0) - (b.closed ? 1 : 0) || (b.createdAt || '').localeCompare(a.createdAt || ''));
+  const card = p => {
+    const closed = p.closed || (p.closesAt && p.closesAt < TODAY);
+    const meta = `<div class="ann-m">${closed ? '<span class="st-pill st-rejected">Tancada</span>' : '<span class="st-pill st-accepted">Oberta</span>'}${p.closesAt ? `<span>Fins al ${ddmm(p.closesAt)}</span>` : ''}${p.sections?.length ? `<span>Per a: ${p.sections.map(x => SEC[x].name).join(', ')}</span>` : ''}<span>${p.multi ? 'Pots triar-ne diverses' : 'Una opció'}</span></div>`;
+    if (canEdit()) {
+      const r = pollResults(p);
+      const max = Math.max(1, ...Object.values(r.counts));
+      return `<div class="poll"><div class="ann-h"><h2 class="ann-t">${esc(p.title)}</h2><button class="icon-btn" data-act="poll-edit" data-id="${p.id}" aria-label="Edita">${ICON.more}</button></div>
+        ${p.description ? `<div class="ann-b">${linkify(p.description)}</div>` : ''}${meta}
+        ${(p.options || []).map(o => `<div class="opt-row ${r.counts[o.id] === max && max > 0 ? 'best' : ''}"><span></span><span>${esc(o.label)}</span><span class="n">${r.counts[o.id]}</span><span class="opt-bar"><span style="width:${(r.counts[o.id] / Math.max(1, r.voters)) * 100}%"></span></span></div>`).join('')}
+        <div class="c-a" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="muted" style="font-size:13px">${r.voters} de ${r.expected} han respost</span>
+          <button class="btn btn-sm" data-act="poll-results" data-id="${p.id}">Qui ha votat</button>${closed ? '' : `<button class="btn btn-sm" data-act="poll-remind" data-id="${p.id}">Recorda-ho</button>`}</div></div>`;
+    }
+    const mine = S.pollVotes.get(`${p.id}_${S.memberId}`);
+    const chosen = new Set(mine?.choices || []);
+    return `<div class="poll" data-poll="${p.id}"><h2 class="ann-t">${esc(p.title)}</h2>
+      ${p.description ? `<div class="ann-b">${linkify(p.description)}</div>` : ''}${meta}
+      ${(p.options || []).map(o => `<label class="opt-row"><input type="${p.multi ? 'checkbox' : 'radio'}" name="poll-${p.id}" value="${o.id}" ${chosen.has(o.id) ? 'checked' : ''} ${closed ? 'disabled' : ''}><span>${esc(o.label)}</span><span></span></label>`).join('')}
+      ${closed ? '' : `<div class="c-a" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="btn btn-sm btn-primary" data-act="poll-vote" data-id="${p.id}">${mine ? 'Actualitza la resposta' : 'Envia la resposta'}</button>${mine ? '<span class="rsvp yes">Resposta desada</span>' : ''}</div>`}</div>`;
+  };
+  return `${canEdit() ? '<div class="sec-h" style="margin-top:6px"><span class="muted" style="font-size:13px">Per saber quan pot venir la gent.</span><button class="btn btn-sm btn-primary" data-act="poll-new">+ Enquesta</button></div>' : ''}
+    ${all.length ? `<div class="panel">${all.map(card).join('')}</div>` : '<div class="empty"><p>No hi ha enquestes.</p></div>'}`;
+}
+
+/* ---------- Singer: my attendance ---------- */
+function myProdSummary(me, pid) {
+  const prod = S.productions.get(pid);
+  if (!prod) return null;
+  const st = computeStats({ kind: 'prod', id: pid, name: prod.name }, me.section);
+  const r = st.rows.find(x => x.m.id === me.id);
+  return { prod, r, rs: ruleStatus(pid, me), counted: r ? r.P + r.R + r.FJ + r.FNJ : 0 };
+}
+function ruleSentence(rs) {
+  if (!rs) return '';
+  const min = minAttendance();
+  if (rs.status === 'ok') return `<span class="rsvp yes">Compleixes la norma del ${min}%</span>`;
+  if (rs.status === 'risk') return `<span class="rsvp none" style="background:var(--fj-soft);color:var(--fj-ink)">Per sota del ${min}%</span> <span class="muted" style="font-size:13px">Encara hi pots arribar: si vens als ${rs.remaining} assajos que queden, arribaràs al ${pct(rs.best)}.</span>`;
+  return `<span class="rsvp no">No arribes al ${min}%</span> <span class="muted" style="font-size:13px">Parla amb el teu cap de corda.</span>`;
+}
+function myAttendanceCard(me) {
+  const x = myProdSummary(me, currentProductionId());
+  if (!x) return '';
+  const { prod, r, rs, counted } = x;
+  const dots = (r?.hist || []).map(({ s, mk }) => `<i class="${mk ? 's-' + mk.s : ''}" title="${ddmm(s.date)} · ${mk ? STATUS[mk.s].label : 'Sense llista'}"></i>`).join('');
+  return `<div class="section-title"><h2 class="h2">La meva assistència</h2><span class="eyebrow">${esc(prod.name)}</span></div>
+    <div class="panel my-att">
+      ${counted ? `<div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span class="big">${Math.round(rate(r) * 100)}<small>%</small></span>
+        <span class="muted" style="font-size:13px">${r.P + r.R} de ${counted} assajos${r.R ? ` · ${r.R} retards` : ''}${r.FJ ? ` · ${r.FJ} just.` : ''}${r.FNJ ? ` · ${r.FNJ} no just.` : ''}</span></div>
+        <div>${ruleSentence(rs)}</div>
+        <div class="dots" aria-label="Sessió a sessió">${dots}</div>`
+      : `<span class="muted" style="font-size:13.5px">Encara no hi ha cap llista passada en aquesta producció.</span>`}
+      <button class="btn btn-sm" data-act="my-att" style="justify-self:start">Totes les produccions</button>
+    </div>`;
+}
+function sheetMyAttendance() {
+  const me = S.members.get(myMemberId());
+  if (!me) return;
+  const { season } = seasonCfg();
+  const sr = computeStats({ kind: 'range', from: season.from, to: season.to, name: season.name }, me.section).rows.find(x => x.m.id === me.id);
+  const sc = sr ? sr.P + sr.R + sr.FJ + sr.FNJ : 0;
+  const rows = productionsSorted().map(p => myProdSummary(me, p.id)).filter(x => x && x.counted);
+  openSheet({
+    title: 'La meva assistència',
+    body: `<div class="kpis" style="grid-template-columns:repeat(2,1fr)">
+        <div class="kpi"><div class="kpi-v">${sc ? kpiPct(rate(sr)) : '—'}</div><div class="kpi-l">${esc(season.name)}</div></div>
+        <div class="kpi"><div class="kpi-v">${sr ? sr.min : 0}<small>min</small></div><div class="kpi-l">Retard acumulat</div></div>
+      </div>
+      ${rows.length ? `<ul class="mini-list" style="max-height:none;margin-top:14px">${rows.map(({ prod, r, rs, counted }) => `<li style="display:grid;gap:4px;padding:10px 12px">
+        <span style="display:flex;justify-content:space-between;gap:8px"><b>${esc(prod.name)}</b><span class="mono">${pct(rate(r))}</span></span>
+        <span class="m">${r.P + r.R} de ${counted} · ${r.FJ} just. · ${r.FNJ} no just.</span><span>${ruleSentence(rs)}</span></li>`).join('')}</ul>`
+        : '<p class="muted">Encara no hi ha llistes passades.</p>'}
+      <p class="muted" style="font-size:12px">Només tu i l’equip del cor veieu aquestes dades. Si hi ha algun error, parla amb el teu cap de corda.</p>`,
+  });
+}
 /* ---------- View: Singer (avisos) ---------- */
 function myMemberId() {
   if (S.memberId && S.members.has(S.memberId)) return S.memberId;
@@ -1775,7 +2006,15 @@ function viewSinger() {
   return `<div class="page-head"><div><div class="eyebrow">Hola, ${esc(me.name.split(',').pop().trim())}</div><h1 class="h1">El teu espai</h1></div></div>
     <div class="me-line" style="margin-top:-6px"><span><b>${esc(me.name)}</b> · ${SEC[me.section].name}${me.part ? ` ${esc(me.part)}` : ''}${lv ? ` · ${lv}` : ''}</span></div>
     ${subCards}
+    ${(() => {
+      const ann = visibleAnnouncements().filter(a => !a.until || a.until >= TODAY).slice(0, 2);
+      const polls = openPolls().filter(p => !S.pollVotes.get(`${p.id}_${me.id}`));
+      return (ann.length ? `<div class="section-title"><h2 class="h2">Tauler</h2><button class="btn btn-sm btn-ghost" data-act="tab" data-tab="tauler">Tots els anuncis</button></div>
+        <div class="panel">${ann.map(a => `<article class="ann ${a.pinned ? 'pinned' : ''}"><h3 class="ann-t" style="font-size:17px">${esc(a.title)}</h3>${a.body ? `<div class="ann-b">${linkify(a.body.length > 220 ? a.body.slice(0, 220) + '…' : a.body)}</div>` : ''}<div class="ann-m"><span>${esc(a.author || '')}</span><span class="mono">${a.createdAt ? ddmm(a.createdAt.slice(0, 10)) : ''}</span></div></article>`).join('')}</div>` : '')
+        + (polls.length ? `<div class="sub-line sub-hint" style="margin-top:14px"><span>Tens <b>${polls.length === 1 ? '1 enquesta' : `${polls.length} enquestes`}</b> per respondre.</span><button class="btn btn-sm btn-primary" data-act="board-polls">Respon</button></div>` : '');
+    })()}
     ${convHtml}
+    ${myAttendanceCard(me)}
     <div class="hero-cta" style="margin-top:16px">
       <h2 class="h2">No podràs venir a un assaig?</h2>
       <span style="font-size:14px">Avisa amb temps. El teu cap de corda ho veurà i la falta quedarà justificada si l’accepta.</span>
@@ -2613,10 +2852,14 @@ function sheetHelp() {
     <p>Els cantaires avisen des del seu enllaç. Surten a <b>Gestió › Avisos</b> i a la llista del dia. En acceptar-los, els dies queden com a falta justificada.</p>
     <h3>Convocatòries</h3>
     <p>A la fitxa d’una sessió (concert, viatge…) activa <b>Demana confirmació</b>. Els cantaires responen Sí/No i a la Llista veus el recompte.</p>
+    <h3>Tauler</h3>
+    <p><b>Anuncis</b> per a tothom o per cordes, <b>materials</b> de cada producció (partitures, àudios de guia per veu, vídeos) i <b>enquestes</b> de disponibilitat. A les convocatòries i enquestes, <b>Recorda-ho</b> prepara missatges de WhatsApp per als que no han respost, amb el seu enllaç.</p>
     <h3>Estadístiques i norma</h3>
     <p>Per producció, trimestre o temporada. La <b>norma del ${minAttendance()}%</b> avisa de qui no pot fer el concert o està en risc.</p>
     <h3>Cantaires</h3>
     <p>A <b>Gestió › Cantaires</b>: veu, baixes temporals amb dates i l’<b>enllaç personal</b> de cada cantaire (per WhatsApp o copiant-lo).</p>
+    <h3>Còpies de seguretat</h3>
+    <p>Cada nit es guarda automàticament una còpia de totes les dades en un lloc privat. També pots descarregar-ne una a Ajustos › Dades.</p>
     <h3>Pantalla d’inici</h3>
     <p>Al navegador del mòbil, tria <b>Afegeix a la pantalla d’inici</b> per tenir-la com una app.</p>
   </div>` : `<div class="manual">
@@ -2626,12 +2869,193 @@ function sheetHelp() {
     <p><b>Avisa d’una absència</b>, tria els dies i explica el motiu. El teu cap de corda l’acceptarà o no; ho veuràs a «Els meus avisos».</p>
     <h3>Convocatòries</h3>
     <p>Quan hi hagi un concert o viatge, respon <b>Hi seré</b> o <b>No hi podré anar</b> abans de la data límit.</p>
+    <h3>La meva assistència</h3>
+    <p>Al teu espai veus el teu percentatge d’assistència i si compleixes la norma del ${minAttendance()}% per poder fer el concert.</p>
+    <h3>Tauler</h3>
+    <p>Anuncis del cor, partitures i àudios de la teva veu, i enquestes per dir quins dies pots venir.</p>
     <h3>Calendari</h3>
     <p>A <b>Calendari</b> tens totes les sessions. Amb <b>Subscriu-t’hi</b> les tindràs a l’app de calendari del mòbil.</p>
     <h3>Si fas de substitut</h3>
     <p>Et sortirà «Avui passes llista de…». Toca <b>Passa llista</b> i marca els teus companys de corda.</p>
   </div>`;
   openSheet({ title: 'Com funciona', body });
+}
+
+/* ---------- Board sheets ---------- */
+const sectionPickers = (id, chosen) => `<div class="pickers" id="${id}">${SECTIONS.map(x => `<button type="button" class="pick" data-sec="${x.id}" aria-pressed="${(chosen || []).includes(x.id)}"><span class="vl">${x.id}</span> ${x.name}</button>`).join('')}</div>`;
+const bindToggles = (el, sel) => el.querySelectorAll(`${sel} .pick`).forEach(b => b.onclick = () => b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') !== 'true'));
+const readSections = (el, sel) => { const v = $$(`${sel} .pick[aria-pressed="true"]`, el).map(b => b.dataset.sec); return v.length && v.length < 4 ? v : []; };
+const authorName = () => S.me?.name || S.me?.email || 'Equip';
+
+function sheetAnnouncement(id) {
+  const ex = id ? S.announcements.get(id) : null;
+  const a = ex ? { ...ex } : { id: uid('n'), title: '', body: '', pinned: false, sections: [], until: '' };
+  openSheet({
+    title: ex ? 'Edita l’anunci' : 'Nou anunci',
+    body: `<div class="kv">
+      <label class="field"><span>Títol</span><input class="inp" id="an-title" maxlength="90" value="${esc(a.title)}" placeholder="p. ex. Dimecres, assaig a la Sala d’Orquestra"></label>
+      <label class="field"><span>Text</span><textarea class="inp" id="an-body" maxlength="1500" placeholder="Els enllaços es poden clicar.">${esc(a.body)}</textarea></label>
+      <div class="field"><span>Per a (si no en tries cap, per a tothom)</span>${sectionPickers('an-secs', a.sections)}</div>
+      <label class="field"><span>Visible fins al (opcional)</span><input class="inp" id="an-until" type="date" value="${esc(a.until || '')}"></label>
+      <div class="toggle-row"><span><b>Fixat a dalt</b></span><label class="switch"><input type="checkbox" id="an-pin" ${a.pinned ? 'checked' : ''}><span></span></label></div>
+    </div>`,
+    foot: `${ex ? '<button class="btn btn-danger-ghost" id="an-del">Esborra</button>' : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="an-save">${ex ? 'Desa' : 'Publica'}</button>`,
+    onMount: el => {
+      bindToggles(el, '#an-secs');
+      el.querySelector('#an-save').onclick = () => {
+        const title = el.querySelector('#an-title').value.trim();
+        if (!title) { toast('Posa un títol a l’anunci'); return; }
+        const rec = { ...a, title, body: el.querySelector('#an-body').value.trim(), sections: readSections(el, '#an-secs'), until: el.querySelector('#an-until').value, pinned: el.querySelector('#an-pin').checked,
+          author: ex?.author || authorName(), createdAt: ex?.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString() };
+        S.announcements.set(rec.id, rec); persist('announcements', rec.id, rec, 10);
+        closeSheet(); toast(ex ? 'Anunci desat' : 'Anunci publicat'); render();
+      };
+      el.querySelector('#an-del')?.addEventListener('click', async () => {
+        if (!await confirmSheet('Esborrar l’anunci?', esc(a.title), 'Esborra')) return;
+        S.announcements.delete(a.id); persist('announcements', a.id, null, 10); render();
+      });
+    },
+  });
+}
+
+function sheetMaterial(pid, id) {
+  const prods = productionsSorted();
+  const prodId = pid || ui.matProd || currentProductionId();
+  const ex = id ? (S.productions.get(prodId)?.materials || []).find(x => x.id === id) : null;
+  const m = ex ? { ...ex } : { id: uid('mt'), title: '', url: '', kind: 'partitura', section: '', part: '' };
+  openSheet({
+    title: ex ? 'Edita el material' : 'Nou material',
+    body: `<div class="kv">
+      <label class="field"><span>Producció</span><select class="inp" id="mt-prod" ${ex ? 'disabled' : ''}>${prods.map(p => `<option value="${p.id}" ${p.id === prodId ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select></label>
+      <label class="field"><span>Títol</span><input class="inp" id="mt-title" maxlength="90" value="${esc(m.title)}" placeholder="p. ex. O Fortuna – partitura"></label>
+      <label class="field"><span>Enllaç</span><input class="inp" id="mt-url" type="url" value="${esc(m.url)}" placeholder="https://drive.google.com/…"><small>Si és de Google Drive, comparteix-lo com a «Qualsevol persona amb l’enllaç».</small></label>
+      <div class="field"><span>Tipus</span><div class="pickers" id="mt-kind">${Object.entries(MAT_KINDS).map(([k, l]) => `<button type="button" class="pick" data-k="${k}" aria-pressed="${m.kind === k}">${l}</button>`).join('')}</div></div>
+      <div class="field"><span>Per a</span><div class="pickers" id="mt-sec"><button type="button" class="pick" data-sec="" aria-pressed="${!m.section}">Tot el cor</button>${SECTIONS.map(x => `<button type="button" class="pick" data-sec="${x.id}" aria-pressed="${m.section === x.id}"><span class="vl">${x.id}</span></button>`).join('')}</div></div>
+      <div class="field"><span>Veu (opcional)</span><div class="pickers" id="mt-part"><button type="button" class="pick" data-part="" aria-pressed="${!m.part}">Totes</button>${['1', '2'].map(v => `<button type="button" class="pick" data-part="${v}" aria-pressed="${m.part === v}">${v}</button>`).join('')}</div></div>
+    </div>`,
+    foot: `${ex ? '<button class="btn btn-danger-ghost" id="mt-del">Esborra</button>' : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="mt-save">Desa</button>`,
+    onMount: el => {
+      const single = sel => el.querySelectorAll(`${sel} .pick`).forEach(b => b.onclick = () => el.querySelectorAll(`${sel} .pick`).forEach(x => x.setAttribute('aria-pressed', x === b)));
+      single('#mt-kind'); single('#mt-sec'); single('#mt-part');
+      const saveTo = (p, list) => { const next = { ...p, materials: list }; saveProduction(next); };
+      el.querySelector('#mt-save').onclick = () => {
+        const title = el.querySelector('#mt-title').value.trim(), url = el.querySelector('#mt-url').value.trim();
+        if (!title) { toast('Posa un títol'); return; }
+        if (!/^https?:\/\//i.test(url)) { toast('L’enllaç ha de començar per https://'); return; }
+        const rec = { id: m.id, title, url, kind: el.querySelector('#mt-kind .pick[aria-pressed="true"]').dataset.k,
+          section: el.querySelector('#mt-sec .pick[aria-pressed="true"]').dataset.sec, part: el.querySelector('#mt-part .pick[aria-pressed="true"]').dataset.part };
+        const p = S.productions.get(el.querySelector('#mt-prod').value);
+        saveTo(p, [...(p.materials || []).filter(x => x.id !== rec.id), rec]);
+        ui.matProd = p.id; closeSheet(); toast('Material desat'); render();
+      };
+      el.querySelector('#mt-del')?.addEventListener('click', async () => {
+        if (!await confirmSheet('Esborrar el material?', esc(m.title), 'Esborra')) return;
+        const p = S.productions.get(prodId); saveTo(p, (p.materials || []).filter(x => x.id !== m.id)); render();
+      });
+    },
+  });
+}
+
+function sheetPoll(id) {
+  const ex = id ? S.polls.get(id) : null;
+  const p = ex ? { ...ex } : { id: uid('q'), title: '', description: '', options: [], multi: true, sections: [], closesAt: '', closed: false };
+  openSheet({
+    title: ex ? 'Edita l’enquesta' : 'Nova enquesta',
+    body: `<div class="kv">
+      <label class="field"><span>Pregunta</span><input class="inp" id="pl-title" maxlength="120" value="${esc(p.title)}" placeholder="p. ex. Quin dissabte podeu fer assaig extra?"></label>
+      <label class="field"><span>Explicació (opcional)</span><textarea class="inp" id="pl-desc" maxlength="600" style="min-height:70px">${esc(p.description || '')}</textarea></label>
+      <label class="field"><span>Opcions, una per línia</span><textarea class="inp" id="pl-opts" placeholder="Dissabte 7 de novembre, 10–14 h&#10;Dissabte 14 de novembre, 10–14 h&#10;Diumenge 15 de novembre, 17–20 h">${esc((p.options || []).map(o => o.label).join('\n'))}</textarea>
+        ${ex ? '<small>Si canvies el text d’una opció, es mantenen els vots de les que no hagis tocat.</small>' : ''}</label>
+      <div class="toggle-row"><span><b>Es poden triar diverses opcions</b></span><label class="switch"><input type="checkbox" id="pl-multi" ${p.multi ? 'checked' : ''}><span></span></label></div>
+      <div class="field"><span>Per a (si no en tries cap, per a tothom)</span>${sectionPickers('pl-secs', p.sections)}</div>
+      <label class="field"><span>Respondre fins al (opcional)</span><input class="inp" id="pl-close" type="date" value="${esc(p.closesAt || '')}"></label>
+      ${ex ? `<div class="toggle-row"><span><b>Tancada</b><br><span class="muted" style="font-size:12.5px">Ja no s’hi pot respondre</span></span><label class="switch"><input type="checkbox" id="pl-closed" ${p.closed ? 'checked' : ''}><span></span></label></div>` : ''}
+    </div>`,
+    foot: `${ex ? '<button class="btn btn-danger-ghost" id="pl-del">Esborra</button>' : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="pl-save">${ex ? 'Desa' : 'Publica'}</button>`,
+    onMount: el => {
+      bindToggles(el, '#pl-secs');
+      el.querySelector('#pl-save').onclick = () => {
+        const title = el.querySelector('#pl-title').value.trim();
+        const labels = el.querySelector('#pl-opts').value.split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+        if (!title) { toast('Escriu la pregunta'); return; }
+        if (labels.length < 2) { toast('Hi ha d’haver almenys dues opcions'); return; }
+        const old = new Map((p.options || []).map(o => [o.label, o.id]));
+        const options = labels.map(l => ({ id: old.get(l) || uid('o'), label: l }));
+        const rec = { ...p, title, description: el.querySelector('#pl-desc').value.trim(), options, multi: el.querySelector('#pl-multi').checked,
+          sections: readSections(el, '#pl-secs'), closesAt: el.querySelector('#pl-close').value, closed: ex ? el.querySelector('#pl-closed').checked : false,
+          author: ex?.author || authorName(), createdAt: ex?.createdAt || new Date().toISOString() };
+        S.polls.set(rec.id, rec); persist('polls', rec.id, rec, 10);
+        closeSheet(); toast(ex ? 'Enquesta desada' : 'Enquesta publicada'); render();
+      };
+      el.querySelector('#pl-del')?.addEventListener('click', async () => {
+        if (!await confirmSheet('Esborrar l’enquesta?', 'També se n’esborraran les respostes.', 'Esborra')) return;
+        S.polls.delete(p.id); persist('polls', p.id, null, 10);
+        for (const [k, v] of S.pollVotes) if (v.pollId === p.id) { S.pollVotes.delete(k); persist('pollVotes', k, null, 30); }
+        render();
+      });
+    },
+  });
+}
+function votePoll(id) {
+  const p = S.polls.get(id), box = $(`[data-poll="${id}"]`);
+  if (!p || !box) return;
+  const choices = $$('input:checked', box).map(i => i.value);
+  if (!choices.length) { toast('Tria almenys una opció'); return; }
+  const m = S.members.get(myMemberId());
+  const key = `${id}_${m.id}`;
+  const rec = { pollId: id, memberId: m.id, section: m.section, choices, at: new Date().toISOString(), uid: S.uid };
+  S.pollVotes.set(key, rec); persist('pollVotes', key, rec, 10);
+  toast('Resposta desada'); render();
+}
+function sheetPollResults(id) {
+  const p = S.polls.get(id);
+  if (!p) return;
+  const label = Object.fromEntries((p.options || []).map(o => [o.id, o.label]));
+  const block = x => {
+    const ms = membersOf(x.id);
+    const rows = ms.map(m => { const v = S.pollVotes.get(`${id}_${m.id}`); return `<li><span>${esc(m.name)}${v ? `<br><span class="m">${v.choices.map(c => esc(label[c] || '—')).join(' · ')}</span>` : ''}</span><span class="rsvp ${v ? 'yes' : 'none'}">${v ? 'Ha respost' : '—'}</span></li>`; }).join('');
+    return `<div class="eyebrow" style="margin:14px 0 4px">${x.name}</div><ul class="mini-list" style="max-height:none">${rows}</ul>`;
+  };
+  openSheet({ title: p.title, body: SECTIONS.filter(x => !p.sections?.length || p.sections.includes(x.id)).map(block).join('') });
+}
+
+/* ---------- WhatsApp reminders ---------- */
+function sheetReminder(title, pending, messageFor) {
+  const bySec = SECTIONS.map(x => [x, pending.filter(m => m.section === x.id)]).filter(([, l]) => l.length);
+  const first = m => m.name.split(',').pop().trim();
+  const phone = m => (m.phone || '').replace(/[^0-9]/g, '').replace(/^(\d{9})$/, '34$1');
+  const group = `${title}\n\nFalten per respondre:\n${bySec.map(([x, l]) => `${x.name}: ${l.map(first).join(', ')}`).join('\n')}\n\nCadascú pot respondre amb el seu enllaç personal de l’app.`;
+  openSheet({
+    title: 'Recordatori',
+    body: pending.length ? `<p style="margin-top:0">${pending.length} persones encara no han respost. Envia’ls un missatge individual amb el seu enllaç, o copia un missatge per al grup.</p>
+      ${bySec.map(([x, l]) => `<div class="eyebrow" style="margin:14px 0 4px">${x.name}</div><ul class="mini-list remind-list" style="max-height:none">${l.map(m => {
+        const msg = messageFor(m);
+        return `<li><span>${esc(m.name)}${memberLink(m.id) ? '' : '<br><span class="m">Sense enllaç personal</span>'}</span>
+          <span style="display:flex;gap:4px">${phone(m) ? `<a class="btn btn-sm" href="https://wa.me/${phone(m)}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">WhatsApp</a>` : ''}<button class="btn btn-sm" data-copy="${esc(msg)}">Copia</button></span></li>`;
+      }).join('')}</ul>`).join('')}
+      <p class="muted" style="font-size:12.5px">Per enviar WhatsApp directament, cal tenir el telèfon a la fitxa del cantaire.</p>`
+      : '<p style="margin:0">Tothom ha respost.</p>',
+    foot: pending.length ? '<button class="btn btn-primary" id="rm-group">Copia el missatge per al grup</button>' : '',
+    onMount: el => {
+      el.querySelectorAll('[data-copy]').forEach(b => b.onclick = () => copyText(b.dataset.copy, 'Missatge copiat'));
+      el.querySelector('#rm-group')?.addEventListener('click', () => copyText(group, 'Missatge per al grup copiat'));
+    },
+  });
+}
+function remindRsvp(sid) {
+  const s = sessionById(sid);
+  if (!s) return;
+  const pending = SECTIONS.filter(x => convoked(s, x.id)).flatMap(x => membersOf(x.id)).filter(m => !isOut(s, m) && !S.rsvp.get(`${sid}_${m.id}`));
+  const what = `${s.type} del ${longDate(s.date).toLowerCase()}${s.place ? ` (${s.place})` : ''}`;
+  sheetReminder(`Recordatori: confirmeu si veniu al ${what}${s.rsvpBy ? `, abans del ${ddmm(s.rsvpBy)}` : ''}.`, pending,
+    m => `Hola ${m.name.split(',').pop().trim()}! Recorda confirmar si vens al ${what}${s.rsvpBy ? ` abans del ${ddmm(s.rsvpBy)}` : ''}. Respon aquí: ${memberLink(m.id) || '(demana el teu enllaç)'}`);
+}
+function remindPoll(id) {
+  const p = S.polls.get(id);
+  if (!p) return;
+  const pending = pollExpected(p).filter(m => !S.pollVotes.get(`${id}_${m.id}`));
+  sheetReminder(`Recordatori: responeu l’enquesta «${p.title}»${p.closesAt ? ` abans del ${ddmm(p.closesAt)}` : ''}.`, pending,
+    m => `Hola ${m.name.split(',').pop().trim()}! Tens pendent l’enquesta «${p.title}»${p.closesAt ? ` (fins al ${ddmm(p.closesAt)})` : ''}. Respon-la aquí, a Tauler › Enquestes: ${memberLink(m.id) || '(demana el teu enllaç)'}`);
 }
 
 /* ================= Import / export ================= */
@@ -2645,7 +3069,8 @@ function offerFile(filename, text, mime) {
 }
 function exportJSON() {
   const data = { app: 'cor-present', version: 1, exportedAt: new Date().toISOString(), config: S.config,
-    members: [...S.members.values()], productions: [...S.productions.values()], attendance: Object.fromEntries(S.attendance), absences: [...S.absences.values()] };
+    members: [...S.members.values()], productions: [...S.productions.values()], attendance: Object.fromEntries(S.attendance), absences: [...S.absences.values()],
+    rsvp: [...S.rsvp.values()], announcements: [...S.announcements.values()], polls: [...S.polls.values()], pollVotes: [...S.pollVotes.values()] };
   offerFile(`cor-present-${TODAY}.json`, JSON.stringify(data, null, 2), 'application/json');
 }
 function exportCSV() {
@@ -2740,7 +3165,7 @@ async function wipeAll(demo) {
 /* ================= Events ================= */
 const SUB_OK = new Set(['mark', 'min', 'mark-rest']);
 const ADMIN_ONLY = new Set(['staff-new', 'staff-edit', 'edit-link-off', 'link-regen', 'brand-color', 'logo-remove', 'wipe-all']);
-const EDIT_ONLY = new Set(['mark', 'min', 'mark-rest', 'session-new', 'sub-set', 'links-generate', 'links-copy', 'member-link', 'session-edit', 'member-edit', 'member-bulk', 'prod-new', 'prod-edit',
+const EDIT_ONLY = new Set(['mark', 'min', 'mark-rest', 'session-new', 'sub-set', 'ann-new', 'ann-edit', 'mat-new', 'mat-edit', 'poll-new', 'poll-edit', 'poll-results', 'poll-remind', 'rsvp-remind', 'links-generate', 'links-copy', 'member-link', 'session-edit', 'member-edit', 'member-bulk', 'prod-new', 'prod-edit',
   'wipe-demo', 'wipe-all', 'load-demo', 'export-json', 'abs-accept', 'abs-reject', 'abs-delete', 'link-regen', 'manage']);
 const actions = {
   'tab': el => { ui.tab = el.dataset.tab; ui.rollSec = null; ui._calScrolled = false; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
@@ -2760,6 +3185,21 @@ const actions = {
   'rsvp-yes': el => rsvpAnswer(el.dataset.sid, 'yes'),
   'rsvp-no': el => sheetRsvpNo(el.dataset.sid),
   'cal-subscribe': () => sheetCalendar(),
+  'board': el => { ui.board = el.dataset.k; render(); },
+  'board-polls': () => { ui.tab = 'tauler'; ui.board = 'enquestes'; render(); window.scrollTo({ top: 0 }); },
+  'ann-new': () => sheetAnnouncement(null),
+  'ann-edit': el => sheetAnnouncement(el.dataset.id),
+  'mat-new': () => sheetMaterial(ui.matProd, null),
+  'mat-edit': el => sheetMaterial(el.dataset.pid, el.dataset.id),
+  'mat-prod': el => { ui.matProd = el.dataset.id; render(); },
+  'mat-mine': () => { ui.matMine = ui.matMine === false; render(); },
+  'poll-new': () => sheetPoll(null),
+  'poll-edit': el => sheetPoll(el.dataset.id),
+  'poll-results': el => sheetPollResults(el.dataset.id),
+  'poll-remind': el => remindPoll(el.dataset.id),
+  'poll-vote': el => votePoll(el.dataset.id),
+  'rsvp-remind': el => remindRsvp(el.dataset.sid),
+  'my-att': () => sheetMyAttendance(),
   'brand-color': el => setBrandColor(el.dataset.color),
   'logo-remove': () => { const b = { ...(S.config.brand || {}) }; delete b.logo; saveConfig({ brand: b }); render(); },
   'link-regen': el => regenerateLink(el.dataset.role),

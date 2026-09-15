@@ -8,6 +8,7 @@ service cloud.firestore {
     //   edit     → enllaç compartit d'edició (transició)
     //   singer   → enllaç personal d'un cantaire (memberId)
     //   calendar → lector del calendari per generar el fitxer .ics
+    //   backup   → lector de totes les dades per a la còpia de seguretat diària
 
     function email() { return request.auth.token.get('email', '').lower(); }
     function isStaff(c) {
@@ -33,7 +34,7 @@ service cloud.firestore {
       allow list: if false;
       allow create: if request.auth != null && k.size() >= 24
         && request.resource.data.keys().hasOnly(['choirId', 'role', 'at', 'memberId'])
-        && request.resource.data.role in ['edit', 'singer', 'calendar']
+        && request.resource.data.role in ['edit', 'singer', 'calendar', 'backup']
         && ((request.resource.data.role == 'singer' && canEdit(request.resource.data.choirId))
             || isAdmin(request.resource.data.choirId)
             || (!exists(/databases/$(database)/documents/cors/$(request.resource.data.choirId)/config/main)
@@ -61,10 +62,25 @@ service cloud.firestore {
         allow create: if request.auth != null && !exists(/databases/$(database)/documents/cors/$(c)/config/main);
       }
       match /{col}/{doc} {
-        allow read: if (col in ['members', 'productions', 'attendance', 'config', 'staff', 'subs', 'rsvp'] && canEdit(c))
-                    || (col in ['members', 'productions', 'config'] && isSinger(c))
-                    || (col in ['productions', 'config'] && hasRole(c, ['calendar']));
-        allow write: if col in ['members', 'productions', 'attendance', 'config', 'subs', 'rsvp'] && canEdit(c);
+        allow read: if (col in ['members', 'productions', 'attendance', 'config', 'staff', 'subs', 'rsvp', 'absences',
+                                'announcements', 'polls', 'pollVotes', 'memberMarks'] && canEdit(c))
+                    || (col in ['members', 'productions', 'config', 'announcements', 'polls'] && isSinger(c))
+                    || (col in ['productions', 'config'] && hasRole(c, ['calendar']))
+                    || (col in ['members', 'productions', 'attendance', 'config', 'staff', 'subs', 'rsvp', 'absences',
+                                'announcements', 'polls', 'pollVotes'] && hasRole(c, ['backup']));
+        allow write: if col in ['members', 'productions', 'attendance', 'config', 'subs', 'rsvp',
+                                'announcements', 'polls', 'pollVotes', 'memberMarks'] && canEdit(c);
+      }
+      // Còpia de les marques de cada cantaire: només les seves.
+      match /memberMarks/{mid} {
+        allow read: if isSinger(c) && myMember(c) == mid;
+      }
+      match /pollVotes/{id} {
+        allow read: if isSinger(c) && resource.data.memberId == myMember(c);
+        allow create, update: if isSinger(c)
+          && request.resource.data.memberId == myMember(c)
+          && id == request.resource.data.pollId + '_' + myMember(c)
+          && get(/databases/$(database)/documents/cors/$(c)/polls/$(request.resource.data.pollId)).data.get('closed', false) == false;
       }
       match /staff/{e} {
         allow write: if isAdmin(c);
