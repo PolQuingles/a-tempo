@@ -615,7 +615,7 @@ const canEdit = () => S.role === 'edit';
 const LS_KEY = 'corpresent:clau';
 const LS_LINK = 'corpresent:enllac';
 const LS_ME = 'corpresent:jo';
-const ROLE_NAME = { edit: 'Caps de corda', view: 'Consulta', singer: 'Cantaires' };
+const ROLE_NAME = { edit: 'Caps de corda i director', view: 'Consulta', singer: 'Cantaires' };
 let db = null, fs = null, auth = null, LINK = null;   // LINK = { secret, choirId, role }
 const queue = new Map();   // path -> { data | null, timer }  (debounce window)
 let inflight = 0;
@@ -1516,8 +1516,7 @@ function manageConfig() {
   const { season, terms } = seasonCfg();
   return `<div class="sec-h"><h2 class="h2">Enllaços</h2></div>
   <div class="panel">
-    ${linkRow('edit', 'Caps de corda', 'Passar llista i editar-ho tot.')}
-    ${linkRow('view', 'Consulta', 'Per a la direcció: veu llistes i estadístiques, no pot canviar res.')}
+    ${linkRow('edit', 'Caps de corda i director', 'Passar llista, veure les estadístiques i editar-ho tot.')}
     ${linkRow('singer', 'Cantaires', 'Veuen el calendari i avisen d’absències. No veuen l’assistència dels altres.')}
     <p class="muted" style="margin:0;padding:10px 14px 12px;font-size:12px;border-top:1px solid var(--line)">«Renova» crea un enllaç nou i desactiva l’anterior: qui feia servir el vell haurà de rebre el nou.</p>
   </div>
@@ -2086,7 +2085,7 @@ async function regenerateLink(role) {
   const has = !!S.secrets?.[role];
   if (has) {
     const ok = await confirmSheet('Renovar l’enllaç?', role === 'edit'
-      ? 'Es crearà un enllaç nou per als caps de corda i <b>l’actual deixarà de funcionar</b>. Aquest mòbil passarà a fer servir el nou; als altres caps de corda els l’hauràs d’enviar.'
+      ? 'Es crearà un enllaç nou per als caps de corda i el director, i <b>l’actual deixarà de funcionar</b>. Aquest mòbil passarà a fer servir el nou; a la resta els l’hauràs d’enviar.'
       : 'Es crearà un enllaç nou i <b>l’actual deixarà de funcionar</b>.', 'Renova', false);
     if (!ok) return;
   }
@@ -2168,7 +2167,7 @@ async function loadDemo() {
   } catch { toast('No s’han pogut carregar les dades d’exemple'); }
 }
 const SHARE_TEXT = {
-  edit: ['Enllaç dels caps de corda', 'Envia aquest enllaç als caps de corda. Des del mòbil podran passar llista i editar-ho tot.', 'qualsevol persona amb aquest enllaç pot veure i modificar les dades.'],
+  edit: ['Enllaç de caps de corda i director', 'Envia aquest enllaç als caps de corda i al director. Des del mòbil podran passar llista, veure les estadístiques i editar-ho tot.', 'qualsevol persona amb aquest enllaç pot veure i modificar les dades.'],
   view: ['Enllaç de consulta', 'Per a la direcció o qui hagi de veure l’assistència sense modificar-la.', 'qui el tingui veurà l’assistència de tots els cantaires.'],
   singer: ['Enllaç per als cantaires', 'Envia’l al grup del cor: cadascú podrà veure el calendari i avisar de les seves absències.', 'qui el tingui pot enviar avisos i veure el calendari, però no l’assistència.'],
 };
@@ -2232,7 +2231,7 @@ const actions = {
   'sync-info': () => openSheet({
     title: 'Estat de les dades',
     body: S.mode === 'shared'
-      ? `<p style="margin-top:0">${S.role === 'edit' ? 'Les llistes es desen automàticament i es comparteixen en temps real amb tots els caps de corda.' : S.role === 'view' ? 'Tens accés de <b>consulta</b>: veus les llistes i les estadístiques al moment, però no pots canviar res.' : 'Tens l’enllaç de <b>cantaires</b>: pots veure el calendari i avisar de les teves absències.'}</p>
+      ? `<p style="margin-top:0">${S.role === 'edit' ? 'Les llistes es desen automàticament i es comparteixen en temps real amb els caps de corda i el director.' : S.role === 'view' ? 'Tens accés de <b>consulta</b>: veus les llistes i les estadístiques al moment, però no pots canviar res.' : 'Tens l’enllaç de <b>cantaires</b>: pots veure el calendari i avisar de les teves absències.'}</p>
          <p style="margin-top:0">Si et quedes sense cobertura, pots continuar passant llista: els canvis s’envien sols quan torni la connexió.</p>
          <p class="muted" style="margin-bottom:0">${!navigator.onLine ? 'Ara mateix no hi ha connexió.' : pendingWrites() ? `Desant ${pendingWrites()} canvis…` : 'Tots els canvis estan desats.'}</p>`
       : `<p style="margin:0">Encara no hi ha cap cor connectat en aquest dispositiu.</p>`,
