@@ -948,7 +948,7 @@ function viewCalendar() {
     }
     if (rows) rows += '</ul>';
     body += `<section class="cal-prod">
-      <div class="cal-prod-h"><h2 class="h2">${esc(p.name)}</h2><span class="mono muted" style="font-size:12px">${total} sessions</span></div>
+      <div class="cal-prod-h"><h2 class="h2">${esc(p.name)}</h2><span class="mono muted" style="font-size:12px;white-space:nowrap">${total} sessions</span></div>
       ${rows || `<p class="muted">No queden sessions pendents. ${ui.calPast ? '' : 'Mostra les passades per veure-les.'}</p>`}
     </section>`;
   }
