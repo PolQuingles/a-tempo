@@ -78,10 +78,10 @@ input,select,textarea{font:inherit;color:var(--ink)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 
 /* ---------- App bar ---------- */
-.appbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:14px 10px}
-.brand{display:flex;align-items:baseline;gap:10px;min-width:0}
-.brand-mark{font-family:var(--f-display);font-style:italic;font-weight:600;font-size:22px;letter-spacing:-.01em;color:var(--accent);white-space:nowrap}
-.brand-choir{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.appbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:16px 12px}
+.brand{min-width:0}
+.brand-choir{display:block;font-family:var(--f-display);font-weight:600;font-size:clamp(22px, 6.4vw, 30px);line-height:1.08;letter-spacing:-.015em;color:var(--accent);text-wrap:balance}
+@media (max-width:480px){ .sync[data-state="ok"] span{display:none} .sync[data-state="ok"]{padding:9px} }
 .sync{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:var(--surface);white-space:nowrap}
 .sync i{width:7px;height:7px;border-radius:50%;background:var(--p);flex:none}
 .sync[data-state="saving"] i{background:var(--fj);animation:pulse 1s infinite}
@@ -427,6 +427,63 @@ textarea.inp{padding:10px 12px;min-height:120px;resize:vertical;line-height:1.4}
 .me-line b{color:var(--ink)}
 .link-row .t small{font-weight:400;color:var(--muted)}
 
+/* ---------- Roll overview: four quadrants ---------- */
+.quads{display:grid;grid-template-columns:1fr 1fr;gap:1px;aspect-ratio:1/1;max-width:100%;width:min(100%, 520px);margin:16px auto 0;background:var(--line);border:1px solid var(--line);border-radius:26px;overflow:hidden;box-shadow:var(--shadow)}
+.quad{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:var(--surface);color:var(--ink);padding:14px;transition:background .15s}
+.quad:hover{background:var(--surface-2)}
+.quad:active{background:var(--accent-soft)}
+.q-l{font-family:var(--f-display);font-style:italic;font-weight:600;font-size:clamp(58px, 19vw, 96px);line-height:.9;color:var(--accent)}
+.q-n{font-size:15px;font-weight:600;margin-top:6px}
+.q-c{font-family:var(--f-mono);font-size:15px;color:var(--ink-2)}
+.q-bar{position:absolute;left:18%;right:18%;bottom:14%;height:4px;border-radius:4px;background:var(--surface-2);overflow:hidden}
+.q-bar span{display:block;height:100%;background:var(--accent);border-radius:4px}
+.quad.is-done .q-bar span{background:var(--p)}
+.q-dot{position:absolute;top:14px;width:11px;height:11px;border-radius:50%}
+.q-dot.done{right:14px;background:var(--p)}
+.q-dot.pend{left:14px;background:var(--fnj)}
+.quad.off{background:var(--surface-2)}
+.quad.off .q-l{color:var(--line-strong)}
+.quad.off .q-n,.quad.off .q-c{color:var(--muted)}
+.q-legend{display:flex;justify-content:center;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:var(--muted)}
+.q-legend span{display:inline-flex;align-items:center;gap:6px}
+.q-legend i{width:9px;height:9px;border-radius:50%}
+.day-panel{padding:16px;display:grid;gap:12px}
+.day-main{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.day-big{font-family:var(--f-display);font-weight:600;font-size:44px;line-height:1;font-variant-numeric:lining-nums tabular-nums}
+.day-big small{font-size:22px;color:var(--muted)}
+.day-main .lbl{font-size:14px;color:var(--ink-2)}
+.day-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+@media (min-width:560px){.day-grid{grid-template-columns:repeat(4,1fr)}}
+.day-grid div{display:grid;grid-template-columns:auto 1fr;align-items:center;column-gap:8px;padding:10px 12px;border-radius:12px;background:var(--surface-2)}
+.day-grid i{width:10px;height:10px;border-radius:3px;grid-row:span 2}
+.day-grid b{font-family:var(--f-mono);font-size:20px;font-weight:500;line-height:1.1}
+.day-grid span{font-size:12px;color:var(--muted)}
+.secbar{display:flex;align-items:center;gap:10px;margin-top:10px;padding:6px 8px 6px 4px;background:var(--surface);border:1px solid var(--line);border-radius:14px}
+.secbar .back{padding:0 10px;min-height:36px}
+.secbar-t{flex:1;display:flex;align-items:baseline;gap:8px;font-weight:600;font-size:17px;min-width:0}
+.secbar-t em{font-family:var(--f-display);font-size:26px;line-height:1;color:var(--accent)}
+.secbar .mono{font-size:14px;color:var(--ink-2)}
+.session.compact .session-prod{display:none}
+.session.compact .session-date{font-size:19px}
+.session.compact .session-note{display:none}
+
+/* ---------- Production tones (pastel per production) ---------- */
+.prod-tone{--pbg:hsl(var(--ph) 70% 95%);--pbg2:hsl(var(--ph) 70% 89%);--pline:hsl(var(--ph) 40% 83%);--pdot:hsl(var(--ph) 55% 72%);--pink:hsl(var(--ph) 35% 32%)}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) .prod-tone{--pbg:hsl(var(--ph) 20% 16%);--pbg2:hsl(var(--ph) 24% 22%);--pline:hsl(var(--ph) 20% 27%);--pdot:hsl(var(--ph) 40% 52%);--pink:hsl(var(--ph) 55% 82%)}
+}
+:root[data-theme="dark"] .prod-tone{--pbg:hsl(var(--ph) 20% 16%);--pbg2:hsl(var(--ph) 24% 22%);--pline:hsl(var(--ph) 20% 27%);--pdot:hsl(var(--ph) 40% 52%);--pink:hsl(var(--ph) 55% 82%)}
+.pdot{display:inline-block;flex:none;width:12px;height:12px;border-radius:4px;background:var(--pdot);vertical-align:baseline}
+.cal-prod.prod-tone .cal-list{background:var(--pbg);border-color:var(--pline)}
+.cal-prod.prod-tone .cal-row{border-top-color:var(--pline)}
+.cal-prod.prod-tone .cal-row.is-today{background:var(--pbg2)}
+.cal-prod.prod-tone .cal-month{color:var(--pink)}
+.cal-prod.prod-tone .cal-prod-h .h2{display:flex;align-items:center;gap:10px}
+.cal-prod.prod-tone .cal-prod-h .pdot{width:14px;height:14px}
+.chip .pdot{margin-right:7px;width:10px;height:10px;border-radius:3px}
+.hue-pick{width:36px;height:36px;border-radius:10px;border:2px solid transparent;background:var(--pbg2)}
+.hue-pick[aria-pressed="true"]{border-color:var(--ink)}
+
 @media (min-width:700px){
   .session-date{font-size:30px}
   .opt{font-size:12.5px}
@@ -440,7 +497,7 @@ textarea.inp{padding:10px 12px;min-height:120px;resize:vertical;line-height:1.4}
 
 <div class="wrap">
   <header class="appbar">
-    <div class="brand"><span class="brand-mark">Cor Present</span><span class="brand-choir" id="choir-name"></span></div>
+    <div class="brand"><h1 class="brand-choir" id="choir-name"></h1></div>
     <button class="sync" id="sync" data-act="sync-info" data-state="loading"><i></i><span>Connectant…</span></button>
   </header>
   <div id="banner"></div>
@@ -537,7 +594,7 @@ const S = {
   secrets: null,
 };
 const ui = {
-  tab: 'llista', section: 'S', sessionId: null,
+  tab: 'llista', section: 'S', sessionId: null, rollSec: null,
   calProd: 'all', calPast: false,
   statsScope: 'prod', statsProd: null, statsTerm: null, statsSec: '', statsSort: 'pct',
   manage: 'cantaires', absFilter: 'pending',
@@ -683,6 +740,14 @@ function membersOf(sec, includeInactive = false) {
   return [...S.members.values()]
     .filter(m => (!sec || m.section === sec) && (includeInactive || m.active !== false))
     .sort((a, b) => (b.leader ? 1 : 0) - (a.leader ? 1 : 0) || byName(a, b));
+}
+/** Pastel hue per production: chosen in its sheet, or assigned by season order. */
+const PROD_HUES = [265, 200, 150, 30, 330, 55, 180, 10, 95, 230];
+function prodHue(p) {
+  if (!p) return PROD_HUES[0];
+  if (p.hue != null && p.hue !== '') return +p.hue;
+  const i = productionsSorted().findIndex(x => x.id === p.id);
+  return PROD_HUES[(i < 0 ? 0 : i) % PROD_HUES.length];
 }
 function productionsSorted() {
   return [...S.productions.values()].sort((a, b) => (a.start || '').localeCompare(b.start || ''));
@@ -929,6 +994,7 @@ function renderTabs() {
 }
 function render() {
   $('#choir-name').textContent = S.config.name || '';
+  document.title = S.config.name || 'Cor Present';
   updateSync();
   renderBanner();
   const v = $('#view');
@@ -975,6 +1041,38 @@ function stackBar(c, cls = '') {
 }
 
 /* ---------- View: Roll call ---------- */
+function sessionNav(cur, list, compact) {
+  const idx = list.indexOf(cur);
+  const prod = S.productions.get(cur.prodId);
+  return `<div class="session ${compact ? 'compact' : ''}">
+      <button class="nav-arrow" data-act="sess-step" data-dir="-1" ${idx <= 0 ? 'disabled' : ''} aria-label="Sessió anterior">${ICON.left}</button>
+      <button class="session-main" data-act="sess-pick" aria-label="Canvia de sessió">
+        <span class="session-prod prod-tone" style="--ph:${prodHue(prod)}"><i class="pdot" style="width:9px;height:9px;margin-right:6px"></i>${esc(prodNames(cur))}</span>
+        <span class="session-date">${compact ? capz(fmtD(cur.date, { weekday: 'long', day: 'numeric', month: 'short' })) : longDate(cur.date)}</span>
+        <span class="session-meta">${esc(cur.type || 'Assaig')}${cur.time ? ` · <span class="mono">${esc(timeRange(cur))}</span>` : ''}${cur.place ? ` · ${esc(cur.place)}` : ''}
+          ${cur.date === TODAY ? '<span class="badge">Avui</span>' : ''}</span>
+        ${cur.note ? `<span class="session-note">${esc(cur.note)}</span>` : ''}
+      </button>
+      <button class="nav-arrow" data-act="sess-step" data-dir="1" ${idx >= list.length - 1 ? 'disabled' : ''} aria-label="Sessió següent">${ICON.right}</button>
+    </div>`;
+}
+/** Whole choir for one session: who is expected (not on leave / outside the production) and how they did. */
+function dayStats(cur) {
+  const c = { ...emptyCounts(), none: 0 };
+  let expected = 0, out = 0;
+  for (const x of SECTIONS) {
+    if (!convoked(cur, x.id)) continue;
+    for (const m of membersOf(x.id)) {
+      const mk = effMark(cur, m);
+      if (mk && mk.s === 'NP') { out++; continue; }
+      expected++;
+      if (!mk) { c.none++; continue; }
+      c[mk.s]++;
+      if (mk.s === 'R') c.min += +mk.min || 0;
+    }
+  }
+  return { c, expected, out };
+}
 function viewRoll() {
   const list = allSessions();
   if (!S.members.size || !list.length) {
@@ -987,46 +1085,64 @@ function viewRoll() {
   }
   let cur = ui.sessionId && list.find(s => s.id === ui.sessionId);
   if (!cur) { cur = defaultSession(list); ui.sessionId = cur.id; }
-  const idx = list.indexOf(cur);
-  const sec = ui.section;
   const pendingBySec = canEdit() ? Object.fromEntries(SECTIONS.map(x => [x.id, pendingSessions(x.id)])) : {};
-
-  const voices = SECTIONS.map(x => {
+  return ui.rollSec ? viewRollSection(cur, list, ui.rollSec, pendingBySec) : viewRollOverview(cur, list, pendingBySec);
+}
+function viewRollOverview(cur, list, pendingBySec) {
+  const quads = SECTIONS.map(x => {
     const on = convoked(cur, x.id);
     const pr = progress(cur, x.id);
     const complete = on && pr.total && pr.done === pr.total;
-    return `<button class="voice ${on ? '' : 'off'}" role="tab" aria-selected="${x.id === sec}" data-act="section" data-sec="${x.id}">
-      ${complete ? '<span class="done" aria-label="Completa"></span>' : ''}${pendingBySec[x.id]?.length ? '<span class="pend" aria-label="Té llistes pendents"></span>' : ''}
-      <span class="voice-l">${x.id}</span><span class="voice-n">${x.name}</span>
-      <span class="voice-c">${on ? `${pr.done}/${pr.total}` : 'no conv.'}</span></button>`;
+    const pend = (pendingBySec[x.id] || []).filter(s => s.id !== cur.id).length;
+    const label = `${x.name}: ${on ? `${pr.done} de ${pr.total} marcats` : 'no convocats'}${pend ? `, ${pend} llistes pendents` : ''}`;
+    return `<button class="quad ${on ? '' : 'off'} ${complete ? 'is-done' : ''}" data-act="open-sec" data-sec="${x.id}" aria-label="${label}">
+      ${pend ? '<i class="q-dot pend"></i>' : ''}${complete ? '<i class="q-dot done"></i>' : ''}
+      <span class="q-l">${x.id}</span><span class="q-n">${x.name}</span>
+      <span class="q-c">${on ? `${pr.done}/${pr.total}` : 'No convocats'}</span>
+      ${on ? `<span class="q-bar"><span style="width:${pr.total ? (pr.done / pr.total) * 100 : 0}%"></span></span>` : ''}
+    </button>`;
   }).join('');
-
-  const isToday = cur.date === TODAY;
+  const anyPend = SECTIONS.some(x => (pendingBySec[x.id] || []).some(s => s.id !== cur.id));
+  const { c, expected, out } = dayStats(cur);
+  const present = c.P + c.R;
+  const marked = expected - c.none;
+  const day = `<div class="section-title"><h2 class="h2">Resum del dia</h2><button class="btn btn-sm" data-act="summary" data-scope="all">Resum per enviar</button></div>
+    <div class="panel day-panel">
+      <div class="day-main"><span class="day-big">${present}<small>/${expected}</small></span><span class="lbl">${marked ? 'assisteixen' : 'encara no s’ha passat llista'}${c.R ? ` · ${c.R} amb retard` : ''}</span></div>
+      ${stackBar({ ...c, NP: 0 })}
+      <div class="day-grid">
+        <div><i class="i-R"></i><b>${c.R}</b><span>Retards${c.min ? ` · ${c.min}′` : ''}</span></div>
+        <div><i class="i-FJ"></i><b>${c.FJ}</b><span>Faltes justificades</span></div>
+        <div><i class="i-FNJ"></i><b>${c.FNJ}</b><span>Faltes injustificades</span></div>
+        <div><i class="i-none"></i><b>${c.none}</b><span>Sense marcar</span></div>
+      </div>
+      ${out ? `<p class="muted" style="margin:0;font-size:12.5px">${out === 1 ? '1 cantaire està' : `${out} cantaires estan`} de baixa o no fan aquesta producció.</p>` : ''}
+    </div>`;
+  return `<div class="ctx" id="ctx">${sessionNav(cur, list, false)}</div>
+    <div class="quads">${quads}</div>
+    <div class="q-legend"><span><i style="background:var(--p)"></i>Llista completa</span>${anyPend ? '<span><i style="background:var(--fnj)"></i>Té llistes pendents</span>' : ''}</div>
+    ${day}`;
+}
+function viewRollSection(cur, list, sec, pendingBySec) {
+  const on = convoked(cur, sec);
+  const pr = progress(cur, sec);
   const head = `<div class="ctx" id="ctx">
-    <div class="session">
-      <button class="nav-arrow" data-act="sess-step" data-dir="-1" ${idx <= 0 ? 'disabled' : ''} aria-label="Sessió anterior">${ICON.left}</button>
-      <button class="session-main" data-act="sess-pick" aria-label="Canvia de sessió">
-        <span class="session-prod">${esc(prodNames(cur))}</span>
-        <span class="session-date">${longDate(cur.date)}</span>
-        <span class="session-meta">${esc(cur.type || 'Assaig')}${cur.time ? ` · <span class="mono">${esc(timeRange(cur))}</span>` : ''}${cur.place ? ` · ${esc(cur.place)}` : ''}
-          ${isToday ? '<span class="badge">Avui</span>' : ''}</span>
-        ${cur.note ? `<span class="session-note">${esc(cur.note)}</span>` : ''}
-      </button>
-      <button class="nav-arrow" data-act="sess-step" data-dir="1" ${idx >= list.length - 1 ? 'disabled' : ''} aria-label="Sessió següent">${ICON.right}</button>
+    ${sessionNav(cur, list, true)}
+    <div class="secbar">
+      <button class="btn btn-sm btn-ghost back" data-act="close-sec" aria-label="Torna a les quatre cordes">${ICON.left.replace('<svg', '<svg style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.2"')} Cordes</button>
+      <span class="secbar-t"><em>${sec}</em>${SEC[sec].name}</span>
+      <span class="mono" id="secbar-count">${on ? `${pr.done}/${pr.total}` : ''}</span>
     </div>
-    <div class="voices" role="tablist" aria-label="Corda">${voices}</div>
   </div>`;
-
   const pend = (pendingBySec[sec] || []).filter(s => s.id !== cur.id);
   const pendHtml = pend.length ? `<div class="pending" role="status"><span><b>${pend.length === 1 ? '1 llista pendent' : `${pend.length} llistes pendents`}</b> de ${SEC[sec].name.toLowerCase()}:</span>
-    ${pend.slice(-4).reverse().map(s => `<button class="chip" data-act="open-session" data-sid="${s.id}">${wdShort(s.date)} ${ddmm(s.date)}</button>`).join('')}
+    ${pend.slice(-4).reverse().map(s => `<button class="chip" data-act="open-session" data-keep="1" data-sid="${s.id}">${wdShort(s.date)} ${ddmm(s.date)}</button>`).join('')}
     ${pend.length > 4 ? `<span class="muted">i ${pend.length - 4} més</span>` : ''}</div>` : '';
 
-  if (!convoked(cur, sec)) {
+  if (!on) {
     return head + pendHtml + `<div class="empty"><h2 class="h2">${SEC[sec].name}: no convocats</h2><p>Aquesta sessió només és per a ${cur.sections.map(x => SEC[x].name.toLowerCase()).join(', ')}.</p>
       ${canEdit() ? `<button class="btn" data-act="session-edit" data-sid="${cur.id}">Edita la sessió</button>` : ''}</div>`;
   }
-
   const all = membersOf(sec);
   if (!all.length) {
     return head + `<div class="empty"><h2 class="h2">No hi ha ${SEC[sec].name.toLowerCase()}</h2><p>Afegeix els cantaires d’aquesta corda per poder passar llista.</p>
@@ -1036,7 +1152,6 @@ function viewRoll() {
   const out = all.filter(m => isOut(cur, m));
   const leader = all.find(m => m.leader);
   const c = countsFor(cur, all);
-
   return head + pendHtml + `
   <div class="leader">
     <span>Cap de corda: <b>${leader ? esc(leader.name) : '—'}</b></span>
@@ -1048,7 +1163,8 @@ function viewRoll() {
       <summary><span>De baixa o no fan la producció (${out.length})</span>${ICON.chev}</summary>
       <ul class="roster" style="margin-top:0">${out.map(m => rowHtml(cur, m)).join('')}</ul>
     </details>` : ''}
-  ${canEdit() ? '<p class="muted" style="font-size:12.5px;text-align:center;margin-top:18px">Toca l’estat marcat una altra vegada per desmarcar-lo.</p>' : ''}`;
+  <button class="btn" data-act="close-sec" style="display:flex;margin:18px auto 0">Torna a les quatre cordes</button>
+  ${canEdit() ? '<p class="muted" style="font-size:12.5px;text-align:center;margin-top:12px">Toca l’estat marcat una altra vegada per desmarcar-lo.</p>' : ''}`;
 }
 function countsFor(session, members) {
   const c = { ...emptyCounts(), none: 0 };
@@ -1131,14 +1247,8 @@ function refreshRow(mid) {
   if (tally) tally.innerHTML = tallyInner(c, all.some(x => !isOut(cur, x) && !effMark(cur, x)));
   const lead = $('.leader .mono');
   if (lead) lead.textContent = `${all.length - c.none}/${all.length} marcats`;
-  const vb = $(`.voice[data-sec="${ui.section}"]`);
-  if (vb) {
-    const pr = progress(cur, ui.section);
-    vb.querySelector('.voice-c').textContent = `${pr.done}/${pr.total}`;
-    const dotEl = vb.querySelector('.done');
-    if (pr.total && pr.done === pr.total) { if (!dotEl) vb.insertAdjacentHTML('afterbegin', '<span class="done" aria-label="Completa"></span>'); }
-    else if (dotEl) dotEl.remove();
-  }
+  const sb = $('#secbar-count');
+  if (sb) { const pr = progress(cur, ui.section); sb.textContent = `${pr.done}/${pr.total}`; }
 }
 
 /* ---------- View: Calendar ---------- */
@@ -1147,7 +1257,7 @@ function viewCalendar() {
   if (ui.calProd !== 'all' && !S.productions.has(ui.calProd)) ui.calProd = 'all';
   const chips = `<div class="chips" role="group" aria-label="Filtra per producció">
     <button class="chip" aria-pressed="${ui.calProd === 'all'}" data-act="cal-prod" data-id="all">Totes</button>
-    ${prods.map(p => `<button class="chip" aria-pressed="${ui.calProd === p.id}" data-act="cal-prod" data-id="${p.id}">${esc(p.name)}</button>`).join('')}
+    ${prods.map(p => `<button class="chip" aria-pressed="${ui.calProd === p.id}" data-act="cal-prod" data-id="${p.id}"><i class="pdot prod-tone" style="--ph:${prodHue(p)}"></i>${esc(p.name)}</button>`).join('')}
   </div>`;
   const head = `<div class="page-head"><h1 class="h1">Calendari</h1>
     <span style="display:flex;gap:8px"><button class="btn btn-sm" data-act="cal-past">${ui.calPast ? 'Amaga passades' : 'Mostra passades'}</button>
@@ -1171,8 +1281,8 @@ function viewCalendar() {
       rows += calRow(s, p.id);
     }
     if (rows) rows += '</ul>';
-    body += `<section class="cal-prod">
-      <div class="cal-prod-h"><h2 class="h2">${esc(p.name)}</h2><span class="mono muted" style="font-size:12px;white-space:nowrap">${total} sessions</span></div>
+    body += `<section class="cal-prod prod-tone" style="--ph:${prodHue(p)}">
+      <div class="cal-prod-h"><h2 class="h2"><i class="pdot"></i>${esc(p.name)}</h2><span class="mono muted" style="font-size:12px;white-space:nowrap">${total} sessions</span></div>
       ${rows || `<p class="muted">No queden sessions pendents. ${ui.calPast ? '' : 'Mostra les passades per veure-les.'}</p>`}
     </section>`;
   }
@@ -1220,7 +1330,7 @@ function viewStats() {
   const st = computeStats(scope, ui.statsSec);
   const scopeTabs = `<div class="subtabs" role="tablist" style="margin-bottom:10px">${[['prod', 'Producció'], ['term', 'Trimestre'], ['season', 'Temporada']].map(([k, l]) => `<button class="subtab" role="tab" aria-selected="${ui.statsScope === k}" data-act="stats-scope" data-k="${k}">${l}</button>`).join('')}</div>`;
   const choice = ui.statsScope === 'prod'
-    ? `<div class="chips" role="group" aria-label="Producció">${prods.map(p => `<button class="chip" aria-pressed="${p.id === scope.id}" data-act="stats-prod" data-id="${p.id}">${esc(p.name)}</button>`).join('')}</div>`
+    ? `<div class="chips" role="group" aria-label="Producció">${prods.map(p => `<button class="chip" aria-pressed="${p.id === scope.id}" data-act="stats-prod" data-id="${p.id}"><i class="pdot prod-tone" style="--ph:${prodHue(p)}"></i>${esc(p.name)}</button>`).join('')}</div>`
     : ui.statsScope === 'term'
       ? `<div class="chips" role="group" aria-label="Trimestre">${terms.map((t, i) => `<button class="chip" aria-pressed="${i === ui.statsTerm}" data-act="stats-term" data-i="${i}">${esc(t.name)}</button>`).join('')}</div>`
       : '';
@@ -1359,7 +1469,7 @@ function manageProductions() {
       const past = ss.filter(s => s.date <= TODAY).length;
       const status = p.end && p.end < TODAY ? 'Acabada' : p.start > TODAY ? 'Propera' : 'En curs';
       return `<div class="panel prod-card"><button data-act="prod-edit" data-pid="${p.id}" style="width:100%;text-align:left">
-        <div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><h2 class="h2">${esc(p.name)}</h2><span class="badge ${status === 'En curs' ? '' : 'soft'}">${status}</span></div>
+        <div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><h2 class="h2" style="display:flex;align-items:center;gap:10px"><i class="pdot prod-tone" style="--ph:${prodHue(p)};width:14px;height:14px"></i>${esc(p.name)}</h2><span class="badge ${status === 'En curs' ? '' : 'soft'}">${status}</span></div>
         <div class="prod-meta"><span>${p.start ? shortDate(p.start) : '?'} – ${p.end ? shortDate(p.end) : '?'}</span><span><b>${ss.length}</b> sessions${shared ? ` (${shared} compartides)` : ''} · <b>${past}</b> fetes</span><span><b>${(p.excluded || []).length}</b> no la fan</span></div>
       </button></div>`;
     }).join('')}</div>` : `<div class="empty"><p>Crea la primera producció (p. ex. «Concert de Nadal») i genera’n les sessions d’assaig.</p></div>`}`;
@@ -1569,16 +1679,16 @@ function summaryText(session, secs) {
   }
   return lines.join('\n');
 }
-function sheetSummary() {
+function sheetSummary(initial) {
   const cur = sessionById(ui.sessionId);
   if (!cur) return;
-  let scope = 'sec';
+  let scope = initial === 'all' ? 'all' : 'sec';
   const text = () => summaryText(cur, scope === 'sec' ? [ui.section] : SECTIONS.map(x => x.id));
   openSheet({
     title: 'Resum de la llista',
     body: `<div class="pickers" style="margin-bottom:10px">
-        <button class="pick" aria-pressed="true" data-scope="sec">${SEC[ui.section].name}</button>
-        <button class="pick" aria-pressed="false" data-scope="all">Tot el cor</button></div>
+        <button class="pick" aria-pressed="${scope === 'sec'}" data-scope="sec">${SEC[ui.section].name}</button>
+        <button class="pick" aria-pressed="${scope === 'all'}" data-scope="all">Tot el cor</button></div>
       <textarea class="summary-pre" id="summary-text" readonly>${esc(text())}</textarea>
       <p class="muted" style="font-size:12.5px;margin:8px 0 0">Copia’l i envia’l al grup de WhatsApp o a la direcció.</p>`,
     foot: `<button class="btn btn-primary" id="copy-summary">Copia el resum</button>`,
@@ -1802,6 +1912,7 @@ function sheetProduction(pid) {
     title: existing ? 'Edita la producció' : 'Nova producció', wide: true,
     body: `<div class="kv">
       <label class="field"><span>Nom</span><input class="inp" id="pe-name" type="text" maxlength="60" value="${esc(d.name)}" placeholder="p. ex. Concert de Nadal 2026"></label>
+      <div class="field"><span>Color al calendari</span><div class="pickers" id="pe-hue">${PROD_HUES.map(h => `<button type="button" class="hue-pick prod-tone" style="--ph:${h}" data-hue="${h}" aria-pressed="${prodHue(d) === h}" aria-label="Color ${h}"></button>`).join('')}</div></div>
       <div class="row2"><label class="field"><span>Inici</span><input class="inp" id="pe-start" type="date" value="${d.start || ''}"></label>
       <label class="field"><span>Final</span><input class="inp" id="pe-end" type="date" value="${d.end || ''}"></label></div>
 
@@ -1831,6 +1942,7 @@ function sheetProduction(pid) {
       bindRm();
       el.querySelectorAll('#g-days .pick').forEach(b => b.onclick = () => b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') !== 'true'));
       el.querySelectorAll('[data-ex]').forEach(b => b.onclick = () => b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') !== 'true'));
+      el.querySelectorAll('#pe-hue .hue-pick').forEach(b => b.onclick = () => el.querySelectorAll('#pe-hue .hue-pick').forEach(x => x.setAttribute('aria-pressed', x === b)));
       el.querySelector('#pe-start').onchange = e => { if (!el.querySelector('#g-from').value || !d.sessions.length) el.querySelector('#g-from').value = e.target.value; };
       el.querySelector('#pe-end').onchange = e => { if (!el.querySelector('#g-to').value) el.querySelector('#g-to').value = e.target.value; };
       el.querySelector('#g-run').onclick = () => {
@@ -1857,6 +1969,8 @@ function sheetProduction(pid) {
         d.start = el.querySelector('#pe-start').value || (d.sessions[0]?.date ?? TODAY);
         d.end = el.querySelector('#pe-end').value;
         d.excluded = $$('[data-ex][aria-pressed="true"]', el).map(b => b.dataset.ex);
+        const hueBtn = el.querySelector('#pe-hue .hue-pick[aria-pressed="true"]');
+        if (hueBtn) d.hue = +hueBtn.dataset.hue;
         d.sessions.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
         const removed = (existing?.sessions || []).filter(s => !d.sessions.some(x => x.id === s.id));
         saveProduction(d);
@@ -2100,7 +2214,7 @@ async function wipeAll(demo) {
 const EDIT_ONLY = new Set(['mark', 'min', 'mark-rest', 'session-new', 'session-edit', 'member-edit', 'member-bulk', 'prod-new', 'prod-edit',
   'wipe-demo', 'wipe-all', 'load-demo', 'export-json', 'abs-accept', 'abs-reject', 'abs-delete', 'link-regen', 'manage']);
 const actions = {
-  'tab': el => { ui.tab = el.dataset.tab; ui._calScrolled = false; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
+  'tab': el => { ui.tab = el.dataset.tab; ui.rollSec = null; ui._calScrolled = false; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
   'reload': () => location.reload(),
   'share': el => sheetShare(el.dataset.role || 'edit'),
   'link-regen': el => regenerateLink(el.dataset.role),
@@ -2124,7 +2238,8 @@ const actions = {
       : `<p style="margin:0">Encara no hi ha cap cor connectat en aquest dispositiu.</p>`,
     foot: S.mode === 'shared' && canEdit() ? '<button class="btn btn-primary" data-act="manage" data-k="config">Enllaços</button>' : '',
   }),
-  'section': el => { ui.section = el.dataset.sec; saveUI(); render(); },
+  'open-sec': el => { ui.rollSec = ui.section = el.dataset.sec; saveUI(); render(); window.scrollTo({ top: 0 }); },
+  'close-sec': () => { ui.rollSec = null; render(); window.scrollTo({ top: 0 }); },
   'sess-step': el => {
     const list = allSessions(); const i = list.findIndex(s => s.id === ui.sessionId);
     const n = list[i + +el.dataset.dir]; if (n) { ui.sessionId = n.id; render(); }
@@ -2135,7 +2250,8 @@ const actions = {
   'open-session': el => {
     const s = sessionById(el.dataset.sid); if (!s) return;
     ui.sessionId = s.id; ui.tab = 'llista';
-    if (!convoked(s, ui.section)) ui.section = (s.sections && s.sections[0]) || ui.section;
+    if (!el.dataset.keep) ui.rollSec = null;
+    else if (!convoked(s, ui.section)) ui.rollSec = ui.section = (s.sections && s.sections[0]) || ui.section;
     closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 });
   },
   'mark': el => {
@@ -2172,7 +2288,7 @@ const actions = {
       render();
     } });
   },
-  'summary': () => sheetSummary(),
+  'summary': el => sheetSummary(el.dataset.scope),
   'cal-prod': el => { ui.calProd = el.dataset.id; saveUI(); render(); },
   'cal-past': () => { ui.calPast = !ui.calPast; ui._calScrolled = false; render(); },
   'session-new': () => sheetSession(null),
