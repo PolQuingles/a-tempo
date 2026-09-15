@@ -7,4 +7,4 @@ Llista d'assistència per a un cor dividit en cordes (sopranos, contralts, tenor
 - `firestore.rules` — regles de seguretat de Firestore
 - `demo.json` — dades d'exemple
 
-Les dades de cada cor viuen a Firestore sota una clau secreta que viatja a l'enllaç (`#k=…`).
+Cada enllaç porta una clau secreta (`#k=…`) que dona un rol: caps de corda (editar), consulta (només lectura) o cantaires (calendari i avisos d'absència). Cada mòbil entra de manera anònima amb Firebase Auth i les regles de `firestore.rules` comproven el rol.

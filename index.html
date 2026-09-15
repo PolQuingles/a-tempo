@@ -96,12 +96,13 @@ input,select,textarea{font:inherit;color:var(--ink)}
 
 /* ---------- Bottom nav ---------- */
 .tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;background:color-mix(in srgb, var(--surface) 92%, transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
-.tabs-in{max-width:760px;margin-inline:auto;display:grid;grid-template-columns:repeat(4,1fr);height:var(--nav-h)}
+.tabs-in{max-width:760px;margin-inline:auto;display:grid;grid-auto-flow:column;grid-auto-columns:1fr;height:var(--nav-h)}
 .tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11.5px;font-weight:600;color:var(--muted);letter-spacing:.01em}
 .tab svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .tab[aria-current="page"]{color:var(--accent)}
 .tab[aria-current="page"] .tab-ico{background:var(--accent-soft)}
-.tab-ico{display:grid;place-items:center;width:52px;height:28px;border-radius:999px;transition:background .15s}
+.tab-ico{position:relative;display:grid;place-items:center;width:52px;height:28px;border-radius:999px;transition:background .15s}
+.tab-badge{position:absolute;top:-4px;right:4px;min-width:17px;height:17px;padding:0 4px;border-radius:999px;background:var(--fnj);color:#fff;font-size:10.5px;font-weight:700;line-height:17px;text-align:center}
 
 /* ---------- Common ---------- */
 .page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding-block:8px 14px;flex-wrap:wrap}
@@ -383,6 +384,49 @@ textarea.inp{padding:10px 12px;min-height:120px;resize:vertical;line-height:1.4}
 .toast button{color:var(--accent-line);font-weight:700;text-transform:uppercase;font-size:12.5px;letter-spacing:.05em}
 :root[data-theme="dark"] .toast button{color:var(--accent-ink)}
 
+
+/* ---------- Pending lists, notices, rule ---------- */
+.pending{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px;padding:10px 12px;border-radius:var(--r-md);background:var(--fnj-soft);font-size:13px}
+.pending b{font-weight:700;color:var(--fnj)}
+.pending .chip{min-height:30px;padding:0 10px;font-size:12.5px;font-family:var(--f-mono);font-weight:500}
+.voice .pend{position:absolute;top:5px;left:6px;width:7px;height:7px;border-radius:50%;background:var(--fnj)}
+.voice[aria-selected="true"] .pend{box-shadow:0 0 0 2px var(--accent)}
+.notice{margin-top:10px;padding:10px;border-radius:10px;background:var(--accent-soft);border:1px dashed var(--accent-line);font-size:13px;display:grid;gap:8px}
+.notice .n-h{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.notice .n-h b{color:var(--accent)}
+.notice .n-a{display:flex;gap:6px;flex-wrap:wrap}
+.rule{align-self:center;font-size:10.5px;font-weight:700;line-height:18px;padding:0 6px;border-radius:6px;white-space:nowrap}
+.rule.out{background:var(--fnj-soft);color:var(--fnj)}
+.rule.risk{background:var(--fj-soft);color:var(--fj-ink)}
+.min-chip.now{font-family:var(--f-ui);font-weight:600;padding:0 10px}
+.ro-state{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600}
+.ro-state i{width:10px;height:10px;border-radius:3px}
+.abs-card{padding:12px 14px;border-top:1px solid var(--line);display:grid;gap:6px}
+.abs-card:first-child{border-top:0}
+.abs-card .a-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.abs-card .a-d{display:flex;gap:6px;flex-wrap:wrap}
+.abs-card .a-d span{font-family:var(--f-mono);font-size:12px;padding:1px 7px;border-radius:6px;background:var(--surface-2);color:var(--ink-2)}
+.abs-card .a-r{font-size:13.5px;color:var(--ink-2)}
+.abs-card .a-b{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}
+.st-pill{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.st-pending{background:var(--fj-soft);color:var(--fj-ink)}
+.st-accepted{background:var(--p-soft);color:var(--p)}
+.st-rejected{background:var(--fnj-soft);color:var(--fnj)}
+.checklist{list-style:none;margin:0;padding:0;max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:var(--r-md)}
+.checklist li + li{border-top:1px solid var(--line)}
+.checklist label{display:flex;align-items:center;gap:10px;padding:9px 12px;font-size:13.5px;cursor:pointer}
+.checklist input{width:18px;height:18px;accent-color:var(--accent);flex:none}
+.checklist .m{font-size:12px;color:var(--muted)}
+.checklist .mo{padding:8px 12px 4px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:var(--surface-2)}
+.leave-row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 6px 6px 12px;border:1px solid var(--line);border-radius:10px;font-size:13.5px}
+.row3{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hero-cta{display:grid;gap:10px;padding:18px;border-radius:var(--r-lg);background:var(--accent);color:var(--accent-ink);margin-top:8px}
+.hero-cta .h2{color:inherit}
+.hero-cta .btn{background:var(--surface);color:var(--accent);border-color:transparent;justify-self:start}
+.me-line{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;font-size:13.5px;color:var(--muted);margin-top:10px}
+.me-line b{color:var(--ink)}
+.link-row .t small{font-weight:400;color:var(--muted)}
+
 @media (min-width:700px){
   .session-date{font-size:30px}
   .opt{font-size:12.5px}
@@ -415,6 +459,7 @@ textarea.inp{padding:10px 12px;min-height:120px;resize:vertical;line-height:1.4}
 <div id="toast-root"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="config.js?v=2"></script>
 <script>
@@ -479,52 +524,67 @@ const byName = (a, b) => a.name.localeCompare(b.name, 'ca');
 
 /* ================= State ================= */
 const S = {
-  mode: 'loading',          // loading | shared | local
+  mode: 'loading',          // loading | setup | nokey | badlink | shared
   ready: false,
   error: null,
-  config: { name: '', alertFNJ: 3, demo: false },
+  role: null,               // edit | view | singer
+  uid: null,
+  config: { name: '', alertFNJ: 3, minAttendance: 80, demo: false },
   members: new Map(),
   productions: new Map(),
   attendance: new Map(),
+  absences: new Map(),
+  secrets: null,
 };
 const ui = {
   tab: 'llista', section: 'S', sessionId: null,
   calProd: 'all', calPast: false,
-  statsProd: null, statsSec: '', statsSort: 'pct',
-  manage: 'cantaires',
+  statsScope: 'prod', statsProd: null, statsTerm: null, statsSec: '', statsSort: 'pct',
+  manage: 'cantaires', absFilter: 'pending',
 };
 function loadUI() {
   try { Object.assign(ui, JSON.parse(localStorage.getItem(LS_UI) || '{}')); } catch {}
   ui.sessionId = null;
 }
 function saveUI() {
-  try { localStorage.setItem(LS_UI, JSON.stringify({ tab: ui.tab, section: ui.section, calProd: ui.calProd, statsSec: ui.statsSec, statsSort: ui.statsSort, manage: ui.manage })); } catch {}
+  try { localStorage.setItem(LS_UI, JSON.stringify({ tab: ui.tab, section: ui.section, calProd: ui.calProd, statsScope: ui.statsScope, statsSec: ui.statsSec, statsSort: ui.statsSort, manage: ui.manage })); } catch {}
 }
+const canEdit = () => S.role === 'edit';
 
-/* ================= Persistence (Firebase Firestore) ================= */
-// Every choir lives under cors/<clau>. The clau travels in the link (#k=…): whoever has the link can read and edit.
+/* ================= Persistence (Firebase) ================= */
+// Links carry a secret (#k=…). claus/<secret> says which choir it opens and with which role
+// (edit: caps de corda · view: consulta · singer: avisos d'absència). Each device signs in
+// anonymously and registers its role under cors/<choir>/access/<uid>; Firestore rules check it.
 const LS_KEY = 'corpresent:clau';
-let db = null;
-let fs = null;
-let CHOIR_KEY = null;
+const LS_LINK = 'corpresent:enllac';
+const LS_ME = 'corpresent:jo';
+const ROLE_NAME = { edit: 'Caps de corda', view: 'Consulta', singer: 'Cantaires' };
+let db = null, fs = null, auth = null, LINK = null;   // LINK = { secret, choirId, role }
 const queue = new Map();   // path -> { data | null, timer }  (debounce window)
 let inflight = 0;
 
-function readKey() {
+const SECRET_RE = /^[A-Za-z0-9_-]{24,64}$/;
+function readSecret() {
   const m = location.hash.match(/k=([A-Za-z0-9_-]{24,64})/);
-  if (m) { try { localStorage.setItem(LS_KEY, m[1]); } catch {} return m[1]; }
+  if (m) return m[1];
   let saved = null;
   try { saved = localStorage.getItem(LS_KEY); } catch {}
-  if (saved && /^[A-Za-z0-9_-]{24,64}$/.test(saved)) { history.replaceState(null, '', `#k=${saved}`); return saved; }
+  if (saved && SECRET_RE.test(saved)) { history.replaceState(null, '', `#k=${saved}`); return saved; }
   return null;
 }
+function rememberLink(link) {
+  LINK = link;
+  try { localStorage.setItem(LS_KEY, link.secret); localStorage.setItem(LS_LINK, JSON.stringify(link)); } catch {}
+  history.replaceState(null, '', `#k=${link.secret}`);
+}
+function forgetLink() { try { localStorage.removeItem(LS_KEY); localStorage.removeItem(LS_LINK); } catch {} }
 function newKey() {
   const b = new Uint8Array(18);
   crypto.getRandomValues(b);
   return btoa(String.fromCharCode(...b)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
-const shareUrl = () => `${location.origin}${location.pathname}#k=${CHOIR_KEY}`;
-window.addEventListener('hashchange', () => { const m = location.hash.match(/k=([A-Za-z0-9_-]{24,64})/); if (m && m[1] !== CHOIR_KEY) location.reload(); });
+const shareUrl = (secret = LINK?.secret) => `${location.origin}${location.pathname}#k=${secret}`;
+window.addEventListener('hashchange', () => { const m = location.hash.match(/k=([A-Za-z0-9_-]{24,64})/); if (m && m[1] !== LINK?.secret) location.reload(); });
 
 const isDirty = path => queue.has(path);
 
@@ -553,7 +613,7 @@ function flush(path) {
 function flushAll() { for (const path of [...queue.keys()]) { clearTimeout(queue.get(path).timer); flush(path); } }
 function writeFailed(e) {
   const code = e && e.code;
-  if (code === 'permission-denied') { S.error = 'No tens permís per desar. Revisa que l’enllaç del cor sigui correcte.'; renderBanner(); }
+  if (code === 'permission-denied') { S.error = 'No tens permís per desar aquest canvi. Potser l’enllaç s’ha renovat: demana’n el nou.'; renderBanner(); }
   else if (code === 'resource-exhausted') toast('S’ha arribat al límit diari de la base de dades. Torna-ho a provar demà.');
   else toast('Un canvi no s’ha pogut desar. Torna-ho a provar.');
   S.syncErr = true; updateSync();
@@ -564,10 +624,11 @@ function updateSync() {
   const el = $('#sync');
   let state = 'ok', text = 'Sincronitzat';
   if (S.mode === 'loading') { state = 'loading'; text = 'Connectant…'; }
-  else if (S.mode === 'nokey' || S.mode === 'setup') { state = 'local'; text = 'Sense cor'; }
+  else if (S.mode !== 'shared') { state = 'local'; text = 'Sense cor'; }
   else if (!navigator.onLine) { state = 'local'; text = pendingWrites() ? 'Sense connexió · pendent' : 'Sense connexió'; }
   else if (pendingWrites()) { state = 'saving'; text = 'Desant…'; }
   else if (S.syncErr) { state = 'error'; text = 'Error en desar'; }
+  else if (S.role && S.role !== 'edit') { state = 'ok'; text = ROLE_NAME[S.role]; }
   el.dataset.state = state;
   el.lastElementChild.textContent = text;
 }
@@ -577,32 +638,41 @@ window.addEventListener('pagehide', flushAll);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushAll(); });
 
 function subscribe() {
+  const wanted = ['members', 'productions', 'config', 'absences'];
+  if (S.role !== 'singer') wanted.push('attendance');
+  if (S.role === 'edit') wanted.push('secrets');
   const loaded = new Set();
-  const markLoaded = k => { loaded.add(k); if (loaded.size === COLS.length + 1 && !S.ready) { S.ready = true; render(); } };
-  for (const col of COLS) {
-    db.collection(col).onSnapshot(snap => {
-      const next = new Map();
-      for (const d of snap.docs) {
-        const path = `${col}/${d.id}`;
-        if (isDirty(path)) { if (S[col].has(d.id)) next.set(d.id, S[col].get(d.id)); }
-        else next.set(d.id, d.data());
-      }
-      for (const [id, v] of S[col]) if (!next.has(id) && isDirty(`${col}/${id}`) && queue.get(`${col}/${id}`)?.data !== null) next.set(id, v);
-      S[col] = next;
-      markLoaded(col);
-      if (S.ready) scheduleRender();
-    }, onDbError);
-  }
+  const markLoaded = k => { loaded.add(k); if (loaded.size === wanted.length && !S.ready) { S.ready = true; render(); } };
+  const onCol = col => snap => {
+    const next = new Map();
+    for (const d of snap.docs) {
+      const path = `${col}/${d.id}`;
+      if (isDirty(path)) { if (S[col].has(d.id)) next.set(d.id, S[col].get(d.id)); }
+      else next.set(d.id, d.data());
+    }
+    for (const [id, v] of S[col]) if (!next.has(id) && isDirty(`${col}/${id}`) && queue.get(`${col}/${id}`)?.data !== null) next.set(id, v);
+    S[col] = next;
+    markLoaded(col);
+    if (S.ready) scheduleRender();
+  };
+  for (const col of ['members', 'productions', 'attendance']) if (wanted.includes(col)) db.collection(col).onSnapshot(onCol(col), onDbError);
+  const absQuery = S.role === 'singer' ? db.collection('absences').where('uid', '==', S.uid) : db.collection('absences');
+  absQuery.onSnapshot(onCol('absences'), onDbError);
   db.doc('config/main').onSnapshot(snap => {
-    if (!isDirty('config/main')) S.config = { name: '', alertFNJ: 3, demo: false, ...(snap.exists ? snap.data() : {}) };
+    if (!isDirty('config/main')) S.config = { name: '', alertFNJ: 3, minAttendance: 80, demo: false, ...(snap.exists ? snap.data() : {}) };
     markLoaded('config');
     if (S.ready) scheduleRender();
   }, onDbError);
+  if (S.role === 'edit') db.doc('secrets/main').onSnapshot(snap => {
+    S.secrets = snap.exists ? snap.data() : null;
+    markLoaded('secrets');
+    if (S.ready) scheduleRender();
+  }, () => markLoaded('secrets'));
 }
 function onDbError(e) {
   const code = e && e.code;
   S.error = code === 'permission-denied'
-    ? 'No es pot accedir a les dades d’aquest cor. Comprova que l’enllaç sigui complet.'
+    ? 'Aquest enllaç ja no dona accés al cor. Demana l’enllaç nou.'
     : 'S’ha perdut la connexió amb les dades. Recarrega la pàgina.';
   if (!S.ready) { S.ready = true; }
   render();
@@ -617,29 +687,42 @@ function membersOf(sec, includeInactive = false) {
 function productionsSorted() {
   return [...S.productions.values()].sort((a, b) => (a.start || '').localeCompare(b.start || ''));
 }
+/** A session lives in one production and can also count for others (alsoIn). */
+function withProd(s, p) { return { ...s, prodId: p.id, alsoIn: (s.alsoIn || []).filter(id => id !== p.id && S.productions.has(id)) }; }
 function allSessions(prodId) {
   const out = [];
   for (const p of S.productions.values()) {
-    if (prodId && prodId !== 'all' && p.id !== prodId) continue;
-    for (const s of (p.sessions || [])) out.push({ ...s, prodId: p.id });
+    for (const raw of (p.sessions || [])) {
+      const s = withProd(raw, p);
+      if (!prodId || prodId === 'all' || p.id === prodId || s.alsoIn.includes(prodId)) out.push(s);
+    }
   }
   return out.sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')));
 }
 function sessionById(id) {
   for (const p of S.productions.values()) {
     const s = (p.sessions || []).find(x => x.id === id);
-    if (s) return { ...s, prodId: p.id };
+    if (s) return withProd(s, p);
   }
   return null;
 }
+const sessionProds = s => [s.prodId, ...(s.alsoIn || [])];
+const prodNames = s => sessionProds(s).map(id => S.productions.get(id)?.name).filter(Boolean).join(' + ');
 const attKey = (sid, sec) => `${sid}_${sec}`;
 const attDoc = (sid, sec) => S.attendance.get(attKey(sid, sec));
 const isExcluded = (prodId, mid) => !!(S.productions.get(prodId)?.excluded || []).includes(mid);
 const convoked = (s, sec) => !s.sections || !s.sections.length || s.sections.includes(sec);
-function effMark(session, member) {
+const onLeave = (m, date) => (m.leaves || []).find(l => l.from && l.from <= date && (!l.to || l.to >= date));
+/** Out of the roll for this session: on leave, or not doing any of its productions. */
+const isOut = (s, m) => !!onLeave(m, s.date) || sessionProds(s).every(p => isExcluded(p, m.id));
+/** Effective mark. ctxProd: when computing one production's stats, members outside it count as «No fa». */
+function effMark(session, member, ctxProd) {
+  if (ctxProd && isExcluded(ctxProd, member.id)) return { s: 'NP', auto: true, why: 'prod' };
   const m = attDoc(session.id, member.section)?.marks?.[member.id];
   if (m && m.s) return m;
-  if (isExcluded(session.prodId, member.id)) return { s: 'NP', auto: true };
+  const lv = onLeave(member, session.date);
+  if (lv) return { s: 'NP', auto: true, why: 'leave', leave: lv };
+  if (sessionProds(session).every(p => isExcluded(p, member.id))) return { s: 'NP', auto: true, why: 'prod' };
   return null;
 }
 const hasData = (s, sec) => { const d = attDoc(s.id, sec); return !!(d && d.marks && Object.keys(d.marks).length); };
@@ -649,6 +732,7 @@ function progress(session, sec) {
   for (const m of ms) if (effMark(session, m)) done++;
   return { done, total: ms.length };
 }
+const nowHHMM = () => { const d = new Date(); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
 function defaultSession(list) {
   if (!list.length) return null;
   const todays = list.filter(s => s.date === TODAY);
@@ -658,6 +742,21 @@ function defaultSession(list) {
   }
   const past = list.filter(s => s.date < TODAY);
   return past.length ? past[past.length - 1] : list[0];
+}
+/** Past sessions (or today's, once finished) where this corda still has people without a mark. */
+function pendingSessions(sec) {
+  const hhmm = nowHHMM();
+  return allSessions().filter(s => convoked(s, sec)
+    && (s.date < TODAY || (s.date === TODAY && (s.end || s.time || '23:59') <= hhmm))
+    && (() => { const pr = progress(s, sec); return pr.done < pr.total; })());
+}
+/** Minutes late if someone arrives right now (only for today's session, once started). */
+function lateNow(session) {
+  if (!session || session.date !== TODAY || !session.time) return 0;
+  const [h, m] = session.time.split(':').map(Number);
+  const start = new Date(); start.setHours(h, m, 0, 0);
+  const mins = Math.floor((Date.now() - start) / 60000);
+  return mins > 0 && mins <= 240 ? mins : 0;
 }
 function currentProductionId() {
   const ps = productionsSorted();
@@ -670,8 +769,40 @@ const emptyCounts = () => ({ P: 0, R: 0, FJ: 0, FNJ: 0, NP: 0, min: 0 });
 const rate = c => { const d = c.P + c.R + c.FJ + c.FNJ; return d ? (c.P + c.R) / d : null; };
 const punctuality = c => { const d = c.P + c.R; return d ? c.P / d : null; };
 
-function computeStats(prodId, secFilter) {
-  const sessions = allSessions(prodId).filter(s => s.date <= TODAY);
+/* ---------- Season and terms ---------- */
+function seasonCfg() {
+  const d = new Date(), y = d.getMonth() >= 7 ? d.getFullYear() : d.getFullYear() - 1;
+  const season = { name: `Temporada ${y}-${String(y + 1).slice(2)}`, from: `${y}-09-01`, to: `${y + 1}-07-31`, ...(S.config.season || {}) };
+  const defTerms = [
+    { name: '1r trimestre', from: `${y}-09-01`, to: `${y}-12-31` },
+    { name: '2n trimestre', from: `${y + 1}-01-01`, to: `${y + 1}-03-31` },
+    { name: '3r trimestre', from: `${y + 1}-04-01`, to: `${y + 1}-07-31` },
+  ];
+  const terms = defTerms.map((t, i) => ({ ...t, ...((S.config.terms || [])[i] || {}) }));
+  return { season, terms };
+}
+function currentTermIdx() {
+  const { terms } = seasonCfg();
+  const i = terms.findIndex(t => t.from <= TODAY && t.to >= TODAY);
+  return i < 0 ? 0 : i;
+}
+function currentScope() {
+  const { season, terms } = seasonCfg();
+  if (ui.statsScope === 'season') return { kind: 'range', from: season.from, to: season.to, name: season.name };
+  if (ui.statsScope === 'term') {
+    if (ui.statsTerm == null || !terms[ui.statsTerm]) ui.statsTerm = currentTermIdx();
+    const t = terms[ui.statsTerm];
+    return { kind: 'range', from: t.from, to: t.to, name: t.name };
+  }
+  if (!ui.statsProd || !S.productions.has(ui.statsProd)) ui.statsProd = currentProductionId();
+  const p = S.productions.get(ui.statsProd);
+  return p ? { kind: 'prod', id: p.id, name: p.name } : null;
+}
+
+function computeStats(scope, secFilter) {
+  const base = scope.kind === 'prod' ? allSessions(scope.id) : allSessions().filter(s => s.date >= scope.from && s.date <= scope.to);
+  const sessions = base.filter(s => s.date <= TODAY);
+  const ctx = scope.kind === 'prod' ? scope.id : null;
   const members = [...S.members.values()].filter(m => !secFilter || m.section === secFilter);
   const per = new Map(members.map(m => [m.id, { m, ...emptyCounts(), hist: [], notes: [] }]));
   const tot = emptyCounts();
@@ -682,7 +813,7 @@ function computeStats(prodId, secFilter) {
     let any = false;
     for (const m of members) {
       if (!convoked(s, m.section)) continue;
-      const mk = hasData(s, m.section) ? effMark(s, m) : null;
+      const mk = hasData(s, m.section) ? effMark(s, m, ctx) : null;
       const rec = per.get(m.id);
       rec.hist.push({ s, mk });
       if (!mk) continue;
@@ -694,8 +825,33 @@ function computeStats(prodId, secFilter) {
     if (any) bySession.push({ s, c });
   }
   const rows = [...per.values()].filter(r => r.m.active !== false || (r.P + r.R + r.FJ + r.FNJ + r.NP) > 0);
-  return { sessions, counted: bySession, tot, bySec, rows };
+  return { sessions, all: base, counted: bySession, tot, bySec, rows };
 }
+
+/* ---------- Norma: assistència mínima per fer el concert ---------- */
+const RULE_SKIP = new Set(['Concert', 'Altres']);
+const minAttendance = () => Math.min(100, Math.max(1, +S.config.minAttendance || 80));
+/** status: ok | risk (below now, can still reach it) | out (cannot reach it any more) | null (no data / not in it) */
+function ruleStatus(prodId, member) {
+  if (!prodId || isExcluded(prodId, member.id)) return null;
+  const min = minAttendance() / 100;
+  let att = 0, abs = 0, remaining = 0;
+  for (const s of allSessions(prodId)) {
+    if (RULE_SKIP.has(s.type) || !convoked(s, member.section)) continue;
+    const marked = s.date <= TODAY && hasData(s, member.section) ? effMark(s, member, prodId) : null;
+    if (!marked) { if (s.date >= TODAY && !onLeave(member, s.date)) remaining++; continue; }
+    if (marked.s === 'NP') continue;
+    if (marked.s === 'P' || marked.s === 'R') att++; else abs++;
+  }
+  const done = att + abs;
+  if (!done) return null;
+  const cur = att / done, best = (att + remaining) / (done + remaining);
+  return { cur, best, att, abs, remaining, status: best < min ? 'out' : cur < min ? 'risk' : 'ok' };
+}
+
+/* ---------- Absence notices ---------- */
+const absencesFor = (sid, mid) => [...S.absences.values()].filter(a => a.memberId === mid && (a.sessionIds || []).includes(sid) && a.status !== 'rejected');
+const pendingAbsences = () => [...S.absences.values()].filter(a => a.status === 'pending');
 
 /* ================= Mutations ================= */
 function setMark(session, member, patch) {
@@ -726,6 +882,20 @@ async function removeMany(paths, label) {
   }
 }
 
+function saveAbsence(a) { S.absences.set(a.id, a); persist('absences', a.id, a, 30); }
+/** Accepting a «no vindré» notice marks those sessions as justified (unless already marked by hand). */
+function acceptAbsence(a) {
+  const m = S.members.get(a.memberId);
+  if (m && a.kind === 'absent') {
+    for (const sid of a.sessionIds || []) {
+      const s = sessionById(sid);
+      const cur = s && attDoc(sid, m.section)?.marks?.[m.id];
+      if (s && !cur) setMark(s, m, { s: 'FJ', note: `Avisat: ${a.reason || 'sense motiu'}`.slice(0, 120) });
+    }
+  }
+  saveAbsence({ ...a, status: 'accepted', reviewedAt: new Date().toISOString() });
+}
+
 /* ================= Rendering ================= */
 let renderQueued = false;
 let deferred = false;
@@ -741,13 +911,35 @@ function scheduleRender() {
 }
 document.addEventListener('focusout', () => { if (deferred) { deferred = false; setTimeout(scheduleRender, 60); } });
 
+const TAB_ICONS = {
+  llista: '<path d="M9 6h11M9 12h11M9 18h11"/><path d="M3.5 6l1.2 1.2L7 4.8M3.5 12l1.2 1.2L7 10.8M3.5 18l1.2 1.2L7 16.8"/>',
+  calendari: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+  stats: '<path d="M5 20V11M10 20V5M15 20v-7M20 20V8"/>',
+  gestio: '<circle cx="9" cy="8" r="3.2"/><path d="M3.5 19.5c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><path d="M16 5.2a3 3 0 010 5.6M18 14.8c1.5.7 2.4 2.2 2.6 4.7"/>',
+  avisos: '<path d="M6 16V11a6 6 0 0112 0v5l1.5 2h-15z"/><path d="M10 20.5a2.2 2.2 0 004 0"/>',
+};
+const TAB_LABEL = { llista: 'Llista', calendari: 'Calendari', stats: 'Estadístiques', gestio: 'Gestió', avisos: 'Avisos' };
+const tabsForRole = () => S.role === 'singer' ? ['avisos', 'calendari'] : S.role === 'view' ? ['llista', 'calendari', 'stats'] : ['llista', 'calendari', 'stats', 'gestio'];
+function renderTabs() {
+  const tabs = tabsForRole();
+  if (!tabs.includes(ui.tab)) ui.tab = tabs[0];
+  const badge = S.role === 'edit' ? pendingAbsences().length : 0;
+  $('.tabs-in').innerHTML = tabs.map(t => `<button class="tab" data-act="tab" data-tab="${t}" aria-current="${t === ui.tab ? 'page' : 'false'}">
+    <span class="tab-ico"><svg viewBox="0 0 24 24">${TAB_ICONS[t]}</svg>${t === 'gestio' && badge ? `<span class="tab-badge">${badge}</span>` : ''}</span>${TAB_LABEL[t]}</button>`).join('');
+}
 function render() {
   $('#choir-name').textContent = S.config.name || '';
-  $$('.tab').forEach(t => t.setAttribute('aria-current', t.dataset.tab === ui.tab ? 'page' : 'false'));
   updateSync();
   renderBanner();
   const v = $('#view');
-  $('.tabs').hidden = S.mode === 'nokey' || S.mode === 'setup';
+  $('.tabs').hidden = S.mode !== 'shared';
+  if (S.mode === 'shared') renderTabs();
+  if (S.mode === 'badlink') {
+    v.innerHTML = `<div class="empty" style="padding-top:36px">${staffSvg()}<h2 class="h2">Aquest enllaç no funciona</h2>
+      <p style="max-width:38ch">Pot ser que estigui incomplet o que s’hagi renovat. Demana l’enllaç nou a la persona que gestiona el cor.</p>
+      <button class="btn" data-act="reload">Torna-ho a provar</button></div>`;
+    return;
+  }
   if (S.mode === 'setup') {
     v.innerHTML = `<div class="empty">${staffSvg()}<h2 class="h2">Falta connectar la base de dades</h2><p>Omple el fitxer <span class="mono">config.js</span> amb la configuració del teu projecte de Firebase.</p></div>`;
     return;
@@ -763,7 +955,7 @@ function render() {
     v.innerHTML = `<div class="empty">${staffSvg()}<p>Carregant la llista del cor…</p></div>`;
     return;
   }
-  const html = { llista: viewRoll, calendari: viewCalendar, stats: viewStats, gestio: viewManage }[ui.tab]();
+  const html = { llista: viewRoll, calendari: viewCalendar, stats: viewStats, gestio: viewManage, avisos: viewSinger }[ui.tab]();
   v.innerHTML = html;
   afterRender();
 }
@@ -771,7 +963,7 @@ function renderBanner() {
   const b = $('#banner');
   let h = '';
   if (S.error) h += `<div class="banner warn"><span>${esc(S.error)}</span><button class="btn btn-sm" data-act="reload">Recarrega</button></div>`;
-  if (S.config.demo && S.ready !== false && S.mode !== 'loading') h += `<div class="banner"><span><b>Dades d’exemple.</b> Quan vulguis començar amb el teu cor, esborra-les.</span><button class="btn btn-sm" data-act="wipe-demo">Esborra l’exemple</button></div>`;
+  if (S.config.demo && canEdit() && S.mode === 'shared') h += `<div class="banner"><span><b>Dades d’exemple.</b> Quan vulguis començar amb el teu cor, esborra-les.</span><button class="btn btn-sm" data-act="wipe-demo">Esborra l’exemple</button></div>`;
   b.innerHTML = h;
 }
 const staffSvg = () => `<svg class="staff" viewBox="0 0 120 30" aria-hidden="true"><g stroke="currentColor" stroke-width="1">${[3, 9, 15, 21, 27].map(y => `<line x1="0" x2="120" y1="${y}" y2="${y}"/>`).join('')}</g><g fill="currentColor"><ellipse cx="34" cy="18" rx="4.2" ry="3" transform="rotate(-20 34 18)"/><ellipse cx="60" cy="12" rx="4.2" ry="3" transform="rotate(-20 60 12)"/><ellipse cx="86" cy="6" rx="4.2" ry="3" transform="rotate(-20 86 6)"/></g></svg>`;
@@ -788,23 +980,23 @@ function viewRoll() {
   if (!S.members.size || !list.length) {
     return `<div class="empty">${staffSvg()}<h2 class="h2">Encara no hi ha res per passar llista</h2>
       <p>${!S.members.size ? 'Afegeix els cantaires de cada corda' : 'Crea una producció amb les seves sessions d’assaig'} per començar.</p>
-      <span style="display:inline-flex;gap:8px;flex-wrap:wrap;justify-content:center">
+      ${canEdit() ? `<span style="display:inline-flex;gap:8px;flex-wrap:wrap;justify-content:center">
         <button class="btn btn-primary" data-act="tab" data-tab="gestio">Ves a Gestió</button>
         ${!S.members.size && !S.productions.size ? '<button class="btn" data-act="load-demo">Prova amb dades d’exemple</button>' : ''}
-      </span></div>`;
+      </span>` : ''}</div>`;
   }
   let cur = ui.sessionId && list.find(s => s.id === ui.sessionId);
   if (!cur) { cur = defaultSession(list); ui.sessionId = cur.id; }
   const idx = list.indexOf(cur);
-  const prod = S.productions.get(cur.prodId);
   const sec = ui.section;
+  const pendingBySec = canEdit() ? Object.fromEntries(SECTIONS.map(x => [x.id, pendingSessions(x.id)])) : {};
 
   const voices = SECTIONS.map(x => {
     const on = convoked(cur, x.id);
     const pr = progress(cur, x.id);
     const complete = on && pr.total && pr.done === pr.total;
     return `<button class="voice ${on ? '' : 'off'}" role="tab" aria-selected="${x.id === sec}" data-act="section" data-sec="${x.id}">
-      ${complete ? '<span class="done" aria-label="Completa"></span>' : ''}
+      ${complete ? '<span class="done" aria-label="Completa"></span>' : ''}${pendingBySec[x.id]?.length ? '<span class="pend" aria-label="Té llistes pendents"></span>' : ''}
       <span class="voice-l">${x.id}</span><span class="voice-n">${x.name}</span>
       <span class="voice-c">${on ? `${pr.done}/${pr.total}` : 'no conv.'}</span></button>`;
   }).join('');
@@ -814,7 +1006,7 @@ function viewRoll() {
     <div class="session">
       <button class="nav-arrow" data-act="sess-step" data-dir="-1" ${idx <= 0 ? 'disabled' : ''} aria-label="Sessió anterior">${ICON.left}</button>
       <button class="session-main" data-act="sess-pick" aria-label="Canvia de sessió">
-        <span class="session-prod">${esc(prod?.name || '')}</span>
+        <span class="session-prod">${esc(prodNames(cur))}</span>
         <span class="session-date">${longDate(cur.date)}</span>
         <span class="session-meta">${esc(cur.type || 'Assaig')}${cur.time ? ` · <span class="mono">${esc(timeRange(cur))}</span>` : ''}${cur.place ? ` · ${esc(cur.place)}` : ''}
           ${isToday ? '<span class="badge">Avui</span>' : ''}</span>
@@ -825,38 +1017,45 @@ function viewRoll() {
     <div class="voices" role="tablist" aria-label="Corda">${voices}</div>
   </div>`;
 
+  const pend = (pendingBySec[sec] || []).filter(s => s.id !== cur.id);
+  const pendHtml = pend.length ? `<div class="pending" role="status"><span><b>${pend.length === 1 ? '1 llista pendent' : `${pend.length} llistes pendents`}</b> de ${SEC[sec].name.toLowerCase()}:</span>
+    ${pend.slice(-4).reverse().map(s => `<button class="chip" data-act="open-session" data-sid="${s.id}">${wdShort(s.date)} ${ddmm(s.date)}</button>`).join('')}
+    ${pend.length > 4 ? `<span class="muted">i ${pend.length - 4} més</span>` : ''}</div>` : '';
+
   if (!convoked(cur, sec)) {
-    return head + `<div class="empty"><h2 class="h2">${SEC[sec].name}: no convocats</h2><p>Aquesta sessió només és per a ${cur.sections.map(x => SEC[x].name.toLowerCase()).join(', ')}.</p>
-      <button class="btn" data-act="session-edit" data-sid="${cur.id}">Edita la sessió</button></div>`;
+    return head + pendHtml + `<div class="empty"><h2 class="h2">${SEC[sec].name}: no convocats</h2><p>Aquesta sessió només és per a ${cur.sections.map(x => SEC[x].name.toLowerCase()).join(', ')}.</p>
+      ${canEdit() ? `<button class="btn" data-act="session-edit" data-sid="${cur.id}">Edita la sessió</button>` : ''}</div>`;
   }
 
   const all = membersOf(sec);
   if (!all.length) {
     return head + `<div class="empty"><h2 class="h2">No hi ha ${SEC[sec].name.toLowerCase()}</h2><p>Afegeix els cantaires d’aquesta corda per poder passar llista.</p>
-      <button class="btn btn-primary" data-act="member-bulk" data-sec="${sec}">Afegeix cantaires</button></div>`;
+      ${canEdit() ? `<button class="btn btn-primary" data-act="member-bulk" data-sec="${sec}">Afegeix cantaires</button>` : ''}</div>`;
   }
-  const inProd = all.filter(m => !isExcluded(cur.prodId, m.id));
-  const out = all.filter(m => isExcluded(cur.prodId, m.id));
+  const inRoll = all.filter(m => !isOut(cur, m));
+  const out = all.filter(m => isOut(cur, m));
   const leader = all.find(m => m.leader);
+  const c = countsFor(cur, all);
 
-  const c = { ...emptyCounts(), none: 0 };
-  for (const m of all) { const mk = effMark(cur, m); if (mk) { c[mk.s]++; if (mk.s === 'R') c.min += +mk.min || 0; } else c.none++; }
-  const done = all.length - c.none;
-
-  return head + `
+  return head + pendHtml + `
   <div class="leader">
     <span>Cap de corda: <b>${leader ? esc(leader.name) : '—'}</b></span>
-    <span class="mono">${done}/${all.length} marcats</span>
+    <span class="mono">${all.length - c.none}/${all.length} marcats</span>
   </div>
-  <div class="tally" id="tally">${tallyInner(c, inProd.some(m => !effMark(cur, m)))}</div>
-  <ul class="roster" id="roster">${inProd.map(m => rowHtml(cur, m)).join('')}</ul>
+  <div class="tally" id="tally">${tallyInner(c, inRoll.some(m => !effMark(cur, m)))}</div>
+  <ul class="roster" id="roster">${inRoll.map(m => rowHtml(cur, m)).join('')}</ul>
   ${out.length ? `<details class="np-group" ${out.some(m => effMark(cur, m)?.s !== 'NP') ? 'open' : ''}>
-      <summary><span>No fan aquesta producció (${out.length})</span>${ICON.chev}</summary>
+      <summary><span>De baixa o no fan la producció (${out.length})</span>${ICON.chev}</summary>
       <ul class="roster" style="margin-top:0">${out.map(m => rowHtml(cur, m)).join('')}</ul>
     </details>` : ''}
-  <p class="muted" style="font-size:12.5px;text-align:center;margin-top:18px">Toca l’estat marcat una altra vegada per desmarcar-lo.</p>`;
+  ${canEdit() ? '<p class="muted" style="font-size:12.5px;text-align:center;margin-top:18px">Toca l’estat marcat una altra vegada per desmarcar-lo.</p>' : ''}`;
 }
-function tallyInner(c, pendingInProd) {
+function countsFor(session, members) {
+  const c = { ...emptyCounts(), none: 0 };
+  for (const m of members) { const mk = effMark(session, m); if (mk) { c[mk.s]++; if (mk.s === 'R') c.min += +mk.min || 0; } else c.none++; }
+  return c;
+}
+function tallyInner(c, pendingInRoll) {
   const legend = ORDER.map(k => `<span><i class="i-${k}"></i>${STATUS[k].short} <b>${c[k]}</b></span>`).join('')
     + (c.none ? `<span><i class="i-none"></i>Pendents <b>${c.none}</b></span>` : '');
   return `${stackBar(c)}
@@ -865,9 +1064,28 @@ function tallyInner(c, pendingInProd) {
       <span class="progress-txt">${c.min ? `Retard acumulat <b>${c.min}′</b>` : (c.R ? 'Retards sense minuts' : 'Sense retards')}</span>
       <span style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-sm" data-act="summary">Resum</button>
-        <button class="btn btn-sm btn-primary" data-act="mark-rest" ${pendingInProd ? '' : 'disabled'}>Resta com a presents</button>
+        ${canEdit() ? `<button class="btn btn-sm btn-primary" data-act="mark-rest" ${pendingInRoll ? '' : 'disabled'}>Resta com a presents</button>` : ''}
       </span>
     </div>`;
+}
+function ruleTag(session, m) {
+  const r = ruleStatus(session.prodId, m);
+  if (!r || r.status === 'ok') return '';
+  const label = r.status === 'out' ? `No arriba al ${minAttendance()}%` : `En risc · ${pct(r.cur)}`;
+  return `<span class="rule ${r.status}" title="Assistència a ${esc(S.productions.get(session.prodId)?.name || '')}: ${pct(r.cur)}">${label}</span>`;
+}
+function noticeHtml(session, m, mk) {
+  const list = absencesFor(session.id, m.id);
+  if (!list.length) return '';
+  return list.map(a => {
+    const what = a.kind === 'late' ? `arribarà tard${a.min ? ` (~${a.min}′)` : ''}` : 'no vindrà';
+    const actions = !canEdit() ? '' : a.status === 'pending'
+      ? `<div class="n-a"><button class="btn btn-sm btn-primary" data-act="abs-accept" data-aid="${a.id}">${a.kind === 'late' ? 'D’acord' : 'Accepta · Justificada'}</button><button class="btn btn-sm" data-act="abs-reject" data-aid="${a.id}">Rebutja</button></div>`
+      : (a.kind === 'absent' && !mk ? `<div class="n-a"><button class="btn btn-sm" data-act="abs-accept" data-aid="${a.id}">Marca justificada</button></div>` : '');
+    if (a.status === 'accepted' && mk && a.kind === 'absent') return '';
+    return `<div class="notice"><div class="n-h"><span><b>Ha avisat:</b> ${what}</span><span class="st-pill st-${a.status}">${a.status === 'pending' ? 'Pendent' : 'Acceptat'}</span></div>
+      ${a.reason ? `<span>${esc(a.reason)}</span>` : ''}${actions}</div>`;
+  }).join('');
 }
 function rowHtml(session, m) {
   const mk = effMark(session, m);
@@ -875,23 +1093,29 @@ function rowHtml(session, m) {
   let state = 'Pendent', warn = false;
   if (mk) {
     if (s === 'R') { if (mk.min) state = `Retard ${mk.min}′`; else { state = 'Indica els minuts'; warn = true; } }
-    else state = mk.auto ? 'No fa la producció' : STATUS[s].label;
+    else if (mk.auto) state = mk.why === 'leave' ? `De baixa${mk.leave?.to ? ` fins al ${ddmm(mk.leave.to)}` : ''}` : 'No fa la producció';
+    else state = STATUS[s].label;
   }
-  const opts = ORDER.map(k => `<button class="opt o-${k}" role="radio" aria-checked="${s === k}" aria-label="${STATUS[k].label}" data-act="mark" data-s="${k}"><i></i>${STATUS[k].short}</button>`).join('');
-  let extra = '';
-  if (s === 'R') {
-    extra = `<div class="extra x-R"><label for="min-${m.id}">Minuts</label>
-      <div class="mins">${LATE_CHIPS.map(n => `<button class="min-chip" aria-pressed="${+mk.min === n}" data-act="min" data-min="${n}">${n}</button>`).join('')}</div>
-      <input class="min-input" id="min-${m.id}" type="number" inputmode="numeric" min="1" max="240" placeholder="—" value="${mk.min || ''}" data-bind="min" aria-label="Minuts de retard"></div>`;
-  } else if ((s === 'FJ' || s === 'FNJ') && !mk.auto) {
-    extra = `<div class="extra x-${s}"><label for="note-${m.id}">Motiu</label>
-      <input class="note-input" id="note-${m.id}" type="text" maxlength="120" placeholder="Opcional" value="${esc(mk.note || '')}" data-bind="note"></div>`;
+  let body = '';
+  if (canEdit()) {
+    body = `<div class="seg" role="radiogroup" aria-label="Assistència de ${esc(m.name)}">${ORDER.map(k => `<button class="opt o-${k}" role="radio" aria-checked="${s === k}" aria-label="${STATUS[k].label}" data-act="mark" data-s="${k}"><i></i>${STATUS[k].short}</button>`).join('')}</div>`;
+    if (s === 'R') {
+      const now = lateNow(session);
+      body += `<div class="extra x-R"><label for="min-${m.id}">Minuts</label>
+        <div class="mins">${now ? `<button class="min-chip now" data-act="min" data-min="${now}" aria-pressed="${+mk.min === now}">Arriba ara · ${now}′</button>` : ''}${LATE_CHIPS.map(n => `<button class="min-chip" aria-pressed="${+mk.min === n}" data-act="min" data-min="${n}">${n}</button>`).join('')}</div>
+        <input class="min-input" id="min-${m.id}" type="number" inputmode="numeric" min="1" max="240" placeholder="—" value="${mk.min || ''}" data-bind="min" aria-label="Minuts de retard"></div>`;
+    } else if ((s === 'FJ' || s === 'FNJ') && !mk.auto) {
+      body += `<div class="extra x-${s}"><label for="note-${m.id}">Motiu</label>
+        <input class="note-input" id="note-${m.id}" type="text" maxlength="120" placeholder="Opcional" value="${esc(mk.note || '')}" data-bind="note"></div>`;
+    }
+  } else if (mk && mk.note) {
+    body = `<div class="muted" style="font-size:12.5px">${esc(mk.note)}</div>`;
   }
+  const dot = s === 'none' ? '' : `<i class="i-${s}" style="display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px"></i>`;
   return `<li class="row ${mk ? 'has-mark' : ''}" data-mid="${m.id}" data-s="${s}">
-    <div class="row-top"><span class="who"><span class="name">${esc(m.name)}</span>${m.part ? `<span class="part" title="Veu">${esc(partTag(m))}</span>` : ''}${m.leader ? '<span class="tag">Cap de corda</span>' : ''}</span>
-      <span class="state ${warn ? 'warn' : ''}">${state}</span></div>
-    <div class="seg" role="radiogroup" aria-label="Assistència de ${esc(m.name)}">${opts}</div>
-    ${extra}</li>`;
+    <div class="row-top" ${canEdit() ? '' : 'style="margin-bottom:4px"'}><span class="who"><span class="name">${esc(m.name)}</span>${m.part ? `<span class="part" title="Veu">${esc(partTag(m))}</span>` : ''}${m.leader ? '<span class="tag">Cap de corda</span>' : ''}${mk?.auto ? '' : ruleTag(session, m)}</span>
+      <span class="state ${warn ? 'warn' : ''}">${canEdit() ? '' : dot}${state}</span></div>
+    ${body}${noticeHtml(session, m, mk && !mk.auto ? mk : null)}</li>`;
 }
 function refreshRow(mid) {
   const cur = sessionById(ui.sessionId);
@@ -901,21 +1125,19 @@ function refreshRow(mid) {
   const tmp = document.createElement('ul');
   tmp.innerHTML = rowHtml(cur, m);
   li.replaceWith(tmp.firstElementChild);
-  // tally, counters
   const all = membersOf(ui.section);
-  const c = { ...emptyCounts(), none: 0 };
-  for (const x of all) { const mk = effMark(cur, x); if (mk) { c[mk.s]++; if (mk.s === 'R') c.min += +mk.min || 0; } else c.none++; }
+  const c = countsFor(cur, all);
   const tally = $('#tally');
-  if (tally) tally.innerHTML = tallyInner(c, all.some(x => !isExcluded(cur.prodId, x.id) && !effMark(cur, x)));
+  if (tally) tally.innerHTML = tallyInner(c, all.some(x => !isOut(cur, x) && !effMark(cur, x)));
   const lead = $('.leader .mono');
   if (lead) lead.textContent = `${all.length - c.none}/${all.length} marcats`;
   const vb = $(`.voice[data-sec="${ui.section}"]`);
   if (vb) {
     const pr = progress(cur, ui.section);
     vb.querySelector('.voice-c').textContent = `${pr.done}/${pr.total}`;
-    const dot = vb.querySelector('.done');
-    if (pr.total && pr.done === pr.total) { if (!dot) vb.insertAdjacentHTML('afterbegin', '<span class="done" aria-label="Completa"></span>'); }
-    else if (dot) dot.remove();
+    const dotEl = vb.querySelector('.done');
+    if (pr.total && pr.done === pr.total) { if (!dotEl) vb.insertAdjacentHTML('afterbegin', '<span class="done" aria-label="Completa"></span>'); }
+    else if (dotEl) dotEl.remove();
   }
 }
 
@@ -929,14 +1151,16 @@ function viewCalendar() {
   </div>`;
   const head = `<div class="page-head"><h1 class="h1">Calendari</h1>
     <span style="display:flex;gap:8px"><button class="btn btn-sm" data-act="cal-past">${ui.calPast ? 'Amaga passades' : 'Mostra passades'}</button>
-    <button class="btn btn-sm btn-primary" data-act="session-new">+ Sessió</button></span></div>`;
-  if (!prods.length) return head + `<div class="empty">${staffSvg()}<h2 class="h2">Cap producció</h2><p>Les sessions s’organitzen per produccions. Crea’n una per començar.</p><button class="btn btn-primary" data-act="prod-new">Nova producció</button></div>`;
+    ${canEdit() ? '<button class="btn btn-sm btn-primary" data-act="session-new">+ Sessió</button>' : ''}</span></div>
+    ${S.role === 'singer' ? '<p class="muted" style="margin:-6px 2px 12px;font-size:13px">Toca una sessió per avisar que no hi podràs anar.</p>' : ''}`;
+  if (!prods.length) return head + `<div class="empty">${staffSvg()}<h2 class="h2">Cap producció</h2><p>Les sessions s’organitzen per produccions.</p>${canEdit() ? '<button class="btn btn-primary" data-act="prod-new">Nova producció</button>' : ''}</div>`;
 
   const shown = ui.calProd === 'all' ? prods : prods.filter(p => p.id === ui.calProd);
   let body = '';
   let hiddenPast = 0;
   for (const p of shown) {
-    let sessions = allSessions(p.id);
+    // In «Totes», a shared session appears once, under its own production.
+    let sessions = allSessions(p.id).filter(s => ui.calProd !== 'all' || s.prodId === p.id);
     const total = sessions.length;
     if (!ui.calPast) { const before = sessions.length; sessions = sessions.filter(s => s.date >= TODAY); hiddenPast += before - sessions.length; }
     if (ui.calProd === 'all' && !sessions.length) continue;
@@ -944,7 +1168,7 @@ function viewCalendar() {
     for (const s of sessions) {
       const m = s.date.slice(0, 7);
       if (m !== month) { if (rows) rows += '</ul>'; month = m; rows += `<div class="cal-month">${monthYear(s.date)}</div><ul class="cal-list">`; }
-      rows += calRow(s);
+      rows += calRow(s, p.id);
     }
     if (rows) rows += '</ul>';
     body += `<section class="cal-prod">
@@ -955,24 +1179,35 @@ function viewCalendar() {
   if (!body) body = `<div class="empty"><p>No hi ha sessions properes${hiddenPast ? ` (${hiddenPast} ja passades)` : ''}.</p><button class="btn" data-act="cal-past">Mostra passades</button></div>`;
   return head + chips + body;
 }
-function calRow(s) {
-  const marks = SECTIONS.map(x => {
-    if (!convoked(s, x.id)) return `<span class="vm off" title="${x.name}: no convocats">${x.id}</span>`;
-    const pr = progress(s, x.id);
-    const cls = !hasData(s, x.id) ? '' : pr.total && pr.done === pr.total ? 'full' : 'part';
-    return `<span class="vm ${cls}" title="${x.name}: ${pr.done}/${pr.total}">${x.id}</span>`;
-  }).join('');
-  const c = emptyCounts();
-  for (const x of SECTIONS) if (convoked(s, x.id) && hasData(s, x.id)) for (const m of membersOf(x.id)) { const mk = effMark(s, m); if (mk) c[mk.s]++; }
-  const r = rate(c);
+function calRow(s, underProd) {
+  const staff = S.role !== 'singer';
+  let right = '';
+  if (staff) {
+    const marks = SECTIONS.map(x => {
+      if (!convoked(s, x.id)) return `<span class="vm off" title="${x.name}: no convocats">${x.id}</span>`;
+      const pr = progress(s, x.id);
+      const cls = !hasData(s, x.id) ? '' : pr.total && pr.done === pr.total ? 'full' : 'part';
+      return `<span class="vm ${cls}" title="${x.name}: ${pr.done}/${pr.total}">${x.id}</span>`;
+    }).join('');
+    const c = emptyCounts();
+    for (const x of SECTIONS) if (convoked(s, x.id) && hasData(s, x.id)) for (const m of membersOf(x.id)) { const mk = effMark(s, m); if (mk) c[mk.s]++; }
+    const r = rate(c);
+    right = `<span class="cal-right"><span class="vmarks" aria-label="Llista per cordes">${marks}</span>${r != null ? `<span class="cal-pct">${pct(r)}</span>` : ''}</span>`;
+  } else {
+    const me = S.members.get(myMemberId());
+    const mine = me && [...S.absences.values()].find(a => a.memberId === me.id && (a.sessionIds || []).includes(s.id) && a.status !== 'rejected');
+    right = mine ? `<span class="cal-right"><span class="st-pill st-${mine.status}">${mine.kind === 'late' ? 'Tard' : 'No hi vaig'}</span></span>` : '<span></span>';
+  }
+  const other = sessionProds(s).filter(id => id !== underProd).map(id => S.productions.get(id)?.name).filter(Boolean);
   const cls = [s.date === TODAY ? 'is-today' : '', s.date < TODAY ? 'is-past' : '', s.type === 'Concert' ? 'type-concert' : ''].join(' ');
+  const openAct = staff ? 'open-session' : (s.date >= TODAY ? 'absence-new' : '');
   return `<li class="cal-row ${cls}" data-date="${s.date}">
-    <button class="cal-main" data-act="open-session" data-sid="${s.id}">
+    <button class="cal-main" ${openAct ? `data-act="${openAct}"` : 'disabled'} data-sid="${s.id}">
       <span class="cal-date"><b>${+s.date.slice(8, 10)}</b><small>${wdShort(s.date)}</small></span>
-      <span class="cal-info"><span class="cal-type">${esc(s.type || 'Assaig')}</span><span class="cal-place">${[s.time ? `<span class="mono">${esc(timeRange(s))}</span>` : '', esc(s.place || ''), esc(s.note || '')].filter(Boolean).join(' · ')}</span></span>
-      <span class="cal-right"><span class="vmarks" aria-label="Llista per cordes">${marks}</span>${r != null ? `<span class="cal-pct">${pct(r)}</span>` : ''}</span>
+      <span class="cal-info"><span class="cal-type">${esc(s.type || 'Assaig')}</span><span class="cal-place">${[s.time ? `<span class="mono">${esc(timeRange(s))}</span>` : '', esc(s.place || ''), esc(s.note || ''), other.length ? `També: ${esc(other.join(', '))}` : ''].filter(Boolean).join(' · ')}</span></span>
+      ${right}
     </button>
-    <button class="icon-btn" data-act="session-edit" data-sid="${s.id}" aria-label="Edita la sessió">${ICON.more}</button>
+    ${canEdit() ? `<button class="icon-btn" data-act="session-edit" data-sid="${s.id}" aria-label="Edita la sessió">${ICON.more}</button>` : ''}
   </li>`;
 }
 
@@ -980,31 +1215,54 @@ function calRow(s) {
 function viewStats() {
   const prods = productionsSorted();
   if (!prods.length) return `<div class="page-head"><h1 class="h1">Estadístiques</h1></div><div class="empty">${staffSvg()}<p>Quan hi hagi produccions amb llistes passades, veuràs aquí l’assistència.</p></div>`;
-  if (!ui.statsProd || !S.productions.has(ui.statsProd)) ui.statsProd = currentProductionId();
-  const prod = S.productions.get(ui.statsProd);
-  const st = computeStats(prod.id, ui.statsSec);
-  const chips = `<div class="chips" role="group" aria-label="Producció">${prods.map(p => `<button class="chip" aria-pressed="${p.id === prod.id}" data-act="stats-prod" data-id="${p.id}">${esc(p.name)}</button>`).join('')}</div>`;
+  const scope = currentScope();
+  const { terms } = seasonCfg();
+  const st = computeStats(scope, ui.statsSec);
+  const scopeTabs = `<div class="subtabs" role="tablist" style="margin-bottom:10px">${[['prod', 'Producció'], ['term', 'Trimestre'], ['season', 'Temporada']].map(([k, l]) => `<button class="subtab" role="tab" aria-selected="${ui.statsScope === k}" data-act="stats-scope" data-k="${k}">${l}</button>`).join('')}</div>`;
+  const choice = ui.statsScope === 'prod'
+    ? `<div class="chips" role="group" aria-label="Producció">${prods.map(p => `<button class="chip" aria-pressed="${p.id === scope.id}" data-act="stats-prod" data-id="${p.id}">${esc(p.name)}</button>`).join('')}</div>`
+    : ui.statsScope === 'term'
+      ? `<div class="chips" role="group" aria-label="Trimestre">${terms.map((t, i) => `<button class="chip" aria-pressed="${i === ui.statsTerm}" data-act="stats-term" data-i="${i}">${esc(t.name)}</button>`).join('')}</div>`
+      : '';
   const secChips = `<div class="chips" role="group" aria-label="Corda" style="padding-bottom:4px">
     <button class="chip" aria-pressed="${!ui.statsSec}" data-act="stats-sec" data-sec="">Tot el cor</button>
     ${SECTIONS.map(x => `<button class="chip" aria-pressed="${ui.statsSec === x.id}" data-act="stats-sec" data-sec="${x.id}">${x.name}</button>`).join('')}</div>`;
-  const head = `<div class="page-head"><div><div class="eyebrow">Estadístiques</div><h1 class="h1">${esc(prod.name)}</h1></div>
+  const sub = scope.kind === 'range' ? `<p class="muted mono" style="margin:4px 0 0;font-size:12.5px">${ddmm(scope.from)}/${scope.from.slice(0, 4)} – ${ddmm(scope.to)}/${scope.to.slice(0, 4)}</p>` : '';
+  const head = `<div class="page-head"><div><div class="eyebrow">Estadístiques</div><h1 class="h1">${esc(scope.name)}</h1>${sub}</div>
     <button class="btn btn-sm" data-act="export-csv">Exporta CSV</button></div>`;
+  const top = head + scopeTabs + choice + secChips;
 
-  const all = allSessions(prod.id);
   if (!st.counted.length) {
-    return head + chips + secChips + `<div class="empty"><p>Encara no s’ha passat llista en cap sessió d’aquesta producció${all.length ? ` (${all.length} sessions programades, la primera el ${shortDate(all[0].date)})` : ''}.</p></div>`;
+    const first = st.all[0];
+    return top + `<div class="empty"><p>Encara no s’ha passat llista en cap sessió d’aquest període${st.all.length ? ` (${st.all.length} sessions programades, la primera el ${shortDate(first.date)})` : ''}.</p></div>`;
   }
   const t = st.tot;
-  const fnjAlert = st.rows.filter(r => r.FNJ >= (+S.config.alertFNJ || 3)).sort((a, b) => b.FNJ - a.FNJ);
   const kpis = `<div class="kpis">
     <div class="kpi"><div class="kpi-v">${kpiPct(rate(t))}</div><div class="kpi-l">Assistència</div></div>
     <div class="kpi"><div class="kpi-v">${kpiPct(punctuality(t))}</div><div class="kpi-l">Puntualitat</div></div>
     <div class="kpi"><div class="kpi-v">${t.min}<small>min</small></div><div class="kpi-l">Retard acumulat · ${t.R} retards</div></div>
     <div class="kpi ${t.FNJ ? 'alert' : ''}"><div class="kpi-v">${t.FNJ}</div><div class="kpi-l">Faltes no justificades · ${t.FJ} just.</div></div>
   </div>
-  <p class="muted" style="font-size:12.5px;margin:10px 2px 0">${st.counted.length} de ${all.length} sessions amb llista · Assistència = presents i retards sobre convocats (sense comptar «no fa»).</p>`;
+  <p class="muted" style="font-size:12.5px;margin:10px 2px 0">${st.counted.length} de ${st.all.length} sessions amb llista · Assistència = presents i retards sobre convocats (sense comptar «no fa» ni baixes).</p>`;
 
   const dist = `<div class="panel" style="padding:14px;margin-top:14px">${stackBar(t)}<div class="legend">${ORDER.map(k => `<span><i class="i-${k}"></i>${STATUS[k].label} <b>${t[k]}</b></span>`).join('')}</div></div>`;
+
+  // Norma del concert (only per production)
+  let rule = '';
+  const ruleMap = new Map();
+  if (scope.kind === 'prod') {
+    for (const r of st.rows) { const rs = ruleStatus(scope.id, r.m); if (rs) ruleMap.set(r.m.id, rs); }
+    const outL = st.rows.filter(r => ruleMap.get(r.m.id)?.status === 'out');
+    const riskL = st.rows.filter(r => ruleMap.get(r.m.id)?.status === 'risk');
+    const hasConcert = st.all.some(s => s.type === 'Concert');
+    const item = (r, rs) => `<li><span><b>${esc(r.m.name)}</b> <span class="muted">· ${SEC[r.m.section].name} · ${pct(rs.cur)}${rs.status === 'risk' ? ` (pot arribar al ${pct(rs.best)})` : ''}</span></span><button class="rule ${rs.status}" data-act="member-stats" data-mid="${r.m.id}">${rs.status === 'out' ? 'No pot fer el concert' : 'En risc'}</button></li>`;
+    rule = `<div class="section-title"><h2 class="h2">Norma del ${minAttendance()}%</h2><span class="eyebrow">${hasConcert ? 'per fer el concert' : 'assistència mínima'}</span></div>
+      <div class="panel">
+        ${outL.length || riskL.length ? `<ul class="alerts">${outL.map(r => item(r, ruleMap.get(r.m.id))).join('')}${riskL.map(r => item(r, ruleMap.get(r.m.id))).join('')}</ul>`
+          : `<p style="margin:0;padding:14px;font-size:13.5px">Ara mateix tothom compleix la norma.</p>`}
+        <p class="muted" style="margin:0;padding:10px 14px 12px;font-size:12px;border-top:1px solid var(--line)">Compten tots els assajos de la producció (no els concerts ni les sessions «Altres»). «En risc» vol dir que ara està per sota però encara hi pot arribar amb els assajos que queden.</p>
+      </div>`;
+  }
 
   const secBars = !ui.statsSec ? `<div class="section-title"><h2 class="h2">Per cordes</h2><span class="eyebrow">assistència</span></div>
     <div class="panel bars">${SECTIONS.map(x => {
@@ -1012,7 +1270,6 @@ function viewStats() {
       return `<div class="bar-row"><span class="lbl"><em>${x.id}</em>${x.name.slice(0, 7)}${x.name.length > 7 ? '.' : ''}</span>${stackBar(c)}<span class="val">${pct(r)}</span></div>`;
     }).join('')}</div>` : '';
 
-  // trend chart: stacked columns per session, normalized to counted marks (excluding NP)
   const cols = st.counted.map(({ s, c }) => {
     const d = c.P + c.R + c.FJ + c.FNJ;
     const seg = k => d ? `<span class="s-${k}" style="height:${(c[k] / d) * 100}%;background:var(--${k.toLowerCase()})"></span>` : '';
@@ -1028,6 +1285,7 @@ function viewStats() {
       <div class="tlabels">${labels}</div></div></div>
       <div class="trend-note legend" style="margin:0;padding:0 14px 12px">${['P', 'R', 'FJ', 'FNJ'].map(k => `<span><i class="i-${k}"></i>${STATUS[k].short}</span>`).join('')}</div></div>`;
 
+  const fnjAlert = st.rows.filter(r => r.FNJ >= (+S.config.alertFNJ || 3)).sort((a, b) => b.FNJ - a.FNJ);
   const alerts = fnjAlert.length ? `<div class="section-title"><h2 class="h2">Cal fer seguiment</h2><span class="eyebrow">≥ ${S.config.alertFNJ || 3} faltes no just.</span></div>
     <div class="panel"><ul class="alerts">${fnjAlert.map(r => `<li><span><b>${esc(r.m.name)}</b> <span class="muted">· ${SEC[r.m.section].name}</span></span><button class="pill fnj" data-act="member-stats" data-mid="${r.m.id}">${r.FNJ} FNJ</button></li>`).join('')}</ul></div>` : '';
 
@@ -1042,8 +1300,9 @@ function viewStats() {
       <div class="sortbar">${Object.entries(sorters).map(([k, l]) => `<button class="chip" style="min-height:30px;font-size:12.5px" aria-pressed="${ui.statsSort === k}" data-act="stats-sort" data-k="${k}">${l}</button>`).join('')}</div></div>
     <div class="panel"><ul class="mtable">${rows.map(r => {
       const counted = r.P + r.R + r.FJ + r.FNJ;
+      const rs = ruleMap.get(r.m.id);
       return `<li class="mrow"><button data-act="member-stats" data-mid="${r.m.id}">
-        <span class="mname"><em>${r.m.section}</em><span>${esc(r.m.name)}</span></span>
+        <span class="mname"><em>${r.m.section}</em><span>${esc(r.m.name)}</span>${rs && rs.status !== 'ok' ? `<span class="rule ${rs.status}">${rs.status === 'out' ? `&lt;${minAttendance()}%` : 'En risc'}</span>` : ''}</span>
         <span class="mpct">${counted ? pct(rate(r)) : (r.NP ? 'No fa' : '—')}</span>
         ${stackBar(r)}
         <span class="mcounts">
@@ -1055,17 +1314,25 @@ function viewStats() {
         </span></button></li>`;
     }).join('')}</ul></div>`;
 
-  return head + chips + secChips + kpis + dist + secBars + trend + alerts + table;
+  return top + kpis + rule + dist + secBars + trend + alerts + table;
 }
 
 /* ---------- View: Manage ---------- */
 function viewManage() {
-  const tabs = [['cantaires', 'Cantaires'], ['produccions', 'Produccions'], ['config', 'Configuració']];
+  const pend = pendingAbsences().length;
+  const tabs = [['avisos', `Avisos${pend ? ` (${pend})` : ''}`], ['cantaires', 'Cantaires'], ['produccions', 'Produccions'], ['config', 'Ajustos']];
   const head = `<div class="page-head"><h1 class="h1">Gestió</h1></div>
-    <div class="subtabs" role="tablist">${tabs.map(([k, l]) => `<button class="subtab" role="tab" aria-selected="${ui.manage === k}" data-act="manage" data-k="${k}">${l}</button>`).join('')}</div>`;
+    <div class="subtabs" role="tablist" style="grid-template-columns:repeat(4,1fr)">${tabs.map(([k, l]) => `<button class="subtab" role="tab" aria-selected="${ui.manage === k}" data-act="manage" data-k="${k}" style="font-size:12.5px">${l}</button>`).join('')}</div>`;
   if (ui.manage === 'produccions') return head + manageProductions();
   if (ui.manage === 'config') return head + manageConfig();
+  if (ui.manage === 'avisos') return head + manageAbsences();
   return head + manageMembers();
+}
+function leaveText(m) {
+  const now = onLeave(m, TODAY);
+  if (now) return `De baixa${now.to ? ` fins al ${ddmm(now.to)}` : ''}`;
+  const next = (m.leaves || []).filter(l => l.from > TODAY).sort((a, b) => a.from.localeCompare(b.from))[0];
+  return next ? `Baixa prevista des del ${ddmm(next.from)}` : '';
 }
 function manageMembers() {
   return SECTIONS.map(x => {
@@ -1073,10 +1340,13 @@ function manageMembers() {
     const active = ms.filter(m => m.active !== false).length;
     return `<div class="sec-h"><h2 class="h2"><em>${x.id}</em>${x.name} <span class="mono muted" style="font-size:13px;font-weight:400">${active}</span></h2>
       <span style="display:flex;gap:4px"><button class="btn btn-sm btn-ghost" data-act="member-bulk" data-sec="${x.id}">Afegeix</button></span></div>
-      ${ms.length ? `<ul class="list">${ms.map(m => `<li class="li"><button data-act="member-edit" data-mid="${m.id}">
-        <span class="${m.active === false ? 'dim' : ''}"><span class="t">${esc(m.name)}</span>${m.leader ? ' <span class="tag">Cap de corda</span>' : ''}
-        ${m.active === false ? '<br><span class="s">De baixa</span>' : m.phone ? `<br><span class="s mono">${esc(m.phone)}</span>` : ''}</span>
-        <span class="icon-btn" aria-hidden="true">${ICON.go}</span></button></li>`).join('')}</ul>`
+      ${ms.length ? `<ul class="list">${ms.map(m => {
+        const lv = leaveText(m);
+        return `<li class="li"><button data-act="member-edit" data-mid="${m.id}">
+        <span class="${m.active === false ? 'dim' : ''}"><span class="t">${esc(m.name)}</span>${m.part ? ` <span class="part">${esc(partTag(m))}</span>` : ''}${m.leader ? ' <span class="tag">Cap de corda</span>' : ''}
+        ${m.active === false ? '<br><span class="s">Inactiu</span>' : lv ? `<br><span class="s">${lv}</span>` : m.phone ? `<br><span class="s mono">${esc(m.phone)}</span>` : ''}</span>
+        <span class="icon-btn" aria-hidden="true">${ICON.go}</span></button></li>`;
+      }).join('')}</ul>`
         : `<div class="panel" style="padding:14px;color:var(--muted);font-size:13.5px">Cap cantaire en aquesta corda.</div>`}`;
   }).join('');
 }
@@ -1084,36 +1354,113 @@ function manageProductions() {
   const ps = productionsSorted();
   return `<div class="sec-h"><span class="muted" style="font-size:13.5px">${ps.length} produccions</span><button class="btn btn-sm btn-primary" data-act="prod-new">+ Producció</button></div>
     ${ps.length ? `<div style="display:grid;gap:10px">${ps.map(p => {
-      const ss = p.sessions || [];
+      const ss = allSessions(p.id);
+      const shared = ss.filter(s => s.prodId !== p.id).length;
       const past = ss.filter(s => s.date <= TODAY).length;
       const status = p.end && p.end < TODAY ? 'Acabada' : p.start > TODAY ? 'Propera' : 'En curs';
       return `<div class="panel prod-card"><button data-act="prod-edit" data-pid="${p.id}" style="width:100%;text-align:left">
         <div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><h2 class="h2">${esc(p.name)}</h2><span class="badge ${status === 'En curs' ? '' : 'soft'}">${status}</span></div>
-        <div class="prod-meta"><span>${p.start ? shortDate(p.start) : '?'} – ${p.end ? shortDate(p.end) : '?'}</span><span><b>${ss.length}</b> sessions · <b>${past}</b> fetes</span><span><b>${(p.excluded || []).length}</b> no la fan</span></div>
+        <div class="prod-meta"><span>${p.start ? shortDate(p.start) : '?'} – ${p.end ? shortDate(p.end) : '?'}</span><span><b>${ss.length}</b> sessions${shared ? ` (${shared} compartides)` : ''} · <b>${past}</b> fetes</span><span><b>${(p.excluded || []).length}</b> no la fan</span></div>
       </button></div>`;
     }).join('')}</div>` : `<div class="empty"><p>Crea la primera producció (p. ex. «Concert de Nadal») i genera’n les sessions d’assaig.</p></div>`}`;
 }
+function absenceCard(a, opts = {}) {
+  const m = S.members.get(a.memberId);
+  const dates = (a.sessionIds || []).map(sessionById).filter(Boolean).sort((x, y) => x.date.localeCompare(y.date));
+  const label = { pending: 'Pendent', accepted: 'Acceptat', rejected: 'Rebutjat' }[a.status];
+  const what = a.kind === 'late' ? `Arribarà tard${a.min ? ` (~${a.min}′)` : ''}` : 'No vindrà';
+  let btns = '';
+  if (opts.staff && canEdit()) {
+    btns = a.status === 'pending'
+      ? `<button class="btn btn-sm btn-primary" data-act="abs-accept" data-aid="${a.id}">Accepta</button><button class="btn btn-sm" data-act="abs-reject" data-aid="${a.id}">Rebutja</button>`
+      : `<button class="btn btn-sm btn-danger-ghost" data-act="abs-delete" data-aid="${a.id}">Esborra</button>`;
+  } else if (opts.mine && a.status === 'pending') {
+    btns = `<button class="btn btn-sm btn-danger-ghost" data-act="abs-cancel" data-aid="${a.id}">Retira l’avís</button>`;
+  }
+  return `<div class="abs-card">
+    <div class="a-h"><span><b>${esc(m?.name || a.memberName || '—')}</b> <span class="muted">· ${esc(SEC[a.section]?.name || '')} · ${what}</span></span><span class="st-pill st-${a.status}">${label}</span></div>
+    <div class="a-d">${dates.map(s => `<span>${wdShort(s.date)} ${ddmm(s.date)}</span>`).join('') || '<span>Sessió esborrada</span>'}</div>
+    ${a.reason ? `<div class="a-r">${esc(a.reason)}</div>` : ''}
+    <div class="muted mono" style="font-size:11.5px">Enviat el ${a.createdAt ? `${ddmm(a.createdAt.slice(0, 10))} a les ${a.createdAt.slice(11, 16)}` : '—'}</div>
+    ${btns ? `<div class="a-b">${btns}</div>` : ''}
+  </div>`;
+}
+function manageAbsences() {
+  const all = [...S.absences.values()].sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+  const list = all.filter(a => ui.absFilter === 'all' || a.status === 'pending');
+  return `<div class="sec-h"><div class="pickers">
+      <button class="pick" aria-pressed="${ui.absFilter !== 'all'}" data-act="abs-filter" data-k="pending">Pendents</button>
+      <button class="pick" aria-pressed="${ui.absFilter === 'all'}" data-act="abs-filter" data-k="all">Tots</button></div>
+    <button class="btn btn-sm btn-primary" data-act="absence-new">+ Nou avís</button></div>
+    ${list.length ? `<div class="panel">${list.map(a => absenceCard(a, { staff: true })).join('')}</div>`
+      : `<div class="panel" style="padding:16px;font-size:13.5px;color:var(--muted)">${ui.absFilter === 'all' ? 'Encara no hi ha cap avís.' : 'No hi ha avisos pendents.'} Els cantaires poden avisar amb el seu enllaç (Ajustos › Enllaços).</div>`}`;
+}
+function linkRow(role, title, desc) {
+  const has = !!S.secrets?.[role];
+  return `<div class="setting link-row"><div><div class="t">${title}</div><div class="s">${desc}</div></div>
+    <span style="display:flex;gap:6px;flex-wrap:wrap">
+      ${has ? `<button class="btn btn-sm btn-primary" data-act="share" data-role="${role}">Comparteix</button>` : ''}
+      <button class="btn btn-sm" data-act="link-regen" data-role="${role}">${has ? 'Renova' : 'Crea'}</button></span></div>`;
+}
 function manageConfig() {
-  return `<div class="panel" style="margin-top:16px">
-    <div class="setting"><div><div class="t">Enllaç per als caps de corda</div><div class="s">Qui tingui l’enllaç pot passar llista i editar. Els canvis es veuen a l’instant a tots els mòbils.</div></div><button class="btn btn-sm btn-primary" data-act="share">Comparteix</button></div>
+  const { season, terms } = seasonCfg();
+  return `<div class="sec-h"><h2 class="h2">Enllaços</h2></div>
+  <div class="panel">
+    ${linkRow('edit', 'Caps de corda', 'Passar llista i editar-ho tot.')}
+    ${linkRow('view', 'Consulta', 'Per a la direcció: veu llistes i estadístiques, no pot canviar res.')}
+    ${linkRow('singer', 'Cantaires', 'Veuen el calendari i avisen d’absències. No veuen l’assistència dels altres.')}
+    <p class="muted" style="margin:0;padding:10px 14px 12px;font-size:12px;border-top:1px solid var(--line)">«Renova» crea un enllaç nou i desactiva l’anterior: qui feia servir el vell haurà de rebre el nou.</p>
   </div>
-  <div class="panel" style="margin-top:12px">
+  <div class="sec-h"><h2 class="h2">Cor</h2></div>
+  <div class="panel">
     <div class="setting" style="display:grid;grid-template-columns:1fr;gap:10px">
       <label class="field"><span>Nom del cor</span><input class="inp" id="cfg-name" type="text" maxlength="60" value="${esc(S.config.name || '')}" data-bind="cfg-name" placeholder="p. ex. Cor de Cambra de Sant Cugat"></label>
     </div>
     <div class="setting">
-      <div><div class="t">Avís de seguiment</div><div class="s">Assenyala a Estadístiques qui acumula aquest nombre de faltes no justificades en una producció.</div></div>
+      <div><div class="t">Norma per fer el concert</div><div class="s">Assistència mínima als assajos d’una producció per poder-ne cantar el concert.</div></div>
+      <span style="display:flex;align-items:center;gap:6px"><input class="inp" id="cfg-min" type="number" inputmode="numeric" min="1" max="100" style="width:80px;text-align:center" value="${minAttendance()}" data-bind="cfg-min"><b>%</b></span>
+    </div>
+    <div class="setting">
+      <div><div class="t">Avís de seguiment</div><div class="s">Assenyala qui acumula aquest nombre de faltes no justificades.</div></div>
       <input class="inp" id="cfg-alert" type="number" inputmode="numeric" min="1" max="20" style="width:80px;text-align:center" value="${+S.config.alertFNJ || 3}" data-bind="cfg-alert">
     </div>
+  </div>
+  <div class="sec-h"><h2 class="h2">Temporada i trimestres</h2></div>
+  <div class="panel" style="padding:14px;display:grid;gap:12px">
+    <label class="field"><span>Nom de la temporada</span><input class="inp" id="cfg-sname" type="text" maxlength="40" value="${esc(season.name)}" data-bind="cfg-period"></label>
+    <div class="row3"><label class="field"><span>Inici</span><input class="inp" id="cfg-sfrom" type="date" value="${season.from}" data-bind="cfg-period"></label>
+      <label class="field"><span>Final</span><input class="inp" id="cfg-sto" type="date" value="${season.to}" data-bind="cfg-period"></label></div>
+    ${terms.map((t, i) => `<div class="row3"><label class="field"><span>${esc(t.name)} · inici</span><input class="inp" id="cfg-t${i}from" type="date" value="${t.from}" data-bind="cfg-period"></label>
+      <label class="field"><span>final</span><input class="inp" id="cfg-t${i}to" type="date" value="${t.to}" data-bind="cfg-period"></label></div>`).join('')}
   </div>
   <div class="sec-h"><h2 class="h2">Dades</h2></div>
   <div class="panel">
     ${S.members.size ? '' : '<div class="setting"><div><div class="t">Dades d’exemple</div><div class="s">Carrega un cor fictici amb llistes passades per provar l’app.</div></div><button class="btn btn-sm" data-act="load-demo">Carrega</button></div>'}
-    <div class="setting"><div><div class="t">Còpia de seguretat</div><div class="s">Descarrega tots els cantaires, produccions i llistes en un fitxer JSON.</div></div><button class="btn btn-sm" data-act="export-json">Exporta</button></div>
+    <div class="setting"><div><div class="t">Còpia de seguretat</div><div class="s">Descarrega cantaires, produccions, llistes i avisos en un fitxer JSON.</div></div><button class="btn btn-sm" data-act="export-json">Exporta</button></div>
     <div class="setting"><div><div class="t">Restaura una còpia</div><div class="s">Substitueix totes les dades actuals per les del fitxer.</div></div>
       <label class="btn btn-sm" for="import-file">Importa…</label><input id="import-file" type="file" accept="application/json,.json" class="sr" data-bind="import"></div>
-    <div class="setting"><div><div class="t">Esborra-ho tot</div><div class="s">Elimina cantaires, produccions i llistes. No es pot desfer.</div></div><button class="btn btn-sm btn-danger-ghost" data-act="wipe-all">Esborra</button></div>
+    <div class="setting"><div><div class="t">Esborra-ho tot</div><div class="s">Elimina cantaires, produccions, llistes i avisos. No es pot desfer.</div></div><button class="btn btn-sm btn-danger-ghost" data-act="wipe-all">Esborra</button></div>
   </div>`;
+}
+
+/* ---------- View: Singer (avisos) ---------- */
+function myMemberId() { try { const id = localStorage.getItem(LS_ME); return id && S.members.has(id) ? id : null; } catch { return null; } }
+function viewSinger() {
+  const me = S.members.get(myMemberId());
+  const mine = [...S.absences.values()].sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+  const next = me ? allSessions().filter(s => s.date >= TODAY && convoked(s, me.section))[0] : null;
+  return `<div class="page-head"><div><div class="eyebrow">${esc(S.config.name || 'Cor')}</div><h1 class="h1">Avisos d’absència</h1></div></div>
+    <div class="hero-cta">
+      <h2 class="h2">No podràs venir a un assaig?</h2>
+      <span style="font-size:14px">Avisa amb temps. El teu cap de corda ho veurà i la falta quedarà justificada si l’accepta.</span>
+      <button class="btn" data-act="absence-new">Avisa d’una absència</button>
+    </div>
+    <div class="me-line">${me ? `<span>Ets <b>${esc(me.name)}</b> · ${SEC[me.section].name}</span>` : '<span>Encara no has dit qui ets.</span>'}<button class="btn btn-sm btn-ghost" data-act="who-am-i">${me ? 'No sóc jo' : 'Tria el teu nom'}</button></div>
+    ${next ? `<div class="section-title"><h2 class="h2">Proper assaig</h2></div>
+      <div class="panel" style="padding:14px"><b>${longDate(next.date)}</b><div class="muted" style="font-size:13.5px">${esc(next.type)}${next.time ? ` · ${esc(timeRange(next))}` : ''}${next.place ? ` · ${esc(next.place)}` : ''} · ${esc(prodNames(next))}</div>${next.note ? `<div style="font-size:13px;color:var(--accent);margin-top:4px">${esc(next.note)}</div>` : ''}</div>` : ''}
+    <div class="section-title"><h2 class="h2">Els meus avisos</h2></div>
+    ${mine.length ? `<div class="panel">${mine.map(a => absenceCard(a, { mine: true })).join('')}</div>`
+      : '<div class="panel" style="padding:14px;font-size:13.5px;color:var(--muted)">Encara no has enviat cap avís des d’aquest mòbil.</div>'}`;
 }
 
 function afterRender() {
@@ -1207,7 +1554,7 @@ function sheetSessionPicker() {
 /* ---------- Sheet: summary ---------- */
 function summaryText(session, secs) {
   const prod = S.productions.get(session.prodId);
-  const lines = [`${prod?.name || ''} — ${session.type || 'Assaig'} ${ddmm(session.date)}${session.time ? ' ' + timeRange(session) : ''}`];
+  const lines = [`${prodNames(session)} — ${session.type || 'Assaig'} ${ddmm(session.date)}${session.time ? ' ' + timeRange(session) : ''}`];
   for (const sec of secs) {
     if (!convoked(session, sec)) continue;
     const ms = membersOf(sec);
@@ -1267,6 +1614,8 @@ function sheetSession(sid, presetProd) {
       <label class="field"><span>Hora de final</span><input class="inp" id="se-end" type="time" value="${esc(cur.end || '')}"></label></div>
       <label class="field"><span>Lloc</span><input class="inp" id="se-place" type="text" maxlength="60" value="${esc(cur.place || '')}" placeholder="Sala d’assaig"></label>
       <div class="field"><span>Cordes convocades</span><div class="pickers" id="se-secs">${SECTIONS.map(x => `<button type="button" class="pick" aria-pressed="${secs.has(x.id)}" data-sec="${x.id}"><span class="vl">${x.id}</span> ${x.name}</button>`).join('')}</div></div>
+      <div class="field"><span>També compta per a</span><div class="pickers" id="se-also">${prods.map(p => `<button type="button" class="pick" data-also="${p.id}" aria-pressed="${(cur.alsoIn || []).includes(p.id)}">${esc(p.name)}</button>`).join('')}</div>
+        <small>Per a assajos compartits entre produccions: comptaran a les estadístiques i a la norma de totes les marcades.</small></div>
       <label class="field"><span>Nota</span><input class="inp" id="se-note" type="text" maxlength="80" value="${esc(cur.note || '')}" placeholder="p. ex. Portar partitures del Gloria"></label>
     </div>`,
     foot: `${existing ? '<button class="btn btn-danger-ghost" id="se-del">Esborra</button>' : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="se-save">Desa</button>`,
@@ -1276,6 +1625,7 @@ function sheetSession(sid, presetProd) {
         if (!on && el.querySelectorAll('#se-secs .pick[aria-pressed="true"]').length === 1) return;
         b.setAttribute('aria-pressed', on);
       });
+      el.querySelectorAll('#se-also .pick').forEach(b => b.onclick = () => b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') !== 'true'));
       el.querySelector('#se-save').onclick = () => {
         const date = el.querySelector('#se-date').value;
         if (!date) { toast('Indica la data de la sessió'); return; }
@@ -1286,6 +1636,8 @@ function sheetSession(sid, presetProd) {
         };
         if (chosen.length && chosen.length < 4) next.sections = chosen;
         const prodId = el.querySelector('#se-prod').value;
+        const also = $$('#se-also .pick[aria-pressed="true"]', el).map(b => b.dataset.also).filter(id => id !== prodId);
+        if (also.length) next.alsoIn = also;
         if (existing && existing.prodId !== prodId) {
           const old = clone(S.productions.get(existing.prodId));
           old.sessions = (old.sessions || []).filter(s => s.id !== cur.id);
@@ -1326,7 +1678,14 @@ function sheetMember(mid) {
       <div class="field"><span>Corda</span><div class="pickers" id="me-sec">${SECTIONS.map(x => `<button type="button" class="pick" aria-pressed="${m.section === x.id}" data-sec="${x.id}"><span class="vl">${x.id}</span> ${x.name}</button>`).join('')}</div></div>
       <div class="field"><span>Veu dins la corda</span><div class="pickers" id="me-part"><button type="button" class="pick" data-part="" aria-pressed="${!m.part}">Sense</button>${PARTS.map(v => `<button type="button" class="pick" data-part="${v}" aria-pressed="${m.part === v}">${v}</button>`).join('')}</div></div>
       <div class="toggle-row"><span><b>Cap de corda</b><br><span class="muted" style="font-size:12.5px">Passa llista de la seva corda</span></span><label class="switch"><input type="checkbox" id="me-leader" ${m.leader ? 'checked' : ''}><span></span></label></div>
-      <div class="toggle-row"><span><b>Actiu</b><br><span class="muted" style="font-size:12.5px">Desactiva’l si és baixa; conserva l’historial</span></span><label class="switch"><input type="checkbox" id="me-active" ${m.active !== false ? 'checked' : ''}><span></span></label></div>
+      <fieldset class="fieldset"><legend>Baixes temporals</legend>
+        <div id="me-leaves" style="display:grid;gap:6px"></div>
+        <div class="row3"><label class="field"><span>Des del</span><input class="inp" id="lv-from" type="date"></label><label class="field"><span>Fins al</span><input class="inp" id="lv-to" type="date"></label></div>
+        <label class="field"><span>Motiu</span><input class="inp" id="lv-note" type="text" maxlength="60" placeholder="p. ex. Erasmus, lesió…"></label>
+        <button type="button" class="btn btn-sm" id="lv-add" style="width:max-content">Afegeix la baixa</button>
+        <small class="muted">Durant la baixa surt en gris («No fa») i no compta a les estadístiques ni a la norma.</small>
+      </fieldset>
+      <div class="toggle-row"><span><b>Actiu</b><br><span class="muted" style="font-size:12.5px">Desactiva’l si deixa el cor; conserva l’historial</span></span><label class="switch"><input type="checkbox" id="me-active" ${m.active !== false ? 'checked' : ''}><span></span></label></div>
       <label class="field"><span>Telèfon</span><input class="inp" id="me-phone" type="tel" maxlength="20" value="${esc(m.phone || '')}"></label>
       <label class="field"><span>Notes</span><input class="inp" id="me-notes" type="text" maxlength="120" value="${esc(m.notes || '')}"></label>
     </div>`,
@@ -1334,6 +1693,20 @@ function sheetMember(mid) {
     onMount: el => {
       el.querySelectorAll('#me-sec .pick').forEach(b => b.onclick = () => { el.querySelectorAll('#me-sec .pick').forEach(x => x.setAttribute('aria-pressed', x === b)); });
       el.querySelectorAll('#me-part .pick').forEach(b => b.onclick = () => { el.querySelectorAll('#me-part .pick').forEach(x => x.setAttribute('aria-pressed', x === b)); });
+      m.leaves = [...(m.leaves || [])];
+      const drawLeaves = () => {
+        el.querySelector('#me-leaves').innerHTML = m.leaves.length ? m.leaves.map((l, i) => `<div class="leave-row"><span><span class="mono">${ddmm(l.from)}/${l.from.slice(2, 4)} – ${l.to ? `${ddmm(l.to)}/${l.to.slice(2, 4)}` : 'sense data'}</span>${l.note ? ` · ${esc(l.note)}` : ''}</span><button type="button" class="icon-btn" data-lv="${i}" aria-label="Treu la baixa">${ICON.close}</button></div>`).join('') : '<span class="muted" style="font-size:13px">Cap baixa.</span>';
+        el.querySelectorAll('[data-lv]').forEach(b => b.onclick = () => { m.leaves.splice(+b.dataset.lv, 1); drawLeaves(); });
+      };
+      drawLeaves();
+      el.querySelector('#lv-add').onclick = () => {
+        const from = el.querySelector('#lv-from').value, to = el.querySelector('#lv-to').value;
+        if (!from || (to && to < from)) { toast('Indica una data d’inici (i un final posterior)'); return; }
+        m.leaves.push({ from, to, note: el.querySelector('#lv-note').value.trim() });
+        m.leaves.sort((a, b) => a.from.localeCompare(b.from));
+        ['#lv-from', '#lv-to', '#lv-note'].forEach(q => { el.querySelector(q).value = ''; });
+        drawLeaves();
+      };
       el.querySelector('#me-save').onclick = () => {
         const name = el.querySelector('#me-name').value.trim();
         if (!name) { toast('Escriu el nom del cantaire'); return; }
@@ -1386,13 +1759,18 @@ function sheetBulk(sec) {
 function sheetMemberStats(mid) {
   const m = S.members.get(mid);
   if (!m) return;
-  const st = computeStats(ui.statsProd, m.section);
+  const scope = currentScope();
+  const st = computeStats(scope, m.section);
+  const rs = scope.kind === 'prod' ? ruleStatus(scope.id, m) : null;
   const r = st.rows.find(x => x.m.id === mid) || { ...emptyCounts(), hist: [], notes: [] };
   const hist = r.hist.map(({ s, mk }) => `<button class="hcell" data-act="open-session" data-sid="${s.id}" title="${longDate(s.date)} · ${mk ? STATUS[mk.s].label + (mk.min ? ` ${mk.min}′` : '') : 'Sense llista'}"><i class="${mk ? 's-' + mk.s : ''}"></i>${ddmm(s.date)}</button>`).join('');
-  const prod = S.productions.get(ui.statsProd);
   openSheet({
     title: m.name,
-    body: `<div class="eyebrow" style="margin-bottom:10px">${SEC[m.section].name} · ${esc(prod?.name || '')}</div>
+    body: `<div class="eyebrow" style="margin-bottom:10px">${SEC[m.section].name} · ${esc(scope.name)}</div>
+      ${rs ? `<div class="notice" style="margin:0 0 12px;background:${rs.status === 'ok' ? 'var(--p-soft)' : rs.status === 'risk' ? 'var(--fj-soft)' : 'var(--fnj-soft)'};border:0">
+        <b>${rs.status === 'ok' ? `Compleix la norma del ${minAttendance()}%` : rs.status === 'risk' ? 'En risc de no poder fer el concert' : 'No pot fer el concert'}</b>
+        <span>Assistència als assajos: ${pct(rs.cur)} (${rs.att} de ${rs.att + rs.abs})${rs.remaining ? ` · queden ${rs.remaining} assajos, màxim possible ${pct(rs.best)}` : ''}.</span></div>` : ''}
+      ${leaveText(m) ? `<p class="muted" style="margin:0 0 10px;font-size:13px">${leaveText(m)}</p>` : ''}
       <div class="kpis" style="grid-template-columns:repeat(2,1fr)">
         <div class="kpi"><div class="kpi-v">${pct(rate(r))}</div><div class="kpi-l">Assistència</div></div>
         <div class="kpi"><div class="kpi-v">${r.min}<small>min</small></div><div class="kpi-l">${r.R} retards</div></div>
@@ -1501,6 +1879,120 @@ function sheetProduction(pid) {
   });
 }
 
+/* ---------- Sheet: absence notice ---------- */
+function memberOptions(selected) {
+  return SECTIONS.map(x => `<optgroup label="${x.name}">${membersOf(x.id).map(m => `<option value="${m.id}" ${m.id === selected ? 'selected' : ''}>${esc(m.name)}</option>`).join('')}</optgroup>`).join('');
+}
+function sheetWhoAmI(then) {
+  openSheet({
+    title: 'Qui ets?',
+    body: `<p style="margin-top:0">Tria el teu nom. Aquest mòbil el recordarà per als propers avisos.</p>
+      <label class="field"><span>Nom</span><select class="inp" id="who-sel"><option value="">—</option>${memberOptions(myMemberId())}</select></label>`,
+    foot: `<button class="btn btn-primary" id="who-ok">Desa</button>`,
+    onMount: el => {
+      el.querySelector('#who-ok').onclick = () => {
+        const id = el.querySelector('#who-sel').value;
+        if (!id) { toast('Tria el teu nom de la llista'); return; }
+        try { localStorage.setItem(LS_ME, id); } catch {}
+        closeSheet(); render();
+        if (then) then();
+      };
+    },
+  });
+}
+function sheetAbsence(presetSid) {
+  const singer = S.role === 'singer';
+  let memberId = singer ? myMemberId() : null;
+  if (singer && !memberId) { sheetWhoAmI(() => sheetAbsence(presetSid)); return; }
+  let kind = 'absent';
+  const picked = new Set(presetSid ? [presetSid] : []);
+  const sessionsFor = mid => {
+    const m = S.members.get(mid);
+    return m ? allSessions().filter(s => s.date >= TODAY && convoked(s, m.section)) : [];
+  };
+  openSheet({
+    title: 'Avís d’absència',
+    body: `<div class="kv">
+      ${singer ? `<p style="margin:0">De part de <b>${esc(S.members.get(memberId).name)}</b></p>`
+        : `<label class="field"><span>Cantaire</span><select class="inp" id="ab-member"><option value="">—</option>${memberOptions('')}</select></label>`}
+      <div class="field"><span>Què passa?</span><div class="pickers" id="ab-kind">
+        <button type="button" class="pick" data-k="absent" aria-pressed="true">No hi podré anar</button>
+        <button type="button" class="pick" data-k="late" aria-pressed="false">Arribaré tard</button></div></div>
+      <label class="field" id="ab-min-f" hidden><span>Minuts de retard aproximats</span><input class="inp" id="ab-min" type="number" inputmode="numeric" min="1" max="240" style="width:120px"></label>
+      <div class="field"><span>Quins dies?</span><div id="ab-sessions"></div></div>
+      <label class="field"><span>Motiu</span><textarea class="inp" id="ab-reason" maxlength="200" style="min-height:80px" placeholder="p. ex. Examen a la universitat"></textarea></label>
+    </div>`,
+    foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="ab-send">${singer ? 'Envia l’avís' : 'Desa l’avís'}</button>`,
+    onMount: el => {
+      const drawSessions = () => {
+        const box = el.querySelector('#ab-sessions');
+        if (!memberId) { box.innerHTML = '<span class="muted" style="font-size:13px">Tria primer el cantaire.</span>'; return; }
+        const list = sessionsFor(memberId);
+        if (!list.length) { box.innerHTML = '<span class="muted" style="font-size:13px">No hi ha sessions properes.</span>'; return; }
+        let month = '', html = '<ul class="checklist">';
+        for (const s of list) {
+          const mo = s.date.slice(0, 7);
+          if (mo !== month) { month = mo; html += `<li class="mo">${monthYear(s.date)}</li>`; }
+          html += `<li><label><input type="checkbox" value="${s.id}" ${picked.has(s.id) ? 'checked' : ''}><span><b>${wdShort(s.date)} ${ddmm(s.date)}</b> · ${esc(s.type)}${s.time ? ` · <span class="mono">${esc(timeRange(s))}</span>` : ''}<br><span class="m">${esc(prodNames(s))}</span></span></label></li>`;
+        }
+        box.innerHTML = html + '</ul>';
+        box.querySelectorAll('input').forEach(i => i.onchange = () => { i.checked ? picked.add(i.value) : picked.delete(i.value); });
+        const first = box.querySelector('input:checked');
+        if (first) setTimeout(() => first.closest('li').scrollIntoView({ block: 'nearest' }), 30);
+      };
+      drawSessions();
+      const sel = el.querySelector('#ab-member');
+      if (sel) sel.onchange = () => { memberId = sel.value || null; drawSessions(); };
+      el.querySelectorAll('#ab-kind .pick').forEach(b => b.onclick = () => {
+        kind = b.dataset.k;
+        el.querySelectorAll('#ab-kind .pick').forEach(x => x.setAttribute('aria-pressed', x === b));
+        el.querySelector('#ab-min-f').hidden = kind !== 'late';
+      });
+      el.querySelector('#ab-send').onclick = () => {
+        const m = S.members.get(memberId);
+        const reason = el.querySelector('#ab-reason').value.trim();
+        const ids = [...picked].filter(id => sessionById(id));
+        if (!m) { toast('Tria el cantaire'); return; }
+        if (!ids.length) { toast('Marca almenys un dia'); return; }
+        if (singer && !reason) { toast('Explica breument el motiu'); return; }
+        const a = { id: uid('a'), uid: S.uid, memberId: m.id, memberName: m.name, section: m.section, sessionIds: ids, kind, reason,
+          status: 'pending', createdAt: new Date().toISOString(), by: S.role };
+        if (kind === 'late') { const v = parseInt(el.querySelector('#ab-min').value, 10); if (v > 0) a.min = Math.min(240, v); }
+        closeSheet();
+        if (singer) { saveAbsence(a); toast('Avís enviat. El teu cap de corda el revisarà.'); }
+        else { acceptAbsence(a); toast('Avís desat i acceptat'); }
+        render();
+      };
+    },
+  });
+}
+
+/* ---------- Links ---------- */
+async function regenerateLink(role) {
+  const has = !!S.secrets?.[role];
+  if (has) {
+    const ok = await confirmSheet('Renovar l’enllaç?', role === 'edit'
+      ? 'Es crearà un enllaç nou per als caps de corda i <b>l’actual deixarà de funcionar</b>. Aquest mòbil passarà a fer servir el nou; als altres caps de corda els l’hauràs d’enviar.'
+      : 'Es crearà un enllaç nou i <b>l’actual deixarà de funcionar</b>.', 'Renova', false);
+    if (!ok) return;
+  }
+  const k = newKey(), at = new Date().toISOString(), old = S.secrets?.[role];
+  const choirId = LINK.choirId;
+  const b = fs.batch();
+  b.set(fs.doc(`claus/${k}`), { choirId, role, at });
+  if (old) b.delete(fs.doc(`claus/${old}`));
+  b.set(fs.doc(`cors/${choirId}/secrets/main`), { ...(S.secrets || {}), [role]: k });
+  if (role === 'edit') b.set(fs.doc(`cors/${choirId}/access/${S.uid}`), { role: 'edit', key: k, at });
+  try {
+    await b.commit();
+    if (role === 'edit') rememberLink({ ...LINK, secret: k });
+    S.secrets = { ...(S.secrets || {}), [role]: k };
+    toast(has ? 'Enllaç renovat' : 'Enllaç creat');
+    render();
+    sheetShare(role);
+  } catch (e) { toast('No s’ha pogut canviar l’enllaç. Comprova la connexió.'); }
+}
+
 /* ================= Import / export ================= */
 function offerFile(filename, text, mime) {
   try {
@@ -1512,13 +2004,14 @@ function offerFile(filename, text, mime) {
 }
 function exportJSON() {
   const data = { app: 'cor-present', version: 1, exportedAt: new Date().toISOString(), config: S.config,
-    members: [...S.members.values()], productions: [...S.productions.values()], attendance: Object.fromEntries(S.attendance) };
+    members: [...S.members.values()], productions: [...S.productions.values()], attendance: Object.fromEntries(S.attendance), absences: [...S.absences.values()] };
   offerFile(`cor-present-${TODAY}.json`, JSON.stringify(data, null, 2), 'application/json');
 }
 function exportCSV() {
-  const prod = S.productions.get(ui.statsProd);
-  if (!prod) return;
-  const st = computeStats(prod.id, '');
+  const scope = currentScope();
+  if (!scope) return;
+  const prod = { name: scope.name };
+  const st = computeStats(scope, '');
   const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const head = ['Nom', 'Corda', 'Assistència %', 'Assisteix', 'Retard', 'Minuts retard', 'Falta no justificada', 'Falta justificada', 'No fa', ...st.sessions.map(s => `${s.date} ${s.type || ''}`)];
   const lines = [head.map(q).join(';')];
@@ -1560,13 +2053,21 @@ async function loadDemo() {
     toast('Dades d’exemple carregades');
   } catch { toast('No s’han pogut carregar les dades d’exemple'); }
 }
-function sheetShare() {
-  const url = shareUrl();
+const SHARE_TEXT = {
+  edit: ['Enllaç dels caps de corda', 'Envia aquest enllaç als caps de corda. Des del mòbil podran passar llista i editar-ho tot.', 'qualsevol persona amb aquest enllaç pot veure i modificar les dades.'],
+  view: ['Enllaç de consulta', 'Per a la direcció o qui hagi de veure l’assistència sense modificar-la.', 'qui el tingui veurà l’assistència de tots els cantaires.'],
+  singer: ['Enllaç per als cantaires', 'Envia’l al grup del cor: cadascú podrà veure el calendari i avisar de les seves absències.', 'qui el tingui pot enviar avisos i veure el calendari, però no l’assistència.'],
+};
+function sheetShare(role = 'edit') {
+  const secret = S.secrets?.[role] || (role === LINK?.role ? LINK.secret : null);
+  if (!secret) { toast('Primer crea aquest enllaç'); return; }
+  const url = shareUrl(secret);
+  const [title, intro, warn] = SHARE_TEXT[role];
   openSheet({
-    title: 'Comparteix el cor',
-    body: `<p style="margin-top:0">Envia aquest enllaç als caps de corda. Des del mòbil podran passar llista i editar-ho tot.</p>
+    title,
+    body: `<p style="margin-top:0">${intro}</p>
       <textarea class="summary-pre" id="share-url" readonly style="min-height:90px;word-break:break-all">${esc(url)}</textarea>
-      <p class="muted" style="font-size:12.5px;margin:10px 0 0"><b>Important:</b> qualsevol persona amb aquest enllaç pot veure i modificar les dades. No el publiquis a xarxes ni a grups oberts.</p>
+      <p class="muted" style="font-size:12.5px;margin:10px 0 0"><b>Important:</b> ${warn} No el publiquis a xarxes ni a llocs oberts.</p>
       <p class="muted" style="font-size:12.5px;margin:8px 0 0">Consell: obre’l al mòbil i, des del menú del navegador, tria «Afegeix a la pantalla d’inici» per tenir-lo com una app.</p>`,
     foot: `${navigator.share ? '<button class="btn" id="share-native">Comparteix…</button>' : ''}<button class="btn btn-primary" id="share-copy">Copia l’enllaç</button>`,
     onMount: el => {
@@ -1585,7 +2086,7 @@ async function wipeAll(demo) {
     ? 'S’eliminaran els cantaires, produccions i llistes d’exemple perquè puguis començar amb el teu cor.'
     : 'S’eliminaran tots els cantaires, produccions i llistes. Fes abans una còpia de seguretat si en vols conservar res.', 'Esborra-ho');
   if (!ok) return;
-  const paths = COLS.flatMap(col => [...S[col].keys()].map(id => [col, id]));
+  const paths = [...COLS, 'absences'].flatMap(col => [...S[col].keys()].map(id => [col, id]));
   let i = 0;
   for (const [col, id] of paths) { S[col].delete(id); persist(col, id, null, 10 + (i++ % 40) * 15); }
   saveConfig({ demo: false, ...(demo ? { name: '' } : {}) });
@@ -1596,20 +2097,32 @@ async function wipeAll(demo) {
 }
 
 /* ================= Events ================= */
+const EDIT_ONLY = new Set(['mark', 'min', 'mark-rest', 'session-new', 'session-edit', 'member-edit', 'member-bulk', 'prod-new', 'prod-edit',
+  'wipe-demo', 'wipe-all', 'load-demo', 'export-json', 'abs-accept', 'abs-reject', 'abs-delete', 'link-regen', 'manage']);
 const actions = {
   'tab': el => { ui.tab = el.dataset.tab; ui._calScrolled = false; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
   'reload': () => location.reload(),
-  'share': () => sheetShare(),
+  'share': el => sheetShare(el.dataset.role || 'edit'),
+  'link-regen': el => regenerateLink(el.dataset.role),
+  'absence-new': el => sheetAbsence(el.dataset.sid),
+  'who-am-i': () => sheetWhoAmI(),
+  'abs-filter': el => { ui.absFilter = el.dataset.k; render(); },
+  'abs-accept': el => { const a = S.absences.get(el.dataset.aid); if (!a) return; acceptAbsence(a); toast(a.kind === 'absent' ? 'Avís acceptat: faltes justificades' : 'Avís acceptat'); render(); },
+  'abs-reject': el => { const a = S.absences.get(el.dataset.aid); if (!a) return; saveAbsence({ ...a, status: 'rejected', reviewedAt: new Date().toISOString() }); toast('Avís rebutjat'); render(); },
+  'abs-delete': async el => { const a = S.absences.get(el.dataset.aid); if (!a) return; if (!await confirmSheet('Esborrar l’avís?', 'Les faltes que ja s’hagin marcat es mantenen.', 'Esborra')) return; S.absences.delete(a.id); persist('absences', a.id, null, 10); render(); },
+  'abs-cancel': async el => { const a = S.absences.get(el.dataset.aid); if (!a) return; if (!await confirmSheet('Retirar l’avís?', 'El teu cap de corda deixarà de veure’l.', 'Retira')) return; S.absences.delete(a.id); persist('absences', a.id, null, 10); render(); },
+  'stats-scope': el => { ui.statsScope = el.dataset.k; saveUI(); render(); },
+  'stats-term': el => { ui.statsTerm = +el.dataset.i; render(); },
   'load-demo': () => loadDemo(),
   'create-choir': () => createChoir(),
   'sync-info': () => openSheet({
     title: 'Estat de les dades',
     body: S.mode === 'shared'
-      ? `<p style="margin-top:0">Les llistes es desen automàticament i es comparteixen en temps real amb tots els caps de corda.</p>
+      ? `<p style="margin-top:0">${S.role === 'edit' ? 'Les llistes es desen automàticament i es comparteixen en temps real amb tots els caps de corda.' : S.role === 'view' ? 'Tens accés de <b>consulta</b>: veus les llistes i les estadístiques al moment, però no pots canviar res.' : 'Tens l’enllaç de <b>cantaires</b>: pots veure el calendari i avisar de les teves absències.'}</p>
          <p style="margin-top:0">Si et quedes sense cobertura, pots continuar passant llista: els canvis s’envien sols quan torni la connexió.</p>
          <p class="muted" style="margin-bottom:0">${!navigator.onLine ? 'Ara mateix no hi ha connexió.' : pendingWrites() ? `Desant ${pendingWrites()} canvis…` : 'Tots els canvis estan desats.'}</p>`
       : `<p style="margin:0">Encara no hi ha cap cor connectat en aquest dispositiu.</p>`,
-    foot: S.mode === 'shared' ? '<button class="btn btn-primary" data-act="share">Comparteix l’enllaç</button>' : '',
+    foot: S.mode === 'shared' && canEdit() ? '<button class="btn btn-primary" data-act="manage" data-k="config">Enllaços</button>' : '',
   }),
   'section': el => { ui.section = el.dataset.sec; saveUI(); render(); },
   'sess-step': el => {
@@ -1631,6 +2144,7 @@ const actions = {
     const s = el.dataset.s;
     const current = attDoc(cur.id, m.section)?.marks?.[mid];
     if (current && current.s === s) setMark(cur, m, null);
+    else if (s === 'R' && !current?.min && lateNow(cur)) setMark(cur, m, { s, min: lateNow(cur) });
     else setMark(cur, m, { s });
     if (navigator.vibrate) try { navigator.vibrate(8); } catch {}
     refreshRow(mid);
@@ -1643,7 +2157,7 @@ const actions = {
   },
   'mark-rest': () => {
     const cur = sessionById(ui.sessionId);
-    const pending = membersOf(ui.section).filter(m => !isExcluded(cur.prodId, m.id) && !effMark(cur, m));
+    const pending = membersOf(ui.section).filter(m => !isOut(cur, m) && !effMark(cur, m));
     if (!pending.length) return;
     const key = attKey(cur.id, ui.section);
     const before = S.attendance.has(key) ? clone(S.attendance.get(key)) : null;
@@ -1663,13 +2177,13 @@ const actions = {
   'cal-past': () => { ui.calPast = !ui.calPast; ui._calScrolled = false; render(); },
   'session-new': () => sheetSession(null),
   'session-edit': el => sheetSession(el.dataset.sid),
-  'stats-prod': el => { ui.statsProd = el.dataset.id; render(); },
+  'stats-prod': el => { ui.statsProd = el.dataset.id; ui.statsScope = 'prod'; render(); },
   'stats-sec': el => { ui.statsSec = el.dataset.sec; saveUI(); render(); },
   'stats-sort': el => { ui.statsSort = el.dataset.k; saveUI(); render(); },
   'member-stats': el => sheetMemberStats(el.dataset.mid),
   'export-csv': () => exportCSV(),
   'export-json': () => exportJSON(),
-  'manage': el => { ui.manage = el.dataset.k; saveUI(); render(); },
+  'manage': el => { ui.manage = el.dataset.k; ui.tab = 'gestio'; closeSheet(); saveUI(); render(); },
   'member-edit': el => sheetMember(el.dataset.mid),
   'member-bulk': el => sheetBulk(el.dataset.sec || ui.section),
   'prod-new': () => sheetProduction(null),
@@ -1681,8 +2195,12 @@ const actions = {
 document.addEventListener('click', e => {
   const el = e.target.closest('[data-act]');
   if (!el || el.disabled) return;
-  const fn = actions[el.dataset.act];
-  if (fn) { e.preventDefault(); fn(el, e); }
+  const act = el.dataset.act;
+  const fn = actions[act];
+  if (!fn) return;
+  e.preventDefault();
+  if (EDIT_ONLY.has(act) && !canEdit()) { toast('Amb aquest enllaç només pots consultar'); return; }
+  fn(el, e);
 });
 
 let bindTimer = null;
@@ -1703,6 +2221,18 @@ document.addEventListener('input', e => {
       const s = attDoc(cur.id, m.section)?.marks?.[mid]?.s;
       setMark(cur, m, { s, note: el.value.trim() || undefined });
     }
+  } else if (kind === 'cfg-period') {
+    clearTimeout(bindTimer);
+    bindTimer = setTimeout(() => {
+      const v = id => $('#' + id)?.value;
+      const { season, terms } = seasonCfg();
+      const nextSeason = { name: v('cfg-sname') || season.name, from: v('cfg-sfrom') || season.from, to: v('cfg-sto') || season.to };
+      const nextTerms = terms.map((t, i) => ({ name: t.name, from: v(`cfg-t${i}from`) || t.from, to: v(`cfg-t${i}to`) || t.to }));
+      saveConfig({ season: nextSeason, terms: nextTerms });
+    }, 600);
+  } else if (kind === 'cfg-min') {
+    clearTimeout(bindTimer);
+    bindTimer = setTimeout(() => { const v = parseInt(el.value, 10); if (v > 0 && v <= 100) saveConfig({ minAttendance: v }); }, 500);
   } else if (kind === 'cfg-name' || kind === 'cfg-alert') {
     clearTimeout(bindTimer);
     bindTimer = setTimeout(() => {
@@ -1719,13 +2249,28 @@ document.addEventListener('change', e => {
 
 /* ================= Boot ================= */
 function connect() {
-  const base = `cors/${CHOIR_KEY}`;
+  const base = `cors/${LINK.choirId}`;
   db = { doc: p => fs.doc(`${base}/${p}`), collection: p => fs.collection(`${base}/${p}`) };
+  S.role = LINK.role;
   S.mode = 'shared';
+  document.body.classList.toggle('ro', S.role !== 'edit');
   render();
   subscribe();
 }
-function init() {
+const waitForUser = () => new Promise(res => { const un = auth.onAuthStateChanged(u => { un(); res(u); }); });
+async function resolveLink(secret) {
+  const snap = await fs.doc(`claus/${secret}`).get();
+  if (!snap.exists) { const e = new Error('bad-link'); e.code = 'bad-link'; throw e; }
+  const { choirId, role } = snap.data();
+  const accRef = fs.doc(`cors/${choirId}/access/${S.uid}`);
+  let acc = null;
+  try { acc = await accRef.get(); } catch {}
+  if (!acc || !acc.exists || acc.data().key !== secret || acc.data().role !== role) {
+    await accRef.set({ role, key: secret, at: new Date().toISOString() });
+  }
+  return { secret, choirId, role };
+}
+async function init() {
   loadUI();
   const cfg = window.COR_FIREBASE;
   if (!window.firebase || !cfg || !cfg.apiKey || String(cfg.apiKey).startsWith('POSA')) {
@@ -1735,18 +2280,45 @@ function init() {
   fs = firebase.firestore();
   // Offline cache: roll call keeps working in rehearsal rooms with poor signal.
   fs.enablePersistence({ synchronizeTabs: true }).catch(() => {});
-  CHOIR_KEY = readKey();
-  if (!CHOIR_KEY) { S.mode = 'nokey'; render(); return; }
+  auth = firebase.auth();
+  const secret = readSecret();
+  if (!secret) { S.mode = 'nokey'; render(); return; }
+  S.mode = 'loading'; render();
+  let cached = null;
+  try { cached = JSON.parse(localStorage.getItem(LS_LINK) || 'null'); } catch {}
+  try {
+    let user = auth.currentUser || await waitForUser();
+    if (!user) user = (await auth.signInAnonymously()).user;
+    S.uid = user.uid;
+    rememberLink(await resolveLink(secret));
+  } catch (e) {
+    if (e && e.code === 'bad-link') { forgetLink(); S.mode = 'badlink'; render(); return; }
+    if (cached && cached.secret === secret && auth.currentUser) { S.uid = auth.currentUser.uid; LINK = cached; }
+    else { S.mode = 'badlink'; render(); return; }
+  }
   connect();
 }
-function createChoir() {
-  CHOIR_KEY = newKey();
-  try { localStorage.setItem(LS_KEY, CHOIR_KEY); } catch {}
-  history.replaceState(null, '', `#k=${CHOIR_KEY}`);
-  S.config = { ...S.config, name: '' };
-  connect();
-  ui.tab = 'gestio'; ui.manage = 'config';
-  setTimeout(sheetShare, 400);
+async function createChoir() {
+  S.mode = 'loading'; render();
+  try {
+    let user = auth.currentUser || await waitForUser();
+    if (!user) user = (await auth.signInAnonymously()).user;
+    S.uid = user.uid;
+    const choirId = newKey(), at = new Date().toISOString();
+    const secrets = { edit: newKey(), view: newKey(), singer: newKey() };
+    const b = fs.batch();
+    b.set(fs.doc(`cors/${choirId}/config/main`), { name: '', alertFNJ: 3, minAttendance: 80, demo: false });
+    for (const [role, k] of Object.entries(secrets)) b.set(fs.doc(`claus/${k}`), { choirId, role, at });
+    b.set(fs.doc(`cors/${choirId}/access/${S.uid}`), { role: 'edit', key: secrets.edit, at });
+    await b.commit();
+    await fs.doc(`cors/${choirId}/secrets/main`).set(secrets);
+    rememberLink({ secret: secrets.edit, choirId, role: 'edit' });
+    ui.tab = 'gestio'; ui.manage = 'config';
+    connect();
+  } catch (e) {
+    S.mode = 'nokey'; render();
+    toast('No s’ha pogut crear el cor. Comprova la connexió i torna-ho a provar.');
+  }
 }
 init();
 })();

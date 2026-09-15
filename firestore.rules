@@ -1,11 +1,59 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Cada cor viu a cors/<clau>. La clau només la té qui té l'enllaç (#k=...).
-    // Ningú pot llistar els cors existents; només es pot llegir o escriure dins d'una clau coneguda.
-    match /cors/{clau}/{col}/{docId} {
-      allow read, write: if clau.size() >= 24
-        && col in ['members', 'productions', 'attendance', 'config'];
+
+    // Cada mòbil entra de manera anònima i registra el seu rol a cors/<cor>/access/<uid>
+    // amb la clau secreta de l'enllaç. El rol només val mentre la clau existeixi a claus/.
+    function hasRole(c, roles) {
+      let accP = /databases/$(database)/documents/cors/$(c)/access/$(request.auth.uid);
+      return request.auth != null
+        && exists(accP)
+        && get(accP).data.role in roles
+        && exists(/databases/$(database)/documents/claus/$(get(accP).data.key));
+    }
+
+    // claus/<secret> → { choirId, role }. Només qui coneix la clau la pot llegir; no es poden llistar.
+    match /claus/{k} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if request.auth != null && k.size() >= 24
+        && request.resource.data.keys().hasOnly(['choirId', 'role', 'at'])
+        && request.resource.data.role in ['edit', 'view', 'singer']
+        && (hasRole(request.resource.data.choirId, ['edit'])
+            || (!exists(/databases/$(database)/documents/cors/$(request.resource.data.choirId)/config/main)
+                && existsAfter(/databases/$(database)/documents/cors/$(request.resource.data.choirId)/config/main)));
+      allow delete: if hasRole(resource.data.choirId, ['edit']);
+    }
+
+    match /cors/{c} {
+      match /access/{u} {
+        allow read: if request.auth != null && request.auth.uid == u;
+        allow create, update: if request.auth != null && request.auth.uid == u
+          && request.resource.data.keys().hasOnly(['role', 'key', 'at'])
+          && getAfter(/databases/$(database)/documents/claus/$(request.resource.data.key)).data.choirId == c
+          && getAfter(/databases/$(database)/documents/claus/$(request.resource.data.key)).data.role == request.resource.data.role;
+        allow delete: if request.auth != null && request.auth.uid == u;
+      }
+      match /config/main {
+        allow create: if request.auth != null && !exists(/databases/$(database)/documents/cors/$(c)/config/main);
+      }
+      match /{col}/{doc} {
+        allow read: if (col in ['members', 'productions', 'attendance', 'config'] && hasRole(c, ['edit', 'view']))
+                    || (col in ['members', 'productions', 'config'] && hasRole(c, ['singer']));
+        allow write: if col in ['members', 'productions', 'attendance', 'config'] && hasRole(c, ['edit']);
+      }
+      match /secrets/{doc} {
+        allow read, write: if hasRole(c, ['edit']);
+      }
+      match /absences/{id} {
+        allow read: if hasRole(c, ['edit', 'view'])
+                    || (hasRole(c, ['singer']) && resource.data.uid == request.auth.uid);
+        allow create: if request.resource.data.uid == request.auth.uid
+          && (hasRole(c, ['edit']) || (hasRole(c, ['singer']) && request.resource.data.status == 'pending'));
+        allow update: if hasRole(c, ['edit']);
+        allow delete: if hasRole(c, ['edit'])
+          || (hasRole(c, ['singer']) && resource.data.uid == request.auth.uid && resource.data.status == 'pending');
+      }
     }
   }
 }
