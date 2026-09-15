@@ -695,15 +695,29 @@ function loadUI() {
 function saveUI() {
   try { localStorage.setItem(LS_UI, JSON.stringify({ tab: ui.tab, section: ui.section, calProd: ui.calProd, statsScope: ui.statsScope, statsSec: ui.statsSec, statsSort: ui.statsSort, manage: ui.manage })); } catch {}
 }
+// Rols de les persones del cor. Els tres primers poden editar; els altres només llegir.
+const PEOPLE_ROLES = { admin: 'Administració', director: 'Director', leader: 'Cap de corda', singer: 'Cantaire', palau: 'Treballador del Palau' };
+const ROLE_HINT = {
+  admin: 'Ho pot fer tot, i gestiona les persones, la imatge i les dades.',
+  director: 'Pot passar llista i editar-ho tot.',
+  leader: 'Pot passar llista i editar-ho tot. Se li assigna una corda.',
+  singer: 'Veu tota l’app en mode lectura i té el seu espai personal.',
+  palau: 'Veu tota l’app en mode lectura. No és cantaire.',
+};
+const EDIT_ROLES = new Set(['admin', 'director', 'leader']);
+const roleLevel = r => EDIT_ROLES.has(r) ? 'edit' : 'read';
 const canEdit = () => S.role === 'edit';
 const isAdmin = () => S.role === 'edit' && (!S.me || S.me.role === 'admin');
-const STAFF_ROLES = { admin: 'Administració', director: 'Director', leader: 'Cap de corda' };
+/** The member this account really is (from the account record or a personal link), if any. */
+const myId = () => (S.memberId && S.members.has(S.memberId)) ? S.memberId : null;
+/** Narrow personal link: only «El meu espai», no access to the rest of the app. */
+const isLinkOnly = () => S.role === 'singer';
 const subKey = (sid, sec) => `${sid}_${sec}`;
 const subFor = (sid, sec) => S.subs.get(subKey(sid, sec));
 /** Singer allowed to take today's roll for this session and corda. */
-const isMySub = (sid, sec) => { const x = subFor(sid, sec); return S.role === 'singer' && !!x && x.memberId === S.memberId && x.until > Date.now(); };
+const isMySub = (sid, sec) => { const x = subFor(sid, sec); return !canEdit() && !!x && !!myId() && x.memberId === myId() && x.until > Date.now(); };
 const canMark = (s, sec) => canEdit() || (!!s && isMySub(s.id, sec));
-const mySubs = () => [...S.subs.values()].filter(x => x.memberId === S.memberId && x.until > Date.now());
+const mySubs = () => { const id = myId(); return id ? [...S.subs.values()].filter(x => x.memberId === id && x.until > Date.now()) : []; };
 
 /* ================= Persistence (Firebase) ================= */
 // Links carry a secret (#k=…). claus/<secret> says which choir it opens and with which role
@@ -712,7 +726,7 @@ const mySubs = () => [...S.subs.values()].filter(x => x.memberId === S.memberId 
 const LS_KEY = 'corpresent:clau';
 const LS_LINK = 'corpresent:enllac';
 const LS_ME = 'corpresent:jo';
-const ROLE_NAME = { edit: 'Caps de corda i director', view: 'Consulta', singer: 'Cantaire' };
+const ROLE_NAME = { edit: 'Edició', read: 'Només lectura', view: 'Només lectura', singer: 'Enllaç personal' };
 let db = null, fs = null, auth = null, LINK = null;   // LINK = { secret, choirId, role }
 const queue = new Map();   // path -> { data | null, timer }  (debounce window)
 let inflight = 0;
@@ -793,8 +807,10 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 
 function subscribe() {
   const staff = S.role === 'edit';
+  const reader = S.role === 'read' || S.role === 'view';   // account with read-only access to the whole app
   const wanted = ['members', 'productions', 'config', 'absences', 'subs', 'rsvp', 'announcements', 'polls', 'pollVotes'];
   if (staff) wanted.push('attendance', 'secrets', 'secretsMembers', 'staff', 'memberMarks');
+  else if (reader) wanted.push('attendance');
   else wanted.push('myMarks');
   const loaded = new Set();
   const markLoaded = k => { loaded.add(k); if (loaded.size >= wanted.length && !S.ready) { S.ready = true; render(); if (staff) scheduleMirror(); } };
@@ -807,7 +823,7 @@ function subscribe() {
     }
     for (const [id, v] of S[col]) if (!next.has(id) && isDirty(`${col}/${id}`) && queue.get(`${col}/${id}`)?.data !== null) next.set(id, v);
     S[col] = next;
-    if (col === 'subs' && !staff) watchSubAttendance();
+    if (col === 'subs' && !staff && !reader) watchSubAttendance();
     if (staff && (col === 'attendance' || col === 'memberMarks' || col === 'members' || col === 'productions')) scheduleMirror();
     markLoaded(col);
     if (S.ready) scheduleRender();
@@ -815,7 +831,8 @@ function subscribe() {
   const mine = col => staff ? db.collection(col) : db.collection(col).where('memberId', '==', S.memberId || '-');
   for (const col of ['members', 'productions', 'announcements', 'polls']) db.collection(col).onSnapshot(onCol(col), e => { markLoaded(col); if (col === 'members' || col === 'productions') onDbError(e); });
   for (const col of ['absences', 'subs', 'rsvp', 'pollVotes']) mine(col).onSnapshot(onCol(col), e => { markLoaded(col); if (staff && col !== 'pollVotes') onDbError(e); });
-  if (!staff) db.doc(`memberMarks/${S.memberId || '-'}`).onSnapshot(snap => { S.myMarks = snap.exists ? snap.data() : null; markLoaded('myMarks'); if (S.ready) scheduleRender(); }, () => markLoaded('myMarks'));
+  if (reader) db.collection('attendance').onSnapshot(onCol('attendance'), e => { markLoaded('attendance'); onDbError(e); });
+  else if (!staff) db.doc(`memberMarks/${S.memberId || '-'}`).onSnapshot(snap => { S.myMarks = snap.exists ? snap.data() : null; markLoaded('myMarks'); if (S.ready) scheduleRender(); }, () => markLoaded('myMarks'));
   if (staff) {
     db.collection('attendance').onSnapshot(onCol('attendance'), onDbError);
     db.collection('staff').onSnapshot(onCol('staff'), () => markLoaded('staff'));
@@ -1072,9 +1089,11 @@ async function removeMany(paths, label) {
 /* ---------- Per-singer copy of marks (so each singer can see only their own) ---------- */
 const canon = v => JSON.stringify(v, (k, x) => x && typeof x === 'object' && !Array.isArray(x) ? Object.fromEntries(Object.keys(x).sort().map(key => [key, x[key]])) : x);
 let mirrorTimer = null;
-function scheduleMirror() { if (!canEdit() || !S.ready) return; clearTimeout(mirrorTimer); mirrorTimer = setTimeout(reconcileMirrors, 4000); }
+// Només cal mentre quedi algun enllaç personal: amb compte propi, el cantaire ja llegeix les llistes.
+const mirrorsNeeded = () => !!S.secretsMembers && Object.keys(S.secretsMembers).length > 0;
+function scheduleMirror() { if (!canEdit() || !S.ready || !mirrorsNeeded()) return; clearTimeout(mirrorTimer); mirrorTimer = setTimeout(reconcileMirrors, 4000); }
 function reconcileMirrors() {
-  if (!canEdit()) return;
+  if (!canEdit() || !mirrorsNeeded()) return;
   const byMember = new Map();
   for (const [key, d] of S.attendance) {
     const sid = d.sessionId || key.slice(0, key.lastIndexOf('_'));
@@ -1135,7 +1154,11 @@ const TAB_ICONS = {
   tauler: '<rect x="3.5" y="4" width="17" height="16" rx="2.5"/><path d="M7.5 9h9M7.5 13h9M7.5 17h5"/>',
 };
 const TAB_LABEL = { llista: 'Llista', calendari: 'Calendari', stats: 'Estadístiques', gestio: 'Gestió', avisos: 'El meu espai', tauler: 'Tauler' };
-const tabsForRole = () => S.role === 'singer' ? ['avisos', 'tauler', ...(mySubs().length ? ['llista'] : []), 'calendari'] : S.role === 'view' ? ['llista', 'calendari', 'stats'] : ['llista', 'calendari', 'stats', 'tauler', 'gestio'];
+const tabsForRole = () => {
+  if (isLinkOnly()) return ['avisos', 'tauler', ...(mySubs().length ? ['llista'] : []), 'calendari'];
+  if (!canEdit()) return [...(myId() ? ['avisos'] : []), 'llista', 'calendari', 'stats', 'tauler'];
+  return ['llista', 'calendari', 'stats', 'tauler', 'gestio'];
+};
 function renderTabs() {
   const tabs = tabsForRole();
   if (!tabs.includes(ui.tab)) ui.tab = tabs[0];
@@ -1185,16 +1208,14 @@ function render() {
   const GBTN = `<button class="gbtn" data-act="google-in"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17.1z"/><path fill="#FBBC05" d="M10.5 28.7c-.5-1.4-.8-3-.8-4.7s.3-3.2.8-4.7l-7.9-6.1C.9 16.5 0 20.1 0 24s.9 7.5 2.6 10.8l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2.1 1.4-4.8 2.3-8.5 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>Entra amb Google</button>`;
   if (S.mode === 'badlink' || S.mode === 'nokey' || S.mode === 'nostaff') {
     const intro = S.mode === 'badlink'
-      ? `<h2 class="h2">Aquest enllaç no funciona</h2><p>Pot ser que estigui incomplet o que s’hagi renovat. Si ets cantaire, demana el teu enllaç personal al teu cap de corda.</p>`
+      ? `<h2 class="h2">Aquest enllaç no funciona</h2><p>Pot ser que estigui incomplet o que s’hagi renovat. Entra amb el teu correu: és l’única cosa que et cal.</p>`
       : S.mode === 'nostaff'
-        ? `<h2 class="h2">El compte ${esc(S.email || '')} no és a l’equip</h2><p>Demana a l’administració del cor que t’afegeixi a <b>Gestió › Ajustos › Equip</b> amb aquest correu, o entra amb un altre compte.</p>`
-        : `<h2 class="h2">Benvingut/da</h2><p>Aquesta és l’app d’assistència del cor.</p>`;
+        ? `<h2 class="h2">El compte ${esc(S.email || '')} encara no hi té accés</h2><p>Demana a l’administració del cor que hi afegeixi aquest correu des de <b>Gestió › Ajustos › Persones</b>, o entra amb un altre compte.</p>`
+        : `<h2 class="h2">Benvingut/da</h2><p>Aquesta és l’app d’assistència del cor. Entra amb el correu que has donat al cor.</p>`;
     v.innerHTML = `<div class="login-card">${intro}
-      <div class="login-sep">Caps de corda i director</div>
       ${GBTN}
-      ${S.mode === 'nostaff' ? '<button class="btn btn-ghost" data-act="sign-out" style="justify-self:start">Tanca la sessió de Google</button>' : ''}
-      <div class="login-sep">Cantaires</div>
-      <p>Obre l’<b>enllaç personal</b> que t’ha enviat el teu cap de corda. Aquest mòbil el recordarà.</p>
+      ${S.mode === 'nostaff' ? '<button class="btn btn-ghost" data-act="sign-out" style="justify-self:start">Prova amb un altre compte</button>' : ''}
+      <p class="muted" style="font-size:13px;margin:0">Cantaires, caps de corda, direcció i Palau entreu pel mateix lloc. Segons qui siguis, veuràs el teu espai i podràs consultar o editar.</p>
     </div>
     ${S.mode === 'nokey' ? '<p style="text-align:center;margin-top:22px"><button class="btn btn-sm btn-ghost" data-act="create-choir">Crear un cor nou</button></p>' : ''}`;
     return;
@@ -1231,15 +1252,15 @@ function sessionNav(cur, list, compact) {
   const idx = list.indexOf(cur);
   const prod = S.productions.get(cur.prodId);
   return `<div class="session ${compact ? 'compact' : ''}">
-      <button class="nav-arrow" data-act="sess-step" data-dir="-1" ${idx <= 0 || S.role === 'singer' ? 'disabled' : ''} aria-label="Sessió anterior">${ICON.left}</button>
-      <button class="session-main" ${S.role === 'singer' ? '' : 'data-act="sess-pick"'} aria-label="Canvia de sessió">
+      <button class="nav-arrow" data-act="sess-step" data-dir="-1" ${idx <= 0 || isLinkOnly() ? 'disabled' : ''} aria-label="Sessió anterior">${ICON.left}</button>
+      <button class="session-main" ${isLinkOnly() ? '' : 'data-act="sess-pick"'} aria-label="Canvia de sessió">
         <span class="session-prod prod-tone" style="--ph:${prodHue(prod)}"><i class="pdot" style="width:9px;height:9px;margin-right:6px"></i>${esc(prodNames(cur))}</span>
         <span class="session-date">${compact ? capz(fmtD(cur.date, { weekday: 'long', day: 'numeric', month: 'short' })) : longDate(cur.date)}</span>
         <span class="session-meta">${esc(cur.type || 'Assaig')}${cur.time ? ` · <span class="mono">${esc(timeRange(cur))}</span>` : ''}${cur.place ? ` · ${esc(cur.place)}` : ''}
           ${cur.date === TODAY ? '<span class="badge">Avui</span>' : ''}</span>
         ${cur.note ? `<span class="session-note">${esc(cur.note)}</span>` : ''}
       </button>
-      <button class="nav-arrow" data-act="sess-step" data-dir="1" ${idx >= list.length - 1 || S.role === 'singer' ? 'disabled' : ''} aria-label="Sessió següent">${ICON.right}</button>
+      <button class="nav-arrow" data-act="sess-step" data-dir="1" ${idx >= list.length - 1 || isLinkOnly() ? 'disabled' : ''} aria-label="Sessió següent">${ICON.right}</button>
     </div>`;
 }
 /** Whole choir for one session: who is expected (not on leave / outside the production) and how they did. */
@@ -1269,7 +1290,7 @@ function viewRoll() {
         ${!S.members.size && !S.productions.size ? '<button class="btn" data-act="load-demo">Prova amb dades d’exemple</button>' : ''}
       </span>` : ''}</div>`;
   }
-  if (S.role === 'singer') {
+  if (isLinkOnly()) {
     const sub = mySubs().sort((a, b) => a.until - b.until)[0];
     const s = sub && list.find(x => x.id === sub.sessionId);
     if (!s) return `<div class="empty"><p>Ara no tens cap llista per passar.</p><button class="btn" data-act="tab" data-tab="avisos">Torna als avisos</button></div>`;
@@ -1315,7 +1336,7 @@ function viewRollOverview(cur, list, pendingBySec) {
   return `<div class="ctx" id="ctx">${sessionNav(cur, list, false)}</div>
     <div class="quads">${quads}</div>
     <div class="q-legend"><span><i style="background:var(--p)"></i>Llista completa</span>${anyPend ? '<span><i style="background:var(--fnj)"></i>Té llistes pendents</span>' : ''}</div>
-    ${cur.rsvp ? rsvpPanel(cur) : ''}
+    ${cur.rsvp && canEdit() ? rsvpPanel(cur) : ''}
     ${day}`;
 }
 function rsvpCounts(session) {
@@ -1347,7 +1368,7 @@ function viewRollSection(cur, list, sec, pendingBySec) {
   const head = `<div class="ctx" id="ctx">
     ${sessionNav(cur, list, true)}
     <div class="secbar">
-      <button class="btn btn-sm btn-ghost back" ${S.role === 'singer' ? 'data-act="tab" data-tab="avisos"' : 'data-act="close-sec"'} aria-label="Torna enrere">${ICON.left.replace('<svg', '<svg style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.2"')} Cordes</button>
+      <button class="btn btn-sm btn-ghost back" ${isLinkOnly() ? 'data-act="tab" data-tab="avisos"' : 'data-act="close-sec"'} aria-label="Torna enrere">${ICON.left.replace('<svg', '<svg style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.2"')} Cordes</button>
       <span class="secbar-t"><em>${sec}</em>${SEC[sec].name}</span>
       <span class="mono" id="secbar-count">${on ? `${pr.done}/${pr.total}` : ''}</span>
     </div>
@@ -1382,7 +1403,7 @@ function viewRollSection(cur, list, sec, pendingBySec) {
       <summary><span>De baixa o no fan la producció (${out.length})</span>${ICON.chev}</summary>
       <ul class="roster" style="margin-top:0">${out.map(m => rowHtml(cur, m)).join('')}</ul>
     </details>` : ''}
-  ${S.role === 'singer' ? '' : '<button class="btn" data-act="close-sec" style="display:flex;margin:18px auto 0">Torna a les quatre cordes</button>'}
+  ${isLinkOnly() ? '' : '<button class="btn" data-act="close-sec" style="display:flex;margin:18px auto 0">Torna a les quatre cordes</button>'}
   ${canMark(cur, sec) ? '<p class="muted" style="font-size:12.5px;text-align:center;margin-top:12px">Toca l’estat marcat una altra vegada per desmarcar-lo.</p>' : ''}`;
 }
 function subLine(cur, sec, leader) {
@@ -1494,7 +1515,7 @@ function viewCalendar() {
   const head = `<div class="page-head"><h1 class="h1">Calendari</h1>
     <span style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-sm" data-act="cal-subscribe">Subscriu-t’hi</button><button class="btn btn-sm" data-act="cal-past">${ui.calPast ? 'Amaga passades' : 'Mostra passades'}</button>
     ${canEdit() ? '<button class="btn btn-sm btn-primary" data-act="session-new">+ Sessió</button>' : ''}</span></div>
-    ${S.role === 'singer' ? '<p class="muted" style="margin:-6px 2px 12px;font-size:13px">Toca una sessió per avisar que no hi podràs anar.</p>' : ''}`;
+    ${isLinkOnly() ? '<p class="muted" style="margin:-6px 2px 12px;font-size:13px">Toca una sessió per avisar que no hi podràs anar.</p>' : ''}`;
   if (!prods.length) return head + `<div class="empty">${staffSvg()}<h2 class="h2">Cap producció</h2><p>Les sessions s’organitzen per produccions.</p>${canEdit() ? '<button class="btn btn-primary" data-act="prod-new">Nova producció</button>' : ''}</div>`;
 
   const shown = ui.calProd === 'all' ? prods : prods.filter(p => p.id === ui.calProd);
@@ -1522,7 +1543,7 @@ function viewCalendar() {
   return head + chips + body;
 }
 function calRow(s, underProd) {
-  const staff = S.role !== 'singer';
+  const staff = !isLinkOnly();
   let right = '';
   if (staff) {
     const marks = SECTIONS.map(x => {
@@ -1534,7 +1555,7 @@ function calRow(s, underProd) {
     const c = emptyCounts();
     for (const x of SECTIONS) if (convoked(s, x.id) && hasData(s, x.id)) for (const m of membersOf(x.id)) { const mk = effMark(s, m); if (mk) c[mk.s]++; }
     const r = rate(c);
-    const rv = s.rsvp ? rsvpCounts(s) : null;
+    const rv = s.rsvp && canEdit() ? rsvpCounts(s) : null;
     right = `<span class="cal-right"><span class="vmarks" aria-label="Llista per cordes">${marks}</span>${r != null ? `<span class="cal-pct">${pct(r)}</span>` : rv ? `<span class="cal-badge" title="Confirmacions">${rv.yes}✓ ${rv.no}✗ ${rv.none}?</span>` : ''}</span>`;
   } else {
     const me = S.members.get(myMemberId());
@@ -1746,17 +1767,20 @@ function manageConfig() {
   const { season, terms } = seasonCfg();
   const members = membersOf(null, true);
   const withLink = members.filter(m => S.secretsMembers?.[m.id]).length;
-  const staff = [...S.staff.values()].sort((a, b) => (a.role === 'admin' ? -1 : 0) - (b.role === 'admin' ? -1 : 0) || a.name.localeCompare(b.name, 'ca'));
+  const people = peopleSorted();
+  const withAccount = members.filter(m => accountFor(m.id)).length;
   const brand = S.config.brand || {};
-  const who = S.me ? `${esc(S.me.name || S.me.email)} · ${STAFF_ROLES[S.me.role] || ''}` : 'Enllaç compartit d’edició';
+  const who = S.me ? `${esc(S.me.name || S.me.email)} · ${PEOPLE_ROLES[S.me.role] || ''}` : 'Enllaç compartit d’edició';
   const adminBlocks = isAdmin() ? `
-  <div class="sec-h"><h2 class="h2">Equip</h2><button class="btn btn-sm btn-primary" data-act="staff-new">+ Persona</button></div>
+  <div class="sec-h"><h2 class="h2">Persones i accessos</h2><span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" data-act="staff-bulk">Enganxa una llista</button><button class="btn btn-sm btn-primary" data-act="staff-new">+ Persona</button></span></div>
   <div class="panel">
-    ${staff.length ? `<ul class="list" style="border:0;border-radius:0">${staff.map(p => `<li class="li"><button data-act="staff-edit" data-email="${esc(p.email)}">
-      <span><span class="t">${esc(p.name || p.email)}</span> <span class="role-tag">${STAFF_ROLES[p.role] || p.role}${p.role === 'leader' && p.section ? ` · ${SEC[p.section].name}` : ''}</span><br><span class="s mono">${esc(p.email)}</span></span>
+    <div class="setting"><div><div class="t">${withAccount} de ${members.length} cantaires ja tenen accés</div><div class="s">Tothom entra pel mateix enllaç amb el seu correu. Els cantaires i el Palau ho veuen tot en <b>mode lectura</b>; administració, direcció i caps de corda poden editar.</div></div>
+      <button class="btn btn-sm" data-act="share-app">Enllaç de l’app</button></div>
+    ${people.length ? `<ul class="list" style="border:0;border-radius:0;border-top:1px solid var(--line)">${people.map(p => `<li class="li"><button data-act="staff-edit" data-email="${esc(p.email)}">
+      <span><span class="t">${esc(p.name || p.email)}</span> <span class="role-tag">${esc(roleSummary(p))}</span><br><span class="s mono">${esc(p.email)}</span></span>
       <span class="icon-btn" aria-hidden="true">${ICON.go}</span></button></li>`).join('')}</ul>`
-      : '<p style="margin:0;padding:14px;font-size:13.5px">Encara no hi ha ningú. Afegeix els caps de corda i el director amb el seu correu de Google.</p>'}
-    <p class="muted" style="margin:0;padding:10px 14px 12px;font-size:12px;border-top:1px solid var(--line)">Cada persona entra amb <b>el seu compte de Google</b> des de la pantalla d’inici. Si algú deixa l’equip, treu-lo d’aquí i perd l’accés a l’instant.</p>
+      : '<p style="margin:0;padding:14px;font-size:13.5px;border-top:1px solid var(--line)">Encara no hi ha ningú. Afegeix els correus un per un o enganxa’n una llista.</p>'}
+    <p class="muted" style="margin:0;padding:10px 14px 12px;font-size:12px;border-top:1px solid var(--line)">Si algú marxa del cor, treu-lo d’aquí i perd l’accés a l’instant. Treure l’accés no esborra la seva fitxa ni les llistes.</p>
   </div>
   <div class="sec-h"><h2 class="h2">Enllaç compartit d’edició</h2></div>
   <div class="panel">
@@ -1776,14 +1800,14 @@ function manageConfig() {
   </div>` : '';
   return `<div class="panel" style="margin-top:16px">
     <div class="setting"><div><div class="t">Sessió</div><div class="s">${who}</div></div>
-      <span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" data-act="help">Manual</button>${S.me ? '<button class="btn btn-sm" data-act="sign-out">Tanca la sessió</button>' : '<button class="btn btn-sm btn-primary" data-act="google-in">Entra amb Google</button>'}</span></div>
+      <span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" data-act="help">Manual</button>${myId() ? '<button class="btn btn-sm" data-act="my-att">La meva assistència</button>' : ''}${S.me ? '<button class="btn btn-sm" data-act="sign-out">Tanca la sessió</button>' : '<button class="btn btn-sm btn-primary" data-act="google-in">Entra amb Google</button>'}</span></div>
   </div>
   ${adminBlocks}
-  <div class="sec-h"><h2 class="h2">Enllaços dels cantaires</h2></div>
+  ${withLink ? `<div class="sec-h"><h2 class="h2">Enllaços personals antics</h2></div>
   <div class="panel">
-    <div class="setting"><div><div class="t">${withLink} de ${members.length} cantaires tenen enllaç personal</div><div class="s">Cada cantaire entra amb el seu enllaç: veu el calendari, avisa d’absències i respon convocatòries. També pot fer de substitut.</div></div>
-      <span style="display:flex;gap:6px;flex-wrap:wrap">${withLink < members.length ? '<button class="btn btn-sm btn-primary" data-act="links-generate">Genera els que falten</button>' : ''}${withLink ? '<button class="btn btn-sm" data-act="links-copy">Copia la llista</button>' : ''}</span></div>
-  </div>
+    <div class="setting"><div><div class="t">${withLink} enllaços encara actius</div><div class="s">Ja no calen: cada cantaire entra amb el seu correu. Esborra’ls quan tothom tingui accés amb compte.</div></div>
+      <span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" data-act="links-copy">Copia la llista</button><button class="btn btn-sm btn-danger-ghost" data-act="links-wipe">Esborra’ls tots</button></span></div>
+  </div>` : ''}
   <div class="sec-h"><h2 class="h2">Calendari subscrit</h2></div>
   <div class="panel"><div class="setting"><div><div class="t">calendari.ics</div><div class="s">S’actualitza sol cada poques hores. Funciona amb Google Calendar, Apple i Outlook.</div></div><button class="btn btn-sm" data-act="cal-subscribe">Com afegir-lo</button></div></div>
   <div class="sec-h"><h2 class="h2">Cor</h2></div>
@@ -1823,7 +1847,7 @@ const LS_SEEN = 'corpresent:tauler-vist';
 const MAT_KINDS = { partitura: 'Partitura', audio: 'Àudio', video: 'Vídeo', altres: 'Altres' };
 const linkify = t => esc(t).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
 const mySection = () => S.members.get(myMemberId())?.section || null;
-const forMe = x => canEdit() || !x.sections?.length || x.sections.includes(mySection());
+const forMe = x => canEdit() || !myId() || !x.sections?.length || x.sections.includes(mySection());
 function visibleAnnouncements() {
   return [...S.announcements.values()]
     .filter(a => forMe(a) && (canEdit() || !a.until || a.until >= TODAY))
@@ -1834,7 +1858,7 @@ function boardBadge() {
   let seen = '';
   try { seen = localStorage.getItem(LS_SEEN) || ''; } catch {}
   const news = visibleAnnouncements().filter(a => (a.createdAt || '') > seen).length;
-  const polls = S.role === 'singer' ? openPolls().filter(p => !S.pollVotes.get(`${p.id}_${S.memberId}`)).length : 0;
+  const polls = myId() && !canEdit() ? openPolls().filter(p => !S.pollVotes.get(`${p.id}_${myId()}`)).length : 0;
   return news + polls;
 }
 function viewBoard() {
@@ -1867,12 +1891,14 @@ function boardMaterials() {
   const prod = S.productions.get(ui.matProd);
   if (!prod) return '<div class="empty"><p>Encara no hi ha produccions.</p></div>';
   const me = S.members.get(myMemberId());
-  const onlyMine = S.role === 'singer' && ui.matMine !== false;
+  const onlyMine = !!me && !canEdit() && ui.matMine !== false;
   const items = (prod.materials || []).filter(x => !onlyMine || !me || ((!x.section || x.section === me.section) && (!x.part || !me.part || me.part.includes(x.part) || x.part.includes(me.part))));
   const chips = `<div class="chips" role="group" aria-label="Producció">${prods.map(p => `<button class="chip" aria-pressed="${p.id === prod.id}" data-act="mat-prod" data-id="${p.id}"><i class="pdot prod-tone" style="--ph:${prodHue(p)}"></i>${esc(p.name)}${(p.materials || []).length ? ` · ${(p.materials || []).length}` : ''}</button>`).join('')}</div>`;
-  const tools = S.role === 'singer'
-    ? `<div class="sec-h" style="margin-top:4px"><span class="muted" style="font-size:13px">${onlyMine ? `Mostrant el material per a ${SEC[me.section].name.toLowerCase()}${me.part ? ` ${me.part}` : ''}` : 'Mostrant tot el material'}</span><button class="btn btn-sm btn-ghost" data-act="mat-mine">${onlyMine ? 'Mostra-ho tot' : 'Només la meva veu'}</button></div>`
-    : `<div class="sec-h" style="margin-top:4px"><span class="muted" style="font-size:13px">Enllaços a Drive, Dropbox, YouTube…</span><button class="btn btn-sm btn-primary" data-act="mat-new">+ Material</button></div>`;
+  const tools = canEdit()
+    ? `<div class="sec-h" style="margin-top:4px"><span class="muted" style="font-size:13px">Enllaços a Drive, Dropbox, YouTube…</span><button class="btn btn-sm btn-primary" data-act="mat-new">+ Material</button></div>`
+    : me
+      ? `<div class="sec-h" style="margin-top:4px"><span class="muted" style="font-size:13px">${onlyMine ? `Mostrant el material per a ${SEC[me.section].name.toLowerCase()}${me.part ? ` ${me.part}` : ''}` : 'Mostrant tot el material'}</span><button class="btn btn-sm btn-ghost" data-act="mat-mine">${onlyMine ? 'Mostra-ho tot' : 'Només la meva veu'}</button></div>`
+      : '';
   const order = Object.keys(MAT_KINDS);
   const sorted = [...items].sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind) || a.title.localeCompare(b.title, 'ca'));
   const row = x => `<div class="mat"><span class="mat-k ${x.kind}">${MAT_KINDS[x.kind]?.slice(0, 4) || ''}</span>
@@ -1907,12 +1933,13 @@ function boardPolls() {
         <div class="c-a" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="muted" style="font-size:13px">${r.voters} de ${r.expected} han respost</span>
           <button class="btn btn-sm" data-act="poll-results" data-id="${p.id}">Qui ha votat</button>${closed ? '' : `<button class="btn btn-sm" data-act="poll-remind" data-id="${p.id}">Recorda-ho</button>`}</div></div>`;
     }
-    const mine = S.pollVotes.get(`${p.id}_${S.memberId}`);
+    const canVote = !!myId() && !closed;
+    const mine = S.pollVotes.get(`${p.id}_${myId()}`);
     const chosen = new Set(mine?.choices || []);
     return `<div class="poll" data-poll="${p.id}"><h2 class="ann-t">${esc(p.title)}</h2>
       ${p.description ? `<div class="ann-b">${linkify(p.description)}</div>` : ''}${meta}
-      ${(p.options || []).map(o => `<label class="opt-row"><input type="${p.multi ? 'checkbox' : 'radio'}" name="poll-${p.id}" value="${o.id}" ${chosen.has(o.id) ? 'checked' : ''} ${closed ? 'disabled' : ''}><span>${esc(o.label)}</span><span></span></label>`).join('')}
-      ${closed ? '' : `<div class="c-a" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="btn btn-sm btn-primary" data-act="poll-vote" data-id="${p.id}">${mine ? 'Actualitza la resposta' : 'Envia la resposta'}</button>${mine ? '<span class="rsvp yes">Resposta desada</span>' : ''}</div>`}</div>`;
+      ${(p.options || []).map(o => `<label class="opt-row"><input type="${p.multi ? 'checkbox' : 'radio'}" name="poll-${p.id}" value="${o.id}" ${chosen.has(o.id) ? 'checked' : ''} ${canVote ? '' : 'disabled'}><span>${esc(o.label)}</span><span></span></label>`).join('')}
+      ${canVote ? `<div class="c-a" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="btn btn-sm btn-primary" data-act="poll-vote" data-id="${p.id}">${mine ? 'Actualitza la resposta' : 'Envia la resposta'}</button>${mine ? '<span class="rsvp yes">Resposta desada</span>' : ''}</div>` : ''}</div>`;
   };
   return `${canEdit() ? '<div class="sec-h" style="margin-top:6px"><span class="muted" style="font-size:13px">Per saber quan pot venir la gent.</span><button class="btn btn-sm btn-primary" data-act="poll-new">+ Enquesta</button></div>' : ''}
     ${all.length ? `<div class="panel">${all.map(card).join('')}</div>` : '<div class="empty"><p>No hi ha enquestes.</p></div>'}`;
@@ -1971,6 +1998,8 @@ function sheetMyAttendance() {
 /* ---------- View: Singer (avisos) ---------- */
 function myMemberId() {
   if (S.memberId && S.members.has(S.memberId)) return S.memberId;
+  // Self-declared identity only helps whoever could write anyway; the rest is decided by the account.
+  if (!canEdit()) return null;
   try { const id = localStorage.getItem(LS_ME); return id && S.members.has(id) ? id : null; } catch { return null; }
 }
 function openConvocations(me) {
@@ -1979,7 +2008,7 @@ function openConvocations(me) {
 }
 function viewSinger() {
   const me = S.members.get(myMemberId());
-  if (!me) return `<div class="empty">${staffSvg()}<h2 class="h2">Enllaç sense cantaire</h2><p>Aquest enllaç no està associat a cap cantaire. Demana el teu enllaç personal al teu cap de corda.</p></div>`;
+  if (!me) return `<div class="empty">${staffSvg()}<h2 class="h2">Compte sense cantaire</h2><p>El teu correu encara no està vinculat a cap fitxa de la plantilla. Demana-ho a l’administració del cor.</p></div>`;
   const mine = [...S.absences.values()].sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
   const next = allSessions().filter(s => s.date >= TODAY && convoked(s, me.section))[0];
   const subs = mySubs();
@@ -2257,7 +2286,8 @@ function sheetMember(mid) {
         <small class="muted">Durant la baixa surt en gris («No fa») i no compta a les estadístiques ni a la norma.</small>
       </fieldset>
       <div class="toggle-row"><span><b>Actiu</b><br><span class="muted" style="font-size:12.5px">Desactiva’l si deixa el cor; conserva l’historial</span></span><label class="switch"><input type="checkbox" id="me-active" ${m.active !== false ? 'checked' : ''}><span></span></label></div>
-      ${existing ? `<div class="toggle-row"><span><b>Enllaç personal</b><br><span class="muted" style="font-size:12.5px">${S.secretsMembers?.[m.id] ? 'Actiu' : 'Encara no en té'}</span></span><button type="button" class="btn btn-sm" data-act="member-link" data-mid="${m.id}">${S.secretsMembers?.[m.id] ? 'Envia’l' : 'Crea’l'}</button></div>` : ''}
+      ${existing ? (x => `<div class="toggle-row"><span><b>Accés a l’app</b><br><span class="muted" style="font-size:12.5px">${x ? esc(x.email) : 'Encara no en té'}</span></span><button type="button" class="btn btn-sm" data-act="${x ? 'staff-edit' : 'staff-new'}" ${x ? `data-email="${esc(x.email)}"` : ''}>${x ? 'Canvia' : 'Dona-li accés'}</button></div>`)(accountFor(m.id)) : ''}
+      ${existing && S.secretsMembers?.[m.id] ? `<div class="toggle-row"><span><b>Enllaç personal antic</b><br><span class="muted" style="font-size:12.5px">Encara actiu</span></span><button type="button" class="btn btn-sm" data-act="member-link" data-mid="${m.id}">Obre’l</button></div>` : ''}
       <label class="field"><span>Telèfon</span><input class="inp" id="me-phone" type="tel" maxlength="20" value="${esc(m.phone || '')}"></label>
       <label class="field"><span>Notes</span><input class="inp" id="me-notes" type="text" maxlength="120" value="${esc(m.notes || '')}"></label>
     </div>`,
@@ -2478,9 +2508,9 @@ function sheetWhoAmI(then) {
   });
 }
 function sheetAbsence(presetSid) {
-  const singer = S.role === 'singer';
+  const singer = !canEdit();                       // reporting on my own behalf
   let memberId = singer ? myMemberId() : null;
-  if (singer && !memberId) { toast('Aquest enllaç no està associat a cap cantaire'); return; }
+  if (singer && !memberId) { toast('El teu compte no està vinculat a cap cantaire'); return; }
   let kind = 'absent';
   const picked = new Set(presetSid ? [presetSid] : []);
   const sessionsFor = mid => {
@@ -2570,29 +2600,53 @@ async function regenerateLink(role) {
   } catch (e) { toast('No s’ha pogut canviar l’enllaç. Comprova la connexió.'); }
 }
 
-/* ---------- Team (Google accounts) ---------- */
+/* ---------- People and access (Google accounts) ---------- */
+const accountFor = mid => mid ? [...S.staff.values()].find(p => p.memberId === mid) : null;
+const peopleSorted = () => [...S.staff.values()].sort((a, b) =>
+  Object.keys(PEOPLE_ROLES).indexOf(a.role) - Object.keys(PEOPLE_ROLES).indexOf(b.role)
+  || (a.name || a.email).localeCompare(b.name || b.email, 'ca'));
+function roleSummary(p) {
+  const bits = [PEOPLE_ROLES[p.role] || p.role];
+  if (p.role === 'leader' && p.section) bits.push(SEC[p.section].name);
+  const m = p.memberId && S.members.get(p.memberId);
+  if (m && p.role !== 'leader') bits.push(SEC[m.section].name);
+  return bits.join(' · ');
+}
 function sheetStaff(email) {
   const existing = email ? S.staff.get(email) : null;
-  const p = existing ? { ...existing } : { email: '', name: '', role: 'leader', section: 'S' };
+  const p = existing ? { ...existing } : { email: '', name: '', role: 'singer', section: 'S', memberId: '' };
   openSheet({
-    title: existing ? 'Persona de l’equip' : 'Afegeix a l’equip',
+    title: existing ? (p.name || p.email) : 'Dona accés a una persona',
     body: `<div class="kv">
-      <label class="field"><span>Correu de Google</span><input class="inp" id="st-email" type="email" autocomplete="off" value="${esc(p.email)}" ${existing ? 'disabled' : ''} placeholder="nom@gmail.com"></label>
-      <label class="field"><span>Nom</span><input class="inp" id="st-name" type="text" maxlength="60" value="${esc(p.name)}" placeholder="p. ex. Quingles, Pol"></label>
-      <div class="field"><span>Rol</span><div class="pickers" id="st-role">${Object.entries(STAFF_ROLES).map(([k, l]) => `<button type="button" class="pick" data-role="${k}" aria-pressed="${p.role === k}">${l}</button>`).join('')}</div>
-        <small>Tots poden passar llista i editar. Només l’administració gestiona l’equip, els enllaços i la imatge.</small></div>
-      <div class="field" id="st-sec-f" ${p.role === 'leader' ? '' : 'hidden'}><span>Corda</span><div class="pickers" id="st-sec">${SECTIONS.map(x => `<button type="button" class="pick" data-sec="${x.id}" aria-pressed="${p.section === x.id}"><span class="vl">${x.id}</span> ${x.name}</button>`).join('')}</div></div>
+      <label class="field"><span>Correu (compte de Google)</span><input class="inp" id="st-email" type="email" autocomplete="off" value="${esc(p.email)}" ${existing ? 'disabled' : ''} placeholder="nom@gmail.com"></label>
+      <label class="field"><span>Nom</span><input class="inp" id="st-name" type="text" maxlength="60" value="${esc(p.name || '')}" placeholder="p. ex. Quingles, Pol"></label>
+      <div class="field"><span>Rol</span><div class="pickers" id="st-role">${Object.entries(PEOPLE_ROLES).map(([k, l]) => `<button type="button" class="pick" data-role="${k}" aria-pressed="${p.role === k}">${l}</button>`).join('')}</div>
+        <small id="st-hint">${ROLE_HINT[p.role] || ''}</small></div>
+      <div class="field" id="st-sec-f" ${p.role === 'leader' ? '' : 'hidden'}><span>Corda que dirigeix</span><div class="pickers" id="st-sec">${SECTIONS.map(x => `<button type="button" class="pick" data-sec="${x.id}" aria-pressed="${p.section === x.id}"><span class="vl">${x.id}</span> ${x.name}</button>`).join('')}</div></div>
+      <label class="field" id="st-mem-f" ${p.role === 'palau' ? 'hidden' : ''}><span>Cantaire de la plantilla</span>
+        <select class="inp" id="st-mem"><option value="">— cap —</option>${memberOptions(p.memberId || '')}</select>
+        <small>Vincula el compte amb la seva fitxa: així té «El meu espai» i pot avisar d’absències, confirmar convocatòries i veure la seva assistència.</small></label>
     </div>`,
-    foot: `${existing ? '<button class="btn btn-danger-ghost" id="st-del">Treu de l’equip</button>' : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="st-save">Desa</button>`,
+    foot: `${existing ? '<button class="btn btn-danger-ghost" id="st-del">Treu l’accés</button>' : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="st-save">Desa</button>`,
     onMount: el => {
-      el.querySelectorAll('#st-role .pick').forEach(b => b.onclick = () => { el.querySelectorAll('#st-role .pick').forEach(x => x.setAttribute('aria-pressed', x === b)); el.querySelector('#st-sec-f').hidden = b.dataset.role !== 'leader'; });
+      el.querySelectorAll('#st-role .pick').forEach(b => b.onclick = () => {
+        el.querySelectorAll('#st-role .pick').forEach(x => x.setAttribute('aria-pressed', x === b));
+        el.querySelector('#st-sec-f').hidden = b.dataset.role !== 'leader';
+        el.querySelector('#st-mem-f').hidden = b.dataset.role === 'palau';
+        el.querySelector('#st-hint').textContent = ROLE_HINT[b.dataset.role] || '';
+      });
       el.querySelectorAll('#st-sec .pick').forEach(b => b.onclick = () => el.querySelectorAll('#st-sec .pick').forEach(x => x.setAttribute('aria-pressed', x === b)));
       el.querySelector('#st-save').onclick = async () => {
         const mail = (existing ? p.email : el.querySelector('#st-email').value).trim().toLowerCase();
         if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail)) { toast('Escriu un correu vàlid'); return; }
         const role = el.querySelector('#st-role .pick[aria-pressed="true"]').dataset.role;
-        const rec = { email: mail, name: el.querySelector('#st-name').value.trim(), role, addedAt: existing?.addedAt || new Date().toISOString() };
+        const memberId = role === 'palau' ? '' : el.querySelector('#st-mem').value;
+        if (role === 'singer' && !memberId) { toast('Tria de quin cantaire és aquest correu'); return; }
+        const clash = memberId && [...S.staff.values()].find(x => x.memberId === memberId && x.email !== mail);
+        if (clash) { toast(`Aquest cantaire ja està vinculat a ${clash.email}`); return; }
+        const rec = { email: mail, name: el.querySelector('#st-name').value.trim() || S.members.get(memberId)?.name || '', role, addedAt: existing?.addedAt || new Date().toISOString() };
         if (role === 'leader') rec.section = el.querySelector('#st-sec .pick[aria-pressed="true"]').dataset.sec;
+        if (memberId) rec.memberId = memberId;
         if (existing && existing.role === 'admin' && role !== 'admin' && [...S.staff.values()].filter(x => x.role === 'admin').length === 1 && S.me) { toast('Ha de quedar almenys una persona d’administració'); return; }
         try {
           const b = fs.batch();
@@ -2600,23 +2654,113 @@ function sheetStaff(email) {
           b.set(fs.doc(`staffIndex/${mail}`), { choirId: LINK.choirId });
           await b.commit();
           S.staff.set(mail, rec);
-          closeSheet(); toast(existing ? 'Canvis desats' : `${rec.name || mail} ja pot entrar amb Google`); render();
-        } catch { toast('No s’ha pogut desar. Només l’administració pot gestionar l’equip.'); }
+          closeSheet(); toast(existing ? 'Canvis desats' : `${rec.name || mail} ja pot entrar`); render();
+        } catch { toast('No s’ha pogut desar. Només l’administració pot donar accessos.'); }
       };
       const del = el.querySelector('#st-del');
       if (del) del.onclick = async () => {
         if (S.me && S.me.email === p.email) { toast('No et pots treure a tu mateix'); return; }
-        if (!await confirmSheet('Treure de l’equip?', `<b>${esc(p.name || p.email)}</b> deixarà de tenir accés a l’instant.`, 'Treu')) return;
+        if (!await confirmSheet('Treure l’accés?', `<b>${esc(p.name || p.email)}</b> deixarà d’entrar a l’app a l’instant. La seva fitxa de cantaire i les llistes no es toquen.`, 'Treu')) return;
         try {
           const b = fs.batch();
           b.delete(db.doc(`staff/${p.email}`));
           b.delete(fs.doc(`staffIndex/${p.email}`));
           await b.commit();
-          S.staff.delete(p.email); toast('Persona treta de l’equip'); render();
+          S.staff.delete(p.email); closeSheet(); toast('Accés retirat'); render();
         } catch { toast('No s’ha pogut treure. Comprova la connexió.'); }
       };
     },
   });
+}
+/** Paste a list of «name — email» lines and match them to the roster. */
+function sheetStaffBulk() {
+  const norm = t => String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+  const roster = membersOf(null, true).map(m => ({ m, key: norm(m.name), parts: norm(m.name).split(' ').filter(w => w.length > 2) }));
+  const findMember = (name, mail) => {
+    const cands = [name, mail.split('@')[0].replace(/[._-]+/g, ' ')].filter(Boolean).map(norm);
+    for (const c of cands) {
+      if (!c) continue;
+      const exact = roster.find(r => r.key === c);
+      if (exact) return exact.m;
+      const words = c.split(' ').filter(w => w.length > 2);
+      if (words.length < 2) continue;
+      const hits = roster.filter(r => words.every(w => r.parts.includes(w)));
+      if (hits.length === 1) return hits[0].m;
+    }
+    return null;
+  };
+  const parse = text => text.split(/\r?\n/).map(line => {
+    const mail = (line.match(/[^\s,;<>()]+@[^\s,;<>()]+\.[^\s,;<>()]+/) || [])[0];
+    if (!mail) return null;
+    const name = line.replace(mail, '').replace(/[<>();]/g, '').replace(/[,;\t]+/g, ' ').trim().replace(/\s+/g, ' ');
+    return { mail: mail.toLowerCase(), name, member: findMember(name, mail.toLowerCase()) };
+  }).filter(Boolean);
+  let rows = [];
+  const draw = el => {
+    const box = el.querySelector('#bk-prev');
+    if (!rows.length) { box.innerHTML = '<span class="muted" style="font-size:13px">Enganxa les línies i prem «Comprova».</span>'; return; }
+    const ok = rows.filter(r => r.member).length;
+    box.innerHTML = `<p style="margin:0 0 8px;font-size:13.5px"><b>${rows.length}</b> correus · <b>${ok}</b> vinculats a un cantaire${ok < rows.length ? ` · <b>${rows.length - ok}</b> sense vincular` : ''}</p>
+      <ul class="mini-list" style="max-height:260px">${rows.map((r, i) => `<li><span>${esc(r.mail)}<br><span class="m">${r.member ? esc(r.member.name) + ' · ' + SEC[r.member.section].name : 'sense cantaire — es desarà com a ' + (r.name ? esc(r.name) : 'només correu')}</span></span>
+        <span class="rsvp ${r.member ? 'yes' : 'none'}">${r.member ? 'Cantaire' : 'Sense vincle'}</span></li>`).join('')}</ul>`;
+  };
+  openSheet({
+    title: 'Afegeix correus en bloc',
+    wide: true,
+    body: `<p style="margin-top:0">Enganxa una línia per persona, amb el nom i el correu en qualsevol ordre. Per exemple:</p>
+      <div class="linkbox">Quingles, Pol — pol@exemple.com<br>Mata, Martina &lt;martina@exemple.com&gt;<br>anna@exemple.com</div>
+      <label class="field" style="margin-top:12px"><span>Llista</span><textarea class="inp" id="bk-text" style="min-height:150px" placeholder="Cognom, Nom  correu@exemple.com"></textarea></label>
+      <div class="field"><span>Rol per a tothom</span><div class="pickers" id="bk-role">${Object.entries(PEOPLE_ROLES).map(([k, l]) => `<button type="button" class="pick" data-role="${k}" aria-pressed="${k === 'singer'}">${l}</button>`).join('')}</div></div>
+      <div id="bk-prev" style="margin-top:10px"></div>`,
+    foot: `<button class="btn" id="bk-check">Comprova</button><span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="bk-save">Desa’ls</button>`,
+    onMount: el => {
+      draw(el);
+      el.querySelectorAll('#bk-role .pick').forEach(b => b.onclick = () => el.querySelectorAll('#bk-role .pick').forEach(x => x.setAttribute('aria-pressed', x === b)));
+      el.querySelector('#bk-check').onclick = () => { rows = parse(el.querySelector('#bk-text').value); draw(el); };
+      el.querySelector('#bk-save').onclick = async () => {
+        if (!rows.length) rows = parse(el.querySelector('#bk-text').value);
+        if (!rows.length) { toast('No hi ha cap correu a la llista'); return; }
+        const role = el.querySelector('#bk-role .pick[aria-pressed="true"]').dataset.role;
+        if (role === 'singer' && rows.some(r => !r.member)) { toast('Hi ha correus sense cantaire. Corregeix el nom o afegeix-los d’un en un.'); return; }
+        const at = new Date().toISOString();
+        const taken = new Set([...S.staff.values()].map(x => x.memberId).filter(Boolean));
+        let n = 0;
+        try {
+          for (let i = 0; i < rows.length; i += 200) {
+            const b = fs.batch();
+            for (const r of rows.slice(i, i + 200)) {
+              const prev = S.staff.get(r.mail);
+              const rec = { email: r.mail, name: r.member?.name || r.name || prev?.name || '', role, addedAt: prev?.addedAt || at };
+              const mid = role === 'palau' ? '' : (r.member?.id || prev?.memberId || '');
+              if (mid && (!taken.has(mid) || prev?.memberId === mid)) { rec.memberId = mid; taken.add(mid); }
+              if (role === 'leader' && (prev?.section || r.member?.section)) rec.section = prev?.section || r.member.section;
+              b.set(db.doc(`staff/${r.mail}`), rec);
+              b.set(fs.doc(`staffIndex/${r.mail}`), { choirId: LINK.choirId });
+              S.staff.set(r.mail, rec); n++;
+            }
+            await b.commit();
+          }
+          closeSheet(); toast(`${n} persones ja poden entrar`); render();
+        } catch { toast('No s’han pogut desar. Només l’administració pot donar accessos.'); render(); }
+      };
+    },
+  });
+}
+/** Once everybody has an account, the 69 personal links are no longer needed. */
+async function wipePersonalLinks() {
+  const map = S.secretsMembers || {};
+  const keys = Object.values(map);
+  if (!keys.length) { toast('Ja no hi ha cap enllaç personal'); return; }
+  if (!await confirmSheet('Esborrar tots els enllaços personals?', `Els <b>${keys.length}</b> enllaços deixaran de funcionar a l’instant. Cadascú haurà d’entrar amb el seu correu.`, 'Esborra’ls')) return;
+  try {
+    for (let i = 0; i < keys.length; i += 200) {
+      const b = fs.batch();
+      for (const k of keys.slice(i, i + 200)) b.delete(fs.doc(`claus/${k}`));
+      if (i + 200 >= keys.length) b.set(db.doc('secrets/members'), {});
+      await b.commit();
+    }
+    S.secretsMembers = {}; toast(`${keys.length} enllaços esborrats`); render();
+  } catch { toast('No s’han pogut esborrar. Comprova la connexió.'); }
 }
 async function disableEditLink() {
   if (!S.me) { toast('Primer entra amb Google, o et quedaries sense accés'); return; }
@@ -2710,20 +2854,21 @@ function sheetSub(sid, sec) {
   const ms = membersOf(sec).filter(m => !isOut(s, m) && !m.leader);
   openSheet({
     title: `Qui passa llista · ${SEC[sec].name}`,
-    body: `<p style="margin-top:0">${longDate(s.date)} · ${esc(s.type)}. La persona triada podrà passar llista d’aquesta corda <b>només aquest dia</b>, des del seu enllaç personal.</p>
-      <label class="field"><span>Substitut</span><select class="inp" id="sub-m"><option value="">—</option>${ms.map(m => `<option value="${m.id}" ${cur?.memberId === m.id ? 'selected' : ''}>${esc(m.name)}${S.secretsMembers?.[m.id] ? '' : ' (sense enllaç)'}</option>`).join('')}</select></label>`,
+    body: `<p style="margin-top:0">${longDate(s.date)} · ${esc(s.type)}. La persona triada podrà passar llista d’aquesta corda <b>només aquest dia</b>, entrant a l’app amb el seu correu.</p>
+      <label class="field"><span>Substitut</span><select class="inp" id="sub-m"><option value="">—</option>${ms.map(m => `<option value="${m.id}" ${cur?.memberId === m.id ? 'selected' : ''}>${esc(m.name)}${accountFor(m.id) || S.secretsMembers?.[m.id] ? '' : ' (sense accés)'}</option>`).join('')}</select></label>`,
     foot: `${cur ? '<button class="btn btn-danger-ghost" id="sub-del">Treu el substitut</button>' : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="sub-save">Desa</button>`,
     onMount: el => {
       el.querySelector('#sub-save').onclick = async () => {
         const m = S.members.get(el.querySelector('#sub-m').value);
         if (!m) { toast('Tria qui passarà llista'); return; }
-        if (!S.secretsMembers?.[m.id]) await generatePersonalLinks(m.id);
+        const hasAccount = !!accountFor(m.id);
+        if (!hasAccount && !S.secretsMembers?.[m.id]) await generatePersonalLinks(m.id);
         const until = parseISO(s.date).getTime() + 36 * 3600 * 1000;   // fins l’endemà al migdia
         const rec = { sessionId: s.id, section: sec, memberId: m.id, memberName: m.name, date: s.date, until, by: S.me?.email || 'enllaç', at: new Date().toISOString() };
         S.subs.set(subKey(s.id, sec), rec); persist('subs', subKey(s.id, sec), rec, 10);
         closeSheet(); render();
-        sheetMemberLink(m.id);
-        toast(`${m.name} pot passar llista avui. Envia-li el seu enllaç si no el té.`);
+        if (hasAccount) toast(`${m.name} ja pot passar llista avui des del seu compte.`);
+        else { sheetMemberLink(m.id); toast(`${m.name} pot passar llista avui. Envia-li l’enllaç.`); }
       };
       el.querySelector('#sub-del')?.addEventListener('click', () => { S.subs.delete(subKey(sid, sec)); persist('subs', subKey(sid, sec), null, 10); closeSheet(); render(); });
     },
@@ -2835,10 +2980,11 @@ function setBrandColor(c) { saveConfig({ brand: { ...(S.config.brand || {}), acc
 
 /* ---------- One-page manual ---------- */
 function sheetHelp() {
-  const staff = S.role === 'edit';
+  const staff = canEdit();
   const body = staff ? `<div class="manual">
     <h3>Entrar</h3>
-    <p>Caps de corda i director: <b>Entra amb Google</b> amb el correu que l’administració ha afegit a l’equip. El mòbil queda connectat.</p>
+    <p>Tothom entra pel mateix enllaç amb <b>el seu correu</b>. L’administració dona d’alta cada persona a <b>Gestió › Ajustos › Persones i accessos</b> amb un rol: administració, director, cap de corda, cantaire o treballador del Palau.</p>
+    <p>Administració, direcció i caps de corda poden editar-ho tot. Cantaires i Palau ho veuen tot en <b>mode lectura</b>, i els cantaires tenen a més el seu espai personal.</p>
     <h3>Passar llista</h3>
     <ul><li>A <b>Llista</b> surt la sessió d’avui. Toca el quadrant de la teva corda.</li>
     <li>Toca l’estat de cada cantaire: <b>Present</b>, <b>Retard</b>, <b>No justificada</b>, <b>Justificada</b> o <b>No fa</b>. Toca’l un altre cop per desmarcar.</li>
@@ -2847,24 +2993,26 @@ function sheetHelp() {
     <li>Sense cobertura pots continuar: es desa quan torni la connexió.</li>
     <li>Un punt vermell al quadrant vol dir que hi ha llistes d’altres dies pendents.</li></ul>
     <h3>Si no hi ets: substitut</h3>
-    <p>Dins la corda, <b>Substitut per avui</b>: tria un cantaire. Rebrà permís per passar llista d’aquella sessió des del seu enllaç personal fins l’endemà.</p>
+    <p>Dins la corda, <b>Substitut per avui</b>: tria un cantaire. Rebrà permís per passar llista d’aquella sessió des del seu compte fins l’endemà.</p>
     <h3>Avisos d’absència</h3>
-    <p>Els cantaires avisen des del seu enllaç. Surten a <b>Gestió › Avisos</b> i a la llista del dia. En acceptar-los, els dies queden com a falta justificada.</p>
+    <p>Els cantaires avisen des del seu espai. Surten a <b>Gestió › Avisos</b> i a la llista del dia. En acceptar-los, els dies queden com a falta justificada.</p>
     <h3>Convocatòries</h3>
     <p>A la fitxa d’una sessió (concert, viatge…) activa <b>Demana confirmació</b>. Els cantaires responen Sí/No i a la Llista veus el recompte.</p>
     <h3>Tauler</h3>
-    <p><b>Anuncis</b> per a tothom o per cordes, <b>materials</b> de cada producció (partitures, àudios de guia per veu, vídeos) i <b>enquestes</b> de disponibilitat. A les convocatòries i enquestes, <b>Recorda-ho</b> prepara missatges de WhatsApp per als que no han respost, amb el seu enllaç.</p>
+    <p><b>Anuncis</b> per a tothom o per cordes, <b>materials</b> de cada producció (partitures, àudios de guia per veu, vídeos) i <b>enquestes</b> de disponibilitat. A les convocatòries i enquestes, <b>Recorda-ho</b> prepara missatges de WhatsApp per als que no han respost.</p>
     <h3>Estadístiques i norma</h3>
     <p>Per producció, trimestre o temporada. La <b>norma del ${minAttendance()}%</b> avisa de qui no pot fer el concert o està en risc.</p>
     <h3>Cantaires</h3>
-    <p>A <b>Gestió › Cantaires</b>: veu, baixes temporals amb dates i l’<b>enllaç personal</b> de cada cantaire (per WhatsApp o copiant-lo).</p>
+    <p>A <b>Gestió › Cantaires</b>: veu, baixes temporals amb dates i telèfon. L’accés a l’app es dona amb el correu, a <b>Ajustos › Persones i accessos</b>.</p>
     <h3>Còpies de seguretat</h3>
     <p>Cada nit es guarda automàticament una còpia de totes les dades en un lloc privat. També pots descarregar-ne una a Ajustos › Dades.</p>
     <h3>Pantalla d’inici</h3>
     <p>Al navegador del mòbil, tria <b>Afegeix a la pantalla d’inici</b> per tenir-la com una app.</p>
   </div>` : `<div class="manual">
-    <h3>El teu enllaç</h3>
-    <p>És personal: no el comparteixis. Obre’l sempre des del mateix mòbil o afegeix-lo a la pantalla d’inici.</p>
+    <h3>Entrar</h3>
+    <p>Entres amb <b>el teu correu</b>, sempre pel mateix enllaç. Afegeix-lo a la pantalla d’inici del mòbil i el tindràs com una app.</p>
+    <h3>Què hi pots fer</h3>
+    <p>Pots consultar <b>tota l’app</b>: les llistes de totes les cordes, el calendari, les estadístiques i el tauler. No pots canviar-hi res. Al <b>teu espai</b> sí que pots avisar d’absències, confirmar convocatòries i respondre enquestes.</p>
     <h3>Avisar d’una absència</h3>
     <p><b>Avisa d’una absència</b>, tria els dies i explica el motiu. El teu cap de corda l’acceptarà o no; ho veuràs a «Els meus avisos».</p>
     <h3>Convocatòries</h3>
@@ -3024,13 +3172,13 @@ function sheetReminder(title, pending, messageFor) {
   const bySec = SECTIONS.map(x => [x, pending.filter(m => m.section === x.id)]).filter(([, l]) => l.length);
   const first = m => m.name.split(',').pop().trim();
   const phone = m => (m.phone || '').replace(/[^0-9]/g, '').replace(/^(\d{9})$/, '34$1');
-  const group = `${title}\n\nFalten per respondre:\n${bySec.map(([x, l]) => `${x.name}: ${l.map(first).join(', ')}`).join('\n')}\n\nCadascú pot respondre amb el seu enllaç personal de l’app.`;
+  const group = `${title}\n\nFalten per respondre:\n${bySec.map(([x, l]) => `${x.name}: ${l.map(first).join(', ')}`).join('\n')}\n\nPodeu respondre a l’app: ${appUrl()}`;
   openSheet({
     title: 'Recordatori',
-    body: pending.length ? `<p style="margin-top:0">${pending.length} persones encara no han respost. Envia’ls un missatge individual amb el seu enllaç, o copia un missatge per al grup.</p>
+    body: pending.length ? `<p style="margin-top:0">${pending.length} persones encara no han respost. Envia’ls un missatge individual o copia’n un per al grup.</p>
       ${bySec.map(([x, l]) => `<div class="eyebrow" style="margin:14px 0 4px">${x.name}</div><ul class="mini-list remind-list" style="max-height:none">${l.map(m => {
         const msg = messageFor(m);
-        return `<li><span>${esc(m.name)}${memberLink(m.id) ? '' : '<br><span class="m">Sense enllaç personal</span>'}</span>
+        return `<li><span>${esc(m.name)}${accountFor(m.id) ? '' : '<br><span class="m">Encara no té accés a l’app</span>'}</span>
           <span style="display:flex;gap:4px">${phone(m) ? `<a class="btn btn-sm" href="https://wa.me/${phone(m)}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">WhatsApp</a>` : ''}<button class="btn btn-sm" data-copy="${esc(msg)}">Copia</button></span></li>`;
       }).join('')}</ul>`).join('')}
       <p class="muted" style="font-size:12.5px">Per enviar WhatsApp directament, cal tenir el telèfon a la fitxa del cantaire.</p>`
@@ -3048,14 +3196,14 @@ function remindRsvp(sid) {
   const pending = SECTIONS.filter(x => convoked(s, x.id)).flatMap(x => membersOf(x.id)).filter(m => !isOut(s, m) && !S.rsvp.get(`${sid}_${m.id}`));
   const what = `${s.type} del ${longDate(s.date).toLowerCase()}${s.place ? ` (${s.place})` : ''}`;
   sheetReminder(`Recordatori: confirmeu si veniu al ${what}${s.rsvpBy ? `, abans del ${ddmm(s.rsvpBy)}` : ''}.`, pending,
-    m => `Hola ${m.name.split(',').pop().trim()}! Recorda confirmar si vens al ${what}${s.rsvpBy ? ` abans del ${ddmm(s.rsvpBy)}` : ''}. Respon aquí: ${memberLink(m.id) || '(demana el teu enllaç)'}`);
+    m => `Hola ${m.name.split(',').pop().trim()}! Recorda confirmar si vens al ${what}${s.rsvpBy ? ` abans del ${ddmm(s.rsvpBy)}` : ''}. Respon aquí: ${appUrl()}`);
 }
 function remindPoll(id) {
   const p = S.polls.get(id);
   if (!p) return;
   const pending = pollExpected(p).filter(m => !S.pollVotes.get(`${id}_${m.id}`));
   sheetReminder(`Recordatori: responeu l’enquesta «${p.title}»${p.closesAt ? ` abans del ${ddmm(p.closesAt)}` : ''}.`, pending,
-    m => `Hola ${m.name.split(',').pop().trim()}! Tens pendent l’enquesta «${p.title}»${p.closesAt ? ` (fins al ${ddmm(p.closesAt)})` : ''}. Respon-la aquí, a Tauler › Enquestes: ${memberLink(m.id) || '(demana el teu enllaç)'}`);
+    m => `Hola ${m.name.split(',').pop().trim()}! Tens pendent l’enquesta «${p.title}»${p.closesAt ? ` (fins al ${ddmm(p.closesAt)})` : ''}. Respon-la aquí, a Tauler › Enquestes: ${appUrl()}`);
 }
 
 /* ================= Import / export ================= */
@@ -3124,6 +3272,24 @@ const SHARE_TEXT = {
   view: ['Enllaç de consulta', 'Per a la direcció o qui hagi de veure l’assistència sense modificar-la.', 'qui el tingui veurà l’assistència de tots els cantaires.'],
   singer: ['Enllaç per als cantaires', 'Envia’l al grup del cor: cadascú podrà veure el calendari i avisar de les seves absències.', 'qui el tingui pot enviar avisos i veure el calendari, però no l’assistència.'],
 };
+/** The one link everybody uses: no secret, everyone signs in with their own email. */
+const appUrl = () => `${location.origin}${location.pathname}`;
+function sheetShareApp() {
+  const url = appUrl();
+  const msg = `Aquesta és l’app del ${S.config.name || 'cor'}. Entra-hi amb el correu que has donat al cor i hi trobaràs el calendari, les llistes, el tauler i el teu espai personal:\n${url}`;
+  openSheet({
+    title: 'Enllaç de l’app',
+    body: `<p style="margin-top:0">El mateix enllaç serveix per a tothom. Qui hi entri haurà d’identificar-se amb el seu correu, i només hi podrà accedir si el tens donat d’alta a <b>Persones i accessos</b>.</p>
+      <div class="linkbox">${esc(url)}</div>
+      <p class="muted" style="font-size:12.5px;margin:10px 0 0">Consell: digues a tothom que l’obri al mòbil i, des del menú del navegador, triï «Afegeix a la pantalla d’inici» per tenir-lo com una app.</p>`,
+    foot: `${navigator.share ? '<button class="btn" id="sa-native">Comparteix…</button>' : ''}<button class="btn" id="sa-msg">Copia el missatge</button><button class="btn btn-primary" id="sa-copy">Copia l’enllaç</button>`,
+    onMount: el => {
+      el.querySelector('#sa-copy').onclick = () => copyText(url, 'Enllaç copiat');
+      el.querySelector('#sa-msg').onclick = () => copyText(msg, 'Missatge copiat');
+      el.querySelector('#sa-native')?.addEventListener('click', () => navigator.share({ title: S.config.name || 'Cor Present', text: 'App d’assistència del cor', url }).catch(() => {}));
+    },
+  });
+}
 function sheetShare(role = 'edit') {
   const secret = S.secrets?.[role] || (role === LINK?.role ? LINK.secret : null);
   if (!secret) { toast('Primer crea aquest enllaç'); return; }
@@ -3164,8 +3330,8 @@ async function wipeAll(demo) {
 
 /* ================= Events ================= */
 const SUB_OK = new Set(['mark', 'min', 'mark-rest']);
-const ADMIN_ONLY = new Set(['staff-new', 'staff-edit', 'edit-link-off', 'link-regen', 'brand-color', 'logo-remove', 'wipe-all']);
-const EDIT_ONLY = new Set(['mark', 'min', 'mark-rest', 'session-new', 'sub-set', 'ann-new', 'ann-edit', 'mat-new', 'mat-edit', 'poll-new', 'poll-edit', 'poll-results', 'poll-remind', 'rsvp-remind', 'links-generate', 'links-copy', 'member-link', 'session-edit', 'member-edit', 'member-bulk', 'prod-new', 'prod-edit',
+const ADMIN_ONLY = new Set(['staff-new', 'staff-edit', 'staff-bulk', 'edit-link-off', 'link-regen', 'brand-color', 'logo-remove', 'wipe-all', 'links-wipe', 'share-app']);
+const EDIT_ONLY = new Set(['mark', 'min', 'mark-rest', 'session-new', 'sub-set', 'ann-new', 'ann-edit', 'mat-new', 'mat-edit', 'poll-new', 'poll-edit', 'poll-results', 'poll-remind', 'rsvp-remind', 'links-generate', 'links-copy', 'links-wipe', 'member-link', 'share-app', 'staff-bulk', 'session-edit', 'member-edit', 'member-bulk', 'prod-new', 'prod-edit',
   'wipe-demo', 'wipe-all', 'load-demo', 'export-json', 'abs-accept', 'abs-reject', 'abs-delete', 'link-regen', 'manage']);
 const actions = {
   'tab': el => { ui.tab = el.dataset.tab; ui.rollSec = null; ui._calScrolled = false; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
@@ -3175,6 +3341,9 @@ const actions = {
   'sign-out': () => signOut(),
   'help': () => sheetHelp(),
   'staff-new': () => sheetStaff(null),
+  'staff-bulk': () => sheetStaffBulk(),
+  'share-app': () => sheetShareApp(),
+  'links-wipe': () => wipePersonalLinks(),
   'staff-edit': el => sheetStaff(el.dataset.email),
   'edit-link-off': () => disableEditLink(),
   'links-generate': () => generatePersonalLinks(),
@@ -3217,7 +3386,7 @@ const actions = {
   'sync-info': () => openSheet({
     title: 'Estat de les dades',
     body: S.mode === 'shared'
-      ? `<p style="margin-top:0">${S.role === 'edit' ? 'Les llistes es desen automàticament i es comparteixen en temps real amb els caps de corda i el director.' : S.role === 'view' ? 'Tens accés de <b>consulta</b>: veus les llistes i les estadístiques al moment, però no pots canviar res.' : 'Tens l’enllaç de <b>cantaires</b>: pots veure el calendari i avisar de les teves absències.'}</p>
+      ? `<p style="margin-top:0">${canEdit() ? 'Les llistes es desen automàticament i es comparteixen en temps real amb la resta de l’equip.' : isLinkOnly() ? 'Tens un enllaç personal: pots veure el calendari i avisar de les teves absències.' : 'Tens accés de <b>només lectura</b>: veus les llistes, el calendari i les estadístiques al moment, però no pots canviar res. Al teu espai sí que pots avisar d’absències i confirmar convocatòries.'}</p>
          <p style="margin-top:0">Si et quedes sense cobertura, pots continuar passant llista: els canvis s’envien sols quan torni la connexió.</p>
          <p class="muted" style="margin-bottom:0">${!navigator.onLine ? 'Ara mateix no hi ha connexió.' : pendingWrites() ? `Desant ${pendingWrites()} canvis…` : 'Tots els canvis estan desats.'}</p>`
       : `<p style="margin:0">Encara no hi ha cap cor connectat en aquest dispositiu.</p>`,
@@ -3361,7 +3530,7 @@ function connect() {
   S.role = LINK.role;
   S.memberId = LINK.memberId || null;
   S.mode = 'shared';
-  document.body.classList.toggle('ro', S.role !== 'edit');
+  document.body.classList.toggle('ro', !canEdit());
   render();
   subscribe();
 }
@@ -3379,7 +3548,7 @@ async function resolveLink(secret) {
   }
   return { secret, choirId, role, ...(memberId ? { memberId } : {}) };
 }
-/** Signed in with Google: find which choir this person belongs to. */
+/** Signed in with Google: find which choir this person belongs to, and with which role. */
 async function resolveStaff(user) {
   const email = (user.email || '').toLowerCase();
   const idx = await fs.doc(`staffIndex/${email}`).get();
@@ -3388,7 +3557,7 @@ async function resolveStaff(user) {
   const me = await fs.doc(`cors/${choirId}/staff/${email}`).get();
   if (!me.exists) { const e = new Error('no-staff'); e.code = 'no-staff'; throw e; }
   S.me = me.data();
-  return { choirId, role: 'edit', via: 'google', email };
+  return { choirId, role: roleLevel(S.me.role), via: 'google', email, memberId: S.me.memberId || null };
 }
 async function init() {
   loadUI();

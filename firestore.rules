@@ -3,8 +3,15 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // ---- Qui és qui ----
-    // Equip (caps de corda, director, administració): entren amb Google i són a cors/<cor>/staff/<email>.
-    // Enllaços (#k=…): claus/<secret> diu el cor i el rol; cada mòbil anònim es registra a cors/<cor>/access/<uid>.
+    // Tothom (equip i cantaires) entra amb el seu compte de Google i té una fitxa
+    // a cors/<cor>/staff/<correu> amb un rol:
+    //   admin | director | leader  → poden editar-ho tot (leader = cap de corda)
+    //   singer | palau             → només lectura de tota l'app
+    // La fitxa pot portar memberId: llavors la persona té el seu espai personal
+    // (avisos d'absència, confirmacions, enquestes, la seva assistència).
+    //
+    // Enllaços antics (#k=…): claus/<secret> diu el cor i el rol; cada mòbil anònim
+    // es registra a cors/<cor>/access/<uid>.
     //   edit     → enllaç compartit d'edició (transició)
     //   singer   → enllaç personal d'un cantaire (memberId)
     //   calendar → lector del calendari per generar el fitxer .ics
@@ -16,7 +23,7 @@ service cloud.firestore {
         && request.auth.token.get('email_verified', false) == true
         && exists(/databases/$(database)/documents/cors/$(c)/staff/$(email()));
     }
-    function staffRole(c) { return get(/databases/$(database)/documents/cors/$(c)/staff/$(email())).data.role; }
+    function staffData(c) { return get(/databases/$(database)/documents/cors/$(c)/staff/$(email())).data; }
     function hasRole(c, roles) {
       let accP = /databases/$(database)/documents/cors/$(c)/access/$(request.auth.uid);
       return request.auth != null
@@ -24,10 +31,16 @@ service cloud.firestore {
         && get(accP).data.role in roles
         && exists(/databases/$(database)/documents/claus/$(get(accP).data.key));
     }
-    function myMember(c) { return get(/databases/$(database)/documents/cors/$(c)/access/$(request.auth.uid)).data.get('memberId', '-'); }
-    function canEdit(c) { return hasRole(c, ['edit']) || isStaff(c); }
-    function isAdmin(c) { return hasRole(c, ['edit']) || (isStaff(c) && staffRole(c) == 'admin'); }
+    function accMember(c) { return get(/databases/$(database)/documents/cors/$(c)/access/$(request.auth.uid)).data.get('memberId', '-'); }
+
+    function canEdit(c) { return hasRole(c, ['edit']) || (isStaff(c) && staffData(c).role in ['admin', 'director', 'leader']); }
+    function isAdmin(c) { return hasRole(c, ['edit']) || (isStaff(c) && staffData(c).role == 'admin'); }
     function isSinger(c) { return hasRole(c, ['singer']); }
+    // El cantaire de qui som: de la fitxa (compte) o de l'enllaç personal.
+    function myMember(c) { return isStaff(c) ? staffData(c).get('memberId', '-') : accMember(c); }
+    // Té espai personal: pot avisar, confirmar, votar i fer de substitut.
+    function hasSpace(c) { return isStaff(c) || isSinger(c); }
+    function mine(c, mid) { return mid == myMember(c) && mid != '-'; }
 
     match /claus/{k} {
       allow get: if true;
@@ -64,6 +77,9 @@ service cloud.firestore {
       match /{col}/{doc} {
         allow read: if (col in ['members', 'productions', 'attendance', 'config', 'staff', 'subs', 'rsvp', 'absences',
                                 'announcements', 'polls', 'pollVotes', 'memberMarks'] && canEdit(c))
+                    // Cantaires i treballadors del Palau: veuen tota l'app, però no poden canviar res.
+                    || (col in ['members', 'productions', 'attendance', 'config', 'subs',
+                                'announcements', 'polls'] && isStaff(c))
                     || (col in ['members', 'productions', 'config', 'announcements', 'polls'] && isSinger(c))
                     || (col in ['productions', 'config'] && hasRole(c, ['calendar']))
                     || (col in ['members', 'productions', 'attendance', 'config', 'staff', 'subs', 'rsvp', 'absences',
@@ -71,45 +87,47 @@ service cloud.firestore {
         allow write: if col in ['members', 'productions', 'attendance', 'config', 'subs', 'rsvp',
                                 'announcements', 'polls', 'pollVotes', 'memberMarks'] && canEdit(c);
       }
+      // Cadascú pot llegir la seva pròpia fitxa per saber quin rol té.
+      match /staff/{e} {
+        allow read: if request.auth != null && email() == e;
+        allow write: if isAdmin(c);
+      }
       // Còpia de les marques de cada cantaire: només les seves.
       match /memberMarks/{mid} {
-        allow read: if isSinger(c) && myMember(c) == mid;
+        allow read: if hasSpace(c) && mine(c, mid);
       }
       match /pollVotes/{id} {
-        allow read: if isSinger(c) && resource.data.memberId == myMember(c);
-        allow create, update: if isSinger(c)
-          && request.resource.data.memberId == myMember(c)
+        allow read: if hasSpace(c) && mine(c, resource.data.memberId);
+        allow create, update: if hasSpace(c)
+          && mine(c, request.resource.data.memberId)
           && id == request.resource.data.pollId + '_' + myMember(c)
           && get(/databases/$(database)/documents/cors/$(c)/polls/$(request.resource.data.pollId)).data.get('closed', false) == false;
-      }
-      match /staff/{e} {
-        allow write: if isAdmin(c);
       }
       match /secrets/{doc} {
         allow read, write: if canEdit(c);
       }
       // Substitut: pot passar llista d'aquella sessió i corda fins que caduca.
       match /attendance/{id} {
-        allow read, write: if isSinger(c)
+        allow read, write: if hasSpace(c)
           && exists(/databases/$(database)/documents/cors/$(c)/subs/$(id))
-          && get(/databases/$(database)/documents/cors/$(c)/subs/$(id)).data.memberId == myMember(c)
+          && mine(c, get(/databases/$(database)/documents/cors/$(c)/subs/$(id)).data.memberId)
           && request.time.toMillis() < get(/databases/$(database)/documents/cors/$(c)/subs/$(id)).data.until;
       }
       match /subs/{id} {
-        allow read: if isSinger(c) && resource.data.memberId == myMember(c);
+        allow read: if hasSpace(c) && mine(c, resource.data.memberId);
       }
       match /absences/{id} {
-        allow read: if canEdit(c) || (isSinger(c) && resource.data.memberId == myMember(c));
+        allow read: if canEdit(c) || (hasSpace(c) && mine(c, resource.data.memberId));
         allow create: if request.resource.data.uid == request.auth.uid
-          && (canEdit(c) || (isSinger(c) && request.resource.data.status == 'pending' && request.resource.data.memberId == myMember(c)));
+          && (canEdit(c) || (hasSpace(c) && request.resource.data.status == 'pending' && mine(c, request.resource.data.memberId)));
         allow update: if canEdit(c);
         allow delete: if canEdit(c)
-          || (isSinger(c) && resource.data.memberId == myMember(c) && resource.data.status == 'pending');
+          || (hasSpace(c) && mine(c, resource.data.memberId) && resource.data.status == 'pending');
       }
       match /rsvp/{id} {
-        allow read: if isSinger(c) && resource.data.memberId == myMember(c);
-        allow create, update: if isSinger(c)
-          && request.resource.data.memberId == myMember(c)
+        allow read: if hasSpace(c) && mine(c, resource.data.memberId);
+        allow create, update: if hasSpace(c)
+          && mine(c, request.resource.data.memberId)
           && id == request.resource.data.sessionId + '_' + myMember(c)
           && request.resource.data.answer in ['yes', 'no'];
       }
