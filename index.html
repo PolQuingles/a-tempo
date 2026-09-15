@@ -236,7 +236,8 @@ details.np-group[open] summary .chev{transform:rotate(180deg)}
 .cal-info{min-width:0}
 .cal-type{display:block;font-weight:600;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cal-type em{font-style:normal;font-family:var(--f-mono);font-weight:400;font-size:12.5px;color:var(--muted);margin-left:4px}
-.cal-place{display:block;font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal-place{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:12.5px;line-height:1.35;color:var(--muted);overflow:hidden}
+.cal-place .mono{font-size:12px;color:var(--ink-2)}
 .cal-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
 .vmarks{display:flex;gap:3px}
 .vm{width:19px;height:19px;border-radius:50%;display:grid;place-items:center;font-family:var(--f-display);font-style:italic;font-weight:600;font-size:11px;border:1.5px solid var(--line-strong);color:var(--muted)}
@@ -958,7 +959,7 @@ function calRow(s) {
   const marks = SECTIONS.map(x => {
     if (!convoked(s, x.id)) return `<span class="vm off" title="${x.name}: no convocats">${x.id}</span>`;
     const pr = progress(s, x.id);
-    const cls = pr.total && pr.done === pr.total ? 'full' : pr.done ? 'part' : '';
+    const cls = !hasData(s, x.id) ? '' : pr.total && pr.done === pr.total ? 'full' : 'part';
     return `<span class="vm ${cls}" title="${x.name}: ${pr.done}/${pr.total}">${x.id}</span>`;
   }).join('');
   const c = emptyCounts();
@@ -968,7 +969,7 @@ function calRow(s) {
   return `<li class="cal-row ${cls}" data-date="${s.date}">
     <button class="cal-main" data-act="open-session" data-sid="${s.id}">
       <span class="cal-date"><b>${+s.date.slice(8, 10)}</b><small>${wdShort(s.date)}</small></span>
-      <span class="cal-info"><span class="cal-type">${esc(s.type || 'Assaig')}<em>${esc(timeRange(s))}</em></span><span class="cal-place">${esc(s.place || '')}${s.note ? ` · ${esc(s.note)}` : ''}</span></span>
+      <span class="cal-info"><span class="cal-type">${esc(s.type || 'Assaig')}</span><span class="cal-place">${[s.time ? `<span class="mono">${esc(timeRange(s))}</span>` : '', esc(s.place || ''), esc(s.note || '')].filter(Boolean).join(' · ')}</span></span>
       <span class="cal-right"><span class="vmarks" aria-label="Llista per cordes">${marks}</span>${r != null ? `<span class="cal-pct">${pct(r)}</span>` : ''}</span>
     </button>
     <button class="icon-btn" data-act="session-edit" data-sid="${s.id}" aria-label="Edita la sessió">${ICON.more}</button>
