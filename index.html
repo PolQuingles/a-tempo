@@ -1218,6 +1218,7 @@ function render() {
       ${GBTN}
       ${S.mode === 'nostaff' ? '<button class="btn btn-ghost" data-act="sign-out" style="justify-self:start">Prova amb un altre compte</button>' : ''}
       <p class="muted" style="font-size:13px;margin:0">Cantaires, caps de corda, direcció i Palau entreu pel mateix lloc. Segons qui siguis, veuràs el teu espai i podràs consultar o editar.</p>
+      <p class="muted" style="font-size:12.5px;margin:0">Si has obert l’enllaç des del WhatsApp i no pots entrar, obre’l amb el <b>Safari</b> o el <b>Chrome</b>: des del menú «···», tria «Obre al navegador».</p>
     </div>
     ${S.mode === 'nokey' ? '<p style="text-align:center;margin-top:22px"><button class="btn btn-sm btn-ghost" data-act="create-choir">Crear un cor nou</button></p>' : ''}`;
     return;
@@ -3299,12 +3300,12 @@ const SHARE_TEXT = {
 const appUrl = () => `${location.origin}${location.pathname}`;
 function sheetShareApp() {
   const url = appUrl();
-  const msg = `Aquesta és l’app del ${S.config.name || 'cor'}. Entra-hi amb el correu que has donat al cor i hi trobaràs el calendari, les llistes, el tauler i el teu espai personal:\n${url}`;
+  const msg = `Aquesta és l’app del ${S.config.name || 'cor'}. Entra-hi amb el correu que has donat al cor i hi trobaràs el calendari, les llistes, el tauler i el teu espai personal:\n${url}\n\nSi no et deixa entrar, obre l’enllaç amb el Safari o el Chrome (no des del WhatsApp) i afegeix-lo a la pantalla d’inici.`;
   openSheet({
     title: 'Enllaç de l’app',
     body: `<p style="margin-top:0">El mateix enllaç serveix per a tothom. Qui hi entri haurà d’identificar-se amb el seu correu, i només hi podrà accedir si el tens donat d’alta a <b>Persones i accessos</b>.</p>
       <div class="linkbox">${esc(url)}</div>
-      <p class="muted" style="font-size:12.5px;margin:10px 0 0">Consell: digues a tothom que l’obri al mòbil i, des del menú del navegador, triï «Afegeix a la pantalla d’inici» per tenir-lo com una app.</p>`,
+      <p class="muted" style="font-size:12.5px;margin:10px 0 0">Consell: digues a tothom que l’obri al <b>navegador del mòbil</b> (Safari o Chrome, no dins del WhatsApp) i, des del menú, triï «Afegeix a la pantalla d’inici» per tenir-lo com una app.</p>`,
     foot: `${navigator.share ? '<button class="btn" id="sa-native">Comparteix…</button>' : ''}<button class="btn" id="sa-msg">Copia el missatge</button><button class="btn btn-primary" id="sa-copy">Copia l’enllaç</button>`,
     onMount: el => {
       el.querySelector('#sa-copy').onclick = () => copyText(url, 'Enllaç copiat');
