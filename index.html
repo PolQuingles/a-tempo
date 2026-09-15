@@ -1772,10 +1772,10 @@ function manageConfig() {
   const brand = S.config.brand || {};
   const who = S.me ? `${esc(S.me.name || S.me.email)} · ${PEOPLE_ROLES[S.me.role] || ''}` : 'Enllaç compartit d’edició';
   const adminBlocks = isAdmin() ? `
-  <div class="sec-h"><h2 class="h2">Persones i accessos</h2><span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" data-act="staff-bulk">Enganxa una llista</button><button class="btn btn-sm btn-primary" data-act="staff-new">+ Persona</button></span></div>
+  <div class="sec-h"><h2 class="h2">Persones</h2><button class="btn btn-sm btn-primary" data-act="staff-new">+ Persona</button></div>
   <div class="panel">
     <div class="setting"><div><div class="t">${withAccount} de ${members.length} cantaires ja tenen accés</div><div class="s">Tothom entra pel mateix enllaç amb el seu correu. Els cantaires i el Palau ho veuen tot en <b>mode lectura</b>; administració, direcció i caps de corda poden editar.</div></div>
-      <button class="btn btn-sm" data-act="share-app">Enllaç de l’app</button></div>
+      <span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" data-act="share-app">Enllaç de l’app</button><button class="btn btn-sm" data-act="staff-bulk">Enganxa una llista</button></span></div>
     ${people.length ? `<ul class="list" style="border:0;border-radius:0;border-top:1px solid var(--line)">${people.map(p => `<li class="li"><button data-act="staff-edit" data-email="${esc(p.email)}">
       <span><span class="t">${esc(p.name || p.email)}</span> <span class="role-tag">${esc(roleSummary(p))}</span><br><span class="s mono">${esc(p.email)}</span></span>
       <span class="icon-btn" aria-hidden="true">${ICON.go}</span></button></li>`).join('')}</ul>`
