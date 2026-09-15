@@ -139,6 +139,7 @@ h1,h2,h3{margin:0;text-wrap:balance}
 .session-prod{display:block;font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .session-date{display:block;font-family:var(--f-display);font-weight:600;font-size:25px;line-height:1.12;letter-spacing:-.01em;margin-block:2px}
 .session-meta{display:flex;justify-content:center;align-items:center;gap:6px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.session-note{display:block;font-size:12.5px;font-weight:600;color:var(--accent);margin-top:3px;text-wrap:balance}
 .badge{display:inline-flex;align-items:center;height:20px;padding:0 7px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.03em;background:var(--accent);color:var(--accent-ink)}
 .badge.soft{background:var(--surface-2);color:var(--ink-2)}
 .nav-arrow{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:var(--ink-2);border:1px solid var(--line)}
@@ -179,6 +180,7 @@ summary::-webkit-details-marker{display:none}
 .who{display:flex;align-items:baseline;gap:8px;min-width:0;flex-wrap:wrap}
 .name{font-weight:600;font-size:16px;line-height:1.25}
 .tag{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+.part{align-self:center;font-family:var(--f-mono);font-size:11px;line-height:18px;padding:0 5px;border-radius:6px;border:1px solid var(--line-strong);color:var(--ink-2)}
 .state{font-size:12.5px;color:var(--muted);white-space:nowrap}
 .state.warn{color:var(--r-ink);background:var(--r-soft);padding:1px 7px;border-radius:999px}
 .row[data-s="none"] .name{color:var(--ink-2)}
@@ -434,7 +436,8 @@ const STATUS = {
   NP:  { label: 'No fa aquesta producció', short: 'No fa' },
 };
 const ORDER = ['P', 'R', 'FNJ', 'FJ', 'NP'];
-const TYPES = ['Assaig', 'Assaig parcial', 'Assaig general', 'Concert', 'Altres'];
+const TYPES = ['Assaig', 'Assaig parcial', 'Assaig pregeneral', 'Assaig general', 'Assaig amb orquestra', 'Concert', 'Cap de setmana de treball', 'Viatge / intercanvi', 'Altres'];
+const PARTS = ['1', '2', '1 o 2'];
 const WEEKDAYS = [ ['1','dl'], ['2','dt'], ['3','dc'], ['4','dj'], ['5','dv'], ['6','ds'], ['0','dg'] ];
 const LATE_CHIPS = [5, 10, 15, 20, 30];
 const LS_UI = 'corpresent:ui:v1';
@@ -465,6 +468,8 @@ const capz = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 const longDate = s => capz(fmtD(s, { weekday: 'long', day: 'numeric', month: 'long' }));
 const shortDate = s => fmtD(s, { day: 'numeric', month: 'short' });
 const ddmm = s => s ? `${s.slice(8, 10)}/${s.slice(5, 7)}` : '';
+const timeRange = s => s.time ? (s.end ? `${s.time}–${s.end}` : s.time) : '';
+const partTag = m => m.part ? `${m.section}${m.part.replace(' o ', '/')}` : '';
 const wdShort = s => fmtD(s, { weekday: 'short' });
 const monthYear = s => capz(fmtD(s, { month: 'long', year: 'numeric' }));
 const pct = v => v == null ? '—' : Math.round(v * 100) + '%';
@@ -645,8 +650,11 @@ function progress(session, sec) {
 }
 function defaultSession(list) {
   if (!list.length) return null;
-  const today = list.find(s => s.date === TODAY);
-  if (today) return today;
+  const todays = list.filter(s => s.date === TODAY);
+  if (todays.length) {
+    const d = new Date(), soon = `${pad(d.getHours() + 1)}:${pad(d.getMinutes())}`;
+    return todays.filter(s => (s.time || '00:00') <= soon).pop() || todays[0];
+  }
   const past = list.filter(s => s.date < TODAY);
   return past.length ? past[past.length - 1] : list[0];
 }
@@ -807,8 +815,9 @@ function viewRoll() {
       <button class="session-main" data-act="sess-pick" aria-label="Canvia de sessió">
         <span class="session-prod">${esc(prod?.name || '')}</span>
         <span class="session-date">${longDate(cur.date)}</span>
-        <span class="session-meta">${esc(cur.type || 'Assaig')}${cur.time ? ` · <span class="mono">${esc(cur.time)}</span>` : ''}${cur.place ? ` · ${esc(cur.place)}` : ''}
+        <span class="session-meta">${esc(cur.type || 'Assaig')}${cur.time ? ` · <span class="mono">${esc(timeRange(cur))}</span>` : ''}${cur.place ? ` · ${esc(cur.place)}` : ''}
           ${isToday ? '<span class="badge">Avui</span>' : ''}</span>
+        ${cur.note ? `<span class="session-note">${esc(cur.note)}</span>` : ''}
       </button>
       <button class="nav-arrow" data-act="sess-step" data-dir="1" ${idx >= list.length - 1 ? 'disabled' : ''} aria-label="Sessió següent">${ICON.right}</button>
     </div>
@@ -878,7 +887,7 @@ function rowHtml(session, m) {
       <input class="note-input" id="note-${m.id}" type="text" maxlength="120" placeholder="Opcional" value="${esc(mk.note || '')}" data-bind="note"></div>`;
   }
   return `<li class="row ${mk ? 'has-mark' : ''}" data-mid="${m.id}" data-s="${s}">
-    <div class="row-top"><span class="who"><span class="name">${esc(m.name)}</span>${m.leader ? '<span class="tag">Cap de corda</span>' : ''}</span>
+    <div class="row-top"><span class="who"><span class="name">${esc(m.name)}</span>${m.part ? `<span class="part" title="Veu">${esc(partTag(m))}</span>` : ''}${m.leader ? '<span class="tag">Cap de corda</span>' : ''}</span>
       <span class="state ${warn ? 'warn' : ''}">${state}</span></div>
     <div class="seg" role="radiogroup" aria-label="Assistència de ${esc(m.name)}">${opts}</div>
     ${extra}</li>`;
@@ -959,7 +968,7 @@ function calRow(s) {
   return `<li class="cal-row ${cls}" data-date="${s.date}">
     <button class="cal-main" data-act="open-session" data-sid="${s.id}">
       <span class="cal-date"><b>${+s.date.slice(8, 10)}</b><small>${wdShort(s.date)}</small></span>
-      <span class="cal-info"><span class="cal-type">${esc(s.type || 'Assaig')}<em>${esc(s.time || '')}</em></span><span class="cal-place">${esc(s.place || '')}${s.note ? ` · ${esc(s.note)}` : ''}</span></span>
+      <span class="cal-info"><span class="cal-type">${esc(s.type || 'Assaig')}<em>${esc(timeRange(s))}</em></span><span class="cal-place">${esc(s.place || '')}${s.note ? ` · ${esc(s.note)}` : ''}</span></span>
       <span class="cal-right"><span class="vmarks" aria-label="Llista per cordes">${marks}</span>${r != null ? `<span class="cal-pct">${pct(r)}</span>` : ''}</span>
     </button>
     <button class="icon-btn" data-act="session-edit" data-sid="${s.id}" aria-label="Edita la sessió">${ICON.more}</button>
@@ -1183,7 +1192,7 @@ function sheetSessionPicker() {
       const prs = SECTIONS.filter(x => convoked(s, x.id)).map(x => progress(s, x.id));
       const done = prs.reduce((a, b) => a + b.done, 0), tot = prs.reduce((a, b) => a + b.total, 0);
       return `<li><button data-act="pick-session" data-sid="${s.id}" aria-current="${s.id === ui.sessionId}" id="pick-${s.id}">
-        <span><span class="d">${longDate(s.date)}</span>${s.date === TODAY ? ' <span class="badge">Avui</span>' : ''}<br><span class="m">${esc(s.type || 'Assaig')} · ${esc(s.time || '')}${s.place ? ' · ' + esc(s.place) : ''}</span></span>
+        <span><span class="d">${longDate(s.date)}</span>${s.date === TODAY ? ' <span class="badge">Avui</span>' : ''}<br><span class="m">${esc(s.type || 'Assaig')}${s.time ? ' · ' + esc(timeRange(s)) : ''}${s.place ? ' · ' + esc(s.place) : ''}</span></span>
         <span class="mono m">${done ? `${done}/${tot}` : ''}</span></button></li>`;
     }).join('')}</ul>`;
   }
@@ -1197,7 +1206,7 @@ function sheetSessionPicker() {
 /* ---------- Sheet: summary ---------- */
 function summaryText(session, secs) {
   const prod = S.productions.get(session.prodId);
-  const lines = [`${prod?.name || ''} — ${session.type || 'Assaig'} ${ddmm(session.date)}${session.time ? ' ' + session.time : ''}`];
+  const lines = [`${prod?.name || ''} — ${session.type || 'Assaig'} ${ddmm(session.date)}${session.time ? ' ' + timeRange(session) : ''}`];
   for (const sec of secs) {
     if (!convoked(session, sec)) continue;
     const ms = membersOf(sec);
@@ -1245,15 +1254,16 @@ function sheetSession(sid, presetProd) {
   const existing = sid ? sessionById(sid) : null;
   const prods = productionsSorted();
   if (!prods.length) { toast('Primer crea una producció'); ui.tab = 'gestio'; ui.manage = 'produccions'; closeSheet(); render(); return; }
-  const cur = existing || { id: uid('s'), date: TODAY, time: '20:30', type: 'Assaig', place: '', note: '', sections: [], prodId: presetProd || (ui.calProd !== 'all' ? ui.calProd : currentProductionId()) };
+  const cur = existing || { id: uid('s'), date: TODAY, time: '20:30', end: '22:30', type: 'Assaig', place: '', note: '', sections: [], prodId: presetProd || (ui.calProd !== 'all' ? ui.calProd : currentProductionId()) };
   const secs = new Set(cur.sections && cur.sections.length ? cur.sections : SECTIONS.map(x => x.id));
   openSheet({
     title: existing ? 'Edita la sessió' : 'Nova sessió',
     body: `<div class="kv">
       <label class="field"><span>Producció</span><select class="inp" id="se-prod">${prods.map(p => `<option value="${p.id}" ${p.id === cur.prodId ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select></label>
       <div class="row2"><label class="field"><span>Data</span><input class="inp" id="se-date" type="date" value="${cur.date}"></label>
-      <label class="field"><span>Hora</span><input class="inp" id="se-time" type="time" value="${esc(cur.time || '')}"></label></div>
-      <label class="field"><span>Tipus</span><select class="inp" id="se-type">${TYPES.map(t => `<option ${t === cur.type ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
+      <label class="field"><span>Tipus</span><select class="inp" id="se-type">${[...new Set([...TYPES, cur.type].filter(Boolean))].map(t => `<option ${t === cur.type ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label></div>
+      <div class="row2"><label class="field"><span>Hora d’inici</span><input class="inp" id="se-time" type="time" value="${esc(cur.time || '')}"></label>
+      <label class="field"><span>Hora de final</span><input class="inp" id="se-end" type="time" value="${esc(cur.end || '')}"></label></div>
       <label class="field"><span>Lloc</span><input class="inp" id="se-place" type="text" maxlength="60" value="${esc(cur.place || '')}" placeholder="Sala d’assaig"></label>
       <div class="field"><span>Cordes convocades</span><div class="pickers" id="se-secs">${SECTIONS.map(x => `<button type="button" class="pick" aria-pressed="${secs.has(x.id)}" data-sec="${x.id}"><span class="vl">${x.id}</span> ${x.name}</button>`).join('')}</div></div>
       <label class="field"><span>Nota</span><input class="inp" id="se-note" type="text" maxlength="80" value="${esc(cur.note || '')}" placeholder="p. ex. Portar partitures del Gloria"></label>
@@ -1270,7 +1280,7 @@ function sheetSession(sid, presetProd) {
         if (!date) { toast('Indica la data de la sessió'); return; }
         const chosen = $$('#se-secs .pick[aria-pressed="true"]', el).map(b => b.dataset.sec);
         const next = {
-          id: cur.id, date, time: el.querySelector('#se-time').value, type: el.querySelector('#se-type').value,
+          id: cur.id, date, time: el.querySelector('#se-time').value, end: el.querySelector('#se-end').value, type: el.querySelector('#se-type').value,
           place: el.querySelector('#se-place').value.trim(), note: el.querySelector('#se-note').value.trim(),
         };
         if (chosen.length && chosen.length < 4) next.sections = chosen;
@@ -1313,6 +1323,7 @@ function sheetMember(mid) {
     body: `<div class="kv">
       <label class="field"><span>Nom i cognoms</span><input class="inp" id="me-name" type="text" maxlength="60" value="${esc(m.name)}" autocomplete="off"></label>
       <div class="field"><span>Corda</span><div class="pickers" id="me-sec">${SECTIONS.map(x => `<button type="button" class="pick" aria-pressed="${m.section === x.id}" data-sec="${x.id}"><span class="vl">${x.id}</span> ${x.name}</button>`).join('')}</div></div>
+      <div class="field"><span>Veu dins la corda</span><div class="pickers" id="me-part"><button type="button" class="pick" data-part="" aria-pressed="${!m.part}">Sense</button>${PARTS.map(v => `<button type="button" class="pick" data-part="${v}" aria-pressed="${m.part === v}">${v}</button>`).join('')}</div></div>
       <div class="toggle-row"><span><b>Cap de corda</b><br><span class="muted" style="font-size:12.5px">Passa llista de la seva corda</span></span><label class="switch"><input type="checkbox" id="me-leader" ${m.leader ? 'checked' : ''}><span></span></label></div>
       <div class="toggle-row"><span><b>Actiu</b><br><span class="muted" style="font-size:12.5px">Desactiva’l si és baixa; conserva l’historial</span></span><label class="switch"><input type="checkbox" id="me-active" ${m.active !== false ? 'checked' : ''}><span></span></label></div>
       <label class="field"><span>Telèfon</span><input class="inp" id="me-phone" type="tel" maxlength="20" value="${esc(m.phone || '')}"></label>
@@ -1321,6 +1332,7 @@ function sheetMember(mid) {
     foot: `${existing ? '<button class="btn btn-danger-ghost" id="me-del">Esborra</button>' : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="me-save">Desa</button>`,
     onMount: el => {
       el.querySelectorAll('#me-sec .pick').forEach(b => b.onclick = () => { el.querySelectorAll('#me-sec .pick').forEach(x => x.setAttribute('aria-pressed', x === b)); });
+      el.querySelectorAll('#me-part .pick').forEach(b => b.onclick = () => { el.querySelectorAll('#me-part .pick').forEach(x => x.setAttribute('aria-pressed', x === b)); });
       el.querySelector('#me-save').onclick = () => {
         const name = el.querySelector('#me-name').value.trim();
         if (!name) { toast('Escriu el nom del cantaire'); return; }
@@ -1328,7 +1340,7 @@ function sheetMember(mid) {
         if (existing && existing.section !== section && [...S.attendance.values()].some(d => d.section === existing.section && d.marks?.[m.id])) {
           toast('Canvi de corda desat. Les llistes antigues queden a la corda anterior.');
         }
-        const next = { ...m, name, section, leader: el.querySelector('#me-leader').checked, active: el.querySelector('#me-active').checked, phone: el.querySelector('#me-phone').value.trim(), notes: el.querySelector('#me-notes').value.trim() };
+        const next = { ...m, name, section, leader: el.querySelector('#me-leader').checked, active: el.querySelector('#me-active').checked, phone: el.querySelector('#me-phone').value.trim(), notes: el.querySelector('#me-notes').value.trim(), part: el.querySelector('#me-part .pick[aria-pressed="true"]').dataset.part };
         if (next.leader) for (const o of membersOf(section, true)) if (o.id !== next.id && o.leader) saveMember({ ...o, leader: false });
         saveMember(next);
         closeSheet();
@@ -1401,10 +1413,10 @@ function sheetProduction(pid) {
   const d = existing ? clone(existing) : { id: uid('p'), name: '', start: TODAY, end: '', sessions: [], excluded: [] };
   d.sessions = d.sessions || []; d.excluded = d.excluded || [];
   const excluded = new Set(d.excluded);
-  const gen = { from: d.start || TODAY, to: d.end || '', days: new Set(['2', '4']), time: '20:30', type: 'Assaig', place: '' };
+  const gen = { from: d.start || TODAY, to: d.end || '', days: new Set(['1', '3']), time: '20:30', end: '22:30', type: 'Assaig', place: '' };
 
   const sessionsList = () => d.sessions.length
-    ? `<ul class="mini-list" id="pe-sessions">${[...d.sessions].sort((a, b) => a.date.localeCompare(b.date)).map(s => `<li><span><span class="mono">${ddmm(s.date)} ${wdShort(s.date)}</span> · ${esc(s.type)} <span class="mono">${esc(s.time || '')}</span></span><button class="icon-btn" data-rm="${s.id}" aria-label="Treu la sessió">${ICON.close}</button></li>`).join('')}</ul>`
+    ? `<ul class="mini-list" id="pe-sessions">${[...d.sessions].sort((a, b) => a.date.localeCompare(b.date)).map(s => `<li><span><span class="mono">${ddmm(s.date)} ${wdShort(s.date)}</span> · ${esc(s.type)} <span class="mono">${esc(timeRange(s))}</span></span><button class="icon-btn" data-rm="${s.id}" aria-label="Treu la sessió">${ICON.close}</button></li>`).join('')}</ul>`
     : '<p class="muted" style="margin:0;font-size:13.5px">Encara no hi ha sessions.</p>';
 
   openSheet({
@@ -1421,8 +1433,9 @@ function sheetProduction(pid) {
             <div class="row2"><label class="field"><span>Des de</span><input class="inp" id="g-from" type="date" value="${gen.from}"></label>
             <label class="field"><span>Fins a</span><input class="inp" id="g-to" type="date" value="${gen.to}"></label></div>
             <div class="field"><span>Dies</span><div class="pickers" id="g-days">${WEEKDAYS.map(([v, l]) => `<button type="button" class="pick" aria-pressed="${gen.days.has(v)}" data-d="${v}">${l}</button>`).join('')}</div></div>
-            <div class="row2"><label class="field"><span>Hora</span><input class="inp" id="g-time" type="time" value="${gen.time}"></label>
-            <label class="field"><span>Tipus</span><select class="inp" id="g-type">${TYPES.map(t => `<option>${t}</option>`).join('')}</select></label></div>
+            <div class="row2"><label class="field"><span>Hora d’inici</span><input class="inp" id="g-time" type="time" value="${gen.time}"></label>
+            <label class="field"><span>Hora de final</span><input class="inp" id="g-end" type="time" value="${gen.end}"></label></div>
+            <label class="field"><span>Tipus</span><select class="inp" id="g-type">${TYPES.map(t => `<option>${t}</option>`).join('')}</select></label>
             <label class="field"><span>Lloc</span><input class="inp" id="g-place" type="text" maxlength="60" placeholder="Sala d’assaig"></label>
             <button type="button" class="btn btn-sm btn-primary" id="g-run" style="width:max-content">Afegeix les sessions</button>
           </div></details>
@@ -1446,14 +1459,14 @@ function sheetProduction(pid) {
         const days = new Set($$('#g-days .pick[aria-pressed="true"]', el).map(b => +b.dataset.d));
         if (!from || !to || to < from) { toast('Indica unes dates d’inici i final vàlides'); return; }
         if (!days.size) { toast('Tria almenys un dia de la setmana'); return; }
-        const time = el.querySelector('#g-time').value, type = el.querySelector('#g-type').value, place = el.querySelector('#g-place').value.trim();
+        const time = el.querySelector('#g-time').value, end = el.querySelector('#g-end').value, type = el.querySelector('#g-type').value, place = el.querySelector('#g-place').value.trim();
         const have = new Set(d.sessions.map(s => s.date + s.time));
         let n = 0;
         for (let dt = parseISO(from); isoDate(dt) <= to && n < 200; dt.setDate(dt.getDate() + 1)) {
           if (!days.has(dt.getDay())) continue;
           const iso = isoDate(dt);
           if (have.has(iso + time)) continue;
-          d.sessions.push({ id: uid('s'), date: iso, time, type, place, note: '' }); n++;
+          d.sessions.push({ id: uid('s'), date: iso, time, end, type, place, note: '' }); n++;
         }
         el.querySelector('#pe-slist').innerHTML = sessionsList(); bindRm();
         toast(n ? `${n} sessions afegides. Recorda desar.` : 'No s’ha afegit cap sessió nova');
