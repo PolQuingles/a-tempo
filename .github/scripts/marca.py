@@ -49,10 +49,18 @@ def _write(path, data):
             f.write(data)
 
 
-def _png(img):
+def _png(path, img):
+    """Desa la imatge només si els píxels canvien: una altra versió de Pillow pot comprimir diferent."""
+    if os.path.exists(path):
+        try:
+            old = Image.open(path)
+            if old.size == img.size and old.convert(img.mode).tobytes() == img.tobytes():
+                return
+        except Exception:
+            pass
     buf = io.BytesIO()
     img.save(buf, "PNG", optimize=True)
-    return buf.getvalue()
+    _write(path, buf.getvalue())
 
 
 def build(cfg, root="."):
@@ -71,13 +79,13 @@ def build(cfg, root="."):
         if own_bg:
             bg = _hex(solid[0])
         full = 1.0 if own_bg else 0.8
-        _write(os.path.join(out, "logo.png"), _png(img))
-        _write(os.path.join(out, "icon-180.png"), _png(_square(img, 180, full, bg)))
-        _write(os.path.join(out, "icon-192.png"), _png(_square(img, 192, full, bg)))
-        _write(os.path.join(out, "icon-512.png"), _png(_square(img, 512, full, bg)))
+        _png(os.path.join(out, "logo.png"), img)
+        _png(os.path.join(out, "icon-180.png"), _square(img, 180, full, bg))
+        _png(os.path.join(out, "icon-192.png"), _square(img, 192, full, bg))
+        _png(os.path.join(out, "icon-512.png"), _square(img, 512, full, bg))
         # Android retalla les icones «maskable» en cercle: el dibuix ha de quedar dins del 80 % central.
-        _write(os.path.join(out, "icon-512-maskable.png"), _png(_square(img, 512, 0.7 if own_bg else 0.6, bg)))
-        _write(os.path.join(out, "favicon-48.png"), _png(_square(img, 48, full, bg)))
+        _png(os.path.join(out, "icon-512-maskable.png"), _square(img, 512, 0.7 if own_bg else 0.6, bg))
+        _png(os.path.join(out, "favicon-48.png"), _square(img, 48, full, bg))
         logo_url = "marca/logo.png"
     else:
         for src, dst in [("icon-180.png", "icon-180.png"), ("icon-512.png", "icon-192.png"), ("icon-512.png", "icon-512.png"),
