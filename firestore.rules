@@ -76,21 +76,33 @@ service cloud.firestore {
       }
       match /{col}/{doc} {
         allow read: if (col in ['members', 'productions', 'attendance', 'config', 'staff', 'subs', 'rsvp', 'absences',
-                                'announcements', 'polls', 'pollVotes', 'memberMarks'] && canEdit(c))
+                                'announcements', 'polls', 'pollVotes', 'memberMarks', 'push'] && canEdit(c))
                     // Cantaires i treballadors del Palau: veuen tota l'app, però no poden canviar res.
                     || (col in ['members', 'productions', 'attendance', 'config', 'subs',
                                 'announcements', 'polls'] && isStaff(c))
                     || (col in ['members', 'productions', 'config', 'announcements', 'polls'] && isSinger(c))
                     || (col in ['productions', 'config'] && hasRole(c, ['calendar']))
                     || (col in ['members', 'productions', 'attendance', 'config', 'staff', 'subs', 'rsvp', 'absences',
-                                'announcements', 'polls', 'pollVotes'] && hasRole(c, ['backup']));
+                                'announcements', 'polls', 'pollVotes', 'push'] && hasRole(c, ['backup']));
         allow write: if col in ['members', 'productions', 'attendance', 'config', 'subs', 'rsvp',
                                 'announcements', 'polls', 'pollVotes', 'memberMarks'] && canEdit(c);
       }
-      // Cadascú pot llegir la seva pròpia fitxa per saber quin rol té.
+      // Cadascú pot llegir la seva pròpia fitxa per saber quin rol té, i deixar-hi
+      // constància de l'última vegada que ha entrat. La resta, només administració.
       match /staff/{e} {
         allow read: if request.auth != null && email() == e;
-        allow write: if isAdmin(c);
+        allow create, delete: if isAdmin(c);
+        allow update: if isAdmin(c)
+          || (request.auth != null && email() == e
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastSeen']));
+      }
+      // Avisos al mòbil: cada aparell es dona d'alta ell mateix i només toca la seva fitxa.
+      match /push/{id} {
+        allow read: if request.auth != null && resource.data.uid == request.auth.uid;
+        allow create: if (hasSpace(c) || canEdit(c)) && request.resource.data.uid == request.auth.uid;
+        allow update: if request.auth != null && resource.data.uid == request.auth.uid
+          && request.resource.data.uid == request.auth.uid;
+        allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
       }
       // Còpia de les marques de cada cantaire: només les seves.
       match /memberMarks/{mid} {

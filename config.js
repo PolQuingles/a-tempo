@@ -8,3 +8,6 @@ window.COR_FIREBASE = {
   messagingSenderId: "94424306722",
   appId: "1:94424306722:web:351d55007da77065ed267b"
 };
+
+// Clau pública dels avisos al mòbil (Web Push · VAPID). La privada només és al servidor que els envia.
+window.COR_PUSH_KEY = "BC9892nrFWccZAEQImIOs068_2ER8OisyrGdmgfP6LlZHWhXkKZ-pO2g9fLT_5y17KbOa5psTE3LdxB7mxR6VkU";

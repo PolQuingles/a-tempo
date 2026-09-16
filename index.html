@@ -520,6 +520,22 @@ textarea.inp{padding:10px 12px;min-height:120px;resize:vertical;line-height:1.4}
 .manual p,.manual li{font-size:14px;line-height:1.5;color:var(--ink-2)}
 .manual ul{padding-left:18px;margin:6px 0}
 .manual b{color:var(--ink)}
+.welcome{padding-left:18px;margin:10px 0 14px;display:grid;gap:7px}
+.welcome li{font-size:14px;line-height:1.45;color:var(--ink-2)}
+.welcome b{color:var(--ink)}
+.find{position:relative;margin:0 0 12px}
+.find input{width:100%;padding-left:36px}
+.find svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;stroke:var(--muted);fill:none;stroke-width:2;pointer-events:none}
+.find-empty{padding:16px;text-align:center;color:var(--muted);font-size:13.5px}
+[hidden]{display:none!important}
+.risk-row{display:grid;grid-template-columns:1fr auto;gap:6px 10px;align-items:center;padding:11px 14px;border-bottom:1px solid var(--line)}
+.risk-row:last-child{border-bottom:0}
+.risk-row .rn{font-weight:600}
+.risk-row .rm{grid-column:1/-1;font-size:12.5px;color:var(--muted)}
+.elig{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;padding:11px 14px;border-bottom:1px solid var(--line);text-align:left}
+.elig:last-child{border-bottom:0}
+.elig.no .en{text-decoration:line-through;color:var(--muted)}
+.elig .em{font-size:12px;color:var(--muted);display:block}
 /* ---------- Brand ---------- */
 .swatch{width:36px;height:36px;border-radius:10px;border:2px solid transparent}
 .swatch[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 2px var(--surface)}
@@ -596,7 +612,7 @@ textarea.inp{padding:10px 12px;min-height:120px;resize:vertical;line-height:1.4}
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
-<script src="config.js?v=2"></script>
+<script src="config.js?v=3"></script>
 <script>
 (() => {
 'use strict';
@@ -640,6 +656,17 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const uid = (p = '') => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const clone = o => JSON.parse(JSON.stringify(o));
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+const normText = t => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+/** Filter an already-rendered list without re-rendering, so the search box keeps the focus. */
+function filterList(input) {
+  const q = normText(input.value).trim();
+  const root = $(input.dataset.target) || document;
+  let shown = 0;
+  for (const li of $$('[data-find]', root)) { const hit = !q || li.dataset.find.includes(q); li.hidden = !hit; if (hit) shown++; }
+  for (const g of $$('[data-group]', root)) g.hidden = !!q && !$$('[data-find]:not([hidden])', g).length;
+  const empty = $('.find-empty', root);
+  if (empty) empty.hidden = shown > 0;
+}
 const pad = n => String(n).padStart(2, '0');
 const isoDate = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const TODAY = isoDate(new Date());
@@ -681,6 +708,9 @@ const S = {
   secretsMembers: null,   // memberId -> personal link key
   me: null,               // staff record when signed in with Google
   memberId: null,         // singer's own member id (personal link)
+  push: new Map(),        // staff: one doc per device that has notifications on
+  pushOn: false,          // this device
+  pushPrefs: null,
 };
 const ui = {
   tab: 'llista', section: 'S', sessionId: null, rollSec: null,
@@ -811,11 +841,11 @@ function subscribe() {
   const staff = S.role === 'edit';
   const reader = S.role === 'read' || S.role === 'view';   // account with read-only access to the whole app
   const wanted = ['members', 'productions', 'config', 'absences', 'subs', 'rsvp', 'announcements', 'polls', 'pollVotes'];
-  if (staff) wanted.push('attendance', 'secrets', 'secretsMembers', 'staff', 'memberMarks');
+  if (staff) wanted.push('attendance', 'secrets', 'secretsMembers', 'staff', 'memberMarks', 'push');
   else if (reader) wanted.push('attendance');
   else wanted.push('myMarks');
   const loaded = new Set();
-  const markLoaded = k => { loaded.add(k); if (loaded.size >= wanted.length && !S.ready) { S.ready = true; render(); if (staff) scheduleMirror(); } };
+  const markLoaded = k => { loaded.add(k); if (loaded.size >= wanted.length && !S.ready) { S.ready = true; render(); if (staff) scheduleMirror(); afterReady(); } };
   const onCol = col => snap => {
     const next = new Map();
     for (const d of snap.docs) {
@@ -839,6 +869,7 @@ function subscribe() {
     db.collection('attendance').onSnapshot(onCol('attendance'), onDbError);
     db.collection('staff').onSnapshot(onCol('staff'), () => markLoaded('staff'));
     db.collection('memberMarks').onSnapshot(onCol('memberMarks'), () => markLoaded('memberMarks'));
+    db.collection('push').onSnapshot(onCol('push'), () => markLoaded('push'));
     db.doc('secrets/main').onSnapshot(snap => { S.secrets = snap.exists ? snap.data() : null; markLoaded('secrets'); if (S.ready) scheduleRender(); }, () => markLoaded('secrets'));
     db.doc('secrets/members').onSnapshot(snap => { S.secretsMembers = snap.exists ? snap.data() : {}; markLoaded('secretsMembers'); if (S.ready) scheduleRender(); }, () => markLoaded('secretsMembers'));
   }
@@ -1586,10 +1617,11 @@ function calRow(s, underProd) {
 function viewStats() {
   const prods = productionsSorted();
   if (!prods.length) return `<div class="page-head"><h1 class="h1">Estadístiques</h1></div><div class="empty">${staffSvg()}<p>Quan hi hagi produccions amb llistes passades, veuràs aquí l’assistència.</p></div>`;
+  const scopeTabs = `<div class="subtabs" role="tablist" style="margin-bottom:10px;grid-template-columns:repeat(4,1fr)">${[['prod', 'Producció'], ['term', 'Trimestre'], ['season', 'Temporada'], ['risk', 'Risc']].map(([k, l]) => `<button class="subtab" role="tab" aria-selected="${ui.statsScope === k}" data-act="stats-scope" data-k="${k}" style="font-size:12.5px">${l}</button>`).join('')}</div>`;
+  if (ui.statsScope === 'risk') return `<div class="page-head"><div><div class="eyebrow">Estadístiques</div><h1 class="h1">Norma del ${minAttendance()}%</h1></div></div>` + scopeTabs + riskView();
   const scope = currentScope();
   const { terms } = seasonCfg();
   const st = computeStats(scope, ui.statsSec);
-  const scopeTabs = `<div class="subtabs" role="tablist" style="margin-bottom:10px">${[['prod', 'Producció'], ['term', 'Trimestre'], ['season', 'Temporada']].map(([k, l]) => `<button class="subtab" role="tab" aria-selected="${ui.statsScope === k}" data-act="stats-scope" data-k="${k}">${l}</button>`).join('')}</div>`;
   const choice = ui.statsScope === 'prod'
     ? `<div class="chips" role="group" aria-label="Producció">${prods.map(p => `<button class="chip" aria-pressed="${p.id === scope.id}" data-act="stats-prod" data-id="${p.id}"><i class="pdot prod-tone" style="--ph:${prodHue(p)}"></i>${esc(p.name)}</button>`).join('')}</div>`
     : ui.statsScope === 'term'
@@ -1627,7 +1659,7 @@ function viewStats() {
     const riskL = st.rows.filter(r => ruleMap.get(r.m.id)?.status === 'risk');
     const hasConcert = st.all.some(s => s.type === 'Concert');
     const item = (r, rs) => `<li><span><b>${esc(r.m.name)}</b> <span class="muted">· ${SEC[r.m.section].name} · ${pct(rs.cur)}${rs.status === 'risk' ? ` (pot arribar al ${pct(rs.best)})` : ''}</span></span><button class="rule ${rs.status}" data-act="member-stats" data-mid="${r.m.id}">${rs.status === 'out' ? 'No pot fer el concert' : 'En risc'}</button></li>`;
-    rule = `<div class="section-title"><h2 class="h2">Norma del ${minAttendance()}%</h2><span class="eyebrow">${hasConcert ? 'per fer el concert' : 'assistència mínima'}</span></div>
+    rule = `<div class="section-title"><h2 class="h2">Norma del ${minAttendance()}%</h2>${hasConcert ? `<button class="btn btn-sm" data-act="concert-list" data-pid="${scope.id}">Llista de concert</button>` : '<span class="eyebrow">assistència mínima</span>'}</div>
       <div class="panel">
         ${outL.length || riskL.length ? `<ul class="alerts">${outL.map(r => item(r, ruleMap.get(r.m.id))).join('')}${riskL.map(r => item(r, ruleMap.get(r.m.id))).join('')}</ul>`
           : `<p style="margin:0;padding:14px;font-size:13.5px">Ara mateix tothom compleix la norma.</p>`}
@@ -1669,10 +1701,10 @@ function viewStats() {
   });
   const table = `<div class="section-title"><h2 class="h2">Cantaires</h2>
       <div class="sortbar">${Object.entries(sorters).map(([k, l]) => `<button class="chip" style="min-height:30px;font-size:12.5px" aria-pressed="${ui.statsSort === k}" data-act="stats-sort" data-k="${k}">${l}</button>`).join('')}</div></div>
-    <div class="panel"><ul class="mtable">${rows.map(r => {
+    <div id="stlist">${findBox('#stlist', 'Cerca un cantaire')}<div class="panel"><ul class="mtable">${rows.map(r => {
       const counted = r.P + r.R + r.FJ + r.FNJ;
       const rs = ruleMap.get(r.m.id);
-      return `<li class="mrow"><button data-act="member-stats" data-mid="${r.m.id}">
+      return `<li class="mrow" data-find="${esc(normText(r.m.name))}"><button data-act="member-stats" data-mid="${r.m.id}">
         <span class="mname"><em>${r.m.section}</em><span>${esc(r.m.name)}</span>${rs && rs.status !== 'ok' ? `<span class="rule ${rs.status}">${rs.status === 'out' ? `&lt;${minAttendance()}%` : 'En risc'}</span>` : ''}</span>
         <span class="mpct">${counted ? pct(rate(r)) : (r.NP ? 'No fa' : '—')}</span>
         ${stackBar(r)}
@@ -1683,9 +1715,184 @@ function viewStats() {
           <span><i class="i-FJ"></i><b>${r.FJ}</b></span>
           ${r.NP ? `<span><i class="i-NP"></i><b>${r.NP}</b></span>` : ''}
         </span></button></li>`;
-    }).join('')}</ul></div>`;
+    }).join('')}</ul></div><div class="panel find-empty" hidden>Cap cantaire amb aquest nom.</div></div>`;
 
   return top + kpis + rule + dist + secBars + trend + alerts + table;
+}
+
+/* ---------- Risc: qui no arriba a la norma ---------- */
+function riskProductions() {
+  const cur = currentProductionId();
+  return productionsSorted().filter(p => p.id === cur || allSessions(p.id).some(s => s.date >= TODAY));
+}
+/** How many of the remaining rehearsals they must attend to reach the minimum. */
+function needed(rs) {
+  const min = minAttendance() / 100;
+  const total = rs.att + rs.abs + rs.remaining;
+  return Math.max(0, Math.ceil(min * total - rs.att - 1e-9));
+}
+function riskLine(rs) {
+  if (rs.status === 'out') return `No hi arriba: encara que vingui a tot, es queda al ${pct(rs.best)}.`;
+  const n = needed(rs);
+  return `Ha de venir a ${n === rs.remaining ? `tots els ${n}` : `${n} dels ${rs.remaining}`} assajos que queden.`;
+}
+function riskView() {
+  const prods = riskProductions();
+  if (!prods.length) return `<div class="empty">${staffSvg()}<p>No hi ha cap producció en curs ni cap de propera.</p></div>`;
+  let nOut = 0, nRisk = 0;
+  const blocks = prods.map(pr => {
+    const rows = [];
+    for (const x of SECTIONS) for (const m of membersOf(x.id)) {
+      const rs = ruleStatus(pr.id, m);
+      if (!rs || rs.status === 'ok') continue;
+      rows.push({ m, rs });
+    }
+    rows.sort((a, b) => (a.rs.status === b.rs.status ? 0 : a.rs.status === 'out' ? -1 : 1) || a.rs.cur - b.rs.cur || byName(a.m, b.m));
+    nOut += rows.filter(r => r.rs.status === 'out').length;
+    nRisk += rows.filter(r => r.rs.status === 'risk').length;
+    const hasConcert = allSessions(pr.id).some(s => s.type === 'Concert');
+    return `<div class="section-title"><h2 class="h2" style="display:flex;align-items:center;gap:9px"><i class="pdot prod-tone" style="--ph:${prodHue(pr)};width:12px;height:12px"></i>${esc(pr.name)}</h2>
+        ${hasConcert ? `<button class="btn btn-sm" data-act="concert-list" data-pid="${pr.id}">Llista de concert</button>` : ''}</div>
+      <div class="panel">${rows.length ? rows.map(({ m, rs }) => `<button class="risk-row" data-act="member-stats" data-mid="${m.id}">
+          <span class="rn">${esc(m.name)}</span><span class="rule ${rs.status}">${rs.status === 'out' ? `${pct(rs.cur)} · no hi arriba` : `${pct(rs.cur)} · en risc`}</span>
+          <span class="rm">${SEC[m.section].name} · ${rs.att} de ${rs.att + rs.abs} assajos · ${riskLine(rs)}</span></button>`).join('')
+        : '<p style="margin:0;padding:14px;font-size:13.5px">Tothom compleix la norma.</p>'}</div>`;
+  }).join('');
+  const text = () => {
+    const out = [`Seguiment de la norma del ${minAttendance()}%`];
+    for (const pr of prods) {
+      const rows = [];
+      for (const x of SECTIONS) for (const m of membersOf(x.id)) {
+        const rs = ruleStatus(pr.id, m);
+        if (rs && rs.status !== 'ok') rows.push(`  ${m.name} (${SEC[m.section].name}): ${pct(rs.cur)} — ${riskLine(rs)}`);
+      }
+      out.push('', pr.name, rows.length ? rows.join('\n') : '  Tothom compleix la norma.');
+    }
+    return out.join('\n');
+  };
+  window.__riskText = text;
+  return `<div class="kpis" style="grid-template-columns:repeat(2,1fr)">
+      <div class="kpi ${nOut ? 'alert' : ''}"><div class="kpi-v">${nOut}</div><div class="kpi-l">No poden fer el concert</div></div>
+      <div class="kpi"><div class="kpi-v">${nRisk}</div><div class="kpi-l">Hi són a temps</div></div>
+    </div>
+    <p class="muted" style="font-size:12.5px;margin:10px 2px 0">Produccions en curs i properes. Compten els assajos (no els concerts ni les sessions «Altres») i no compten les baixes.</p>
+    ${blocks}
+    <div class="panel" style="padding:14px;margin-top:14px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+      <span style="font-size:13.5px">Passa-ho a direcció o guarda-ho.</span>
+      <button class="btn btn-sm" data-act="risk-copy">Copia el resum</button></div>`;
+}
+
+/* ---------- Llista de concert ---------- */
+const concertDates = pid => allSessions(pid).filter(s => s.type === 'Concert').map(s => s.date).sort();
+function concertRows(pid) {
+  const prod = S.productions.get(pid);
+  const dec = prod.concert || {};
+  const dates = concertDates(pid);
+  const first = dates[0] || null;
+  const min = minAttendance() / 100;
+  const rows = [];
+  for (const x of SECTIONS) for (const m of membersOf(x.id)) {
+    if (isExcluded(pid, m.id)) continue;
+    const lv = first && onLeave(m, first);
+    const rs = ruleStatus(pid, m);
+    let base, note;
+    if (lv) { base = 'baixa'; note = leaveText(m) || 'De baixa'; }
+    else if (!rs) { base = 'sense'; note = 'Encara no hi ha cap llista passada'; }
+    else if (rs.cur >= min) { base = 'apte'; note = `${pct(rs.cur)} · ${rs.att} de ${rs.att + rs.abs} assajos`; }
+    else if (rs.status === 'risk') { base = 'pendent'; note = `${pct(rs.cur)} · ${riskLine(rs)}`; }
+    else { base = 'no'; note = `${pct(rs.cur)} · ${riskLine(rs)}`; }
+    const forced = dec.exclude && dec.exclude[m.id] !== undefined ? 'exclude'
+      : dec.include && dec.include[m.id] !== undefined ? 'include' : null;
+    const why = forced === 'include' ? dec.include[m.id] : forced === 'exclude' ? dec.exclude[m.id] : '';
+    rows.push({ m, base, note, forced, why, inList: forced ? forced === 'include' : (base === 'apte' || base === 'sense') });
+  }
+  return { prod, dates, rows };
+}
+function promptSheet(title, label, value = '', ok = 'Desa') {
+  return new Promise(resolve => {
+    let done = false;
+    const finish = v => { if (done) return; done = true; closeSheet(); resolve(v); };
+    openSheet({
+      title,
+      body: `<label class="field"><span>${label}</span><input class="inp" id="pr-v" type="text" maxlength="90" value="${esc(value)}"></label>`,
+      foot: `<span class="spacer"></span><button class="btn" id="pr-no">Cancel·la</button><button class="btn btn-primary" id="pr-ok">${esc(ok)}</button>`,
+      onMount: el => {
+        const inp = el.querySelector('#pr-v');
+        el.querySelector('#pr-ok').onclick = () => finish(inp.value.trim());
+        el.querySelector('#pr-no').onclick = () => finish(null);
+        inp.onkeydown = ev => { if (ev.key === 'Enter') { ev.preventDefault(); finish(inp.value.trim()); } };
+        const prev = sheetClose;
+        sheetClose = () => { prev(); if (!done) { done = true; resolve(null); } };
+      },
+    });
+  });
+}
+async function toggleConcert(pid, mid) {
+  const { prod, rows } = concertRows(pid);
+  const r = rows.find(z => z.m.id === mid);
+  if (!r) return;
+  const dec = { include: { ...(prod.concert?.include || {}) }, exclude: { ...(prod.concert?.exclude || {}) }, ...(prod.concert?.at ? { at: prod.concert.at, by: prod.concert.by } : {}) };
+  if (r.forced) {
+    delete dec.include[mid]; delete dec.exclude[mid];
+  } else if (r.inList) {
+    const why = await promptSheet(`Treure ${r.m.name.split(',').pop().trim()} del concert`, 'Motiu', '', 'Treu-la/lo');
+    if (why === null) return;
+    dec.exclude[mid] = why; delete dec.include[mid];
+  } else {
+    const why = await promptSheet(`Afegir ${r.m.name.split(',').pop().trim()} al concert`, 'Motiu', '', 'Afegeix');
+    if (why === null) return;
+    dec.include[mid] = why; delete dec.exclude[mid];
+  }
+  saveProduction({ ...prod, concert: dec });
+  sheetConcertList(pid);
+}
+function sheetConcertList(pid) {
+  const { prod, dates, rows } = concertRows(pid);
+  if (!prod) return;
+  const inList = rows.filter(r => r.inList);
+  const stamp = prod.concert?.at;
+  const pill = r => r.forced
+    ? `<span class="rule ${r.forced === 'include' ? 'ok' : 'out'}">${r.forced === 'include' ? 'Afegit a mà' : 'Tret a mà'}</span>`
+    : r.base === 'apte' ? '<span class="rule ok">Apte</span>'
+    : r.base === 'pendent' ? '<span class="rule risk">En risc</span>'
+    : r.base === 'no' ? `<span class="rule out">Sota el ${minAttendance()}%</span>`
+    : r.base === 'baixa' ? '<span class="rule out">De baixa</span>' : '<span class="rule risk">Sense dades</span>';
+  const block = x => {
+    const ms = rows.filter(r => r.m.section === x.id);
+    if (!ms.length) return '';
+    const n = ms.filter(r => r.inList).length;
+    return `<div class="section-title" style="margin-top:14px"><h2 class="h2">${x.name}</h2><span class="eyebrow">${n} de ${ms.length}</span></div>
+      <div class="panel">${ms.map(r => `<button class="elig ${r.inList ? '' : 'no'}" ${canEdit() ? `data-act="concert-toggle" data-pid="${pid}" data-mid="${r.m.id}"` : 'disabled'}>
+        <span><span class="en">${esc(r.m.name)}</span>${r.m.part ? ` <span class="part">${esc(partTag(r.m))}</span>` : ''}<span class="em">${esc(r.why || r.note)}</span></span>${pill(r)}</button>`).join('')}</div>`;
+  };
+  const text = [`${prod.name} — qui pot fer el concert${dates.length ? ` (${dates.map(d => shortDate(d)).join(', ')})` : ''}`,
+    `Norma: ${minAttendance()}% dels assajos. ${inList.length} de ${rows.length} cantaires.`, '']
+    .concat(SECTIONS.flatMap(x => {
+      const ms = rows.filter(r => r.m.section === x.id && r.inList);
+      return ms.length ? [`${x.name} (${ms.length})`, ms.map(r => `  ${r.m.name}`).join('\n'), ''] : [];
+    }))
+    .concat(rows.some(r => !r.inList) ? ['No hi canten:', rows.filter(r => !r.inList).map(r => `  ${r.m.name} (${SEC[r.m.section].name}) — ${r.why || r.note}`).join('\n')] : [])
+    .join('\n');
+  openSheet({
+    title: 'Llista de concert',
+    wide: true,
+    body: `<div class="section-title" style="margin-top:0"><h2 class="h2">${esc(prod.name)}</h2><span class="eyebrow">${dates.length ? dates.map(d => shortDate(d)).join(' · ') : 'sense concert al calendari'}</span></div>
+      <div class="kpis" style="grid-template-columns:repeat(2,1fr)">
+        <div class="kpi"><div class="kpi-v">${inList.length}</div><div class="kpi-l">Hi poden cantar</div></div>
+        <div class="kpi ${rows.length - inList.length ? 'alert' : ''}"><div class="kpi-v">${rows.length - inList.length}</div><div class="kpi-l">Fora de la llista</div></div>
+      </div>
+      <p class="muted" style="font-size:12.5px;margin:10px 0 0">Feta amb la norma del ${minAttendance()}% sobre els assajos de la producció.${canEdit() ? ' Toca una persona per afegir-la o treure-la a mà, amb el motiu.' : ''}</p>
+      ${stamp ? `<p class="muted" style="font-size:12.5px;margin:6px 0 0">Desada com a definitiva el ${(d => `${pad(d.getDate())}/${pad(d.getMonth() + 1)} a les ${pad(d.getHours())}:${pad(d.getMinutes())}`)(new Date(stamp))}${prod.concert.by ? ` per ${esc(prod.concert.by)}` : ''}.</p>` : ''}
+      ${SECTIONS.map(block).join('')}`,
+    foot: `${canEdit() ? '<button class="btn" id="cl-final">Marca com a definitiva</button>' : ''}<span class="spacer"></span><button class="btn btn-primary" id="cl-copy">Copia la llista</button>`,
+    onMount: el => {
+      el.querySelector('#cl-copy').onclick = () => copyText(text, 'Llista copiada');
+      el.querySelector('#cl-final')?.addEventListener('click', () => {
+        saveProduction({ ...prod, concert: { include: prod.concert?.include || {}, exclude: prod.concert?.exclude || {}, at: new Date().toISOString(), by: (S.me && (S.me.name || S.me.email)) || 'equip' } });
+        toast('Llista desada com a definitiva'); sheetConcertList(pid);
+      });
+    },
+  });
 }
 
 /* ---------- View: Manage ---------- */
@@ -1705,21 +1912,24 @@ function leaveText(m) {
   const next = (m.leaves || []).filter(l => l.from > TODAY).sort((a, b) => a.from.localeCompare(b.from))[0];
   return next ? `Baixa prevista des del ${ddmm(next.from)}` : '';
 }
+const SEARCH_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>';
+const findBox = (target, ph) => `<label class="find">${SEARCH_ICON}<input class="inp" type="search" inputmode="search" autocomplete="off" placeholder="${ph}" data-bind="find" data-target="${target}" aria-label="${ph}"></label>`;
 function manageMembers() {
-  return SECTIONS.map(x => {
+  const secs = SECTIONS.map(x => {
     const ms = membersOf(x.id, true);
     const active = ms.filter(m => m.active !== false).length;
-    return `<div class="sec-h"><h2 class="h2"><em>${x.id}</em>${x.name} <span class="mono muted" style="font-size:13px;font-weight:400">${active}</span></h2>
+    return `<section data-group="${x.id}"><div class="sec-h"><h2 class="h2"><em>${x.id}</em>${x.name} <span class="mono muted" style="font-size:13px;font-weight:400">${active}</span></h2>
       <span style="display:flex;gap:4px"><button class="btn btn-sm btn-ghost" data-act="member-bulk" data-sec="${x.id}">Afegeix</button></span></div>
       ${ms.length ? `<ul class="list">${ms.map(m => {
         const lv = leaveText(m);
-        return `<li class="li"><button data-act="member-edit" data-mid="${m.id}">
+        return `<li class="li" data-find="${esc(normText(m.name))}"><button data-act="member-edit" data-mid="${m.id}">
         <span class="${m.active === false ? 'dim' : ''}"><span class="t">${esc(m.name)}</span>${m.part ? ` <span class="part">${esc(partTag(m))}</span>` : ''}${m.leader ? ' <span class="tag">Cap de corda</span>' : ''}
         ${m.active === false ? '<br><span class="s">Inactiu</span>' : lv ? `<br><span class="s">${lv}</span>` : m.phone ? `<br><span class="s mono">${esc(m.phone)}</span>` : ''}</span>
         <span class="icon-btn" aria-hidden="true">${ICON.go}</span></button></li>`;
       }).join('')}</ul>`
-        : `<div class="panel" style="padding:14px;color:var(--muted);font-size:13.5px">Cap cantaire en aquesta corda.</div>`}`;
+        : `<div class="panel" style="padding:14px;color:var(--muted);font-size:13.5px">Cap cantaire en aquesta corda.</div>`}</section>`;
   }).join('');
+  return `<div id="mlist">${findBox('#mlist', 'Cerca un cantaire')}${secs}<div class="panel find-empty" hidden>Cap cantaire amb aquest nom.</div></div>`;
 }
 function manageProductions() {
   const ps = productionsSorted();
@@ -1780,6 +1990,8 @@ function manageConfig() {
   <div class="panel">
     <div class="setting"><div><div class="t">${withAccount} de ${members.length} cantaires ja tenen accés</div><div class="s">Tothom entra pel mateix enllaç amb el seu correu. Els cantaires i el Palau ho veuen tot en <b>mode lectura</b>; administració, direcció i caps de corda poden editar.</div></div>
       <span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" data-act="share-app">Enllaç de l’app</button><button class="btn btn-sm" data-act="staff-bulk">Enganxa una llista</button><button class="btn btn-sm" data-act="preview-on">Mira-ho com un cantaire</button></span></div>
+    ${(r => `<div class="setting"><div><div class="t">${r.inApp.length} han entrat${r.never.length ? `, ${r.never.length} encara no` : ''}</div><div class="s">Qui ha obert l’app almenys un cop, i qui té el correu mal escrit o sense vincular.</div></div>
+      <span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" data-act="who-in">Qui ha entrat</button><button class="btn btn-sm ${mailProblems().length ? 'btn-primary' : ''}" data-act="mail-check">Comprova els correus${mailProblems().length ? ` (${mailProblems().length})` : ''}</button></span></div>`)(accessReport())}
     ${people.length ? `<ul class="list" style="border:0;border-radius:0;border-top:1px solid var(--line)">${people.map(p => `<li class="li"><button data-act="staff-edit" data-email="${esc(p.email)}">
       <span><span class="t">${esc(p.name || p.email)}</span> <span class="role-tag">${esc(roleSummary(p))}</span><br><span class="s mono">${esc(p.email)}</span></span>
       <span class="icon-btn" aria-hidden="true">${ICON.go}</span></button></li>`).join('')}</ul>`
@@ -1805,6 +2017,7 @@ function manageConfig() {
   return `<div class="panel" style="margin-top:16px">
     <div class="setting"><div><div class="t">Sessió</div><div class="s">${who}</div></div>
       <span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" data-act="help">Manual</button>${myId() ? '<button class="btn btn-sm" data-act="my-att">La meva assistència</button>' : ''}${S.me ? '<button class="btn btn-sm" data-act="sign-out">Tanca la sessió</button>' : '<button class="btn btn-sm btn-primary" data-act="google-in">Entra amb Google</button>'}</span></div>
+    ${pushRow()}
   </div>
   ${adminBlocks}
   ${withLink ? `<div class="sec-h"><h2 class="h2">Enllaços personals antics</h2></div>
@@ -2058,9 +2271,11 @@ function viewSinger() {
     <div class="section-title"><h2 class="h2">Els meus avisos</h2></div>
     ${mine.length ? `<div class="panel">${mine.map(a => absenceCard(a, { mine: true })).join('')}</div>`
       : '<div class="panel" style="padding:14px;font-size:13.5px;color:var(--muted)">Encara no has enviat cap avís.</div>'}
-    <div class="panel" style="padding:14px;margin-top:16px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
-      <span style="font-size:13.5px">Tingues el calendari del cor al teu mòbil, sempre al dia.</span>
-      <button class="btn btn-sm" data-act="cal-subscribe">Afegeix al calendari</button></div>`;
+    <div class="panel" style="margin-top:16px">
+      <div class="setting"><div><div class="t">Calendari al mòbil</div><div class="s">Tots els assajos i concerts a la teva app de calendari, sempre al dia.</div></div>
+        <button class="btn btn-sm" data-act="cal-subscribe">Afegeix-lo</button></div>
+      ${pushRow()}
+    </div>`;
 }
 
 function afterRender() {
@@ -2798,6 +3013,283 @@ async function disableEditLink() {
   } catch { toast('No s’ha pogut desactivar. Comprova la connexió.'); }
 }
 
+/* ---------- Avisos al mòbil (Web Push) ---------- */
+const LS_PUSH = 'corpresent:avis-id';
+const LS_PUSH_AT = 'corpresent:avis-refresc';
+const LS_WELCOME = 'corpresent:benvinguda';
+const PUSH_KINDS = {
+  anuncis: ['Anuncis nous', 'Quan l’equip publica alguna cosa al tauler.'],
+  convocatories: ['Convocatòries per confirmar', 'Si queda per respondre i s’acosta la data límit.'],
+  enquestes: ['Enquestes obertes', 'Quan una enquesta és a punt de tancar-se.'],
+  assajos: ['Recordatori d’assaig', 'La vespra, si hi estàs convocat/da.'],
+};
+const DEFAULT_PREFS = { anuncis: true, convocatories: true, enquestes: true, assajos: false };
+const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && !!window.COR_PUSH_KEY;
+const isiOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const installed = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+const deviceName = () => isiOS() ? (/iPad/.test(navigator.userAgent) ? 'iPad' : 'iPhone') : /Android/.test(navigator.userAgent) ? 'Android' : 'Ordinador';
+const b64ToU8 = str => {
+  const pad = '='.repeat((4 - str.length % 4) % 4);
+  const raw = atob((str + pad).replace(/-/g, '+').replace(/_/g, '/'));
+  return Uint8Array.from(raw, c => c.charCodeAt(0));
+};
+const subKeyB64 = (sub, name) => {
+  const b = sub.getKey(name);
+  return b ? btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '') : '';
+};
+function pushId() {
+  let id = null;
+  try { id = localStorage.getItem(LS_PUSH); } catch {}
+  if (!id) { id = newKey(); try { localStorage.setItem(LS_PUSH, id); } catch {} }
+  return id;
+}
+let swReg = null;
+async function ensureSW() {
+  if (swReg) return swReg;
+  swReg = await navigator.serviceWorker.register('sw.js');
+  await navigator.serviceWorker.ready;
+  return swReg;
+}
+function pushRecord(sub, prefs) {
+  const mid = myId();
+  const m = mid && S.members.get(mid);
+  return {
+    uid: S.uid, email: (S.me && S.me.email) || '', memberId: mid || '', section: m ? m.section : '',
+    name: m ? m.name : ((S.me && (S.me.name || S.me.email)) || ''),
+    endpoint: sub.endpoint, p256dh: subKeyB64(sub, 'p256dh'), auth: subKeyB64(sub, 'auth'),
+    prefs: { ...DEFAULT_PREFS, ...(prefs || {}) }, device: deviceName(), at: new Date().toISOString(),
+  };
+}
+/** Turn notifications on for this device. Returns a reason when it can't. */
+async function enablePush(prefs) {
+  if (!pushSupported()) return 'no-suport';
+  if (isiOS() && !installed()) return 'ios';
+  try {
+    const perm = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
+    if (perm !== 'granted') return perm === 'denied' ? 'denegat' : 'cancel·lat';
+    const reg = await ensureSW();
+    const sub = await reg.pushManager.getSubscription()
+      || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToU8(window.COR_PUSH_KEY) });
+    const rec = pushRecord(sub, prefs || S.pushPrefs);
+    await db.doc(`push/${pushId()}`).set(rec);
+    S.pushOn = true; S.pushPrefs = rec.prefs;
+    try { localStorage.setItem(LS_PUSH_AT, String(Date.now())); } catch {}
+    return null;
+  } catch (e) { return 'error'; }
+}
+async function disablePush() {
+  try {
+    const reg = await navigator.serviceWorker.getRegistration();
+    const sub = reg && await reg.pushManager.getSubscription();
+    if (sub) await sub.unsubscribe();
+    await db.doc(`push/${pushId()}`).delete();
+  } catch {}
+  S.pushOn = false;
+}
+/** At boot: know whether this device is subscribed, and keep the record fresh (once a day). */
+async function checkPush() {
+  if (!pushSupported() || !db) return;
+  try {
+    const reg = await navigator.serviceWorker.getRegistration();
+    const sub = reg && await reg.pushManager.getSubscription();
+    if (!sub || Notification.permission !== 'granted') { S.pushOn = false; scheduleRender(); return; }
+    swReg = reg; S.pushOn = true;
+    let last = 0;
+    try { last = +localStorage.getItem(LS_PUSH_AT) || 0; } catch {}
+    if (Date.now() - last > 20 * 3600 * 1000) {
+      await db.doc(`push/${pushId()}`).set(pushRecord(sub, S.pushPrefs));
+      try { localStorage.setItem(LS_PUSH_AT, String(Date.now())); } catch {}
+    }
+    scheduleRender();
+  } catch {}
+}
+function pushRow() {
+  if (!pushSupported()) return '';
+  const on = S.pushOn;
+  const why = isiOS() && !installed()
+    ? 'Al iPhone cal afegir l’app a la pantalla d’inici abans d’activar-los.'
+    : on ? 'Rebràs avisos en aquest aparell.' : 'Assabenta’t dels anuncis i de les convocatòries sense mirar l’app.';
+  return `<div class="setting"><div><div class="t">Avisos al mòbil</div><div class="s">${why}</div></div>
+    <button class="btn btn-sm ${on ? '' : 'btn-primary'}" data-act="push-setup">${on ? 'Ajusta’ls' : 'Activa’ls'}</button></div>`;
+}
+function sheetPush() {
+  const blocked = Notification.permission === 'denied';
+  const needsInstall = isiOS() && !installed();
+  const prefs = { ...DEFAULT_PREFS, ...(S.pushPrefs || {}) };
+  openSheet({
+    title: 'Avisos al mòbil',
+    body: `${needsInstall ? `<div class="sub-line sub-hint" style="margin:0 0 12px"><span>Al iPhone i al iPad, els avisos només funcionen si abans afegeixes l’app a la <b>pantalla d’inici</b>: al Safari, toca <b>Comparteix</b> i tria <b>Afegeix a la pantalla d’inici</b>. Després obre-la des d’allà.</span></div>` : ''}
+      ${blocked ? `<div class="sub-line sub-hint" style="margin:0 0 12px"><span>Aquest navegador té els avisos <b>bloquejats</b>. Actíva’ls als ajustos del lloc web i torna-ho a provar.</span></div>` : ''}
+      <p style="margin-top:0">Tria de què vols que t’avisi. Pots canviar-ho quan vulguis.</p>
+      <div class="kv">${Object.entries(PUSH_KINDS).map(([k, [l, d]]) => `<div class="toggle-row"><span><b>${l}</b><br><span class="muted" style="font-size:12.5px">${d}</span></span>
+        <label class="switch"><input type="checkbox" id="pf-${k}" ${prefs[k] ? 'checked' : ''}><span></span></label></div>`).join('')}</div>
+      <p class="muted" style="font-size:12.5px">Els avisos surten d’aquest aparell. Si entres des d’un altre, actíva’ls també allà.</p>`,
+    foot: `${S.pushOn ? '<button class="btn btn-danger-ghost" id="pu-off">Desactiva’ls</button>' : ''}<span class="spacer"></span>
+      <button class="btn" data-act="sheet-close">Cancel·la</button>
+      <button class="btn btn-primary" id="pu-on" ${needsInstall || blocked ? 'disabled' : ''}>${S.pushOn ? 'Desa' : 'Activa’ls'}</button>`,
+    onMount: el => {
+      el.querySelector('#pu-on').onclick = async () => {
+        const chosen = Object.fromEntries(Object.keys(PUSH_KINDS).map(k => [k, el.querySelector(`#pf-${k}`).checked]));
+        if (!Object.values(chosen).some(Boolean)) { toast('Tria almenys una cosa'); return; }
+        const err = await enablePush(chosen);
+        closeSheet();
+        toast(err ? { ios: 'Abans afegeix l’app a la pantalla d’inici', denegat: 'El navegador té els avisos bloquejats', 'no-suport': 'Aquest navegador no els admet' }[err] || 'No s’han pogut activar' : 'Avisos activats');
+        render();
+      };
+      el.querySelector('#pu-off')?.addEventListener('click', async () => {
+        await disablePush(); closeSheet(); toast('Avisos desactivats'); render();
+      });
+    },
+  });
+}
+
+/* ---------- Primera vegada ---------- */
+function maybeWelcome() {
+  if (S.mode !== 'shared' || !S.ready || sheetClose) return;
+  let seen = null;
+  try { seen = localStorage.getItem(LS_WELCOME); } catch { return; }
+  if (seen) return;
+  try { localStorage.setItem(LS_WELCOME, new Date().toISOString()); } catch {}
+  const me = S.members.get(myMemberId());
+  const first = me ? me.name.split(',').pop().trim() : '';
+  const body = canEdit()
+    ? `<p style="margin-top:0">Hola${first ? `, ${esc(first)}` : ''}. Des d’aquí passaràs llista i gestionaràs el cor.</p>
+       <ul class="welcome"><li><b>Llista</b> · toca el quadrant de la teva corda i marca cadascú.</li>
+       <li><b>Calendari</b> · totes les sessions, per produccions.</li>
+       <li><b>Tauler</b> · anuncis, partitures i enquestes.</li>
+       <li><b>Gestió</b> · cantaires, avisos d’absència i ajustos.</li></ul>`
+    : `<p style="margin-top:0">Hola${first ? `, ${esc(first)}` : ''}. Benvingut/da a l’app del cor.</p>
+       <ul class="welcome"><li><b>El meu espai</b> · avisa si no pots venir, confirma les convocatòries i mira la teva assistència.</li>
+       <li><b>Llista</b>, <b>Calendari</b> i <b>Estadístiques</b> · ho pots consultar tot, però no canviar-hi res.</li>
+       <li><b>Tauler</b> · anuncis del cor, partitures i àudios de la teva veu, i enquestes.</li></ul>`;
+  openSheet({
+    title: 'Com funciona',
+    body: body + `<p class="muted" style="font-size:13px">Consell: al navegador del mòbil, tria <b>Afegeix a la pantalla d’inici</b> i la tindràs com una app.</p>`,
+    foot: `${pushSupported() ? '<button class="btn" id="wc-push">Avisos al mòbil</button>' : ''}<span class="spacer"></span><button class="btn btn-primary" data-act="sheet-close">Entesos</button>`,
+    onMount: el => { el.querySelector('#wc-push')?.addEventListener('click', () => { closeSheet(); sheetPush(); }); },
+  });
+}
+
+/* ---------- Qui ha entrat i qui no ---------- */
+const lastSeenOf = p => p && p.lastSeen ? p.lastSeen : null;
+function agoText(iso) {
+  if (!iso) return 'Mai';
+  const d = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+  if (d <= 0) return 'Avui';
+  if (d === 1) return 'Ahir';
+  if (d < 31) return `Fa ${d} dies`;
+  return shortDate(iso.slice(0, 10));
+}
+/** Keep my own «last seen» fresh, without pestering Firestore on every open. */
+async function touchLastSeen() {
+  if (!S.me || !db) return;
+  const last = S.me.lastSeen ? new Date(S.me.lastSeen).getTime() : 0;
+  if (Date.now() - last < 6 * 3600 * 1000) return;
+  const at = new Date().toISOString();
+  try { await db.doc(`staff/${S.me.email}`).update({ lastSeen: at }); S.me.lastSeen = at; } catch {}
+}
+function accessReport() {
+  const people = peopleSorted();
+  const inApp = people.filter(p => p.lastSeen);
+  const never = people.filter(p => !p.lastSeen);
+  const roster = membersOf(null, true).filter(m => m.active !== false);
+  const noAccount = roster.filter(m => !accountFor(m.id));
+  const pushBy = new Map();
+  for (const d of S.push.values()) if (d.email) pushBy.set(d.email, (pushBy.get(d.email) || 0) + 1);
+  return { people, inApp, never, roster, noAccount, pushBy };
+}
+function sheetWhoIn() {
+  const { people, inApp, never, roster, noAccount, pushBy } = accessReport();
+  const first = n => String(n || '').split(',').pop().trim();
+  const memberOfEmail = p => p.memberId && S.members.get(p.memberId);
+  const phoneOf = p => { const m = memberOfEmail(p); return (m && m.phone || '').replace(/[^0-9]/g, '').replace(/^(\d{9})$/, '34$1'); };
+  const invite = p => `Hola ${first(p.name || p.email)}! Ja tens accés a l’app del ${S.config.name || 'cor'}. Entra-hi amb el correu ${p.email} i hi trobaràs el calendari, les llistes i el teu espai: ${appUrl()}\n\nSi no et deixa entrar, obre l’enllaç amb el Safari o el Chrome (no des del WhatsApp).`;
+  const row = p => `<li><span>${esc(p.name || p.email)}<br><span class="m mono">${esc(p.email)}</span></span>
+      <span style="display:flex;gap:4px;align-items:center">${phoneOf(p) ? `<a class="btn btn-sm" href="https://wa.me/${phoneOf(p)}?text=${encodeURIComponent(invite(p))}" target="_blank" rel="noopener">WhatsApp</a>` : ''}<button class="btn btn-sm" data-copy="${esc(invite(p))}">Copia</button></span></li>`;
+  openSheet({
+    title: 'Qui ha entrat i qui no',
+    wide: true,
+    body: `<div class="kpis" style="grid-template-columns:repeat(3,1fr)">
+        <div class="kpi"><div class="kpi-v">${inApp.length}</div><div class="kpi-l">Han entrat</div></div>
+        <div class="kpi ${never.length ? 'alert' : ''}"><div class="kpi-v">${never.length}</div><div class="kpi-l">Encara no</div></div>
+        <div class="kpi"><div class="kpi-v">${noAccount.length}</div><div class="kpi-l">Sense accés</div></div>
+      </div>
+      ${never.length ? `<div class="section-title" style="margin-top:16px"><h2 class="h2">Tenen accés però no han entrat</h2></div>
+        <ul class="mini-list remind-list" style="max-height:none">${never.map(row).join('')}</ul>` : ''}
+      ${noAccount.length ? `<div class="section-title" style="margin-top:16px"><h2 class="h2">Cantaires sense accés</h2><span class="eyebrow">falta el correu</span></div>
+        <ul class="mini-list" style="max-height:220px">${noAccount.map(m => `<li><span>${esc(m.name)}<br><span class="m">${SEC[m.section].name}</span></span><button class="btn btn-sm" data-act="staff-new">Dona-li accés</button></li>`).join('')}</ul>` : ''}
+      ${inApp.length ? `<div class="section-title" style="margin-top:16px"><h2 class="h2">Ja hi entren</h2></div>
+        <ul class="mini-list" style="max-height:260px">${inApp.sort((a, b) => (b.lastSeen || '').localeCompare(a.lastSeen || '')).map(p => `<li><span>${esc(p.name || p.email)}<br><span class="m">${esc(PEOPLE_ROLES[p.role] || p.role)}${pushBy.get(p.email) ? ' · avisos actius' : ''}</span></span><span class="m">${agoText(p.lastSeen)}</span></li>`).join('')}</ul>` : ''}
+      <p class="muted" style="font-size:12.5px">De ${roster.length} cantaires de la plantilla, ${roster.length - noAccount.length} tenen el correu donat d’alta. «Han entrat» vol dir que han obert l’app almenys un cop.</p>`,
+    foot: never.length ? '<button class="btn btn-primary" id="wi-all">Copia el missatge per al grup</button>' : '',
+    onMount: el => {
+      el.querySelectorAll('[data-copy]').forEach(b => b.onclick = () => copyText(b.dataset.copy, 'Missatge copiat'));
+      el.querySelector('#wi-all')?.addEventListener('click', () => copyText(
+        `Encara no heu entrat a l’app del cor: ${never.map(p => first(p.name || p.email)).join(', ')}.\nEntreu-hi amb el vostre correu: ${appUrl()}`,
+        'Missatge per al grup copiat'));
+    },
+  });
+}
+
+/* ---------- Comprovador de correus ---------- */
+const MAIL_DOMAINS = ['gmail.com', 'hotmail.com', 'outlook.com', 'outlook.es', 'icloud.com', 'yahoo.com', 'yahoo.es', 'live.com', 'me.com', 'orfeocatala.cat', 'palaumusica.cat'];
+function mailWarning(mail) {
+  const at = String(mail || '').split('@');
+  if (at.length !== 2) return 'No sembla un correu';
+  const dom = at[1].toLowerCase();
+  if (!dom.includes('.')) return 'Al domini li falta el punt';
+  if (/\s/.test(mail)) return 'Té un espai';
+  if (MAIL_DOMAINS.includes(dom)) return null;
+  const near = MAIL_DOMAINS.find(d => Math.abs(d.length - dom.length) <= 2 && levenshtein(d, dom) <= 2);
+  return near ? `Volies dir ${near}?` : null;
+}
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  let prev = Array.from({ length: n + 1 }, (_, j) => j);
+  for (let i = 1; i <= m; i++) {
+    const cur = [i];
+    for (let j = 1; j <= n; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[n];
+}
+function mailProblems() {
+  const out = [];
+  const seenMember = new Map();
+  for (const p of S.staff.values()) {
+    const w = mailWarning(p.email);
+    if (w) out.push({ kind: 'mail', email: p.email, name: p.name, text: w });
+    if (p.role === 'singer' && !p.memberId) out.push({ kind: 'link', email: p.email, name: p.name, text: 'Cantaire sense fitxa de la plantilla' });
+    if (p.memberId) {
+      const m = S.members.get(p.memberId);
+      if (!m) out.push({ kind: 'link', email: p.email, name: p.name, text: 'Vinculat a una fitxa que ja no hi és' });
+      else if (m.active === false) out.push({ kind: 'inactive', email: p.email, name: p.name, text: `${m.name} ja no és al cor` });
+      if (seenMember.has(p.memberId)) out.push({ kind: 'dup', email: p.email, name: p.name, text: `Aquesta fitxa també és de ${seenMember.get(p.memberId)}` });
+      else seenMember.set(p.memberId, p.email);
+    }
+  }
+  return out;
+}
+function sheetMailCheck() {
+  const probs = mailProblems();
+  const { noAccount, roster } = accessReport();
+  openSheet({
+    title: 'Comprovació dels correus',
+    wide: true,
+    body: probs.length || noAccount.length
+      ? `${probs.length ? `<div class="section-title" style="margin-top:0"><h2 class="h2">Per revisar</h2><span class="eyebrow">${probs.length}</span></div>
+          <ul class="mini-list" style="max-height:none">${probs.map(x => `<li><span>${esc(x.name || x.email)}<br><span class="m mono">${esc(x.email)}</span></span>
+            <span style="display:flex;gap:6px;align-items:center"><span class="m" style="text-align:right">${esc(x.text)}</span><button class="btn btn-sm" data-act="staff-edit" data-email="${esc(x.email)}">Obre</button></span></li>`).join('')}</ul>` : ''}
+         ${noAccount.length ? `<div class="section-title"><h2 class="h2">Cantaires sense correu</h2><span class="eyebrow">${noAccount.length} de ${roster.length}</span></div>
+          <ul class="mini-list" style="max-height:260px">${noAccount.map(m => `<li><span>${esc(m.name)}</span><span class="m">${SEC[m.section].name}</span></li>`).join('')}</ul>` : ''}`
+      : '<p style="margin:0">Tot correcte: no hi ha cap correu estrany i tots els cantaires tenen accés.</p>',
+    foot: noAccount.length ? `<span class="spacer"></span><button class="btn" id="mc-copy">Copia els que falten</button><button class="btn btn-primary" data-act="staff-bulk">Enganxa una llista</button>` : '',
+    onMount: el => {
+      el.querySelector('#mc-copy')?.addEventListener('click', () => copyText(noAccount.map(m => m.name).join('\n'), 'Noms copiats'));
+    },
+  });
+}
+
 /* ---------- Personal links for singers ---------- */
 const memberLink = mid => S.secretsMembers?.[mid] ? shareUrl(S.secretsMembers[mid]) : null;
 async function generatePersonalLinks(onlyMid) {
@@ -3050,7 +3542,7 @@ function sheetHelp() {
     <h3>Si fas de substitut</h3>
     <p>Et sortirà «Avui passes llista de…». Toca <b>Passa llista</b> i marca els teus companys de corda.</p>
   </div>`;
-  openSheet({ title: 'Com funciona', body });
+  openSheet({ title: 'Com funciona', body, foot: pushSupported() ? '<span class="spacer"></span><button class="btn" data-act="push-setup">Avisos al mòbil</button>' : '' });
 }
 
 /* ---------- Board sheets ---------- */
@@ -3354,8 +3846,8 @@ async function wipeAll(demo) {
 
 /* ================= Events ================= */
 const SUB_OK = new Set(['mark', 'min', 'mark-rest']);
-const ADMIN_ONLY = new Set(['staff-new', 'staff-edit', 'staff-bulk', 'preview-on', 'edit-link-off', 'link-regen', 'brand-color', 'logo-remove', 'wipe-all', 'links-wipe', 'share-app']);
-const EDIT_ONLY = new Set(['mark', 'min', 'mark-rest', 'session-new', 'sub-set', 'ann-new', 'ann-edit', 'mat-new', 'mat-edit', 'poll-new', 'poll-edit', 'poll-results', 'poll-remind', 'rsvp-remind', 'links-generate', 'links-copy', 'links-wipe', 'member-link', 'share-app', 'staff-bulk', 'preview-on', 'session-edit', 'member-edit', 'member-bulk', 'prod-new', 'prod-edit',
+const ADMIN_ONLY = new Set(['staff-new', 'staff-edit', 'staff-bulk', 'preview-on', 'who-in', 'mail-check', 'edit-link-off', 'link-regen', 'brand-color', 'logo-remove', 'wipe-all', 'links-wipe', 'share-app']);
+const EDIT_ONLY = new Set(['mark', 'min', 'mark-rest', 'session-new', 'sub-set', 'ann-new', 'ann-edit', 'mat-new', 'mat-edit', 'poll-new', 'poll-edit', 'poll-results', 'poll-remind', 'rsvp-remind', 'links-generate', 'links-copy', 'links-wipe', 'member-link', 'share-app', 'staff-bulk', 'preview-on', 'who-in', 'mail-check', 'concert-list', 'concert-toggle', 'session-edit', 'member-edit', 'member-bulk', 'prod-new', 'prod-edit',
   'wipe-demo', 'wipe-all', 'load-demo', 'export-json', 'abs-accept', 'abs-reject', 'abs-delete', 'link-regen', 'manage']);
 const actions = {
   'tab': el => { ui.tab = el.dataset.tab; ui.rollSec = null; ui._calScrolled = false; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
@@ -3367,6 +3859,12 @@ const actions = {
   'staff-new': () => sheetStaff(null),
   'staff-bulk': () => sheetStaffBulk(),
   'preview-on': () => sheetPreview(),
+  'push-setup': () => sheetPush(),
+  'concert-list': el => { closeSheet(); sheetConcertList(el.dataset.pid); },
+  'concert-toggle': el => toggleConcert(el.dataset.pid, el.dataset.mid),
+  'risk-copy': () => copyText(window.__riskText ? window.__riskText() : '', 'Resum copiat'),
+  'who-in': () => sheetWhoIn(),
+  'mail-check': () => sheetMailCheck(),
   'preview-off': () => { PREVIEW = null; ui.tab = 'gestio'; ui.manage = 'config'; ui.rollSec = null; render(); window.scrollTo({ top: 0 }); },
   'share-app': () => sheetShareApp(),
   'links-wipe': () => wipePersonalLinks(),
@@ -3506,6 +4004,7 @@ document.addEventListener('input', e => {
   const el = e.target.closest('[data-bind]');
   if (!el) return;
   const kind = el.dataset.bind;
+  if (kind === 'find') { filterList(el); return; }
   if (kind === 'min' || kind === 'note') {
     const mid = el.closest('.row').dataset.mid;
     const cur = sessionById(ui.sessionId); const m = S.members.get(mid);
@@ -3559,6 +4058,12 @@ function connect() {
   document.body.classList.toggle('ro', !canEdit());
   render();
   subscribe();
+}
+/** Once the choir data is in: welcome, «last seen» and the state of this device's notifications. */
+function afterReady() {
+  touchLastSeen();
+  checkPush();
+  setTimeout(maybeWelcome, 500);
 }
 const waitForUser = () => new Promise(res => { const un = auth.onAuthStateChanged(u => { un(); res(u); }); });
 async function resolveLink(secret) {
