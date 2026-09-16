@@ -88,7 +88,10 @@ for s, names in sessions:
     L.append(f"SUMMARY:{esc((s.get('type') or 'Assaig') + ' · ' + ' + '.join(names))}")
     if s.get("place"):
         L.append(f"LOCATION:{esc(s['place'])}")
-    desc = [s.get("note") or ""]
+    info = s.get("info") or {}
+    desc = [f"{label}: {info[k]}" for k, label in [("call", "Convocatòria"), ("dress", "Vestuari"), ("meet", "Punt de trobada"),
+                                                   ("bring", "Cal portar"), ("extra", "Indicacions")] if info.get(k)]
+    desc.append(s.get("note") or "")
     if s.get("sections"):
         desc.append("Convocats: " + ", ".join(SECTIONS.get(x, x) for x in s["sections"]))
     desc = "\n".join(x for x in desc if x)

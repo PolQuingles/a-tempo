@@ -635,6 +635,48 @@ button.rule,button.pill{cursor:pointer}
 .dropzone .dz-t{font-weight:600;overflow-wrap:anywhere}
 .dropzone .dz-s{font-size:12.5px;color:var(--muted)}
 .dropzone:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.fitxa-chip{display:flex;align-items:center;gap:10px;width:100%;margin-top:10px;padding:10px 12px;border-radius:var(--r-md);background:var(--surface);border:1px solid var(--line);text-align:left;color:var(--ink)}
+.fitxa-chip svg{width:22px;height:22px;flex:none;stroke:var(--accent);fill:none;stroke-width:1.8;stroke-linecap:round}
+.fitxa-chip span{display:grid;gap:1px;min-width:0}
+.fitxa-chip b{font-weight:600;font-size:14px}
+.fitxa-chip small{font-size:12.5px;color:var(--muted)}
+.fitxa-chip.empty{border-style:dashed;background:transparent}
+.fitxa-chip:hover{border-color:var(--accent)}
+.fitxa{display:grid;gap:0;margin:0 0 6px;border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden}
+.fitxa > div{display:grid;grid-template-columns:118px 1fr;gap:10px;padding:10px 12px;border-top:1px solid var(--line)}
+.fitxa > div:first-child{border-top:0}
+.fitxa dt{font-size:12.5px;font-weight:600;color:var(--muted)}
+.fitxa dd{margin:0;font-size:14.5px;white-space:pre-wrap;overflow-wrap:anywhere}
+.fitxa .key{background:var(--accent-soft)}
+.fitxa .key dd{font-family:var(--f-display);font-weight:600;font-size:22px;line-height:1.1;color:var(--accent)}
+@media (max-width:420px){.fitxa > div{grid-template-columns:1fr;gap:2px}}
+.fitxa-note{margin:10px 0 0;font-size:13.5px;color:var(--accent);font-weight:600}
+details.fitxa-edit{border:1px solid var(--line);border-radius:var(--r-md);padding:10px 12px}
+details.fitxa-edit summary{list-style:none;display:flex;justify-content:space-between;align-items:center;gap:10px;cursor:pointer}
+details.fitxa-edit summary::-webkit-details-marker{display:none}
+details.fitxa-edit[open] summary .chev{transform:rotate(180deg)}
+.cal-row .icon-btn.info{color:var(--accent);margin-right:0}
+.month{padding:10px 8px 12px}
+.mnav{display:grid;grid-template-columns:40px 1fr 40px;align-items:center;gap:6px;margin:0 2px 8px}
+.mnav .h2{text-align:center;font-size:20px}
+.mweek,.mgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px}
+.mweek span{text-align:center;font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);padding:0 0 6px}
+.mday{display:flex;flex-direction:column;align-items:center;gap:4px;min-height:52px;padding:5px 1px 6px;border-radius:10px;color:var(--ink)}
+.mday.out{min-height:0;padding:0}
+button.mday:hover{background:var(--surface-2)}
+.mnum{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;font-size:14px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
+.mday.past .mnum{color:var(--muted)}
+.mday.today .mnum{background:var(--accent);color:var(--accent-ink)}
+.mday.sel{background:var(--accent-soft);box-shadow:inset 0 0 0 1.5px var(--accent)}
+.mmarks{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:2px;max-width:100%}
+.mk{display:block;width:13px;height:5px;border-radius:3px;background:var(--pdot)}
+.mk.concert{height:7px;width:13px;box-shadow:0 0 0 1.5px var(--ink)}
+.mk.concert.key{background:var(--surface-2);display:inline-block}
+.mk.more{width:auto;height:auto;background:none;font-style:normal;font-size:10px;font-weight:700;line-height:5px;color:var(--muted)}
+.mlegend{display:flex;flex-wrap:wrap;gap:6px 14px;margin:10px 4px 0;padding-top:10px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-2)}
+.mlegend span{display:inline-flex;align-items:center;gap:6px}
+.mlegend .pdot{width:10px;height:10px;border-radius:3px}
+.cal-day-list .cal-row.prod-tone{box-shadow:inset 4px 0 0 var(--pdot)}
 .balance{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 @media (max-width:360px){.balance{grid-template-columns:repeat(2,1fr)}}
 .bal{display:grid;gap:7px;align-content:start;padding:10px 10px 9px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);min-width:0}
@@ -740,6 +782,7 @@ const ICON = {
   close: '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>',
   chev: '<svg class="chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>',
   go: '<svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>',
+  info: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.6v.2"/></svg>',
 };
 
 /* ================= Utils ================= */
@@ -804,6 +847,7 @@ const S = {
   push: new Map(),        // staff: one doc per device that has notifications on
   pushOn: false,          // this device
   pushPrefs: null,
+  pushCordes: null,
 };
 const ui = {
   tab: 'llista', section: 'S', sessionId: null, rollSec: null,
@@ -816,7 +860,7 @@ function loadUI() {
   ui.sessionId = null;
 }
 function saveUI() {
-  try { localStorage.setItem(LS_UI, JSON.stringify({ tab: ui.tab, section: ui.section, calProd: ui.calProd, statsScope: ui.statsScope, statsSec: ui.statsSec, statsSort: ui.statsSort, manage: ui.manage })); } catch {}
+  try { localStorage.setItem(LS_UI, JSON.stringify({ tab: ui.tab, section: ui.section, calProd: ui.calProd, calView: ui.calView, statsScope: ui.statsScope, statsSec: ui.statsSec, statsSort: ui.statsSort, manage: ui.manage })); } catch {}
 }
 // Rols de les persones del cor. Els tres primers poden editar; els altres només llegir.
 const PEOPLE_ROLES = { admin: 'Administració', director: 'Director', leader: 'Cap de corda', singer: 'Cantaire', palau: 'Treballador del Palau' };
@@ -1516,6 +1560,7 @@ function viewRollOverview(cur, list, pendingBySec) {
       ${out ? `<p class="muted" style="margin:0;font-size:12.5px">${out === 1 ? '1 cantaire està' : `${out} cantaires estan`} de baixa o no fan aquesta producció.</p>` : ''}
     </div>`;
   return `<div class="ctx" id="ctx">${sessionNav(cur, list, false)}</div>
+    ${fitxaChip(cur)}
     <div class="quads">${quads}</div>
     <div class="q-legend"><span><i style="background:var(--p)"></i>Llista completa</span>${anyPend ? '<span><i style="background:var(--fnj)"></i>Té llistes pendents</span>' : ''}</div>
     ${cur.rsvp && canEdit() ? rsvpPanel(cur) : ''}
@@ -1694,12 +1739,15 @@ function viewCalendar() {
     <button class="chip" aria-pressed="${ui.calProd === 'all'}" data-act="cal-prod" data-id="all">Totes</button>
     ${prods.map(p => `<button class="chip" aria-pressed="${ui.calProd === p.id}" data-act="cal-prod" data-id="${p.id}"><i class="pdot prod-tone" style="--ph:${prodHue(p)}"></i>${esc(p.name)}</button>`).join('')}
   </div>`;
+  const month = ui.calView === 'month';
   const head = `<div class="page-head"><h1 class="h1">Calendari</h1>
-    <span style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-sm" data-act="cal-subscribe">Subscriu-t’hi</button><button class="btn btn-sm" data-act="cal-past">${ui.calPast ? 'Amaga passades' : 'Mostra passades'}</button>
-    ${canEdit() ? '<button class="btn btn-sm btn-primary" data-act="session-new">+ Sessió</button>' : ''}</span></div>
+    <span style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="seg3" role="radiogroup" aria-label="Vista del calendari"><button type="button" role="radio" aria-checked="${!month}" data-act="cal-view" data-k="list">Llista</button><button type="button" role="radio" aria-checked="${month}" data-act="cal-view" data-k="month">Mes</button></span>
+    <button class="btn btn-sm" data-act="cal-subscribe">Subscriu-t’hi</button>${month ? '' : `<button class="btn btn-sm" data-act="cal-past">${ui.calPast ? 'Amaga passades' : 'Mostra passades'}</button>`}
+    ${canEdit() ? `<button class="btn btn-sm btn-primary" data-act="session-new" ${month && ui.calDay ? `data-date="${ui.calDay}"` : ''}>+ Sessió</button>` : ''}</span></div>
     ${isLinkOnly() ? '<p class="muted" style="margin:-6px 2px 12px;font-size:13px">Toca una sessió per avisar que no hi podràs anar.</p>' : ''}`;
   if (!prods.length) return head + `<div class="empty">${staffSvg()}<h2 class="h2">Cap producció</h2><p>Les sessions s’organitzen per produccions.</p>${canEdit() ? '<button class="btn btn-primary" data-act="prod-new">Nova producció</button>' : ''}</div>`;
 
+  if (month) return head + chips + calMonthView();
   const shown = ui.calProd === 'all' ? prods : prods.filter(p => p.id === ui.calProd);
   let body = '';
   let hiddenPast = 0;
@@ -1724,7 +1772,45 @@ function viewCalendar() {
   if (!body) body = `<div class="empty"><p>No hi ha sessions properes${hiddenPast ? ` (${hiddenPast} ja passades)` : ''}.</p><button class="btn" data-act="cal-past">Mostra passades</button></div>`;
   return head + chips + body;
 }
-function calRow(s, underProd) {
+/** Month grid: one cell per day with a coloured mark per session; the chosen day is listed below. */
+function calMonthView() {
+  const list = ui.calProd === 'all' ? allSessions() : allSessions(ui.calProd);
+  const thisMonth = TODAY.slice(0, 7);
+  if (!/^\d{4}-\d{2}$/.test(ui.calMonth || '')) {
+    const upcoming = list.find(x => x.date >= TODAY);
+    ui.calMonth = list.some(x => x.date.slice(0, 7) === thisMonth) || !upcoming ? thisMonth : upcoming.date.slice(0, 7);
+  }
+  const [y, mo] = ui.calMonth.split('-').map(Number);
+  const lead = (new Date(y, mo - 1, 1).getDay() + 6) % 7;
+  const days = new Date(y, mo, 0).getDate();
+  const inMonth = list.filter(x => x.date.slice(0, 7) === ui.calMonth);
+  const byDay = new Map();
+  for (const x of inMonth) { if (!byDay.has(x.date)) byDay.set(x.date, []); byDay.get(x.date).push(x); }
+  if (!ui.calDay || ui.calDay.slice(0, 7) !== ui.calMonth) ui.calDay = ui.calMonth === thisMonth ? TODAY : (inMonth[0]?.date || `${ui.calMonth}-01`);
+  const cells = Array.from({ length: lead }, () => '<span class="mday out" aria-hidden="true"></span>');
+  for (let d = 1; d <= days; d++) {
+    const iso = `${ui.calMonth}-${pad(d)}`;
+    const ss = byDay.get(iso) || [];
+    const marks = ss.slice(0, 3).map(x => `<i class="mk prod-tone${x.type === 'Concert' ? ' concert' : ''}" style="--ph:${prodHue(S.productions.get(x.prodId))}"></i>`).join('') + (ss.length > 3 ? '<i class="mk more">+</i>' : '');
+    const label = `${longDate(iso)}${ss.length ? `: ${ss.map(x => x.type || 'Assaig').join(', ')}` : ', cap sessió'}`;
+    cells.push(`<button class="mday${iso === TODAY ? ' today' : ''}${iso === ui.calDay ? ' sel' : ''}${iso < TODAY ? ' past' : ''}" data-act="cal-day" data-date="${iso}" aria-pressed="${iso === ui.calDay}" aria-label="${esc(label)}"><span class="mnum">${d}</span><span class="mmarks">${marks}</span></button>`);
+  }
+  while (cells.length % 7) cells.push('<span class="mday out" aria-hidden="true"></span>');
+  const title = capz(fmtD(`${ui.calMonth}-01`, { month: 'long', year: 'numeric' }));
+  const legendProds = [...new Set(inMonth.map(x => x.prodId))].map(id => S.productions.get(id)).filter(Boolean);
+  const hasConcert = inMonth.some(x => x.type === 'Concert');
+  const daySessions = byDay.get(ui.calDay) || [];
+  return `<div class="panel month">
+      <div class="mnav"><button class="nav-arrow" data-act="cal-month" data-dir="-1" aria-label="Mes anterior">${ICON.left}</button><h2 class="h2">${esc(title)}</h2><button class="nav-arrow" data-act="cal-month" data-dir="1" aria-label="Mes següent">${ICON.right}</button></div>
+      <div class="mweek" aria-hidden="true">${['dl', 'dt', 'dc', 'dj', 'dv', 'ds', 'dg'].map(d => `<span>${d}</span>`).join('')}</div>
+      <div class="mgrid">${cells.join('')}</div>
+      ${legendProds.length ? `<div class="mlegend">${legendProds.map(p => `<span class="prod-tone" style="--ph:${prodHue(p)}"><i class="pdot"></i>${esc(p.name)}</span>`).join('')}${hasConcert ? '<span><i class="mk concert key"></i>Concert</span>' : ''}</div>` : '<p class="muted" style="margin:10px 4px 0;font-size:13px">Aquest mes no hi ha cap sessió.</p>'}
+    </div>
+    <div class="section-title" style="margin-top:18px"><h2 class="h2">${esc(longDate(ui.calDay))}</h2>${ui.calDay !== TODAY ? '<button class="btn btn-sm btn-ghost" data-act="cal-today">Avui</button>' : ''}</div>
+    ${daySessions.length ? `<ul class="cal-list cal-day-list">${daySessions.map(x => calRow(x, x.prodId, true)).join('')}</ul>`
+      : `<div class="panel" style="padding:14px;font-size:13.5px;color:var(--muted)">Cap sessió aquest dia.</div>`}`;
+}
+function calRow(s, underProd, tone) {
   const staff = !isLinkOnly();
   let right = '';
   if (staff) {
@@ -1750,12 +1836,13 @@ function calRow(s, underProd) {
   const other = sessionProds(s).filter(id => id !== underProd).map(id => S.productions.get(id)?.name).filter(Boolean);
   const cls = [s.date === TODAY ? 'is-today' : '', s.date < TODAY ? 'is-past' : '', s.type === 'Concert' ? 'type-concert' : ''].join(' ');
   const openAct = staff ? 'open-session' : (s.date >= TODAY ? 'absence-new' : '');
-  return `<li class="cal-row ${cls}" data-date="${s.date}">
+  return `<li class="cal-row ${cls}${tone ? ' prod-tone' : ''}" data-date="${s.date}"${tone ? ` style="--ph:${prodHue(S.productions.get(s.prodId))}"` : ''}>
     <button class="cal-main" ${openAct ? `data-act="${openAct}"` : 'disabled'} data-sid="${s.id}">
       <span class="cal-date"><b>${+s.date.slice(8, 10)}</b><small>${wdShort(s.date)}</small></span>
-      <span class="cal-info"><span class="cal-type">${esc(s.type || 'Assaig')}</span><span class="cal-place">${[s.time ? `<span class="mono">${esc(timeRange(s))}</span>` : '', esc(s.place || ''), esc(s.note || ''), other.length ? `També: ${esc(other.join(', '))}` : ''].filter(Boolean).join(' · ')}</span></span>
+      <span class="cal-info"><span class="cal-type">${esc(s.type || 'Assaig')}</span><span class="cal-place">${[s.info?.call ? `Convocatòria <span class="mono">${esc(s.info.call)}</span>` : '', s.time ? `<span class="mono">${esc(timeRange(s))}</span>` : '', esc(s.place || ''), esc(s.note || ''), other.length ? `També: ${esc(other.join(', '))}` : ''].filter(Boolean).join(' · ')}</span></span>
       ${right}
     </button>
+    ${hasInfo(s) ? `<button class="icon-btn info" data-act="session-info" data-sid="${s.id}" aria-label="Fitxa de la sessió">${ICON.info}</button>` : ''}
     ${canEdit() ? `<button class="icon-btn" data-act="session-edit" data-sid="${s.id}" aria-label="Edita la sessió">${ICON.more}</button>` : ''}
   </li>`;
 }
@@ -2470,7 +2557,8 @@ function sheetDocument(id) {
         if (!title.value.trim() && !src.picked()) { toast('Posa un títol'); return; }
         const got = await resolveSource(src, d, e.currentTarget);
         if (!got) return;
-        const rec = { id: d.id, title: title.value.trim() || titleFromFile(got.file?.name || ''), url: got.url, kind: el.querySelector('#dc-kind .pick[aria-pressed="true"]').dataset.k, note: el.querySelector('#dc-note').value.trim() };
+        const rec = { id: d.id, title: title.value.trim() || titleFromFile(got.file?.name || ''), url: got.url, kind: el.querySelector('#dc-kind .pick[aria-pressed="true"]').dataset.k, note: el.querySelector('#dc-note').value.trim(),
+          at: d.at || new Date().toISOString(), by: d.by || S.me?.email || '' };
         if (got.file) rec.file = got.file;
         if (d.file && d.file.id !== got.file?.id) deleteFile(d.file);
         saveConfig({ documents: [...(S.config.documents || []).filter(x => x.id !== rec.id), rec] });
@@ -2607,6 +2695,7 @@ function viewSinger() {
         <span class="muted" style="font-size:13.5px">${esc(s.type)}${s.time ? ` · ${esc(timeRange(s))}` : ''}${s.place ? ` · ${esc(s.place)}` : ''} · ${esc(prodNames(s))}</span>
         ${s.note ? `<span style="font-size:13px;color:var(--accent)">${esc(s.note)}</span>` : ''}
         ${s.rsvpBy ? `<span class="muted mono" style="font-size:12px">Respon abans del ${ddmm(s.rsvpBy)}</span>` : ''}
+        ${hasInfo(s) ? fitxaChip(s) : ''}
         <div class="c-a"><button class="btn btn-sm ${a?.answer === 'yes' ? 'btn-primary' : ''}" data-act="rsvp-yes" data-sid="${s.id}">Hi seré</button>
           <button class="btn btn-sm ${a?.answer === 'no' ? 'btn-danger' : ''}" data-act="rsvp-no" data-sid="${s.id}">No hi podré anar</button></div>
       </div>`;
@@ -2628,8 +2717,10 @@ function viewSinger() {
       <span style="font-size:14px">Avisa amb temps. El teu cap de corda ho veurà i la falta quedarà justificada si l’accepta.</span>
       <button class="btn" data-act="absence-new">Avisa d’una absència</button>
     </div>
-    ${next ? `<div class="section-title"><h2 class="h2">Proper assaig</h2></div>
-      <div class="panel" style="padding:14px"><b>${longDate(next.date)}</b><div class="muted" style="font-size:13.5px">${esc(next.type)}${next.time ? ` · ${esc(timeRange(next))}` : ''}${next.place ? ` · ${esc(next.place)}` : ''} · ${esc(prodNames(next))}</div>${next.note ? `<div style="font-size:13px;color:var(--accent);margin-top:4px">${esc(next.note)}</div>` : ''}</div>` : ''}
+    ${next ? `<div class="section-title"><h2 class="h2">${next.type === 'Concert' ? 'Proper concert' : 'Proper assaig'}</h2></div>
+      <div class="panel" style="padding:14px"><b>${longDate(next.date)}</b><div class="muted" style="font-size:13.5px">${esc(next.type)}${next.time ? ` · ${esc(timeRange(next))}` : ''}${next.place ? ` · ${esc(next.place)}` : ''} · ${esc(prodNames(next))}</div>${next.note ? `<div style="font-size:13px;color:var(--accent);margin-top:4px">${esc(next.note)}</div>` : ''}${hasInfo(next) ? fitxaChip(next) : ''}</div>` : ''}
+    ${(c => c && c.id !== next?.id ? `<div class="section-title"><h2 class="h2">Proper concert</h2></div>
+      <div class="panel" style="padding:14px"><b>${longDate(c.date)}</b><div class="muted" style="font-size:13.5px">${c.time ? `${esc(timeRange(c))} · ` : ''}${c.place ? `${esc(c.place)} · ` : ''}${esc(prodNames(c))}</div>${fitxaChip(c)}</div>` : '')(allSessions().find(x => x.type === 'Concert' && x.date >= TODAY && convoked(x, me.section) && !isOut(x, me) && hasInfo(x)))}
     <div class="section-title"><h2 class="h2">Els meus avisos</h2></div>
     ${mine.length ? `<div class="panel">${mine.map(a => absenceCard(a, { mine: true })).join('')}</div>`
       : '<div class="panel" style="padding:14px;font-size:13.5px;color:var(--muted)">Encara no has enviat cap avís.</div>'}
@@ -2776,11 +2867,44 @@ function sheetSummary(initial) {
 }
 
 /* ---------- Sheet: session edit ---------- */
-function sheetSession(sid, presetProd) {
+/* ---------- Fitxa del concert ---------- */
+const INFO_FIELDS = [['call', 'Convocatòria'], ['dress', 'Vestuari'], ['meet', 'Punt de trobada'], ['bring', 'Cal portar'], ['extra', 'Altres indicacions']];
+const hasInfo = s => !!(s && s.info && INFO_FIELDS.some(([k]) => s.info[k]));
+function infoSummary(s) {
+  const i = s.info || {};
+  return [i.call && `Convocatòria ${i.call}`, i.dress && 'vestuari', i.meet && 'punt de trobada', i.bring && 'què cal portar'].filter(Boolean).join(' · ');
+}
+function fitxaHtml(s) {
+  const rows = [['Quan', `${longDate(s.date)}${s.time ? ` · ${timeRange(s)}` : ''}`], ...(s.place ? [['On', s.place]] : []),
+    ...INFO_FIELDS.filter(([k]) => s.info?.[k]).map(([k, l]) => [l, s.info[k]])];
+  return `<dl class="fitxa">${rows.map(([l, v]) => `<div class="${l === 'Convocatòria' ? 'key' : ''}"><dt>${l}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>`;
+}
+function sheetSessionInfo(sid) {
+  const s = sessionById(sid);
+  if (!s) return;
+  const prod = S.productions.get(s.prodId);
+  const text = [`${s.type || 'Assaig'} · ${prodNames(s)}`, `${longDate(s.date)}${s.time ? ` · ${timeRange(s)}` : ''}`, s.place ? `Lloc: ${s.place}` : '',
+    ...INFO_FIELDS.filter(([k]) => s.info?.[k]).map(([k, l]) => `${l}: ${s.info[k]}`), s.note || ''].filter(Boolean).join('\n');
+  openSheet({
+    title: s.type === 'Concert' ? 'Fitxa del concert' : `Fitxa · ${s.type || 'Sessió'}`,
+    body: `<div class="prod-band prod-tone" style="--ph:${prodHue(prod)}"><h2 class="h2"><i class="pdot"></i>${esc(prodNames(s))}</h2><span class="eyebrow">${esc(s.type || 'Assaig')}</span></div>
+      ${fitxaHtml(s)}
+      ${s.note ? `<p class="fitxa-note">${esc(s.note)}</p>` : ''}
+      ${hasInfo(s) ? '' : `<p class="muted" style="font-size:13px">Encara no hi ha indicacions de convocatòria, vestuari ni punt de trobada.</p>`}`,
+    foot: `${canEdit() ? `<button class="btn" data-act="session-edit" data-sid="${s.id}">Edita</button>` : ''}<span class="spacer"></span><button class="btn btn-primary" id="fx-copy">Copia per al grup</button>`,
+    onMount: el => { el.querySelector('#fx-copy').onclick = () => copyText(text, 'Fitxa copiada'); },
+  });
+}
+function fitxaChip(s) {
+  if (hasInfo(s)) return `<button class="fitxa-chip" data-act="session-info" data-sid="${s.id}">${ICON.info}<span><b>${s.type === 'Concert' ? 'Fitxa del concert' : 'Fitxa de la sessió'}</b><small>${esc(infoSummary(s))}</small></span></button>`;
+  if (canEdit() && s.type === 'Concert') return `<button class="fitxa-chip empty" data-act="session-edit" data-sid="${s.id}">${ICON.info}<span><b>Afegeix la fitxa del concert</b><small>Convocatòria, vestuari, punt de trobada…</small></span></button>`;
+  return '';
+}
+function sheetSession(sid, presetProd, presetDate) {
   const existing = sid ? sessionById(sid) : null;
   const prods = productionsSorted();
   if (!prods.length) { toast('Primer crea una producció'); ui.tab = 'gestio'; ui.manage = 'produccions'; closeSheet(); render(); return; }
-  const cur = existing || { id: uid('s'), date: TODAY, time: '20:30', end: '22:30', type: 'Assaig', place: '', note: '', sections: [], prodId: presetProd || (ui.calProd !== 'all' ? ui.calProd : currentProductionId()) };
+  const cur = existing || { id: uid('s'), date: presetDate || TODAY, time: '20:30', end: '22:30', type: 'Assaig', place: '', note: '', sections: [], prodId: presetProd || (ui.calProd !== 'all' ? ui.calProd : currentProductionId()) };
   const secs = new Set(cur.sections && cur.sections.length ? cur.sections : SECTIONS.map(x => x.id));
   openSheet({
     title: existing ? 'Edita la sessió' : 'Nova sessió',
@@ -2797,6 +2921,16 @@ function sheetSession(sid, presetProd) {
       <div class="field"><span>També compta per a</span><div class="pickers" id="se-also">${prods.map(p => `<button type="button" class="pick" data-also="${p.id}" aria-pressed="${(cur.alsoIn || []).includes(p.id)}">${esc(p.name)}</button>`).join('')}</div>
         <small>Per a assajos compartits entre produccions: comptaran a les estadístiques i a la norma de totes les marcades.</small></div>
       <label class="field"><span>Nota</span><input class="inp" id="se-note" type="text" maxlength="80" value="${esc(cur.note || '')}" placeholder="p. ex. Portar partitures del Gloria"></label>
+      <details class="fitxa-edit" id="se-fitxa" ${cur.type === 'Concert' || hasInfo(cur) ? 'open' : ''}>
+        <summary><span><b>Fitxa del concert</b><br><span class="muted" style="font-size:12.5px">Convocatòria, vestuari, punt de trobada… La veuen tots els convocats.</span></span>${ICON.chev}</summary>
+        <div class="kv" style="margin-top:12px">
+          <label class="field"><span>Hora de convocatòria</span><input class="inp" id="se-call" type="time" style="max-width:170px" value="${esc(cur.info?.call || '')}"><small>A quina hora han de ser-hi els cantaires.</small></label>
+          <label class="field"><span>Vestuari</span><input class="inp" id="se-dress" type="text" maxlength="100" value="${esc(cur.info?.dress || '')}" placeholder="p. ex. Uniforme negre i fulard lila"></label>
+          <label class="field"><span>Punt de trobada</span><input class="inp" id="se-meet" type="text" maxlength="100" value="${esc(cur.info?.meet || '')}" placeholder="p. ex. Entrada d’artistes, c. Sant Pere Més Alt"></label>
+          <label class="field"><span>Cal portar</span><input class="inp" id="se-bring" type="text" maxlength="120" value="${esc(cur.info?.bring || '')}" placeholder="p. ex. Carpeta negra, partitures i aigua"></label>
+          <label class="field"><span>Altres indicacions</span><textarea class="inp" id="se-extra" maxlength="500" style="min-height:70px" placeholder="p. ex. Prova acústica a les 19:00 a l’escenari">${esc(cur.info?.extra || '')}</textarea></label>
+        </div>
+      </details>
     </div>`,
     foot: `${existing ? '<button class="btn btn-danger-ghost" id="se-del">Esborra</button>' : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="se-save">Desa</button>`,
     onMount: el => {
@@ -2807,6 +2941,7 @@ function sheetSession(sid, presetProd) {
       });
       el.querySelectorAll('#se-also .pick').forEach(b => b.onclick = () => b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') !== 'true'));
       el.querySelector('#se-rsvp').onchange = e => { el.querySelector('#se-rsvpby-f').hidden = !e.target.checked; };
+      el.querySelector('#se-type').onchange = e => { if (e.target.value === 'Concert') el.querySelector('#se-fitxa').open = true; };
       el.querySelector('#se-save').onclick = () => {
         const date = el.querySelector('#se-date').value;
         if (!date) { toast('Indica la data de la sessió'); return; }
@@ -2820,6 +2955,8 @@ function sheetSession(sid, presetProd) {
         const also = $$('#se-also .pick[aria-pressed="true"]', el).map(b => b.dataset.also).filter(id => id !== prodId);
         if (also.length) next.alsoIn = also;
         if (el.querySelector('#se-rsvp').checked) { next.rsvp = true; const by = el.querySelector('#se-rsvpby').value; if (by) next.rsvpBy = by; }
+        const info = Object.fromEntries(INFO_FIELDS.map(([k]) => [k, el.querySelector(`#se-${k}`).value.trim()]).filter(([, v]) => v));
+        if (Object.keys(info).length) next.info = info;
         if (existing && existing.prodId !== prodId) {
           const old = clone(S.productions.get(existing.prodId));
           old.sessions = (old.sessions || []).filter(s => s.id !== cur.id);
@@ -3365,11 +3502,29 @@ const LS_PUSH_AT = 'corpresent:avis-refresc';
 const LS_WELCOME = 'corpresent:benvinguda';
 const PUSH_KINDS = {
   anuncis: ['Anuncis nous', 'Quan l’equip publica alguna cosa al tauler.'],
+  materials: ['Material nou', 'Partitures, àudios i documents nous per a la teva corda i veu.'],
   convocatories: ['Convocatòries per confirmar', 'Si queda per respondre i s’acosta la data límit.'],
   enquestes: ['Enquestes obertes', 'Quan una enquesta és a punt de tancar-se.'],
-  assajos: ['Recordatori d’assaig', 'La vespra, si hi estàs convocat/da.'],
+  absencies: ['Resposta als teus avisos', 'Quan t’accepten o no un avís d’absència.'],
+  assajos: ['Recordatori d’assaig', 'La vespra, amb la fitxa del concert si n’hi ha.'],
 };
-const DEFAULT_PREFS = { anuncis: true, convocatories: true, enquestes: true, assajos: false };
+// Només per a qui edita: avisos sobre les cordes que porta.
+const LEADER_KINDS = {
+  llistes: ['Llista a mitges', 'Mitja hora després d’acabar l’assaig, si la llista no és completa.'],
+  risc: ['Cantaires en risc', 'Quan algú baixa de la norma d’assistència.'],
+};
+const DEFAULT_PREFS = { anuncis: true, materials: true, convocatories: true, enquestes: true, absencies: true, assajos: false, llistes: true, risc: true };
+const LS_PUSH_PREFS = 'corpresent:avis-prefs';
+/** The cordes a leader looks after: their own, from the account or from their roster record. */
+function defaultCordes() {
+  if (!canEdit()) return [];
+  if (S.me?.role === 'leader' && S.me.section) return [S.me.section];
+  const m = S.members.get(myId() || '');
+  return m && m.leader ? [m.section] : [];
+}
+function savedPush() {
+  try { return JSON.parse(localStorage.getItem(LS_PUSH_PREFS) || 'null'); } catch { return null; }
+}
 const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && !!window.COR_PUSH_KEY;
 const isiOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent)
   || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1 && !/Android|Windows|Linux|CrOS/.test(navigator.userAgent));
@@ -3397,18 +3552,19 @@ async function ensureSW() {
   await navigator.serviceWorker.ready;
   return swReg;
 }
-function pushRecord(sub, prefs) {
+function pushRecord(sub, prefs, cordes) {
   const mid = myId();
   const m = mid && S.members.get(mid);
   return {
     uid: S.uid, email: (S.me && S.me.email) || '', memberId: mid || '', section: m ? m.section : '',
     name: m ? m.name : ((S.me && (S.me.name || S.me.email)) || ''),
     endpoint: sub.endpoint, p256dh: subKeyB64(sub, 'p256dh'), auth: subKeyB64(sub, 'auth'),
-    prefs: { ...DEFAULT_PREFS, ...(prefs || {}) }, device: deviceName(), at: new Date().toISOString(),
+    prefs: { ...DEFAULT_PREFS, ...(prefs || {}) }, cordes: canEdit() ? (cordes || defaultCordes()) : [],
+    device: deviceName(), at: new Date().toISOString(),
   };
 }
 /** Turn notifications on for this device. Returns a reason when it can't. */
-async function enablePush(prefs) {
+async function enablePush(prefs, cordes) {
   if (!pushSupported()) return 'no-suport';
   if (isiOS() && !installed()) return 'ios';
   try {
@@ -3417,9 +3573,10 @@ async function enablePush(prefs) {
     const reg = await ensureSW();
     const sub = await reg.pushManager.getSubscription()
       || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToU8(window.COR_PUSH_KEY) });
-    const rec = pushRecord(sub, prefs || S.pushPrefs);
+    const rec = pushRecord(sub, prefs || S.pushPrefs, cordes || S.pushCordes);
     await db.doc(`push/${pushId()}`).set(rec);
-    S.pushOn = true; S.pushPrefs = rec.prefs;
+    S.pushOn = true; S.pushPrefs = rec.prefs; S.pushCordes = rec.cordes;
+    try { localStorage.setItem(LS_PUSH_PREFS, JSON.stringify({ prefs: rec.prefs, cordes: rec.cordes })); } catch {}
     try { localStorage.setItem(LS_PUSH_AT, String(Date.now())); } catch {}
     return null;
   } catch (e) { return 'error'; }
@@ -3441,10 +3598,16 @@ async function checkPush() {
     const sub = reg && await reg.pushManager.getSubscription();
     if (!sub || Notification.permission !== 'granted') { S.pushOn = false; scheduleRender(); return; }
     swReg = reg; S.pushOn = true;
+    let saved = savedPush();
+    if (!saved) {
+      const snap = await db.doc(`push/${pushId()}`).get().catch(() => null);
+      if (snap && snap.exists) saved = { prefs: snap.data().prefs, cordes: snap.data().cordes };
+    }
+    if (saved) { S.pushPrefs = saved.prefs || S.pushPrefs; S.pushCordes = Array.isArray(saved.cordes) ? saved.cordes : S.pushCordes; }
     let last = 0;
     try { last = +localStorage.getItem(LS_PUSH_AT) || 0; } catch {}
     if (Date.now() - last > 20 * 3600 * 1000) {
-      await db.doc(`push/${pushId()}`).set(pushRecord(sub, S.pushPrefs));
+      await db.doc(`push/${pushId()}`).set(pushRecord(sub, S.pushPrefs, S.pushCordes));
       try { localStorage.setItem(LS_PUSH_AT, String(Date.now())); } catch {}
     }
     scheduleRender();
@@ -3463,22 +3626,32 @@ function sheetPush() {
   const blocked = Notification.permission === 'denied';
   const needsInstall = isiOS() && !installed();
   const prefs = { ...DEFAULT_PREFS, ...(S.pushPrefs || {}) };
+  const kinds = Object.entries(PUSH_KINDS).filter(([k]) => k !== 'absencies' || myId());
+  const cordes = new Set(S.pushCordes || defaultCordes());
+  const row = ([k, [l, d]]) => `<div class="toggle-row"><span><b>${l}</b><br><span class="muted" style="font-size:12.5px">${d}</span></span>
+        <label class="switch"><input type="checkbox" id="pf-${k}" ${prefs[k] ? 'checked' : ''}><span></span></label></div>`;
   openSheet({
     title: 'Avisos al mòbil',
     body: `${needsInstall ? `<div class="sub-line sub-hint" style="margin:0 0 12px"><span>Al iPhone i al iPad, els avisos només funcionen si abans afegeixes l’app a la <b>pantalla d’inici</b>: al Safari, toca <b>Comparteix</b> i tria <b>Afegeix a la pantalla d’inici</b>. Després obre-la des d’allà.</span></div>` : ''}
       ${blocked ? `<div class="sub-line sub-hint" style="margin:0 0 12px"><span>Aquest navegador té els avisos <b>bloquejats</b>. Actíva’ls als ajustos del lloc web i torna-ho a provar.</span></div>` : ''}
       <p style="margin-top:0">Tria de què vols que t’avisi. Pots canviar-ho quan vulguis.</p>
-      <div class="kv">${Object.entries(PUSH_KINDS).map(([k, [l, d]]) => `<div class="toggle-row"><span><b>${l}</b><br><span class="muted" style="font-size:12.5px">${d}</span></span>
-        <label class="switch"><input type="checkbox" id="pf-${k}" ${prefs[k] ? 'checked' : ''}><span></span></label></div>`).join('')}</div>
+      <div class="kv">${kinds.map(row).join('')}</div>
+      ${canEdit() ? `<div class="section-title" style="margin:18px 0 6px"><h2 class="h2">Com a cap de corda</h2></div>
+        <div class="kv">${Object.entries(LEADER_KINDS).map(row).join('')}
+          <div class="field"><span>De quines cordes?</span><div class="pickers" id="pf-cordes">${SECTIONS.map(x => `<button type="button" class="pick" data-sec="${x.id}" aria-pressed="${cordes.has(x.id)}"><span class="vl">${x.id}</span> ${x.name}</button>`).join('')}</div>
+            <small>Si no en tries cap, no rebràs aquests dos avisos.</small></div></div>` : ''}
       <p class="muted" style="font-size:12.5px">Els avisos surten d’aquest aparell. Si entres des d’un altre, actíva’ls també allà.</p>`,
     foot: `${S.pushOn ? '<button class="btn btn-danger-ghost" id="pu-off">Desactiva’ls</button>' : ''}<span class="spacer"></span>
       <button class="btn" data-act="sheet-close">Cancel·la</button>
       <button class="btn btn-primary" id="pu-on" ${blocked ? 'disabled' : ''}>${S.pushOn ? 'Desa' : 'Activa’ls'}</button>`,
     onMount: el => {
+      el.querySelectorAll('#pf-cordes .pick').forEach(b => b.onclick = () => b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') !== 'true'));
       el.querySelector('#pu-on').onclick = async () => {
-        const chosen = Object.fromEntries(Object.keys(PUSH_KINDS).map(k => [k, el.querySelector(`#pf-${k}`).checked]));
+        const keys = [...kinds.map(([k]) => k), ...(canEdit() ? Object.keys(LEADER_KINDS) : [])];
+        const chosen = Object.fromEntries(keys.map(k => [k, el.querySelector(`#pf-${k}`).checked]));
         if (!Object.values(chosen).some(Boolean)) { toast('Tria almenys una cosa'); return; }
-        const err = await enablePush(chosen);
+        const pickedCordes = canEdit() ? $$('#pf-cordes .pick[aria-pressed="true"]', el).map(b => b.dataset.sec) : [];
+        const err = await enablePush(chosen, pickedCordes);
         closeSheet();
         toast(err ? { ios: 'Abans afegeix l’app a la pantalla d’inici', denegat: 'El navegador té els avisos bloquejats', 'no-suport': 'Aquest navegador no els admet' }[err] || 'No s’han pogut activar' : 'Avisos activats');
         render();
@@ -3907,7 +4080,8 @@ function sheetMaterial(pid, id) {
         const got = await resolveSource(src, m, e.currentTarget);
         if (!got) return;
         const rec = { id: m.id, title: title.value.trim() || titleFromFile(got.file?.name || ''), url: got.url, kind: el.querySelector('#mt-kind .pick[aria-pressed="true"]').dataset.k,
-          section: el.querySelector('#mt-sec .pick[aria-pressed="true"]').dataset.sec, part: el.querySelector('#mt-part .pick[aria-pressed="true"]').dataset.part };
+          section: el.querySelector('#mt-sec .pick[aria-pressed="true"]').dataset.sec, part: el.querySelector('#mt-part .pick[aria-pressed="true"]').dataset.part,
+          at: m.at || new Date().toISOString(), by: m.by || S.me?.email || '' };
         if (got.file) rec.file = got.file;
         if (m.file && m.file.id !== got.file?.id) deleteFile(m.file);
         const p = S.productions.get(el.querySelector('#mt-prod').value);
@@ -4277,7 +4451,16 @@ const actions = {
   'summary': el => sheetSummary(el.dataset.scope),
   'cal-prod': el => { ui.calProd = el.dataset.id; saveUI(); render(); },
   'cal-past': () => { ui.calPast = !ui.calPast; ui._calScrolled = false; render(); },
-  'session-new': () => sheetSession(null),
+  'cal-view': el => { ui.calView = el.dataset.k; saveUI(); render(); },
+  'cal-month': el => {
+    const [y, m] = (ui.calMonth || TODAY.slice(0, 7)).split('-').map(Number);
+    const d = new Date(y, m - 1 + +el.dataset.dir, 1);
+    ui.calMonth = `${d.getFullYear()}-${pad(d.getMonth() + 1)}`; ui.calDay = null; render();
+  },
+  'cal-day': el => { ui.calDay = el.dataset.date; render(); },
+  'cal-today': () => { ui.calMonth = TODAY.slice(0, 7); ui.calDay = TODAY; render(); },
+  'session-new': el => sheetSession(null, null, el.dataset.date),
+  'session-info': el => sheetSessionInfo(el.dataset.sid),
   'session-edit': el => sheetSession(el.dataset.sid),
   'stats-prod': el => { ui.statsProd = el.dataset.id; ui.statsScope = 'prod'; render(); },
   'stats-sec': el => { ui.statsSec = el.dataset.sec; saveUI(); render(); },
