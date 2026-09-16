@@ -102,7 +102,7 @@ service cloud.firestore {
         allow create: if (hasSpace(c) || canEdit(c)) && request.resource.data.uid == request.auth.uid;
         allow update: if request.auth != null && resource.data.uid == request.auth.uid
           && request.resource.data.uid == request.auth.uid;
-        allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+        allow delete: if canEdit(c) || (request.auth != null && resource.data.uid == request.auth.uid);
       }
       // Còpia de les marques de cada cantaire: només les seves.
       match /memberMarks/{mid} {

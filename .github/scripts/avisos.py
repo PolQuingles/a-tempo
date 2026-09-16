@@ -21,11 +21,17 @@ BASE = "https://firestore.googleapis.com/v1/projects/cor-present/databases/(defa
 CHOIR = os.environ["CHOIR_ID"]
 VAPID = os.environ["PUSH_PRIVATE_KEY"]
 APP_URL = os.environ.get("APP_URL", "https://polquingles.github.io/cor-present/")
-CLAIMS = {"sub": APP_URL}
+# Adreça de contacte que demana l'estàndard, per si el servei de push ha d'avisar de res.
+# Es pot canviar amb el secret PUSH_CONTACT; no cal que sigui personal.
+CLAIMS = {"sub": os.environ.get("PUSH_CONTACT") or "mailto:cor-present@polquingles.github.io"}
 STATE = os.path.join(sys.argv[1], "avisos-estat.json")
 
 TZ = ZoneInfo("Europe/Madrid")
 NOW = datetime.datetime.now(TZ)
+UTC_NOW = datetime.datetime.now(datetime.timezone.utc)
+# Un anunci només s'avisa si fa poc que s'ha publicat: així, qui s'hi doni d'alta
+# demà no rep els anuncis de la setmana passada.
+FRESH = (UTC_NOW - datetime.timedelta(hours=36)).isoformat().replace("+00:00", "Z")
 TODAY = NOW.date()
 SECTIONS = {"S": "Sopranos", "C": "Contralts", "T": "Tenors", "B": "Baixos"}
 QUIET = NOW.hour < 8 or NOW.hour >= 22          # de nit no s'envia res
@@ -82,10 +88,12 @@ announcements = collection("announcements")
 polls = collection("polls")
 poll_votes = collection("pollVotes")
 rsvp = collection("rsvp")
-devices = collection("push")
+people = collection("staff")
+# Qui ja no té accés al cor tampoc no ha de rebre avisos.
+devices = {k: v for k, v in collection("push").items() if not v.get("email") or v["email"] in people}
 CHOIR_NAME = config.get("name") or "Cor"
 
-state = {"announcements": [], "sent": {}, "dead": []}
+state = {"announcements": [], "sent": {}, "dead": [], "fails": {}}
 first_run = not os.path.exists(STATE)
 if not first_run:
     try:
@@ -94,6 +102,7 @@ if not first_run:
         first_run = True
 sent = state["sent"]
 dead = set(state.get("dead", []))
+fails = state.setdefault("fails", {})
 
 
 def sessions(prod=None):
@@ -147,29 +156,41 @@ def targets(kind, section=None, member_ids=None):
 
 
 def send(d, title, body, url, tag):
+    """'ok' enviat · 'gone' l'aparell ja no hi és · 'retry' error passatger."""
     try:
         webpush(
             subscription_info={"endpoint": d["endpoint"], "keys": {"p256dh": d["p256dh"], "auth": d["auth"]}},
             data=json.dumps({"title": title, "body": body, "url": url, "tag": tag}),
             vapid_private_key=VAPID, vapid_claims=dict(CLAIMS), ttl=60 * 60 * 20,
         )
-        return True
+        return "ok"
     except WebPushException as e:
         code = getattr(e.response, "status_code", 0)
-        if code in (404, 410):
+        if code in (400, 401, 403, 404, 410):
             dead.add(d["endpoint"])
-            print(f"  aparell caducat ({code})")
-        else:
-            print(f"  error {code}: {e}")
-        return False
+            print(f"  aparell descartat ({code})")
+            return "gone"
+        print(f"  error {code}: {e}")
+        ep = d["endpoint"]
+        fails[ep] = fails.get(ep, 0) + 1
+        if fails[ep] >= 6:           # sis intents seguits fallats: es deixa córrer
+            dead.add(ep)
+            print("  aparell descartat després de sis intents")
+            return "gone"
+        return "retry"
 
 
-def once(key):
-    """True el primer cop que es demana aquesta clau."""
+def deliver(key, d, title, body, url, tag):
+    """Envia si encara no s'havia enviat. Si l'error és passatger, es tornarà a provar."""
     if key in sent:
-        return False
-    sent[key] = NOW.isoformat(timespec="seconds")
-    return True
+        return 0
+    r = send(d, title, body, url, tag)
+    if r != "retry":
+        sent[key] = NOW.isoformat(timespec="seconds")
+    if r == "ok":
+        fails.pop(d["endpoint"], None)
+        return 1
+    return 0
 
 
 count = 0
@@ -182,9 +203,8 @@ elif QUIET:
 else:
     # 1. Anuncis nous
     for aid, a in sorted(announcements.items(), key=lambda kv: kv[1].get("createdAt") or ""):
-        if aid in state["announcements"]:
+        if aid in state["announcements"] or (a.get("createdAt") or "") < FRESH:
             continue
-        state["announcements"].append(aid)
         if a.get("until") and a["until"] < TODAY.isoformat():
             continue
         secs = a.get("sections") or []
@@ -193,10 +213,7 @@ else:
                 continue
             if secs and d.get("section") and d["section"] not in secs:
                 continue
-            if not once(f"ann:{aid}:{did}"):
-                continue
-            if send(d, CHOIR_NAME, a.get("title", "Nou anunci al tauler"), APP_URL, f"ann-{aid}"):
-                count += 1
+            count += deliver(f"ann:{aid}:{did}", d, CHOIR_NAME, a.get("title", "Nou anunci al tauler"), APP_URL, f"ann-{aid}")
 
     # 2. Convocatòries per confirmar
     for sid, s in ALL.items():
@@ -215,11 +232,8 @@ else:
         ]
         when = datetime.date.fromisoformat(s["date"]).strftime("%d/%m")
         for did, d in targets("convocatories", member_ids=set(pending)):
-            if not once(f"rsvp:{sid}:{stage}:{did}"):
-                continue
             body = f"{s.get('type', 'Assaig')} del {when}: encara no has dit si hi seràs."
-            if send(d, CHOIR_NAME, body, APP_URL, f"rsvp-{sid}"):
-                count += 1
+            count += deliver(f"rsvp:{sid}:{stage}:{did}", d, CHOIR_NAME, body, APP_URL, f"rsvp-{sid}")
 
     # 3. Enquestes que es tanquen demà
     tomorrow = (TODAY + datetime.timedelta(days=1)).isoformat()
@@ -233,10 +247,7 @@ else:
                 continue
             if secs and d.get("section") and d["section"] not in secs:
                 continue
-            if not once(f"poll:{pid}:{did}"):
-                continue
-            if send(d, CHOIR_NAME, f"Demà es tanca l'enquesta «{p.get('title', '')}».", APP_URL, f"poll-{pid}"):
-                count += 1
+            count += deliver(f"poll:{pid}:{did}", d, CHOIR_NAME, f"Demà es tanca l'enquesta «{p.get('title', '')}».", APP_URL, f"poll-{pid}")
 
     # 4. Recordatori de l'assaig de demà
     if EVENING:
@@ -251,16 +262,14 @@ else:
             hour = f" a les {s['time']}" if s.get("time") else ""
             place = f" · {s['place']}" if s.get("place") else ""
             for did, d in targets("assajos", member_ids=who):
-                if not once(f"ses:{sid}:{did}"):
-                    continue
-                if send(d, CHOIR_NAME, f"Demà {s.get('type', 'assaig').lower()}{hour}{place}.", APP_URL, f"ses-{sid}"):
-                    count += 1
+                count += deliver(f"ses:{sid}:{did}", d, CHOIR_NAME, f"Demà {s.get('type', 'assaig').lower()}{hour}{place}.", APP_URL, f"ses-{sid}")
 
 # Neteja: no cal recordar avisos de fa més d'un mes
 cut = (NOW - datetime.timedelta(days=35)).isoformat(timespec="seconds")
 state["sent"] = {k: v for k, v in sent.items() if v >= cut}
 state["announcements"] = state["announcements"][-400:]
 state["dead"] = sorted(dead)
+state["fails"] = {k: v for k, v in fails.items() if k not in dead}
 os.makedirs(os.path.dirname(STATE) or ".", exist_ok=True)
 with open(STATE, "w", encoding="utf-8") as f:
     json.dump(state, f, ensure_ascii=False, indent=1, sort_keys=True)
