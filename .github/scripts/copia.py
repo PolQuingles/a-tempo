@@ -80,3 +80,25 @@ if changed:
     with open(latest, "w") as f:
         json.dump(data_out, f, ensure_ascii=False, indent=1)
 print(f"{len(data['members'])} cantaires · {len(data['productions'])} produccions · {len(data['attendance'])} llistes · {'canvis' if changed else 'sense canvis'}")
+
+# Fitxers pujats des de l'app (materials i documents): es desen a trossos a config/fitxer_<id>_<n>.
+# Aquí se'n guarda una còpia sencera, un cop per fitxer, a fitxers/<id>/<nom>.
+import base64, re
+files = [x.get("file") for p in data["productions"] for x in (p.get("materials") or [])]
+files += [x.get("file") for x in (data["config"].get("documents") or [])]
+saved = 0
+for f in filter(None, files):
+    folder = os.path.join(OUT, "fitxers", f["id"])
+    safe = re.sub(r"[^\w.\- ]+", "_", f.get("name") or "fitxer").strip() or "fitxer"
+    target = os.path.join(folder, safe)
+    if os.path.exists(target):
+        continue
+    parts = []
+    for i in range(int(f.get("chunks") or 1)):
+        doc = call(f"{BASE}/cors/{CHOIR}/config/fitxer_{f['id']}_{i}", token=token)
+        parts.append(base64.b64decode(doc["fields"]["d"]["bytesValue"]))
+    os.makedirs(folder, exist_ok=True)
+    with open(target, "wb") as out:
+        out.write(b"".join(parts))
+    saved += 1
+print(f"{len([f for f in files if f])} fitxers pujats · {saved} de nous a la còpia")
