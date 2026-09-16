@@ -100,3 +100,9 @@ L.append("END:VCALENDAR")
 with open("calendari.ics", "w", newline="") as f:
     f.write("\r\n".join(fold(x) for x in L) + "\r\n")
 print(f"{len(sessions)} sessions")
+
+# Identitat del cor (pantalla d'entrada, icona del mòbil, manifest)
+import sys
+sys.path.insert(0, os.path.dirname(__file__))
+import marca
+print("Marca:", marca.build(cfg, "."))

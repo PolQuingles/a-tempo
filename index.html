@@ -6,13 +6,15 @@
 <title>Cor Present</title>
 <meta name="description" content="Llista d’assistència del cor per cordes i produccions.">
 <meta name="robots" content="noindex, nofollow">
-<meta name="theme-color" content="#5A3577">
+<meta name="theme-color" content="#4C2582">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Cor Present">
-<link rel="icon" href="icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Cor Jove">
+<link rel="icon" href="marca/favicon-48.png" type="image/png">
+<link rel="apple-touch-icon" href="marca/icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
+<script>try{var t=localStorage.getItem('corpresent:tema');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,500..700;1,6..96,500..700&family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -26,6 +28,7 @@
   --fj:#F0A52A; --fj-ink:#3A2600; --fj-soft:#FCEDD3;
   --fnj:#D8433E; --fnj-ink:#FFFFFF; --fnj-soft:#FAE0DF;
   --np:#948D9A; --np-ink:#FFFFFF; --np-soft:#ECE9EF;
+  --p-text:#17713F; --r-text:#0A5A82; --fj-text:#7A4A00; --fnj-text:#B02E29;
   --overlay:rgba(29,24,34,.42);
   --shadow:0 1px 2px rgba(29,24,34,.05), 0 10px 30px rgba(29,24,34,.10);
   --f-display:"Bodoni Moda", "Didot", "Bodoni 72", Georgia, serif;
@@ -45,6 +48,7 @@
     --fj:#F2AE3D; --fj-ink:#2E1E00; --fj-soft:#35290F;
     --fnj:#EC5E58; --fnj-ink:#2A0605; --fnj-soft:#3A1917;
     --np:#8A8390; --np-ink:#141117; --np-soft:#2B2631;
+    --p-text:#72D69C; --r-text:#93D4F4; --fj-text:#F4C46E; --fnj-text:#F48D88;
     --overlay:rgba(0,0,0,.6);
     --shadow:0 1px 2px rgba(0,0,0,.3), 0 12px 32px rgba(0,0,0,.45);
     color-scheme: dark;
@@ -59,6 +63,7 @@
   --fj:#F2AE3D; --fj-ink:#2E1E00; --fj-soft:#35290F;
   --fnj:#EC5E58; --fnj-ink:#2A0605; --fnj-soft:#3A1917;
   --np:#8A8390; --np-ink:#141117; --np-soft:#2B2631;
+  --p-text:#72D69C; --r-text:#93D4F4; --fj-text:#F4C46E; --fnj-text:#F48D88;
   --overlay:rgba(0,0,0,.6);
   --shadow:0 1px 2px rgba(0,0,0,.3), 0 12px 32px rgba(0,0,0,.45);
   color-scheme: dark;
@@ -386,6 +391,7 @@ textarea.inp{padding:10px 12px;min-height:120px;resize:vertical;line-height:1.4}
 .toast{position:fixed;left:50%;bottom:calc(var(--nav-h) + 16px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:60;display:flex;align-items:center;gap:14px;max-width:calc(100% - 32px);background:var(--ink);color:var(--bg);border-radius:12px;padding:10px 14px;font-size:14px;box-shadow:var(--shadow);animation:up .2s ease}
 .toast button{color:var(--accent-line);font-weight:700;text-transform:uppercase;font-size:12.5px;letter-spacing:.05em}
 :root[data-theme="dark"] .toast button{color:var(--accent-ink)}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .toast button{color:var(--accent-ink)} }
 
 
 /* ---------- Pending lists, notices, rule ---------- */
@@ -481,8 +487,6 @@ textarea.inp{padding:10px 12px;min-height:120px;resize:vertical;line-height:1.4}
 .cal-prod.prod-tone .cal-row{border-top-color:var(--pline)}
 .cal-prod.prod-tone .cal-row.is-today{background:var(--pbg2)}
 .cal-prod.prod-tone .cal-month{color:var(--pink)}
-.cal-prod.prod-tone .cal-prod-h .h2{display:flex;align-items:center;gap:10px}
-.cal-prod.prod-tone .cal-prod-h .pdot{width:14px;height:14px}
 .chip .pdot{margin-right:7px;width:10px;height:10px;border-radius:3px}
 .hue-pick{width:36px;height:36px;border-radius:10px;border:2px solid transparent;background:var(--pbg2)}
 .hue-pick[aria-pressed="true"]{border-color:var(--ink)}
@@ -490,6 +494,20 @@ textarea.inp{padding:10px 12px;min-height:120px;resize:vertical;line-height:1.4}
 /* ---------- Google sign-in, team, links ---------- */
 .gbtn{display:inline-flex;align-items:center;gap:10px;min-height:46px;padding:0 18px;border-radius:999px;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);font-weight:600;font-size:15px}
 .gbtn svg{width:20px;height:20px}
+.is-login .appbar .brand{visibility:hidden}
+.entry{display:grid;gap:18px;justify-items:center;padding-top:4px}
+.entry-id{display:grid;justify-items:center;gap:10px;text-align:center;max-width:420px}
+.entry-logo{width:112px;height:112px;border-radius:26px;object-fit:cover;box-shadow:var(--shadow)}
+.entry-id .staff{margin:18px auto 6px}
+.entry-name{font-family:var(--f-display);font-weight:600;font-size:clamp(30px, 9vw, 40px);line-height:1.05;letter-spacing:-.015em;color:var(--accent);text-wrap:balance;margin:4px 0 0}
+.entry-sub{margin:0;font-size:14px;color:var(--muted)}
+.entry-wait{margin:8px 0 0;font-size:13.5px;color:var(--muted)}
+.entry .login-card{margin:0;width:100%;text-align:center;justify-items:center}
+.entry .login-card .gbtn{width:100%;justify-content:center}
+.entry-foot{max-width:40ch;margin:0;text-align:center;font-size:12.5px;line-height:1.45;color:var(--muted)}
+.seg3{display:inline-grid;grid-auto-flow:column;gap:2px;padding:3px;border-radius:999px;background:var(--surface-2);border:1px solid var(--line)}
+.seg3 button{min-height:30px;padding:0 12px;border-radius:999px;font-size:13px;font-weight:600;color:var(--ink-2)}
+.seg3 button[aria-checked="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.14)}
 .login-card{max-width:420px;margin:28px auto 0;padding:22px;border-radius:var(--r-lg);background:var(--surface);border:1px solid var(--line);display:grid;gap:12px;text-align:left}
 .login-card .h2{font-size:20px}
 .login-card p{margin:0;color:var(--ink-2);font-size:14px}
@@ -536,6 +554,55 @@ textarea.inp{padding:10px 12px;min-height:120px;resize:vertical;line-height:1.4}
 .elig:last-child{border-bottom:0}
 .elig.no .en{text-decoration:line-through;color:var(--muted)}
 .elig .em{font-size:12px;color:var(--muted);display:block}
+/* ---------- Production colour across the app ---------- */
+.h1 > .pdot,.h2 > .pdot{width:.56em;height:.56em;border-radius:.17em;margin-right:.42em;vertical-align:.06em}
+.eyebrow .pdot{width:8px;height:8px;border-radius:2px;margin-right:6px;vertical-align:0}
+.session.prod-tone{background:var(--pbg);border:1px solid var(--pline);border-radius:var(--r-lg);padding:4px}
+.session.prod-tone .session-prod{color:var(--pink)}
+.session.prod-tone .session-prod .pdot{width:9px;height:9px;border-radius:3px;margin-right:6px;vertical-align:0}
+.session.prod-tone .session-main:hover{background:var(--pbg2)}
+.session.prod-tone .nav-arrow{background:var(--surface);border-color:var(--pline)}
+.session.prod-tone .session-note{color:var(--pink)}
+.tinted.prod-tone{background:var(--pbg);border-color:var(--pline)}
+.tinted.prod-tone .mat,.tinted.prod-tone .risk-row{border-color:var(--pline)}
+.page-head.tinted.prod-tone{border:1px solid var(--pline);border-radius:var(--r-lg);padding:14px 16px;margin-bottom:12px}
+.page-head.tinted.prod-tone .eyebrow,.section-title.prod-tone .eyebrow,.eyebrow.prod-tone{color:var(--pink)}
+.prod-band{display:flex;align-items:center;justify-content:space-between;gap:6px 12px;flex-wrap:wrap;padding:12px 14px;margin-bottom:12px;border-radius:var(--r-md);background:var(--pbg);border:1px solid var(--pline)}
+.prod-band .eyebrow{color:var(--pink)}
+
+/* ---------- Compact headings ---------- */
+.section-title,.sec-h{align-items:center}
+.section-title > .h2,.sec-h > .h2,.cal-prod-h > .h2{flex:1 1 auto;min-width:0}
+.section-title > :not(.h2),.sec-h > :not(.h2){flex:none}
+@media (max-width:480px){
+  .h1{font-size:clamp(24px, 7.4vw, 30px)}
+  .section-title .h2,.sec-h .h2,.cal-prod-h .h2,.prod-band .h2{font-size:18px}
+  .prod-card .h2{font-size:18px}
+  .ann-t{font-size:17.5px}
+  .sheet-h .h2{font-size:19px}
+  .page-head.tinted.prod-tone{padding:12px 14px}
+}
+
+/* ---------- Labels: one system ---------- */
+.badge,.tag,.part,.rule,.rsvp,.st-pill,.pill,.role-tag,.pin,.state.warn{
+  display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 8px;border:0;border-radius:999px;
+  font-family:var(--f-ui);font-size:11px;font-weight:700;line-height:1;letter-spacing:.01em;text-transform:none;
+  white-space:nowrap;vertical-align:middle;align-self:center;flex:none}
+.pill{height:24px;padding:0 10px;font-size:12px}
+.badge{background:var(--accent);color:var(--accent-ink)}
+.tag,.role-tag,.pin{background:var(--accent-soft);color:var(--accent)}
+.badge.soft,.rsvp.none{background:var(--surface-2);color:var(--ink-2)}
+.rule.ok,.rsvp.yes,.st-accepted{background:var(--p-soft);color:var(--p-text)}
+.rule.risk,.st-pending{background:var(--fj-soft);color:var(--fj-text)}
+.rule.out,.rsvp.no,.st-rejected,.pill.fnj{background:var(--fnj-soft);color:var(--fnj-text)}
+.pill.r,.state.warn{background:var(--r-soft);color:var(--r-text)}
+.part{height:18px;padding:0 6px;background:transparent;box-shadow:inset 0 0 0 1px var(--line-strong);color:var(--ink-2);font-family:var(--f-mono);font-weight:500;font-size:10.5px;letter-spacing:0}
+button.rule,button.pill{cursor:pointer}
+.mat-k.audio{color:var(--r-text)} .mat-k.video{color:var(--fj-text)}
+.mat-k.doc-normativa{background:var(--accent-soft);color:var(--accent)}
+.mat-k.doc-calendari{background:var(--r-soft);color:var(--r-text)}
+.mat-k.doc-formulari{background:var(--p-soft);color:var(--p-text)}
+
 /* ---------- Brand ---------- */
 .swatch{width:36px;height:36px;border-radius:10px;border:2px solid transparent}
 .swatch[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 2px var(--surface)}
@@ -1216,6 +1283,9 @@ function applyBrand() {
   const brand = S.config.brand || {};
   const logo = $('#choir-logo');
   if (brand.logo) { if (logo.getAttribute('src') !== brand.logo) logo.src = brand.logo; logo.hidden = false; } else logo.hidden = true;
+  updateThemeColor();
+  const short = S.config.shortName || MARCA?.short;
+  if (short) $('meta[name="apple-mobile-web-app-title"]')?.setAttribute('content', short);
   const sig = brand.accent || '';
   if (sig === brandApplied) return;
   brandApplied = sig;
@@ -1227,31 +1297,82 @@ function applyBrand() {
   const light = `--accent:${brand.accent};--accent-ink:${l > 62 ? '#1D1822' : '#FFFFFF'};--accent-soft:hsl(${h} ${Math.min(sa, 55)}% 94%);--accent-line:hsl(${h} ${Math.min(sa, 40)}% 82%);`;
   const dark = `--accent:hsl(${h} ${Math.min(sa, 60)}% 78%);--accent-ink:hsl(${h} 40% 12%);--accent-soft:hsl(${h} 22% 20%);--accent-line:hsl(${h} 22% 32%);`;
   st.textContent = `:root{${light}}@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){${dark}}}:root[data-theme="dark"]{${dark}}`;
-  $('meta[name="theme-color"]')?.setAttribute('content', brand.accent);
+  updateThemeColor();
 }
+
+/* ---------- Aparença: clara, fosca o automàtica ---------- */
+const LS_THEME = 'corpresent:tema';
+const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
+function currentTheme() { try { return localStorage.getItem(LS_THEME) || ''; } catch { return ''; } }
+const isDark = () => { const t = document.documentElement.getAttribute('data-theme'); return t ? t === 'dark' : darkQuery.matches; };
+function updateThemeColor() {
+  const bar = isDark() ? '#131016' : (MARCA?.bg || S.config.brand?.accent || '#4C2582');
+  $('meta[name="theme-color"]')?.setAttribute('content', bar);
+}
+function setTheme(t) {
+  try { t ? localStorage.setItem(LS_THEME, t) : localStorage.removeItem(LS_THEME); } catch {}
+  if (t) document.documentElement.setAttribute('data-theme', t); else document.documentElement.removeAttribute('data-theme');
+  $$('[data-act="theme"]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.k === t)));
+  updateThemeColor();
+}
+darkQuery.addEventListener?.('change', updateThemeColor);
+function themeRow() {
+  const t = currentTheme();
+  return `<div class="setting"><div><div class="t">Aparença</div><div class="s">L’automàtica segueix el mode clar o fosc del mòbil.</div></div>
+    <div class="seg3" role="radiogroup" aria-label="Aparença">${[['', 'Automàtica'], ['light', 'Clara'], ['dark', 'Fosca']].map(([k, l]) => `<button type="button" role="radio" aria-checked="${t === k}" data-act="theme" data-k="${k}">${l}</button>`).join('')}</div></div>`;
+}
+
+/* ---------- Identitat del cor abans d'entrar (marca.json, generat cada poques hores) ---------- */
+const LS_BRAND = 'corpresent:marca';
+let MARCA = null;
+function loadMarca() {
+  try { MARCA = JSON.parse(localStorage.getItem(LS_BRAND) || 'null'); } catch {}
+  fetch('marca.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : null).then(m => {
+    if (!m) return;
+    MARCA = { ...m, name: (S.ready && S.config.name) || m.name };
+    try { localStorage.setItem(LS_BRAND, JSON.stringify(MARCA)); } catch {}
+    if (!S.ready) render();
+  }).catch(() => {});
+}
+/** Name and logo to show when the choir's own data is not loaded yet. */
+const shownName = () => (S.ready && S.config.name) || MARCA?.name || S.config.name || '';
+const shownLogo = () => (S.ready && S.config.brand?.logo) || MARCA?.logo || null;
 function render() {
+  if (!S.ready && MARCA) S.config = { ...S.config, name: S.config.name || MARCA.name, brand: { ...(S.config.brand || {}), logo: S.config.brand?.logo || MARCA.logo } };
   applyBrand();
-  $('#choir-name').textContent = S.config.name || '';
-  document.title = S.config.name || 'Cor Present';
+  $('#choir-name').textContent = shownName();
+  document.title = shownName() || 'Cor Present';
+  document.body.classList.toggle('is-login', ['badlink', 'nokey', 'nostaff', 'loading'].includes(S.mode));
   updateSync();
   renderBanner();
   const v = $('#view');
   $('.tabs').hidden = S.mode !== 'shared';
   if (S.mode === 'shared') renderTabs();
   const GBTN = `<button class="gbtn" data-act="google-in"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17.1z"/><path fill="#FBBC05" d="M10.5 28.7c-.5-1.4-.8-3-.8-4.7s.3-3.2.8-4.7l-7.9-6.1C.9 16.5 0 20.1 0 24s.9 7.5 2.6 10.8l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2.1 1.4-4.8 2.3-8.5 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>Entra amb Google</button>`;
+  const hero = () => `<div class="entry-id">
+      ${shownLogo() ? `<img class="entry-logo" src="${esc(shownLogo())}" alt="">` : staffSvg()}
+      <h1 class="entry-name">${esc(shownName() || 'Cor Present')}</h1>
+      <p class="entry-sub">Assistència, calendari i avisos del cor</p>
+    </div>`;
+  if (S.mode === 'loading') {
+    v.innerHTML = `<section class="entry">${hero()}<p class="entry-wait">Connectant…</p></section>`;
+    return;
+  }
   if (S.mode === 'badlink' || S.mode === 'nokey' || S.mode === 'nostaff') {
     const intro = S.mode === 'badlink'
-      ? `<h2 class="h2">Aquest enllaç no funciona</h2><p>Pot ser que estigui incomplet o que s’hagi renovat. Entra amb el teu correu: és l’única cosa que et cal.</p>`
+      ? `<h2 class="h2">Aquest enllaç ja no funciona</h2><p>Pot ser que estigui incomplet o que s’hagi renovat. No passa res: entra amb el teu correu.</p>`
       : S.mode === 'nostaff'
-        ? `<h2 class="h2">El compte ${esc(S.email || '')} encara no hi té accés</h2><p>Demana a l’administració del cor que hi afegeixi aquest correu des de <b>Gestió › Ajustos › Persones</b>, o entra amb un altre compte.</p>`
-        : `<h2 class="h2">Benvingut/da</h2><p>Aquesta és l’app d’assistència del cor. Entra amb el correu que has donat al cor.</p>`;
-    v.innerHTML = `<div class="login-card">${intro}
-      ${GBTN}
-      ${S.mode === 'nostaff' ? '<button class="btn btn-ghost" data-act="sign-out" style="justify-self:start">Prova amb un altre compte</button>' : ''}
-      <p class="muted" style="font-size:13px;margin:0">Cantaires, caps de corda, direcció i Palau entreu pel mateix lloc. Segons qui siguis, veuràs el teu espai i podràs consultar o editar.</p>
-      <p class="muted" style="font-size:12.5px;margin:0">Si has obert l’enllaç des del WhatsApp i no pots entrar, obre’l amb el <b>Safari</b> o el <b>Chrome</b>: des del menú «···», tria «Obre al navegador».</p>
-    </div>
-    ${S.mode === 'nokey' ? '<p style="text-align:center;margin-top:22px"><button class="btn btn-sm btn-ghost" data-act="create-choir">Crear un cor nou</button></p>' : ''}`;
+        ? `<h2 class="h2">Aquest correu encara no hi té accés</h2><p><b>${esc(S.email || '')}</b> no és a la llista del cor. Demana a l’administració que l’afegeixi, o entra amb un altre compte.</p>`
+        : `<h2 class="h2">Entra-hi</h2><p>Fes servir el correu que has donat al cor.</p>`;
+    v.innerHTML = `<section class="entry">${hero()}
+      <div class="login-card">${intro}
+        ${GBTN}
+        ${S.mode === 'nostaff' ? '<button class="btn btn-ghost" data-act="sign-out" style="justify-self:center">Prova amb un altre compte</button>' : ''}
+        <p class="muted" style="font-size:13px;margin:0">Cantaires, caps de corda, direcció i Palau entreu pel mateix lloc.</p>
+      </div>
+      <p class="entry-foot">Si l’has obert des del WhatsApp i no et deixa entrar, obre l’enllaç amb el <b>Safari</b> o el <b>Chrome</b> (menú «···» › Obre al navegador).</p>
+      ${S.mode === 'nokey' && !MARCA ? '<button class="btn btn-sm btn-ghost" data-act="create-choir">Crear un cor nou</button>' : ''}
+    </section>`;
     return;
   }
   if (S.mode === 'setup') {
@@ -1286,10 +1407,10 @@ function stackBar(c, cls = '') {
 function sessionNav(cur, list, compact) {
   const idx = list.indexOf(cur);
   const prod = S.productions.get(cur.prodId);
-  return `<div class="session ${compact ? 'compact' : ''}">
+  return `<div class="session prod-tone ${compact ? 'compact' : ''}" style="--ph:${prodHue(prod)}">
       <button class="nav-arrow" data-act="sess-step" data-dir="-1" ${idx <= 0 || isLinkOnly() ? 'disabled' : ''} aria-label="Sessió anterior">${ICON.left}</button>
       <button class="session-main" ${isLinkOnly() ? '' : 'data-act="sess-pick"'} aria-label="Canvia de sessió">
-        <span class="session-prod prod-tone" style="--ph:${prodHue(prod)}"><i class="pdot" style="width:9px;height:9px;margin-right:6px"></i>${esc(prodNames(cur))}</span>
+        <span class="session-prod"><i class="pdot"></i>${esc(prodNames(cur))}</span>
         <span class="session-date">${compact ? capz(fmtD(cur.date, { weekday: 'long', day: 'numeric', month: 'short' })) : longDate(cur.date)}</span>
         <span class="session-meta">${esc(cur.type || 'Assaig')}${cur.time ? ` · <span class="mono">${esc(timeRange(cur))}</span>` : ''}${cur.place ? ` · ${esc(cur.place)}` : ''}
           ${cur.date === TODAY ? '<span class="badge">Avui</span>' : ''}</span>
@@ -1631,7 +1752,8 @@ function viewStats() {
     <button class="chip" aria-pressed="${!ui.statsSec}" data-act="stats-sec" data-sec="">Tot el cor</button>
     ${SECTIONS.map(x => `<button class="chip" aria-pressed="${ui.statsSec === x.id}" data-act="stats-sec" data-sec="${x.id}">${x.name}</button>`).join('')}</div>`;
   const sub = scope.kind === 'range' ? `<p class="muted mono" style="margin:4px 0 0;font-size:12.5px">${ddmm(scope.from)}/${scope.from.slice(0, 4)} – ${ddmm(scope.to)}/${scope.to.slice(0, 4)}</p>` : '';
-  const head = `<div class="page-head"><div><div class="eyebrow">Estadístiques</div><h1 class="h1">${esc(scope.name)}</h1>${sub}</div>
+  const tone = scope.kind === 'prod' ? ` prod-tone tinted" style="--ph:${prodHue(S.productions.get(scope.id))}` : '';
+  const head = `<div class="page-head${tone}"><div><div class="eyebrow">${scope.kind === 'prod' ? '<i class="pdot"></i>Producció' : 'Estadístiques'}</div><h1 class="h1">${esc(scope.name)}</h1>${sub}</div>
     <button class="btn btn-sm" data-act="export-csv">Exporta CSV</button></div>`;
   const top = head + scopeTabs + choice + secChips;
 
@@ -1751,9 +1873,9 @@ function riskView() {
     nOut += rows.filter(r => r.rs.status === 'out').length;
     nRisk += rows.filter(r => r.rs.status === 'risk').length;
     const hasConcert = allSessions(pr.id).some(s => s.type === 'Concert');
-    return `<div class="section-title"><h2 class="h2" style="display:flex;align-items:center;gap:9px"><i class="pdot prod-tone" style="--ph:${prodHue(pr)};width:12px;height:12px"></i>${esc(pr.name)}</h2>
+    return `<div class="section-title prod-tone" style="--ph:${prodHue(pr)}"><h2 class="h2"><i class="pdot"></i>${esc(pr.name)}</h2>
         ${hasConcert ? `<button class="btn btn-sm" data-act="concert-list" data-pid="${pr.id}">Llista de concert</button>` : ''}</div>
-      <div class="panel">${rows.length ? rows.map(({ m, rs }) => `<button class="risk-row" data-act="member-stats" data-mid="${m.id}">
+      <div class="panel prod-tone tinted" style="--ph:${prodHue(pr)}">${rows.length ? rows.map(({ m, rs }) => `<button class="risk-row" data-act="member-stats" data-mid="${m.id}">
           <span class="rn">${esc(m.name)}</span><span class="rule ${rs.status}">${rs.status === 'out' ? `${pct(rs.cur)} · no hi arriba` : `${pct(rs.cur)} · en risc`}</span>
           <span class="rm">${SEC[m.section].name} · ${rs.att} de ${rs.att + rs.abs} assajos · ${riskLine(rs)}</span></button>`).join('')
         : '<p style="margin:0;padding:14px;font-size:13.5px">Tothom compleix la norma.</p>'}</div>`;
@@ -1874,7 +1996,7 @@ function sheetConcertList(pid) {
   openSheet({
     title: 'Llista de concert',
     wide: true,
-    body: `<div class="section-title" style="margin-top:0"><h2 class="h2">${esc(prod.name)}</h2><span class="eyebrow">${dates.length ? dates.map(d => shortDate(d)).join(' · ') : 'sense concert al calendari'}</span></div>
+    body: `<div class="prod-band prod-tone" style="--ph:${prodHue(prod)}"><h2 class="h2"><i class="pdot"></i>${esc(prod.name)}</h2><span class="eyebrow">${dates.length ? dates.map(d => shortDate(d)).join(' · ') : 'sense concert al calendari'}</span></div>
       <div class="kpis" style="grid-template-columns:repeat(3,1fr)">
         <div class="kpi"><div class="kpi-v">${inList.length}</div><div class="kpi-l">Hi poden cantar</div></div>
         <div class="kpi"><div class="kpi-v">${waiting.length}</div><div class="kpi-l">Hi són a temps</div></div>
@@ -1938,8 +2060,8 @@ function manageProductions() {
       const shared = ss.filter(s => s.prodId !== p.id).length;
       const past = ss.filter(s => s.date <= TODAY).length;
       const status = p.end && p.end < TODAY ? 'Acabada' : p.start > TODAY ? 'Propera' : 'En curs';
-      return `<div class="panel prod-card"><button data-act="prod-edit" data-pid="${p.id}" style="width:100%;text-align:left">
-        <div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><h2 class="h2" style="display:flex;align-items:center;gap:10px"><i class="pdot prod-tone" style="--ph:${prodHue(p)};width:14px;height:14px"></i>${esc(p.name)}</h2><span class="badge ${status === 'En curs' ? '' : 'soft'}">${status}</span></div>
+      return `<div class="panel prod-card prod-tone tinted" style="--ph:${prodHue(p)}"><button data-act="prod-edit" data-pid="${p.id}" style="width:100%;text-align:left">
+        <div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><h2 class="h2"><i class="pdot"></i>${esc(p.name)}</h2><span class="badge ${status === 'En curs' ? '' : 'soft'}">${status}</span></div>
         <div class="prod-meta"><span>${p.start ? shortDate(p.start) : '?'} – ${p.end ? shortDate(p.end) : '?'}</span><span><b>${ss.length}</b> sessions${shared ? ` (${shared} compartides)` : ''} · <b>${past}</b> fetes</span><span><b>${(p.excluded || []).length}</b> no la fan</span></div>
       </button></div>`;
     }).join('')}</div>` : `<div class="empty"><p>Crea la primera producció (p. ex. «Concert de Nadal») i genera’n les sessions d’assaig.</p></div>`}`;
@@ -2012,11 +2134,15 @@ function manageConfig() {
     </div>
     <div class="field"><span>Color principal</span><div class="pickers">${BRAND_COLORS.map(c => `<button type="button" class="swatch" style="background:${c}" data-act="brand-color" data-color="${c}" aria-pressed="${(brand.accent || '#5A3577').toLowerCase() === c.toLowerCase()}" aria-label="Color ${c}"></button>`).join('')}
       <label class="swatch" style="display:grid;place-items:center;background:var(--surface-2);cursor:pointer" title="Un altre color">+<input type="color" class="sr" data-bind="brand-color" value="${brand.accent || '#5A3577'}"></label></div></div>
+    <label class="field"><span>Nom curt</span><input class="inp" id="cfg-short" type="text" maxlength="16" value="${esc(S.config.shortName || '')}" data-bind="cfg-short" placeholder="${esc(MARCA?.short || 'p. ex. Cor Jove')}">
+      <small>És el nom que surt sota la icona quan algú afegeix l’app a la pantalla d’inici.</small></label>
+    <p class="muted" style="margin:0;font-size:12.5px">El logotip, el nom i el color es fan servir a la pantalla d’entrada i a la icona del mòbil. Si els canvies, s’hi actualitzen sols en unes hores.</p>
   </div>` : '';
   return `<div class="panel" style="margin-top:16px">
     <div class="setting"><div><div class="t">Sessió</div><div class="s">${who}</div></div>
       <span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" data-act="help">Manual</button>${myId() ? '<button class="btn btn-sm" data-act="my-att">La meva assistència</button>' : ''}${S.me ? '<button class="btn btn-sm" data-act="sign-out">Tanca la sessió</button>' : '<button class="btn btn-sm btn-primary" data-act="google-in">Entra amb Google</button>'}</span></div>
     ${pushRow()}
+    ${themeRow()}
   </div>
   ${adminBlocks}
   ${withLink ? `<div class="sec-h"><h2 class="h2">Enllaços personals antics</h2></div>
@@ -2078,12 +2204,13 @@ function boardBadge() {
   return news + polls;
 }
 function viewBoard() {
-  if (!['anuncis', 'materials', 'enquestes'].includes(ui.board)) ui.board = 'anuncis';
+  if (!['anuncis', 'materials', 'documents', 'enquestes'].includes(ui.board)) ui.board = 'anuncis';
   if (ui.board === 'anuncis') { try { localStorage.setItem(LS_SEEN, new Date().toISOString()); } catch {} setTimeout(renderTabs, 0); }
-  const tabs = [['anuncis', 'Anuncis'], ['materials', 'Materials'], ['enquestes', 'Enquestes']];
+  const tabs = [['anuncis', 'Anuncis'], ['materials', 'Materials'], ['documents', 'Documents'], ['enquestes', 'Enquestes']];
   const head = `<div class="page-head"><h1 class="h1">Tauler</h1></div>
-    <div class="subtabs" role="tablist" style="margin-bottom:10px">${tabs.map(([k, l]) => `<button class="subtab" role="tab" aria-selected="${ui.board === k}" data-act="board" data-k="${k}">${l}</button>`).join('')}</div>`;
+    <div class="subtabs" role="tablist" style="margin-bottom:10px;grid-template-columns:repeat(4,1fr)">${tabs.map(([k, l]) => `<button class="subtab" role="tab" aria-selected="${ui.board === k}" data-act="board" data-k="${k}" style="font-size:12.5px">${l}</button>`).join('')}</div>`;
   if (ui.board === 'materials') return head + boardMaterials();
+  if (ui.board === 'documents') return head + boardDocuments();
   if (ui.board === 'enquestes') return head + boardPolls();
   return head + boardAnnouncements();
 }
@@ -2120,7 +2247,52 @@ function boardMaterials() {
   const row = x => `<div class="mat"><span class="mat-k ${x.kind}">${MAT_KINDS[x.kind]?.slice(0, 4) || ''}</span>
       <span class="mat-i"><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.title)}</a><small>${[MAT_KINDS[x.kind], x.section ? SEC[x.section].name : 'Tot el cor', x.part ? `veu ${esc(x.part)}` : ''].filter(Boolean).join(' · ')}</small></span>
       ${canEdit() ? `<button class="icon-btn" data-act="mat-edit" data-pid="${prod.id}" data-id="${x.id}" aria-label="Edita">${ICON.more}</button>` : ''}</div>`;
-  return chips + tools + (sorted.length ? `<div class="panel">${sorted.map(row).join('')}</div>` : `<div class="empty"><p>Encara no hi ha material per a ${esc(prod.name)}.</p></div>`);
+  return chips + tools + (sorted.length ? `<div class="panel prod-tone tinted" style="--ph:${prodHue(prod)}">${sorted.map(row).join('')}</div>` : `<div class="empty"><p>Encara no hi ha material per a ${esc(prod.name)}.</p></div>`);
+}
+/* ---------- Documents del cor (per a tota la temporada, fora de les produccions) ---------- */
+const DOC_KINDS = { normativa: ['Normativa', 'Norm'], calendari: ['Calendari', 'Cal'], formulari: ['Formulari', 'Form'], altres: ['Altres', 'Doc'] };
+const choirDocs = () => [...(S.config.documents || [])]
+  .sort((a, b) => Object.keys(DOC_KINDS).indexOf(a.kind) - Object.keys(DOC_KINDS).indexOf(b.kind) || a.title.localeCompare(b.title, 'ca'));
+function boardDocuments() {
+  const docs = choirDocs();
+  const tools = canEdit()
+    ? `<div class="sec-h" style="margin-top:6px"><span class="muted" style="font-size:13px">Normativa, calendari de la temporada, formularis…</span><button class="btn btn-sm btn-primary" data-act="doc-new">+ Document</button></div>`
+    : '';
+  const row = d => `<div class="mat"><span class="mat-k doc-${esc(d.kind)}">${DOC_KINDS[d.kind]?.[1] || 'Doc'}</span>
+      <span class="mat-i"><a href="${esc(d.url)}" target="_blank" rel="noopener">${esc(d.title)}</a><small>${[DOC_KINDS[d.kind]?.[0], d.note].filter(Boolean).map(esc).join(' · ')}</small></span>
+      ${canEdit() ? `<button class="icon-btn" data-act="doc-edit" data-id="${esc(d.id)}" aria-label="Edita el document">${ICON.more}</button>` : ''}</div>`;
+  return tools + (docs.length
+    ? `<div class="panel">${docs.map(row).join('')}</div>`
+    : `<div class="empty"><p>Encara no hi ha cap document.${canEdit() ? ' Afegeix-hi la normativa del cor o el calendari de la temporada.' : ''}</p></div>`);
+}
+function sheetDocument(id) {
+  const ex = id ? (S.config.documents || []).find(d => d.id === id) : null;
+  const d = ex ? { ...ex } : { id: uid('d'), title: '', url: '', kind: 'normativa', note: '' };
+  openSheet({
+    title: ex ? 'Edita el document' : 'Nou document',
+    body: `<div class="kv">
+      <label class="field"><span>Títol</span><input class="inp" id="dc-title" maxlength="90" value="${esc(d.title)}" placeholder="p. ex. Normativa del Cor Jove 2026-27"></label>
+      <label class="field"><span>Enllaç</span><input class="inp" id="dc-url" type="url" value="${esc(d.url)}" placeholder="https://drive.google.com/…"><small>Si és de Google Drive, comparteix-lo com a «Qualsevol persona amb l’enllaç».</small></label>
+      <div class="field"><span>Tipus</span><div class="pickers" id="dc-kind">${Object.entries(DOC_KINDS).map(([k, [l]]) => `<button type="button" class="pick" data-k="${k}" aria-pressed="${d.kind === k}">${l}</button>`).join('')}</div></div>
+      <label class="field"><span>Nota (opcional)</span><input class="inp" id="dc-note" maxlength="80" value="${esc(d.note || '')}" placeholder="p. ex. Actualitzada al setembre"></label>
+    </div>`,
+    foot: `${ex ? '<button class="btn btn-danger-ghost" id="dc-del">Esborra</button>' : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="dc-save">Desa</button>`,
+    onMount: el => {
+      el.querySelectorAll('#dc-kind .pick').forEach(b => b.onclick = () => el.querySelectorAll('#dc-kind .pick').forEach(x => x.setAttribute('aria-pressed', x === b)));
+      el.querySelector('#dc-save').onclick = () => {
+        const title = el.querySelector('#dc-title').value.trim(), url = el.querySelector('#dc-url').value.trim();
+        if (!title) { toast('Posa un títol'); return; }
+        if (!/^https?:\/\//i.test(url)) { toast('L’enllaç ha de començar per https://'); return; }
+        const rec = { id: d.id, title, url, kind: el.querySelector('#dc-kind .pick[aria-pressed="true"]').dataset.k, note: el.querySelector('#dc-note').value.trim() };
+        saveConfig({ documents: [...(S.config.documents || []).filter(x => x.id !== rec.id), rec] });
+        closeSheet(); toast(ex ? 'Document desat' : 'Document afegit'); render();
+      };
+      el.querySelector('#dc-del')?.addEventListener('click', async () => {
+        if (!await confirmSheet('Esborrar el document?', esc(d.title), 'Esborra')) return;
+        saveConfig({ documents: (S.config.documents || []).filter(x => x.id !== d.id) }); render();
+      });
+    },
+  });
 }
 function pollExpected(p) {
   return membersOf(null).filter(m => !p.sections?.length || p.sections.includes(m.section));
@@ -2181,8 +2353,8 @@ function myAttendanceCard(me) {
   if (!x) return '';
   const { prod, r, rs, counted } = x;
   const dots = (r?.hist || []).map(({ s, mk }) => `<i class="${mk ? 's-' + mk.s : ''}" title="${ddmm(s.date)} · ${mk ? STATUS[mk.s].label : 'Sense llista'}"></i>`).join('');
-  return `<div class="section-title"><h2 class="h2">La meva assistència</h2><span class="eyebrow">${esc(prod.name)}</span></div>
-    <div class="panel my-att">
+  return `<div class="section-title prod-tone" style="--ph:${prodHue(prod)}"><h2 class="h2">La meva assistència</h2><span class="eyebrow"><i class="pdot"></i>${esc(prod.name)}</span></div>
+    <div class="panel my-att prod-tone tinted" style="--ph:${prodHue(prod)}">
       ${counted ? `<div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span class="big">${Math.round(rate(r) * 100)}<small>%</small></span>
         <span class="muted" style="font-size:13px">${r.P + r.R} de ${counted} assajos${r.R ? ` · ${r.R} retards` : ''}${r.FJ ? ` · ${r.FJ} just.` : ''}${r.FNJ ? ` · ${r.FNJ} no just.` : ''}</span></div>
         <div>${ruleSentence(rs)}</div>
@@ -2274,6 +2446,7 @@ function viewSinger() {
       <div class="setting"><div><div class="t">Calendari al mòbil</div><div class="s">Tots els assajos i concerts a la teva app de calendari, sempre al dia.</div></div>
         <button class="btn btn-sm" data-act="cal-subscribe">Afegeix-lo</button></div>
       ${pushRow()}
+      ${themeRow()}
     </div>`;
 }
 
@@ -2350,7 +2523,7 @@ function sheetSessionPicker() {
   for (const p of productionsSorted()) {
     const ss = list.filter(s => s.prodId === p.id);
     if (!ss.length) continue;
-    body += `<div class="eyebrow" style="margin:14px 0 4px">${esc(p.name)}</div><ul class="picklist">${ss.map(s => {
+    body += `<div class="eyebrow prod-tone" style="margin:14px 0 4px;--ph:${prodHue(p)}"><i class="pdot"></i>${esc(p.name)}</div><ul class="picklist">${ss.map(s => {
       const prs = SECTIONS.filter(x => convoked(s, x.id)).map(x => progress(s, x.id));
       const done = prs.reduce((a, b) => a + b.done, 0), tot = prs.reduce((a, b) => a + b.total, 0);
       return `<li><button data-act="pick-session" data-sid="${s.id}" aria-current="${s.id === ui.sessionId}" id="pick-${s.id}">
@@ -3523,6 +3696,8 @@ function sheetHelp() {
     <p><b>Qui ha entrat</b> diu qui ja ha obert l’app i qui no, amb un missatge a punt per enviar. <b>Comprova els correus</b> busca dominis mal escrits, cantaires sense accés i comptes sense fitxa.</p>
     <h3>La norma i el concert</h3>
     <p>A <b>Estadístiques › Risc</b> tens, de totes les produccions en curs, qui no arriba a la norma i a quants assajos ha de venir per arribar-hi. Des d’allà, <b>Llista de concert</b> diu qui hi pot cantar: toca una persona per afegir-la o treure-la a mà amb el motiu, i desa-la com a definitiva quan estigui decidida.</p>
+    <h3>Documents i aparença</h3>
+    <p>A <b>Tauler › Documents</b> hi ha els documents de tot el cor (normativa, calendari, formularis), fora de les produccions. Cadascú pot triar l’aparença clara, fosca o automàtica al final d’aquest manual.</p>
     <h3>Avisos al mòbil</h3>
     <p>Cadascú se’ls activa al seu aparell (al manual o a Ajustos). L’app avisa dels anuncis nous, de les convocatòries sense resposta, de les enquestes que es tanquen i, si es vol, de l’assaig de l’endemà. Mai de nit. Al iPhone cal afegir abans l’app a la pantalla d’inici.</p>
     <h3>Còpies de seguretat</h3>
@@ -3542,6 +3717,8 @@ function sheetHelp() {
     <p>Al teu espai veus el teu percentatge d’assistència i si compleixes la norma del ${minAttendance()}% per poder fer el concert.</p>
     <h3>Tauler</h3>
     <p>Anuncis del cor, partitures i àudios de la teva veu, i enquestes per dir quins dies pots venir.</p>
+    <h3>Documents</h3>
+    <p>A <b>Tauler › Documents</b> tens la normativa del cor, el calendari de la temporada i els formularis.</p>
     <h3>Avisos al mòbil</h3>
     <p>Activa’ls al teu espai i t’assabentaràs dels anuncis i de les convocatòries sense haver d’obrir l’app. Tries de què vols que t’avisi i mai no t’escriu de nit. Si tens iPhone, abans has d’afegir l’app a la pantalla d’inici.</p>
     <h3>Calendari</h3>
@@ -3549,7 +3726,7 @@ function sheetHelp() {
     <h3>Si fas de substitut</h3>
     <p>Et sortirà «Avui passes llista de…». Toca <b>Passa llista</b> i marca els teus companys de corda.</p>
   </div>`;
-  openSheet({ title: 'Com funciona', body, foot: pushSupported() ? '<span class="spacer"></span><button class="btn" data-act="push-setup">Avisos al mòbil</button>' : '' });
+  openSheet({ title: 'Com funciona', body: body + `<div class="panel" style="margin-top:18px">${themeRow()}</div>`, foot: pushSupported() ? '<span class="spacer"></span><button class="btn" data-act="push-setup">Avisos al mòbil</button>' : '' });
 }
 
 /* ---------- Board sheets ---------- */
@@ -3854,7 +4031,7 @@ async function wipeAll(demo) {
 /* ================= Events ================= */
 const SUB_OK = new Set(['mark', 'min', 'mark-rest']);
 const ADMIN_ONLY = new Set(['staff-new', 'staff-edit', 'staff-bulk', 'preview-on', 'who-in', 'mail-check', 'edit-link-off', 'link-regen', 'brand-color', 'logo-remove', 'wipe-all', 'links-wipe', 'share-app']);
-const EDIT_ONLY = new Set(['mark', 'min', 'mark-rest', 'session-new', 'sub-set', 'ann-new', 'ann-edit', 'mat-new', 'mat-edit', 'poll-new', 'poll-edit', 'poll-results', 'poll-remind', 'rsvp-remind', 'links-generate', 'links-copy', 'links-wipe', 'member-link', 'share-app', 'staff-bulk', 'preview-on', 'who-in', 'mail-check', 'concert-list', 'concert-toggle', 'session-edit', 'member-edit', 'member-bulk', 'prod-new', 'prod-edit',
+const EDIT_ONLY = new Set(['mark', 'min', 'mark-rest', 'session-new', 'sub-set', 'ann-new', 'ann-edit', 'mat-new', 'mat-edit', 'poll-new', 'poll-edit', 'poll-results', 'poll-remind', 'rsvp-remind', 'doc-new', 'doc-edit', 'links-generate', 'links-copy', 'links-wipe', 'member-link', 'share-app', 'staff-bulk', 'preview-on', 'who-in', 'mail-check', 'concert-list', 'concert-toggle', 'session-edit', 'member-edit', 'member-bulk', 'prod-new', 'prod-edit',
   'wipe-demo', 'wipe-all', 'load-demo', 'export-json', 'abs-accept', 'abs-reject', 'abs-delete', 'link-regen', 'manage']);
 const actions = {
   'tab': el => { ui.tab = el.dataset.tab; ui.rollSec = null; ui._calScrolled = false; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
@@ -3867,6 +4044,9 @@ const actions = {
   'staff-bulk': () => sheetStaffBulk(),
   'preview-on': () => sheetPreview(),
   'push-setup': () => sheetPush(),
+  'doc-new': () => sheetDocument(null),
+  'doc-edit': el => sheetDocument(el.dataset.id),
+  'theme': el => setTheme(el.dataset.k),
   'concert-list': el => { closeSheet(); sheetConcertList(el.dataset.pid); },
   'concert-toggle': el => sheetConcertDecide(el.dataset.pid, el.dataset.mid),
   'risk-copy': () => copyText(window.__riskText ? window.__riskText() : '', 'Resum copiat'),
@@ -4037,10 +4217,11 @@ document.addEventListener('input', e => {
   } else if (kind === 'cfg-min') {
     clearTimeout(bindTimer);
     bindTimer = setTimeout(() => { const v = parseInt(el.value, 10); if (v > 0 && v <= 100) saveConfig({ minAttendance: v }); }, 500);
-  } else if (kind === 'cfg-name' || kind === 'cfg-alert') {
+  } else if (kind === 'cfg-name' || kind === 'cfg-alert' || kind === 'cfg-short') {
     clearTimeout(bindTimer);
     bindTimer = setTimeout(() => {
       if (kind === 'cfg-name') { saveConfig({ name: el.value.trim() }); $('#choir-name').textContent = S.config.name; }
+      else if (kind === 'cfg-short') { saveConfig({ shortName: el.value.trim().slice(0, 16) }); }
       else { const v = parseInt(el.value, 10); if (v > 0) saveConfig({ alertFNJ: v }); }
     }, 500);
   }
@@ -4068,6 +4249,10 @@ function connect() {
 }
 /** Once the choir data is in: welcome, «last seen» and the state of this device's notifications. */
 function afterReady() {
+  if (S.config.name) {
+    MARCA = { ...(MARCA || {}), name: S.config.name, short: S.config.shortName || MARCA?.short || '' };
+    try { localStorage.setItem(LS_BRAND, JSON.stringify(MARCA)); } catch {}
+  }
   touchLastSeen();
   checkPush();
   setTimeout(maybeWelcome, 500);
@@ -4099,6 +4284,7 @@ async function resolveStaff(user) {
 }
 async function init() {
   loadUI();
+  loadMarca();
   const cfg = window.COR_FIREBASE;
   if (!window.firebase || !cfg || !cfg.apiKey || String(cfg.apiKey).startsWith('POSA')) {
     S.mode = 'setup'; render(); return;
