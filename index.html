@@ -1804,82 +1804,81 @@ function concertRows(pid) {
     const forced = dec.exclude && dec.exclude[m.id] !== undefined ? 'exclude'
       : dec.include && dec.include[m.id] !== undefined ? 'include' : null;
     const why = forced === 'include' ? dec.include[m.id] : forced === 'exclude' ? dec.exclude[m.id] : '';
-    rows.push({ m, base, note, forced, why, inList: forced ? forced === 'include' : (base === 'apte' || base === 'sense') });
+    // Apte · pendent (per sota però encara hi pot arribar) · fora.
+    const state = forced ? (forced === 'include' ? 'apte' : 'fora')
+      : base === 'apte' || base === 'sense' ? 'apte'
+      : base === 'pendent' ? 'pendent' : 'fora';
+    rows.push({ m, base, note, forced, why, state, inList: state === 'apte' });
   }
   return { prod, dates, rows };
 }
-function promptSheet(title, label, value = '', ok = 'Desa') {
-  return new Promise(resolve => {
-    let done = false;
-    const finish = v => { if (done) return; done = true; closeSheet(); resolve(v); };
-    openSheet({
-      title,
-      body: `<label class="field"><span>${label}</span><input class="inp" id="pr-v" type="text" maxlength="90" value="${esc(value)}"></label>`,
-      foot: `<span class="spacer"></span><button class="btn" id="pr-no">Cancel·la</button><button class="btn btn-primary" id="pr-ok">${esc(ok)}</button>`,
-      onMount: el => {
-        const inp = el.querySelector('#pr-v');
-        el.querySelector('#pr-ok').onclick = () => finish(inp.value.trim());
-        el.querySelector('#pr-no').onclick = () => finish(null);
-        inp.onkeydown = ev => { if (ev.key === 'Enter') { ev.preventDefault(); finish(inp.value.trim()); } };
-        const prev = sheetClose;
-        sheetClose = () => { prev(); if (!done) { done = true; resolve(null); } };
-      },
-    });
-  });
-}
-async function toggleConcert(pid, mid) {
+const STATE_LABEL = { apte: 'Hi pot cantar', pendent: 'Encara hi és a temps', fora: 'Fora de la llista' };
+function sheetConcertDecide(pid, mid) {
   const { prod, rows } = concertRows(pid);
   const r = rows.find(z => z.m.id === mid);
   if (!r) return;
-  const dec = { include: { ...(prod.concert?.include || {}) }, exclude: { ...(prod.concert?.exclude || {}) }, ...(prod.concert?.at ? { at: prod.concert.at, by: prod.concert.by } : {}) };
-  if (r.forced) {
+  const save = (kind, why) => {
+    const dec = { include: { ...(prod.concert?.include || {}) }, exclude: { ...(prod.concert?.exclude || {}) },
+      ...(prod.concert?.at ? { at: prod.concert.at, by: prod.concert.by } : {}) };
     delete dec.include[mid]; delete dec.exclude[mid];
-  } else if (r.inList) {
-    const why = await promptSheet(`Treure ${r.m.name.split(',').pop().trim()} del concert`, 'Motiu', '', 'Treu-la/lo');
-    if (why === null) return;
-    dec.exclude[mid] = why; delete dec.include[mid];
-  } else {
-    const why = await promptSheet(`Afegir ${r.m.name.split(',').pop().trim()} al concert`, 'Motiu', '', 'Afegeix');
-    if (why === null) return;
-    dec.include[mid] = why; delete dec.exclude[mid];
-  }
-  saveProduction({ ...prod, concert: dec });
-  sheetConcertList(pid);
+    if (kind === 'include') dec.include[mid] = why;
+    if (kind === 'exclude') dec.exclude[mid] = why;
+    saveProduction({ ...prod, concert: dec });
+    closeSheet(); sheetConcertList(pid);
+  };
+  openSheet({
+    title: r.m.name,
+    body: `<p style="margin-top:0"><b>${STATE_LABEL[r.state]}</b><br><span class="muted" style="font-size:13.5px">${esc(r.note)}</span></p>
+      ${r.forced ? `<p class="muted" style="font-size:13px">Ara està decidit a mà${r.why ? `: ${esc(r.why)}` : ''}.</p>` : ''}
+      <label class="field"><span>Motiu (surt a la llista)</span><input class="inp" id="cd-why" type="text" maxlength="90" value="${esc(r.forced ? r.why : '')}" placeholder="p. ex. es va incorporar tard"></label>`,
+    foot: `${r.forced ? '<button class="btn" id="cd-auto">Torna a l’automàtic</button>' : ''}<span class="spacer"></span>
+      <button class="btn btn-danger-ghost" id="cd-no">No hi canta</button><button class="btn btn-primary" id="cd-yes">Hi canta</button>`,
+    onMount: el => {
+      const why = () => el.querySelector('#cd-why').value.trim();
+      el.querySelector('#cd-yes').onclick = () => save('include', why());
+      el.querySelector('#cd-no').onclick = () => save('exclude', why());
+      el.querySelector('#cd-auto')?.addEventListener('click', () => save(null, ''));
+    },
+  });
 }
 function sheetConcertList(pid) {
   const { prod, dates, rows } = concertRows(pid);
   if (!prod) return;
-  const inList = rows.filter(r => r.inList);
+  const inList = rows.filter(r => r.state === 'apte');
+  const waiting = rows.filter(r => r.state === 'pendent');
+  const outList = rows.filter(r => r.state === 'fora');
   const stamp = prod.concert?.at;
   const pill = r => r.forced
     ? `<span class="rule ${r.forced === 'include' ? 'ok' : 'out'}">${r.forced === 'include' ? 'Afegit a mà' : 'Tret a mà'}</span>`
     : r.base === 'apte' ? '<span class="rule ok">Apte</span>'
-    : r.base === 'pendent' ? '<span class="rule risk">En risc</span>'
+    : r.base === 'pendent' ? '<span class="rule risk">Hi és a temps</span>'
     : r.base === 'no' ? `<span class="rule out">Sota el ${minAttendance()}%</span>`
     : r.base === 'baixa' ? '<span class="rule out">De baixa</span>' : '<span class="rule risk">Sense dades</span>';
   const block = x => {
     const ms = rows.filter(r => r.m.section === x.id);
     if (!ms.length) return '';
-    const n = ms.filter(r => r.inList).length;
+    const n = ms.filter(r => r.state === 'apte').length;
     return `<div class="section-title" style="margin-top:14px"><h2 class="h2">${x.name}</h2><span class="eyebrow">${n} de ${ms.length}</span></div>
-      <div class="panel">${ms.map(r => `<button class="elig ${r.inList ? '' : 'no'}" ${canEdit() ? `data-act="concert-toggle" data-pid="${pid}" data-mid="${r.m.id}"` : 'disabled'}>
+      <div class="panel">${ms.map(r => `<button class="elig ${r.state === 'fora' ? 'no' : ''}" ${canEdit() ? `data-act="concert-toggle" data-pid="${pid}" data-mid="${r.m.id}"` : 'disabled'}>
         <span><span class="en">${esc(r.m.name)}</span>${r.m.part ? ` <span class="part">${esc(partTag(r.m))}</span>` : ''}<span class="em">${esc(r.why || r.note)}</span></span>${pill(r)}</button>`).join('')}</div>`;
   };
   const text = [`${prod.name} — qui pot fer el concert${dates.length ? ` (${dates.map(d => shortDate(d)).join(', ')})` : ''}`,
     `Norma: ${minAttendance()}% dels assajos. ${inList.length} de ${rows.length} cantaires.`, '']
     .concat(SECTIONS.flatMap(x => {
-      const ms = rows.filter(r => r.m.section === x.id && r.inList);
+      const ms = rows.filter(r => r.m.section === x.id && r.state === 'apte');
       return ms.length ? [`${x.name} (${ms.length})`, ms.map(r => `  ${r.m.name}`).join('\n'), ''] : [];
     }))
-    .concat(rows.some(r => !r.inList) ? ['No hi canten:', rows.filter(r => !r.inList).map(r => `  ${r.m.name} (${SEC[r.m.section].name}) — ${r.why || r.note}`).join('\n')] : [])
+    .concat(waiting.length ? ['Encara hi són a temps:', waiting.map(r => `  ${r.m.name} (${SEC[r.m.section].name}) — ${r.note}`).join('\n'), ''] : [])
+    .concat(outList.length ? ['No hi canten:', outList.map(r => `  ${r.m.name} (${SEC[r.m.section].name}) — ${r.why || r.note}`).join('\n')] : [])
     .join('\n');
   openSheet({
     title: 'Llista de concert',
     wide: true,
     body: `<div class="section-title" style="margin-top:0"><h2 class="h2">${esc(prod.name)}</h2><span class="eyebrow">${dates.length ? dates.map(d => shortDate(d)).join(' · ') : 'sense concert al calendari'}</span></div>
-      <div class="kpis" style="grid-template-columns:repeat(2,1fr)">
+      <div class="kpis" style="grid-template-columns:repeat(3,1fr)">
         <div class="kpi"><div class="kpi-v">${inList.length}</div><div class="kpi-l">Hi poden cantar</div></div>
-        <div class="kpi ${rows.length - inList.length ? 'alert' : ''}"><div class="kpi-v">${rows.length - inList.length}</div><div class="kpi-l">Fora de la llista</div></div>
+        <div class="kpi"><div class="kpi-v">${waiting.length}</div><div class="kpi-l">Hi són a temps</div></div>
+        <div class="kpi ${outList.length ? 'alert' : ''}"><div class="kpi-v">${outList.length}</div><div class="kpi-l">Fora</div></div>
       </div>
       <p class="muted" style="font-size:12.5px;margin:10px 0 0">Feta amb la norma del ${minAttendance()}% sobre els assajos de la producció.${canEdit() ? ' Toca una persona per afegir-la o treure-la a mà, amb el motiu.' : ''}</p>
       ${stamp ? `<p class="muted" style="font-size:12.5px;margin:6px 0 0">Desada com a definitiva el ${(d => `${pad(d.getDate())}/${pad(d.getMonth() + 1)} a les ${pad(d.getHours())}:${pad(d.getMinutes())}`)(new Date(stamp))}${prod.concert.by ? ` per ${esc(prod.concert.by)}` : ''}.</p>` : ''}
@@ -3025,7 +3024,8 @@ const PUSH_KINDS = {
 };
 const DEFAULT_PREFS = { anuncis: true, convocatories: true, enquestes: true, assajos: false };
 const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && !!window.COR_PUSH_KEY;
-const isiOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isiOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent)
+  || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1 && !/Android|Windows|Linux|CrOS/.test(navigator.userAgent));
 const installed = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 const deviceName = () => isiOS() ? (/iPad/.test(navigator.userAgent) ? 'iPad' : 'iPhone') : /Android/.test(navigator.userAgent) ? 'Android' : 'Ordinador';
 const b64ToU8 = str => {
@@ -3126,7 +3126,7 @@ function sheetPush() {
       <p class="muted" style="font-size:12.5px">Els avisos surten d’aquest aparell. Si entres des d’un altre, actíva’ls també allà.</p>`,
     foot: `${S.pushOn ? '<button class="btn btn-danger-ghost" id="pu-off">Desactiva’ls</button>' : ''}<span class="spacer"></span>
       <button class="btn" data-act="sheet-close">Cancel·la</button>
-      <button class="btn btn-primary" id="pu-on" ${needsInstall || blocked ? 'disabled' : ''}>${S.pushOn ? 'Desa' : 'Activa’ls'}</button>`,
+      <button class="btn btn-primary" id="pu-on" ${blocked ? 'disabled' : ''}>${S.pushOn ? 'Desa' : 'Activa’ls'}</button>`,
     onMount: el => {
       el.querySelector('#pu-on').onclick = async () => {
         const chosen = Object.fromEntries(Object.keys(PUSH_KINDS).map(k => [k, el.querySelector(`#pf-${k}`).checked]));
@@ -3861,7 +3861,7 @@ const actions = {
   'preview-on': () => sheetPreview(),
   'push-setup': () => sheetPush(),
   'concert-list': el => { closeSheet(); sheetConcertList(el.dataset.pid); },
-  'concert-toggle': el => toggleConcert(el.dataset.pid, el.dataset.mid),
+  'concert-toggle': el => sheetConcertDecide(el.dataset.pid, el.dataset.mid),
   'risk-copy': () => copyText(window.__riskText ? window.__riskText() : '', 'Resum copiat'),
   'who-in': () => sheetWhoIn(),
   'mail-check': () => sheetMailCheck(),
