@@ -16,9 +16,11 @@ service cloud.firestore {
     // La fitxa pot portar memberId: llavors la persona té el seu espai personal, sigui quin sigui el rol.
     // Cada persona té un índex de les seves agrupacions a staffIndex/<correu>/agrupacions/<agrupació>.
     //
-    // ---- Plataforma ----
-    // plataforma/equip diu qui porta la plataforma (veu el directori i pot suspendre agrupacions,
-    // però no les dades de dins). plataforma/config diu si qualsevol pot crear agrupacions.
+    // ---- Plataforma i Usuaris Pro ----
+    // plataforma/equip diu qui porta la plataforma: veu el directori, pot suspendre agrupacions (però no
+    // en veu les dades de dins) i decideix qui és Usuari Pro. plataforma/pro és la llista d'Usuaris Pro.
+    // Només un Usuari Pro (l'equip de la plataforma ho és sempre) pot crear agrupacions i, de les que
+    // administra, canviar-ne la identitat (nom, tipus, seccions, imatge) o esborrar-les.
     // El compte de servei (avisos, calendari, còpies) llegeix totes les agrupacions i no escriu res.
     //
     // ---- Lectors antics de les tasques automàtiques ----
@@ -36,6 +38,13 @@ service cloud.firestore {
       return verified()
         && exists(/databases/$(database)/documents/plataforma/equip)
         && email() in get(/databases/$(database)/documents/plataforma/equip).data.emails;
+    }
+
+    function isPro() {
+      return isPlatform()
+        || (verified()
+            && exists(/databases/$(database)/documents/plataforma/pro)
+            && email() in get(/databases/$(database)/documents/plataforma/pro).data.emails);
     }
 
     function dirDoc(c) { return /databases/$(database)/documents/agrupacions/$(c); }
@@ -63,6 +72,10 @@ service cloud.firestore {
     function myMember(c) { return staffData(c).get('memberId', '-'); }
     // Té espai personal: pot avisar, confirmar, votar i fer de substitut.
     function hasSpace(c) { return isStaff(c); }
+    // Pot canviar la identitat de l'agrupació o esborrar-la: n'és administrador i és Usuari Pro.
+    function canManage(c) { return isAdmin(c) && isPro(); }
+    // Camps de config/main que fan d'identitat de l'agrupació.
+    function identityKeys() { return ['name', 'shortName', 'kind', 'sections', 'brand', 'labels', 'deleted', 'deletedAt']; }
     function mine(c, mid) { return mid == myMember(c) && mid != '-'; }
 
     // Es crea una agrupació nova en aquest mateix lot d'escriptures: abans no hi havia res i després sí.
@@ -70,10 +83,6 @@ service cloud.firestore {
       return !exists(dirDoc(c)) && existsAfter(dirDoc(c))
         && !exists(/databases/$(database)/documents/cors/$(c)/config/main)
         && existsAfter(/databases/$(database)/documents/cors/$(c)/config/main);
-    }
-    function creationOpen() {
-      return !exists(/databases/$(database)/documents/plataforma/config)
-        || get(/databases/$(database)/documents/plataforma/config).data.get('openCreation', true) == true;
     }
 
     match /plataforma/equip {
@@ -88,6 +97,13 @@ service cloud.firestore {
         && request.resource.data.emails is list
         && email() in request.resource.data.emails;
     }
+    match /plataforma/pro {
+      // Cadascú només pot saber si ell mateix hi és; la llista sencera, només la plataforma.
+      allow get: if isPlatform() || (verified() && (resource == null || email() in resource.data.emails));
+      allow create, update: if isPlatform()
+        && request.resource.data.keys().hasOnly(['emails', 'at'])
+        && request.resource.data.emails is list;
+    }
     match /plataforma/config {
       allow get: if signedIn();
       allow create, update: if isPlatform();
@@ -96,22 +112,22 @@ service cloud.firestore {
     match /agrupacions/{c} {
       allow get: if isPlatform() || isService() || isMember(c);
       allow list: if isPlatform() || isService();
-      // Nova agrupació: qui la crea en queda d'administrador, tot en un sol lot.
+      // Nova agrupació (només Usuaris Pro): qui la crea en queda d'administrador, tot en un sol lot.
       allow create: if c.size() >= 20 && c.size() <= 40
         && request.resource.data.keys().hasOnly(['name', 'kind', 'status', 'createdAt', 'createdBy'])
         && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 80
         && request.resource.data.status == 'active'
-        && ((verified() && (creationOpen() || isPlatform())
+        && ((verified() && isPro()
               && request.resource.data.createdBy == email()
               && creating(c)
               && rolesOf(getAfter(/databases/$(database)/documents/cors/$(c)/staff/$(email())).data).hasAny(['admin']))
             // Registrar al directori una agrupació que ja existia d'abans.
             || (isAdmin(c) && exists(/databases/$(database)/documents/cors/$(c)/config/main)));
       allow update: if isPlatform()
-        || (isAdmin(c) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'kind', 'stats'])
+        || (canManage(c) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'kind', 'stats'])
             && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 80)
         || (canEdit(c) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stats']))
-        || (isAdmin(c) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'deletedAt'])
+        || (canManage(c) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'deletedAt'])
             && request.resource.data.status == 'deleted');
       allow delete: if isPlatform();
     }
@@ -158,6 +174,9 @@ service cloud.firestore {
       // tornar a «crear» una agrupació que ja té dades i fer-se'n administrador.
       match /config/main {
         allow create: if verified() && creating(c);
+        // La resta de la configuració la canvia qui pot editar; la identitat, només un Usuari Pro que l'administri.
+        allow update: if canEdit(c)
+          && (canManage(c) || !request.resource.data.diff(resource.data).affectedKeys().hasAny(identityKeys()));
       }
       match /{col}/{doc} {
         allow read: if (col in ['members', 'productions', 'attendance', 'config', 'staff', 'subs', 'rsvp', 'absences',
@@ -169,7 +188,8 @@ service cloud.firestore {
                     || (col in ['members', 'productions', 'attendance', 'config', 'staff', 'subs', 'rsvp', 'absences',
                                 'announcements', 'polls', 'pollVotes', 'push'] && (hasRole(c, ['backup']) || isService()));
         allow create, update: if col in ['members', 'productions', 'attendance', 'config', 'subs', 'rsvp',
-                                         'announcements', 'polls', 'pollVotes', 'memberMarks'] && canEdit(c);
+                                         'announcements', 'polls', 'pollVotes', 'memberMarks'] && canEdit(c)
+          && !(col == 'config' && doc == 'main');
         allow delete: if col in ['members', 'productions', 'attendance', 'config', 'subs', 'rsvp',
                                  'announcements', 'polls', 'pollVotes', 'memberMarks'] && canEdit(c)
           && !(col == 'config' && doc == 'main');

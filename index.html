@@ -1040,7 +1040,7 @@ const S = {
   groups: [],             // [{ id, name, kind, status }] the groups this account belongs to
   group: null,            // directory record of the active group: { id, name, kind, status, fileQuotaMB, stats }
   platform: null,         // true when this account runs the platform (plataforma/equip)
-  openCreation: true,     // plataforma/config: anyone can create a group
+  pro: false,             // Usuari Pro (plataforma/pro, or the platform team): may create groups and change or delete the ones they run
 };
 const ui = {
   tab: 'llista', section: '', sessionId: null, rollSec: null,
@@ -1090,6 +1090,8 @@ const rolesHint = roles => !roles.length ? 'Tria almenys un rol.' : [
 let PREVIEW = null;
 const canEdit = () => S.role === 'edit' && !PREVIEW;
 const isAdmin = () => S.role === 'edit' && !PREVIEW && hasRole(S.me, 'admin');
+/** Name, type, sections and look of the group, and deleting it: only a Pro user who runs it. */
+const canManageGroup = () => isAdmin() && S.pro;
 /** The member this account really is (from the account record or a personal link), if any. */
 const myId = () => { const id = PREVIEW ? PREVIEW.memberId : S.memberId; return id && S.members.has(id) ? id : null; };
 /** Narrow personal link: only «El meu espai», no access to the rest of the app. */
@@ -1674,7 +1676,6 @@ function render() {
         <p class="muted" style="font-size:13px;margin:0">Músics, cantaires, direcció i equip entreu pel mateix lloc.</p>
       </div>
       <p class="entry-foot">Si l’has obert des del WhatsApp i no et deixa entrar, obre l’enllaç amb el <b>Safari</b> o el <b>Chrome</b> (menú «···» › Obre al navegador).</p>
-      ${MARCA ? '' : newGroup('Portes un cor, una orquestra o una altra agrupació?')}
     </section>`;
     return;
   }
@@ -1684,7 +1685,7 @@ function render() {
         <p><b>${esc(S.email || '')}</b> no és a la llista de cap agrupació. Si en formes part, demana a l’administració que t’hi afegeixi amb aquest correu, o entra amb un altre compte.</p>
         <button class="btn btn-ghost" data-act="sign-out" style="justify-self:center">Prova amb un altre compte</button>
       </div>
-      ${S.openCreation ? newGroup('Vols fer servir l’app amb la teva agrupació?') : ''}
+      ${S.pro ? newGroup('Com a Usuari Pro, pots crear una agrupació nova.') : ''}
     </section>`;
     return;
   }
@@ -2502,9 +2503,9 @@ function onboardingSteps() {
     { done: S.members.size > 0, t: `Afegeix els ${V.members}`, s: `A Gestió › ${V.Members}, per ${V.sections}. Pots enganxar-ne els noms d’un full de càlcul.`, act: 'manage', k: 'cantaires', b: `Ves-hi` },
     { done: S.productions.size > 0, t: 'Crea la primera producció', s: 'Un concert o un projecte, amb totes les seves sessions d’assaig.', act: 'prod-new', b: 'Nova producció' },
     { done: S.staff.size > 1, t: 'Dona accés a l’equip', s: `Cada persona entra amb el seu correu. Pots enganxar una llista de correus de cop.`, act: 'staff-new', b: '+ Persona' },
-    { done: !!(S.config.brand && (S.config.brand.logo || S.config.brand.accent)), t: 'Posa-hi el logotip i el color', s: 'Surten a l’entrada de l’app i a la icona del mòbil.', act: 'manage', k: 'config', b: 'Identitat' },
+    { skip: !canManageGroup(), done: !!(S.config.brand && (S.config.brand.logo || S.config.brand.accent)), t: 'Posa-hi el logotip i el color', s: 'Surten a l’entrada de l’app i a la icona del mòbil.', act: 'manage', k: 'config', b: 'Identitat' },
     { done: !!S.config.shared, t: 'Comparteix l’enllaç de l’app', s: 'Un sol enllaç per a tothom: cadascú hi entra amb el seu correu.', act: 'share-app', b: 'Enllaç' },
-  ];
+  ].filter(x => !x.skip);
 }
 function onboardingPanel() {
   // Només per a les agrupacions creades des de l'app (les d'abans ja estaven en marxa).
@@ -2637,7 +2638,7 @@ function manageConfig() {
       : '<p style="margin:0;padding:14px;font-size:13.5px;border-top:1px solid var(--line)">Encara no hi ha ningú. Afegeix els correus un per un o enganxa’n una llista.</p>'}
     <p class="muted" style="margin:0;padding:10px 14px 12px;font-size:12px;border-top:1px solid var(--line)">Si algú marxa, treu-lo d’aquí i perd l’accés a l’instant. Treure l’accés no esborra la seva fitxa ni les llistes.</p>
   </div>
-  <div class="sec-h"><h2 class="h2">Agrupació</h2></div>
+  ${canManageGroup() ? `<div class="sec-h"><h2 class="h2">Agrupació</h2></div>
   <div class="panel">
     <div class="setting" style="display:grid;grid-template-columns:1fr;gap:12px">
       <label class="field"><span>Nom de l’agrupació</span><input class="inp" id="cfg-name" type="text" maxlength="60" value="${esc(S.config.name || '')}" data-bind="cfg-name" placeholder="p. ex. ${esc(NAME_EXAMPLES[kindOf()])}"></label>
@@ -2666,7 +2667,9 @@ function manageConfig() {
     <label class="field"><span>Nom curt</span><input class="inp" id="cfg-short" type="text" maxlength="16" value="${esc(S.config.shortName || '')}" data-bind="cfg-short" placeholder="${esc(MARCA?.short || `p. ex. ${initials(S.config.name || NAME_EXAMPLES[kindOf()])}`)}">
       <small>És el nom que surt sota la icona quan algú afegeix l’app a la pantalla d’inici.</small></label>
     <p class="muted" style="margin:0;font-size:12.5px">El logotip, el nom i el color es fan servir a la pantalla d’entrada i a la icona del mòbil. Si els canvies, s’hi actualitzen sols en unes hores.</p>
-  </div>` : '';
+  </div>` : `<div class="sec-h"><h2 class="h2">Agrupació</h2></div>
+  <div class="panel"><div class="setting"><div><div class="t">${esc(S.config.name || '')}</div>
+    <div class="s">${esc(KINDS[kindOf()].label)} · ${SECTIONS.map(x => esc(x.name)).join(', ')}. El nom, el tipus, les ${esc(V.sections)} i la imatge de l’agrupació només els pot canviar un <b>Usuari Pro</b> que l’administri.</div></div></div></div>`}` : '';
   return `${onboardingPanel()}<div class="panel" style="margin-top:16px">
     <div class="setting"><div><div class="t">Sessió</div><div class="s">${who}</div></div>
       <span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" data-act="help">Manual</button>${myId() ? '<button class="btn btn-sm" data-act="my-att">La meva assistència</button>' : ''}${S.me ? '<button class="btn btn-sm" data-act="sign-out">Tanca la sessió</button>' : '<button class="btn btn-sm btn-primary" data-act="google-in">Entra amb Google</button>'}</span></div>
@@ -2710,14 +2713,15 @@ function manageConfig() {
     ${isAdmin() ? `<div class="setting"><div><div class="t">Restaura una còpia</div><div class="s">Substitueix totes les dades actuals per les del fitxer.</div></div>
       <label class="btn btn-sm" for="import-file">Importa…</label><input id="import-file" type="file" accept="application/json,.json" class="sr" data-bind="import"></div>
     <div class="setting"><div><div class="t">Esborra les dades</div><div class="s">Elimina ${esc(V.members)}, produccions, llistes i avisos, però manté l’agrupació i les persones amb accés. No es pot desfer.</div></div><button class="btn btn-sm btn-danger-ghost" data-act="wipe-all">Esborra</button></div>
-    ${GID !== FOUNDER && S.me ? `<div class="setting"><div><div class="t">Esborra l’agrupació</div><div class="s">Ho elimina tot, persones incloses, i l’agrupació desapareix. No es pot desfer.</div></div><button class="btn btn-sm btn-danger-ghost" data-act="group-delete">Esborra-la</button></div>` : ''}` : ''}
+    ${GID !== FOUNDER && canManageGroup() ? `<div class="setting"><div><div class="t">Esborra l’agrupació</div><div class="s">Ho elimina tot, persones incloses, i l’agrupació desapareix. No es pot desfer.</div></div><button class="btn btn-sm btn-danger-ghost" data-act="group-delete">Esborra-la</button></div>` : ''}` : ''}
   </div>`;
 }
 /** «Les teves agrupacions» row: switch, or create a new one. */
 function groupsRow() {
   if (!S.me || PREVIEW) return '';
   const n = S.groups.length;
-  return `<div class="setting"><div><div class="t">${n > 1 ? `Formes part de ${n} agrupacions` : 'Agrupacions'}</div><div class="s">${n > 1 ? 'Canvia d’agrupació o crea’n una de nova.' : 'Si portes una altra agrupació, pots crear-la i fer-la servir amb el mateix compte.'}</div></div>
+  if (n < 2 && !S.pro && !S.platform && !S.platformFree) return '';
+  return `<div class="setting"><div><div class="t">${n > 1 ? `Formes part de ${n} agrupacions` : 'Agrupacions'}${S.pro ? ' <span class="role-tag">Pro</span>' : ''}</div><div class="s">${n > 1 ? (S.pro ? 'Canvia d’agrupació o crea’n una de nova.' : 'Canvia d’agrupació.') : 'Com a Usuari Pro, pots crear una altra agrupació i fer-la servir amb el mateix compte.'}</div></div>
     <button class="btn btn-sm" data-act="groups">${n > 1 ? 'Canvia' : 'Les teves agrupacions'}</button></div>`;
 }
 
@@ -4363,9 +4367,9 @@ function sheetHelp() {
     <h3>${w.Members} i persones</h3>
     <p>A <b>Gestió › ${w.Members}</b>: ${w.section}, ${w.part}, baixes temporals amb dates i telèfon. L’accés a l’app es dona amb el correu, a <b>Ajustos › Persones</b> (<b>+ Persona</b> o <b>Enganxa una llista</b>). Amb <b>Mira-ho com un ${w.member}</b> comproves què veu cadascú; <b>Qui ha entrat</b> i <b>Comprova els correus</b> t’ajuden a fer que tothom hi entri.</p>
     <h3>Tipus d’agrupació i ${w.sections}</h3>
-    <p>A <b>Ajustos › Agrupació</b> tries si és un cor, una orquestra, una banda, una cobla, un grup de cambra o una altra agrupació: canvien les paraules de l’app i els tipus de sessió. A <b>Ajustos › ${w.Sections}</b> en canvies els noms i les abreviatures, n’afegeixes o en treus.</p>
+    <p>A <b>Ajustos › Agrupació</b> tries si és un cor, una orquestra, una banda, una cobla, un grup de cambra o una altra agrupació: canvien les paraules de l’app i els tipus de sessió. A <b>Ajustos › ${w.Sections}</b> en canvies els noms i les abreviatures, n’afegeixes o en treus. El nom, el tipus, les ${w.sections} i la imatge només els pot canviar un <b>Usuari Pro</b> que administri l’agrupació.</p>
     <h3>Més d’una agrupació</h3>
-    <p>Amb el mateix compte pots ser a diverses agrupacions: toca el nom a dalt de tot, o <b>Ajustos › Agrupacions</b>, per canviar-ne. Des d’allà també pots <b>crear una agrupació nova</b>, de la qual seràs l’administrador/a. Cada agrupació té les seves dades, i ningú d’una altra no les pot veure.</p>
+    <p>Amb el mateix compte pots ser a diverses agrupacions: toca el nom a dalt de tot, o <b>Ajustos › Agrupacions</b>, per canviar-ne. Els <b>Usuaris Pro</b> també hi poden <b>crear una agrupació nova</b>, de la qual en són l’administrador/a. Cada agrupació té les seves dades, i ningú d’una altra no les pot veure.</p>
     <h3>Avisos al mòbil</h3>
     <p>Cadascú se’ls activa al seu aparell. L’app avisa dels anuncis nous, del material nou, de les convocatòries sense resposta, de les enquestes que es tanquen i, si es vol, de l’assaig de l’endemà. Als ${w.leaders}, també de les llistes a mitges i de qui baixa de la norma. Mai de nit. Al iPhone cal afegir abans l’app a la pantalla d’inici.</p>
     <h3>Còpies de seguretat</h3>
@@ -4731,7 +4735,7 @@ function viewPick(hero) {
       <h2 class="h2">Tria l’agrupació</h2>
       <p>${first ? `Hola, ${esc(first)}. ` : ''}Formes part de més d’una agrupació. Després podràs canviar-ne tocant el nom a dalt de tot.</p>
       <div id="gr-list">${groupList()}</div>
-      ${S.openCreation || S.platform ? '<button class="btn btn-ghost" data-act="group-create" style="justify-self:center">+ Crea una agrupació nova</button>' : ''}
+      ${S.pro ? '<button class="btn btn-ghost" data-act="group-create" style="justify-self:center">+ Crea una agrupació nova</button>' : ''}
     </div>
     <button class="btn btn-sm btn-ghost" data-act="sign-out">Tanca la sessió</button>
   </section>`;
@@ -4784,11 +4788,12 @@ async function refreshGroupInfo() {
   }));
   saveGroupsCache();
 }
-/** Whether anyone may create groups, and whether this account runs the platform. */
+/** Whether this account runs the platform, and whether it is a Pro user (the platform team always is). */
 async function loadPlatformState() {
-  try { const c = await fs.doc('plataforma/config').get(); S.openCreation = !c.exists || c.data().openCreation !== false; } catch {}
   try { const p = await fs.doc('plataforma/equip').get(); S.platform = p.exists; S.platformFree = !p.exists; }
   catch { S.platform = false; S.platformFree = false; }
+  try { const q = await fs.doc('plataforma/pro').get(); S.pro = S.platform || (q.exists && (q.data().emails || []).includes(S.email)); }
+  catch { S.pro = S.platform; }
   if (S.mode !== 'loading') scheduleRender();
 }
 function switchGroup(gid) {
@@ -4798,14 +4803,14 @@ function switchGroup(gid) {
   location.href = `${location.pathname}?a=${encodeURIComponent(gid)}`;
 }
 function sheetGroups() {
-  const canCreate = S.openCreation || S.platform;
+  const canCreate = S.pro;
   const claim = S.platformFree && GID === FOUNDER && hasRole(S.me, 'admin') && !PREVIEW;
   openSheet({
     title: 'Les teves agrupacions',
     body: `<div id="gr-list">${groupList()}</div>
-      ${canCreate ? `<div class="entry-new" style="margin-top:14px"><span>Portes una altra agrupació? Crea-la i en seràs l’administrador/a.</span><button class="btn btn-sm" data-act="group-create">+ Crea’n una</button></div>` : ''}
-      ${S.platform ? `<div class="panel" style="margin-top:14px"><div class="setting"><div><div class="t">Plataforma</div><div class="s">Totes les agrupacions, qui les ha creades i si se’n poden crear de noves.</div></div><button class="btn btn-sm" data-act="platform">Obre el panell</button></div></div>` : ''}
-      ${claim ? `<div class="panel" style="margin-top:14px"><div class="setting"><div><div class="t">Panell de plataforma</div><div class="s">Encara no el porta ningú. Si l’actives, veuràs totes les agrupacions i podràs decidir qui en pot crear.</div></div><button class="btn btn-sm btn-primary" data-act="platform-claim">Activa’l</button></div></div>` : ''}`,
+      ${canCreate ? `<div class="entry-new" style="margin-top:14px"><span>Com a Usuari Pro, pots crear una agrupació nova i en seràs l’administrador/a.</span><button class="btn btn-sm" data-act="group-create">+ Crea’n una</button></div>` : ''}
+      ${S.platform ? `<div class="panel" style="margin-top:14px"><div class="setting"><div><div class="t">Plataforma</div><div class="s">Totes les agrupacions, qui les ha creades i qui és Usuari Pro.</div></div><button class="btn btn-sm" data-act="platform">Obre el panell</button></div></div>` : ''}
+      ${claim ? `<div class="panel" style="margin-top:14px"><div class="setting"><div><div class="t">Panell de plataforma</div><div class="s">Encara no el porta ningú. Si l’actives, veuràs totes les agrupacions i decidiràs qui és Usuari Pro i en pot crear.</div></div><button class="btn btn-sm btn-primary" data-act="platform-claim">Activa’l</button></div></div>` : ''}`,
     onMount: () => refreshGroupInfo().then(() => { const box = $('#gr-list'); if (box) box.innerHTML = groupList(); }),
   });
 }
@@ -4814,7 +4819,7 @@ function sheetGroups() {
 let CREATE = null;
 const NAME_EXAMPLES = { cor: 'Cor de Cambra de Sant Cugat', orquestra: 'Orquestra de Cambra de Girona', banda: 'Banda Municipal de Mataró', cobla: 'Cobla Ciutat de Vic', cambra: 'Quartet Brossa', altres: 'Esbart Dansaire de Reus' };
 function startCreate() {
-  if (!S.openCreation && !S.platform) { toast('Ara mateix no es poden crear agrupacions noves'); return; }
+  if (!S.pro) { toast('Només els Usuaris Pro poden crear agrupacions'); return; }
   CREATE = { step: 1, kind: '', name: '', short: '', sections: [], busy: false, back: S.mode === 'loading' ? (S.groups.length ? 'pick' : 'nostaff') : S.mode,
     readyAt: Date.now() + 400 };   // que el mateix toc que obre l'assistent no hi triï res
   closeSheet();
@@ -4942,7 +4947,10 @@ async function createGroup() {
 const STATUS_LABEL = { active: 'Activa', suspended: 'Suspesa', deleted: 'Esborrada' };
 const QUOTAS = [50, 100, 300, 500, 1000];
 async function sheetPlatform() {
-  const P = { groups: [], cfg: {}, team: { emails: [] } };
+  const P = { groups: [], team: { emails: [] }, pro: { emails: [] } };
+  const MAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+  const chip = (e, rm) => `<span class="chip-mail">${esc(e)}${rm ? `<button type="button" data-rm-${rm}="${esc(e)}" aria-label="Treu ${esc(e)}">${ICON.close}</button>` : ''}</span>`;
+  const adder = id => `<div style="display:flex;gap:6px"><input class="inp" id="pl-${id}-mail" type="email" placeholder="correu@exemple.com" style="min-height:38px"><button class="btn btn-sm" id="pl-${id}-add">Afegeix</button></div>`;
   const draw = el => {
     const body = el.querySelector('.sheet-b');
     const act = P.groups.filter(g => (g.status || 'active') === 'active');
@@ -4956,11 +4964,12 @@ async function sheetPlatform() {
         <div class="kpi"><div class="kpi-v">${fmtSize(sum('files'))}</div><div class="kpi-l">Fitxers pujats</div></div>
       </div>
       <div class="panel" style="margin-top:14px">
-        <div class="toggle-row setting"><span><b>Creació oberta</b><br><span class="muted" style="font-size:12.5px">${P.cfg.openCreation === false ? 'Només l’equip de la plataforma pot crear agrupacions.' : 'Qualsevol persona amb un compte de Google pot crear-ne una.'}</span></span>
-          <label class="switch"><input type="checkbox" id="pl-open" ${P.cfg.openCreation === false ? '' : 'checked'}><span></span></label></div>
-        <div class="setting" style="display:grid;gap:8px"><div><div class="t">Equip de la plataforma</div><div class="s">Veuen aquest panell. No veuen les dades de dins de les agrupacions.</div></div>
-          <div class="pickers">${(P.team.emails || []).map(e => `<span class="chip-mail">${esc(e)}${e === S.email ? '' : `<button type="button" data-rm-mail="${esc(e)}" aria-label="Treu ${esc(e)}">${ICON.close}</button>`}</span>`).join('')}</div>
-          <div style="display:flex;gap:6px"><input class="inp" id="pl-mail" type="email" placeholder="correu@exemple.com" style="min-height:38px"><button class="btn btn-sm" id="pl-add">Afegeix</button></div></div>
+        <div class="setting" style="display:grid;gap:8px"><div><div class="t">Usuaris Pro</div><div class="s">Són els únics que poden <b>crear agrupacions</b> i, de les que administren, <b>canviar-ne</b> el nom, el tipus, les seccions i la imatge o <b>esborrar-les</b>. La resta de persones fan servir les agrupacions on les han donat d’alta, però no en poden crear ni canviar-les. L’equip de la plataforma és Pro sempre.</div></div>
+          <div class="pickers">${(P.team.emails || []).map(e => chip(`${e} · plataforma`)).join('')}${(P.pro.emails || []).filter(e => !(P.team.emails || []).includes(e)).map(e => chip(e, 'pro')).join('')}</div>
+          ${adder('pro')}</div>
+        <div class="setting" style="display:grid;gap:8px"><div><div class="t">Equip de la plataforma</div><div class="s">Veuen aquest panell, decideixen qui és Usuari Pro i poden suspendre agrupacions. No veuen les dades de dins de les agrupacions.</div></div>
+          <div class="pickers">${(P.team.emails || []).map(e => chip(e, e === S.email ? '' : 'team')).join('')}</div>
+          ${adder('team')}</div>
       </div>
       <div class="section-title"><h2 class="h2">Agrupacions</h2><span class="eyebrow">${P.groups.length}</span></div>
       <div class="panel">${list.map(g => {
@@ -4977,23 +4986,30 @@ async function sheetPlatform() {
           </div></div>`;
       }).join('') || '<p style="margin:0;padding:14px">Encara no hi ha cap agrupació al directori.</p>'}</div>
       <p class="muted" style="font-size:12.5px">Una agrupació suspesa no hi pot entrar ningú fins que la reactivis, però no se n’esborra res. La base de dades gratuïta té un límit diari de lectures i 1 GB d’espai per a totes les agrupacions juntes: vigila els fitxers pujats.</p>`;
-    body.querySelector('#pl-open').onchange = async e => {
-      const v = e.target.checked;
-      try { await fs.doc('plataforma/config').set({ openCreation: v, at: new Date().toISOString() }); P.cfg.openCreation = v; S.openCreation = v; toast(v ? 'Creació oberta a tothom' : 'Creació tancada'); }
-      catch { toast('No s’ha pogut desar'); e.target.checked = !v; }
-      draw(el);
+    const saveList = async (key, doc, emails, ok) => {
+      try { await fs.doc(doc).set({ emails, at: new Date().toISOString() }); P[key].emails = emails; toast(ok); draw(el); }
+      catch { toast('No s’ha pogut desar'); }
     };
-    const saveTeam = async emails => {
-      try { await fs.doc('plataforma/equip').set({ emails, at: new Date().toISOString() }); P.team.emails = emails; draw(el); }
-      catch { toast('No s’ha pogut desar l’equip'); }
+    const readMail = id => {
+      const m = body.querySelector(`#pl-${id}-mail`).value.trim().toLowerCase();
+      if (!MAIL_RE.test(m)) { toast('Escriu un correu vàlid'); return null; }
+      return m;
     };
-    body.querySelector('#pl-add').onclick = () => {
-      const m = body.querySelector('#pl-mail').value.trim().toLowerCase();
-      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(m)) { toast('Escriu un correu vàlid'); return; }
+    body.querySelector('#pl-pro-add').onclick = () => {
+      const m = readMail('pro'); if (!m) return;
+      if ((P.pro.emails || []).includes(m) || (P.team.emails || []).includes(m)) { toast('Aquest correu ja és Pro'); return; }
+      saveList('pro', 'plataforma/pro', [...(P.pro.emails || []), m], `${m} ja és Usuari Pro`);
+    };
+    body.querySelectorAll('[data-rm-pro]').forEach(b => b.onclick = async () => {
+      if (!await confirmSheet('Treure’l dels Usuaris Pro?', `<b>${esc(b.dataset.rmPro)}</b> ja no podrà crear agrupacions ni canviar o esborrar les que administra. Les agrupacions i les seves dades no es toquen.`, 'Treu-lo', false)) return sheetPlatform();
+      saveList('pro', 'plataforma/pro', (P.pro.emails || []).filter(x => x !== b.dataset.rmPro), 'Ja no és Usuari Pro');
+    });
+    body.querySelector('#pl-team-add').onclick = () => {
+      const m = readMail('team'); if (!m) return;
       if ((P.team.emails || []).includes(m)) return;
-      saveTeam([...(P.team.emails || []), m]);
+      saveList('team', 'plataforma/equip', [...(P.team.emails || []), m], `${m} ja és de l’equip de la plataforma`);
     };
-    body.querySelectorAll('[data-rm-mail]').forEach(b => b.onclick = () => saveTeam((P.team.emails || []).filter(x => x !== b.dataset.rmMail)));
+    body.querySelectorAll('[data-rm-team]').forEach(b => b.onclick = () => saveList('team', 'plataforma/equip', (P.team.emails || []).filter(x => x !== b.dataset.rmTeam), 'Tret de l’equip'));
     body.querySelectorAll('[data-pl]').forEach(b => b.onclick = async () => {
       const g = P.groups.find(x => x.id === b.dataset.id);
       if (!g) return;
@@ -5024,10 +5040,10 @@ async function sheetPlatform() {
     body: '<p class="muted" style="margin:0">Carregant les agrupacions…</p>',
     onMount: async el => {
       try {
-        const [snap, c, t] = await Promise.all([fs.collection('agrupacions').get(), fs.doc('plataforma/config').get(), fs.doc('plataforma/equip').get()]);
+        const [snap, t, pro] = await Promise.all([fs.collection('agrupacions').get(), fs.doc('plataforma/equip').get(), fs.doc('plataforma/pro').get()]);
         P.groups = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        P.cfg = c.exists ? c.data() : {};
         P.team = t.exists ? t.data() : { emails: [] };
+        P.pro = pro.exists ? pro.data() : { emails: [] };
       } catch { el.querySelector('.sheet-b').innerHTML = '<p style="margin:0">No s’han pogut carregar les agrupacions. Comprova la connexió.</p>'; return; }
       if (el.isConnected) draw(el);
     },
@@ -5036,7 +5052,7 @@ async function sheetPlatform() {
 async function claimPlatform() {
   try {
     await fs.doc('plataforma/equip').set({ emails: [S.email], at: new Date().toISOString() });
-    S.platform = true; S.platformFree = false;
+    S.platform = true; S.platformFree = false; S.pro = true;
     toast('Panell de plataforma activat'); render(); sheetPlatform();
   } catch { toast('No s’ha pogut activar'); }
 }
@@ -5065,7 +5081,7 @@ async function syncDirectory(force) {
       S.group.stats = stats;
       return;
     }
-    const renamed = hasRole(S.me, 'admin') && ((S.config.name && S.config.name !== S.group.name) || kindOf() !== (S.group.kind || 'cor'));
+    const renamed = canManageGroup() && ((S.config.name && S.config.name !== S.group.name) || kindOf() !== (S.group.kind || 'cor'));
     const last = S.group.stats && S.group.stats.at ? Date.parse(S.group.stats.at) : 0;
     if (!force && !renamed && Date.now() - last < 20 * 3600 * 1000) return;
     const patch = { stats };
@@ -5077,8 +5093,9 @@ async function syncDirectory(force) {
 
 /* ================= Events ================= */
 const SUB_OK = new Set(['mark', 'min', 'mark-rest']);
-const ADMIN_ONLY = new Set(['staff-new', 'staff-edit', 'staff-bulk', 'preview-on', 'who-in', 'mail-check', 'brand-color', 'logo-remove', 'wipe-all', 'share-app',
-  'kind-set', 'group-delete', 'sections-save', 'sections-undo', 'onboard-hide']);
+const ADMIN_ONLY = new Set(['staff-new', 'staff-edit', 'staff-bulk', 'preview-on', 'who-in', 'mail-check', 'wipe-all', 'share-app', 'onboard-hide']);
+// La identitat de l'agrupació i esborrar-la: només un Usuari Pro que l'administri.
+const PRO_ONLY = new Set(['brand-color', 'logo-remove', 'kind-set', 'group-delete', 'sections-save', 'sections-undo']);
 const EDIT_ONLY = new Set(['mark', 'min', 'mark-rest', 'session-new', 'sub-set', 'ann-new', 'ann-edit', 'mat-new', 'mat-edit', 'poll-new', 'poll-edit', 'poll-results', 'poll-remind', 'rsvp-remind', 'doc-new', 'doc-edit', 'share-app', 'staff-bulk', 'preview-on', 'who-in', 'mail-check', 'concert-list', 'concert-toggle', 'session-edit', 'member-edit', 'member-bulk', 'prod-new', 'prod-edit',
   'wipe-demo', 'wipe-all', 'load-demo', 'export-json', 'abs-accept', 'abs-reject', 'abs-delete', 'manage']);
 const actions = {
@@ -5264,6 +5281,7 @@ document.addEventListener('click', e => {
   const subAllowed = SUB_OK.has(act) && canMark(sessionById(ui.sessionId), ui.rollSec || ui.section);
   if (EDIT_ONLY.has(act) && !canEdit() && !subAllowed) { toast('Amb aquest enllaç no pots fer aquesta acció'); return; }
   if (ADMIN_ONLY.has(act) && !isAdmin()) { toast('Només l’administració de l’agrupació pot fer-ho'); return; }
+  if (PRO_ONLY.has(act) && !canManageGroup()) { toast('Només un Usuari Pro que administri l’agrupació pot canviar-ho'); return; }
   fn(el, e);
 });
 
@@ -5303,18 +5321,18 @@ document.addEventListener('input', e => {
   } else if (kind === 'cfg-name' || kind === 'cfg-alert' || kind === 'cfg-short' || kind === 'cfg-staff') {
     clearTimeout(bindTimer);
     bindTimer = setTimeout(() => {
-      if (kind === 'cfg-name') { if (!isAdmin() || !el.value.trim()) return; saveConfig({ name: el.value.trim() }); paintBrandName(); syncDirectory(true); }
-      else if (kind === 'cfg-short') { saveConfig({ shortName: el.value.trim().slice(0, 16) }); }
-      else if (kind === 'cfg-staff') { if (isAdmin()) saveConfig({ labels: { ...(S.config.labels || {}), palau: el.value.trim().slice(0, 40) } }); }
+      if (kind === 'cfg-name') { if (!canManageGroup() || !el.value.trim()) return; saveConfig({ name: el.value.trim() }); paintBrandName(); syncDirectory(true); }
+      else if (kind === 'cfg-short') { if (canManageGroup()) saveConfig({ shortName: el.value.trim().slice(0, 16) }); }
+      else if (kind === 'cfg-staff') { if (canManageGroup()) saveConfig({ labels: { ...(S.config.labels || {}), palau: el.value.trim().slice(0, 40) } }); }
       else { const v = parseInt(el.value, 10); if (v > 0) saveConfig({ alertFNJ: v }); }
     }, 500);
   }
 });
 document.addEventListener('change', e => {
   const logo = e.target.closest('[data-bind="logo"]');
-  if (logo && logo.files && logo.files[0]) { uploadLogo(logo.files[0]); logo.value = ''; }
+  if (logo && logo.files && logo.files[0]) { if (canManageGroup()) uploadLogo(logo.files[0]); logo.value = ''; }
   const color = e.target.closest('[data-bind="brand-color"]');
-  if (color && isAdmin()) setBrandColor(color.value);
+  if (color && canManageGroup()) setBrandColor(color.value);
   const el = e.target.closest('[data-bind="import"]');
   if (el && el.files && el.files[0]) { importJSON(el.files[0]); el.value = ''; }
   if (e.target.closest('[data-bind="cfg-ics"]') && isAdmin()) { saveConfig({ icsOn: e.target.checked }); toast(e.target.checked ? 'Calendari subscrit activat: funcionarà d’aquí a unes hores' : 'Calendari subscrit desactivat'); render(); }
@@ -5413,7 +5431,7 @@ async function init() {
     const platform = loadPlatformState();
     try { S.groups = await myGroups(S.email); saveGroupsCache(); }
     catch { S.groups = cachedGroups(); }
-    if (takeIntent() === 'create') { await platform; startCreate(); return; }
+    if (takeIntent() === 'create') { await platform; if (S.pro) { startCreate(); return; } }
     const want = urlGroup() || rememberedGroup();
     const pick = S.groups.find(g => g.id === want) || (S.groups.length === 1 ? S.groups[0] : null);
     if (!S.groups.length) { S.mode = 'nostaff'; render(); return; }
