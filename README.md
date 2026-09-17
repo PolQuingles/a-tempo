@@ -1,4 +1,4 @@
-# Cor Present
+# A Tempo
 
 Assistència, calendari i avisos per a cors, orquestres, bandes, cobles i altres agrupacions. Cada agrupació hi té les seves dades, separades de la resta. Només els Usuaris Pro en poden crear.
 
@@ -18,7 +18,13 @@ Assistència, calendari i avisos per a cors, orquestres, bandes, cobles i altres
 
 ## Accés
 
-Ningú no hi entra sense identificar-se: tothom entra amb Google, amb el correu que l'administració ha donat d'alta a Gestió › Ajustos › Persones. No hi ha enllaços d'accés.
+Ningú no hi entra sense identificar-se: tothom entra amb el correu que l'administració ha donat d'alta a Gestió › Ajustos › Persones. No hi ha enllaços d'accés.
+
+- **Amb Google**, per als correus de Google.
+- **Amb un altre correu i una contrasenya** (Hotmail, iCloud, de la feina…). El primer cop es crea la contrasenya i es confirma el correu amb l'enllaç que envia Firebase: les regles només deixen entrar comptes amb el correu confirmat. La contrasenya es pot recuperar des de la mateixa pantalla.
+- **Invitacions**: en donar d'alta algú, l'app prepara el missatge amb l'enllaç i les instruccions, i l'administració l'envia des del seu correu (una persona, o moltes en còpia oculta) o pel WhatsApp. La fitxa guarda `invitedAt` per saber qui falta.
+
+L'adreça de l'app i el projecte de Firebase encara es diuen `cor-present`: canviar-los trencaria les instal·lacions i els enllaços que ja circulen.
 
 Cada persona té un o més rols (`roles` a la seva fitxa):
 

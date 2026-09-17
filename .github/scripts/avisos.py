@@ -96,7 +96,7 @@ class Group:
         self.gid, self.config, self.people = gid, config, people
         self.base = f"cors/{gid}"
         self.devices = devices
-        self.name = config.get("name") or "Cor Present"
+        self.name = config.get("name") or "A Tempo"
         self.url = APP_URL if gid == dades.FOUNDER else f"{APP_URL}?a={gid}"
         has_icon = os.path.exists(os.path.join(SITE, "marca", gid, "icon-192.png"))
         self.icon = f"marca/{gid}/icon-192.png" if has_icon else None

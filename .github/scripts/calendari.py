@@ -37,7 +37,7 @@ def ics(cfg, prods):
             also = [a for a in s.get("alsoIn", []) if a != pid and a in prods]
             sessions.append((s, [p["name"]] + [prods[a]["name"] for a in also]))
     sessions.sort(key=lambda x: x[0]["date"] + (x[0].get("time") or ""))
-    L = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Cor Present//CA", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
+    L = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//A Tempo//CA", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
          f"X-WR-CALNAME:{esc(cfg.get('name') or 'Agrupació')}", "X-WR-TIMEZONE:Europe/Madrid", "REFRESH-INTERVAL;VALUE=DURATION:PT3H",
          "BEGIN:VTIMEZONE", "TZID:Europe/Madrid",
          "BEGIN:DAYLIGHT", "TZOFFSETFROM:+0100", "TZOFFSETTO:+0200", "TZNAME:CEST", "DTSTART:19700329T020000", "RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU", "END:DAYLIGHT",

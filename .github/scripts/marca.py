@@ -27,7 +27,7 @@ def short_name(cfg):
         return s
     name = (cfg.get("name") or "").strip()
     if not name:
-        return "Cor Present"
+        return "A Tempo"
     if len(name) <= 14:
         return name
     # «Cor Jove», «Banda Mataró» o, si no hi cap, les inicials («OSV»), sense articles ni preposicions.
@@ -123,7 +123,7 @@ def build(cfg, root=".", gid=None):
     web = f"marca/{gid}/" if gid else "marca/"
     os.makedirs(out, exist_ok=True)
     bg, logo_url = accent, None
-    name = (cfg.get("name") or "").strip() or "Cor Present"
+    name = (cfg.get("name") or "").strip() or "A Tempo"
 
     m = re.match(r"data:image/(png|jpe?g|webp);base64,(.+)$", brand.get("logo") or "", re.S)
     if m:
