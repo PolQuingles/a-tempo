@@ -26,8 +26,8 @@ jobs:
           git clone --depth 1 git@github.com:PolQuingles/cor-present-copies.git copies
       - name: Envia els avisos
         env:
+          SERVICE_REFRESH_TOKEN: ${{ secrets.SERVICE_REFRESH_TOKEN }}
           BACKUP_REFRESH_TOKEN: ${{ secrets.BACKUP_REFRESH_TOKEN }}
-          CHOIR_ID: ${{ secrets.CHOIR_ID }}
           PUSH_PRIVATE_KEY: ${{ secrets.PUSH_PRIVATE_KEY }}
         run: python3 .github/scripts/avisos.py copies
       - name: Desa què s'ha enviat

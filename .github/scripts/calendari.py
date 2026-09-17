@@ -1,56 +1,24 @@
-"""Genera calendari.ics a partir de les produccions del cor (Firestore).
+"""Calendaris subscrits i identitat de cada agrupació.
 
-Entra amb un compte de només lectura del calendari (rol «calendar»): només pot llegir
-produccions i configuració, no dades de cantaires ni assistència.
+Per a cada agrupació activa:
+  · si té el calendari subscrit activat, genera el seu fitxer .ics amb totes les sessions
+    (la primera agrupació a calendari.ics, com sempre; la resta a calendaris/<agrupació>.ics)
+  · genera la seva marca (nom, logotip, icones i manifest) a marca/<agrupació>/
+Els calendaris no porten noms de persones: només produccions, dates, llocs i indicacions.
 """
-import json, os, urllib.parse, urllib.request
+import datetime, os, re, sys
 
-API = "AIzaSyDxFa61IEt6K2s2xCMXQhUpkdFipVwzDRY"
-BASE = "https://firestore.googleapis.com/v1/projects/cor-present/databases/(default)/documents"
-CHOIR = os.environ["CHOIR_ID"]
+sys.path.insert(0, os.path.dirname(__file__))
+import dades, marca
 
-
-def call(url, body=None, token=None, form=False):
-    headers = {}
-    data = None
-    if form:
-        data = urllib.parse.urlencode(body).encode()
-        headers["Content-Type"] = "application/x-www-form-urlencoded"
-    elif body is not None:
-        data = json.dumps(body).encode()
-        headers["Content-Type"] = "application/json"
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
-    with urllib.request.urlopen(urllib.request.Request(url, data=data, headers=headers)) as r:
-        return json.loads(r.read())
-
-
-def dec(v):
-    k, x = next(iter(v.items()))
-    if k == "mapValue":
-        return {a: dec(b) for a, b in x.get("fields", {}).items()}
-    if k == "arrayValue":
-        return [dec(b) for b in x.get("values", [])]
-    if k == "integerValue":
-        return int(x)
-    return x
-
-
-token = call(f"https://securetoken.googleapis.com/v1/token?key={API}",
-             {"grant_type": "refresh_token", "refresh_token": os.environ["CAL_REFRESH_TOKEN"]}, form=True)["id_token"]
-docs = call(f"{BASE}/cors/{CHOIR}/productions?pageSize=300", token=token).get("documents", [])
-prods = {d["name"].rsplit("/", 1)[1]: dec({"mapValue": d}) for d in docs}
-cfg = dec({"mapValue": call(f"{BASE}/cors/{CHOIR}/config/main", token=token)})
-
-SECTIONS = {"S": "Sopranos", "C": "Contralts", "T": "Tenors", "B": "Baixos"}
+r, groups = dades.connect("CAL_REFRESH_TOKEN")
 
 
 def esc(t):
-    return str(t or "").replace("\\", "\\\\").replace("\n", "\\n").replace(",", "\\,").replace(";", "\;")
+    return str(t or "").replace("\\", "\\\\").replace("\n", "\\n").replace(",", "\\,").replace(";", "\\;")
 
 
 def fold(line):
-    raw = line.encode()
     out, cur = [], b""
     for ch in line:
         b = ch.encode()
@@ -61,51 +29,81 @@ def fold(line):
     return "\r\n ".join(p.decode() for p in out)
 
 
-sessions = []
-for pid, p in prods.items():
-    for s in p.get("sessions", []):
-        also = [a for a in s.get("alsoIn", []) if a != pid and a in prods]
-        sessions.append((s, [p["name"]] + [prods[a]["name"] for a in also]))
-sessions.sort(key=lambda x: x[0]["date"] + (x[0].get("time") or ""))
+def ics(cfg, prods):
+    names = dades.sections(cfg)
+    sessions = []
+    for pid, p in prods.items():
+        for s in p.get("sessions", []):
+            also = [a for a in s.get("alsoIn", []) if a != pid and a in prods]
+            sessions.append((s, [p["name"]] + [prods[a]["name"] for a in also]))
+    sessions.sort(key=lambda x: x[0]["date"] + (x[0].get("time") or ""))
+    L = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Cor Present//CA", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
+         f"X-WR-CALNAME:{esc(cfg.get('name') or 'Agrupació')}", "X-WR-TIMEZONE:Europe/Madrid", "REFRESH-INTERVAL;VALUE=DURATION:PT3H",
+         "BEGIN:VTIMEZONE", "TZID:Europe/Madrid",
+         "BEGIN:DAYLIGHT", "TZOFFSETFROM:+0100", "TZOFFSETTO:+0200", "TZNAME:CEST", "DTSTART:19700329T020000", "RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU", "END:DAYLIGHT",
+         "BEGIN:STANDARD", "TZOFFSETFROM:+0200", "TZOFFSETTO:+0100", "TZNAME:CET", "DTSTART:19701025T030000", "RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU", "END:STANDARD",
+         "END:VTIMEZONE"]
+    for s, pnames in sessions:
+        d = s["date"].replace("-", "")
+        L += ["BEGIN:VEVENT", f"UID:{s['id']}@cor-present", "DTSTAMP:20260101T000000Z"]
+        if s.get("time"):
+            start = s["time"]
+            end = s.get("end") or f"{min(23, int(start[:2]) + 2):02d}:{start[3:5]}"
+            L += [f"DTSTART;TZID=Europe/Madrid:{d}T{start.replace(':', '')}00", f"DTEND;TZID=Europe/Madrid:{d}T{end.replace(':', '')}00"]
+        else:
+            nxt = (datetime.date.fromisoformat(s["date"]) + datetime.timedelta(days=1)).strftime("%Y%m%d")
+            L += [f"DTSTART;VALUE=DATE:{d}", f"DTEND;VALUE=DATE:{nxt}"]
+        L.append(f"SUMMARY:{esc((s.get('type') or 'Assaig') + ' · ' + ' + '.join(pnames))}")
+        if s.get("place"):
+            L.append(f"LOCATION:{esc(s['place'])}")
+        info = s.get("info") or {}
+        desc = [f"{label}: {info[k]}" for k, label in [("call", "Convocatòria"), ("dress", "Vestuari"), ("meet", "Punt de trobada"),
+                                                       ("bring", "Cal portar"), ("extra", "Indicacions")] if info.get(k)]
+        desc.append(s.get("note") or "")
+        if s.get("sections"):
+            desc.append("Convocats: " + ", ".join(names.get(x, x) for x in s["sections"]))
+        desc = "\n".join(x for x in desc if x)
+        if desc:
+            L.append(f"DESCRIPTION:{esc(desc)}")
+        L.append("END:VEVENT")
+    L.append("END:VCALENDAR")
+    return "\r\n".join(fold(x) for x in L) + "\r\n", len(sessions)
 
-L = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Cor Present//CA", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
-     f"X-WR-CALNAME:{esc(cfg.get('name') or 'Cor')}", "X-WR-TIMEZONE:Europe/Madrid", "REFRESH-INTERVAL;VALUE=DURATION:PT3H",
-     "BEGIN:VTIMEZONE", "TZID:Europe/Madrid",
-     "BEGIN:DAYLIGHT", "TZOFFSETFROM:+0100", "TZOFFSETTO:+0200", "TZNAME:CEST", "DTSTART:19700329T020000", "RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU", "END:DAYLIGHT",
-     "BEGIN:STANDARD", "TZOFFSETFROM:+0200", "TZOFFSETTO:+0100", "TZNAME:CET", "DTSTART:19701025T030000", "RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU", "END:STANDARD",
-     "END:VTIMEZONE"]
-for s, names in sessions:
-    d = s["date"].replace("-", "")
-    L += ["BEGIN:VEVENT", f"UID:{s['id']}@cor-present", "DTSTAMP:20260101T000000Z"]
-    if s.get("time"):
-        start = s["time"]
-        end = s.get("end") or f"{min(23, int(start[:2]) + 2):02d}:{start[3:5]}"
-        L += [f"DTSTART;TZID=Europe/Madrid:{d}T{start.replace(':', '')}00", f"DTEND;TZID=Europe/Madrid:{d}T{end.replace(':', '')}00"]
-    else:
-        import datetime
-        nxt = (datetime.date.fromisoformat(s["date"]) + datetime.timedelta(days=1)).strftime("%Y%m%d")
-        L += [f"DTSTART;VALUE=DATE:{d}", f"DTEND;VALUE=DATE:{nxt}"]
-    L.append(f"SUMMARY:{esc((s.get('type') or 'Assaig') + ' · ' + ' + '.join(names))}")
-    if s.get("place"):
-        L.append(f"LOCATION:{esc(s['place'])}")
-    info = s.get("info") or {}
-    desc = [f"{label}: {info[k]}" for k, label in [("call", "Convocatòria"), ("dress", "Vestuari"), ("meet", "Punt de trobada"),
-                                                   ("bring", "Cal portar"), ("extra", "Indicacions")] if info.get(k)]
-    desc.append(s.get("note") or "")
-    if s.get("sections"):
-        desc.append("Convocats: " + ", ".join(SECTIONS.get(x, x) for x in s["sections"]))
-    desc = "\n".join(x for x in desc if x)
-    if desc:
-        L.append(f"DESCRIPTION:{esc(desc)}")
-    L.append("END:VEVENT")
-L.append("END:VCALENDAR")
 
-with open("calendari.ics", "w", newline="") as f:
-    f.write("\r\n".join(fold(x) for x in L) + "\r\n")
-print(f"{len(sessions)} sessions")
+def write(path, text):
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    old = open(path, newline="").read() if os.path.exists(path) else None
+    if old != text:
+        with open(path, "w", newline="") as f:
+            f.write(text)
 
-# Identitat del cor (pantalla d'entrada, icona del mòbil, manifest)
-import sys
-sys.path.insert(0, os.path.dirname(__file__))
-import marca
-print("Marca:", marca.build(cfg, "."))
+
+published, branded = set(), set()
+for gid, entry in groups.items():
+    try:
+        cfg = r.get(f"cors/{gid}/config/main") or {}
+    except dades.Forbidden:
+        print(f"{gid}: sense permís de lectura")
+        continue
+    if cfg.get("deleted"):
+        continue
+    label = cfg.get("name") or gid
+    target = "calendari.ics" if gid == dades.FOUNDER else f"calendaris/{gid}.ics"
+    if cfg.get("icsOn", gid == dades.FOUNDER):
+        text, n = ics(cfg, r.list(f"cors/{gid}/productions"))
+        write(target, text)
+        published.add(target)
+        print(f"{label}: {n} sessions al calendari")
+    marca.build(cfg, ".", gid)
+    branded.add(gid)
+    if gid == dades.FOUNDER:
+        marca.build(cfg, ".")   # on apunten les instal·lacions antigues
+
+# Calendaris i marques d'agrupacions que ja no en tenen (esborrades, suspeses o amb el calendari desactivat).
+if r.full and os.path.isdir("calendaris"):
+    for f in os.listdir("calendaris"):
+        if re.fullmatch(r"[A-Za-z0-9_-]{20,40}\.ics", f) and f"calendaris/{f}" not in published:
+            os.remove(os.path.join("calendaris", f))
+if r.full:
+    marca.prune(".", branded)
+print(f"{len(branded)} agrupacions · {len(published)} calendaris · {r.reads} lectures")

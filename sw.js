@@ -1,5 +1,5 @@
 // Cor Present — només avisos. No hi ha memòria cau: l'app sempre es carrega de la xarxa,
-// així ningú no es queda amb una versió antiga.
+// així ningú no es queda amb una versió antiga. Cada avís porta el nom i la icona de la seva agrupació.
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
 
@@ -7,11 +7,11 @@ self.addEventListener('push', e => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; }
   catch { d = { body: e.data ? e.data.text() : '' }; }
-  const title = d.title || 'Cor Jove';
+  const title = d.title || 'Cor Present';
   e.waitUntil(self.registration.showNotification(title, {
     body: d.body || '',
-    icon: './icon-180.png',
-    badge: './icon-180.png',
+    icon: d.icon ? `./${d.icon}` : './app/icon-192.png',
+    badge: './app/icon-192.png',
     lang: 'ca',
     tag: d.tag || 'cor-present',
     renotify: true,

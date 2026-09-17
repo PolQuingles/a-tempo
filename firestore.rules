@@ -2,107 +2,196 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ---- Qui és qui ----
-    // Tothom (equip i cantaires) entra amb el seu compte de Google i té una fitxa
-    // a cors/<cor>/staff/<correu> amb un rol:
-    //   admin | director | leader  → poden editar-ho tot (leader = cap de corda)
-    //   singer | palau             → només lectura de tota l'app
-    // La fitxa pot portar memberId: llavors la persona té el seu espai personal
-    // (avisos d'absència, confirmacions, enquestes, la seva assistència).
+    // ---- Agrupacions ----
+    // L'app pot allotjar moltes agrupacions (cors, orquestres, bandes…). Cadascuna té les seves
+    // dades a cors/<agrupació>/… i una fitxa al directori agrupacions/<agrupació> amb el nom,
+    // el tipus i l'estat (active | suspended | deleted). Cap agrupació pot veure res d'una altra.
     //
-    // Enllaços antics (#k=…): claus/<secret> diu el cor i el rol; cada mòbil anònim
-    // es registra a cors/<cor>/access/<uid>.
-    //   edit     → enllaç compartit d'edició (transició)
-    //   singer   → enllaç personal d'un cantaire (memberId)
-    //   calendar → lector del calendari per generar el fitxer .ics
-    //   backup   → lector de totes les dades per a la còpia de seguretat diària
+    // ---- Qui és qui dins d'una agrupació ----
+    // Tothom entra amb el seu compte de Google i té una fitxa a cors/<agrupació>/staff/<correu>:
+    //   admin | director | leader  → poden editar-ho tot (leader = cap de corda o de secció)
+    //   singer | palau             → només lectura de tota l'app
+    // La fitxa pot portar memberId: llavors la persona té el seu espai personal.
+    // Cada persona té un índex de les seves agrupacions a staffIndex/<correu>/agrupacions/<agrupació>.
+    //
+    // ---- Plataforma ----
+    // plataforma/equip diu qui porta la plataforma (veu el directori i pot suspendre agrupacions,
+    // però no les dades de dins). plataforma/config diu si qualsevol pot crear agrupacions.
+    // El compte de servei (avisos, calendari, còpies) llegeix totes les agrupacions i no escriu res.
+    //
+    // ---- Enllaços antics (#k=…) ----
+    // claus/<secret> diu l'agrupació i el rol; cada mòbil anònim es registra a cors/<agrupació>/access/<uid>.
+    //   edit → enllaç compartit d'edició · calendar i backup → lectors de les tasques automàtiques
 
+    function signedIn() { return request.auth != null; }
     function email() { return request.auth.token.get('email', '').lower(); }
-    function isStaff(c) {
-      return request.auth != null
-        && request.auth.token.get('email_verified', false) == true
-        && exists(/databases/$(database)/documents/cors/$(c)/staff/$(email()));
+    function verified() { return signedIn() && request.auth.token.get('email_verified', false) == true; }
+
+    // Primera agrupació: la seva administració pot activar el panell de plataforma el primer cop.
+    function founder() { return 'nSN9kYDkzPik239jnsMsCSYW'; }
+    function isService() { return signedIn() && request.auth.uid in ['sZy09w2YOfdv2jky8zy5m7Vzfna2']; }
+    function isPlatform() {
+      return verified()
+        && exists(/databases/$(database)/documents/plataforma/equip)
+        && email() in get(/databases/$(database)/documents/plataforma/equip).data.emails;
     }
-    function staffData(c) { return get(/databases/$(database)/documents/cors/$(c)/staff/$(email())).data; }
+
+    function dirDoc(c) { return /databases/$(database)/documents/agrupacions/$(c); }
+    // Una agrupació sense fitxa al directori (la primera, abans de registrar-la) compta com a activa.
+    function groupOk(c) { return !exists(dirDoc(c)) || get(dirDoc(c)).data.get('status', 'active') == 'active'; }
+    function staffPath(c) { return /databases/$(database)/documents/cors/$(c)/staff/$(email()); }
+    // Té fitxa a l'agrupació, encara que estigui suspesa (per poder-li dir).
+    function isMember(c) { return verified() && exists(staffPath(c)); }
+    function isStaff(c) { return isMember(c) && groupOk(c); }
+    function staffData(c) { return get(staffPath(c)).data; }
     function hasRole(c, roles) {
       let accP = /databases/$(database)/documents/cors/$(c)/access/$(request.auth.uid);
-      return request.auth != null
+      return signedIn()
         && exists(accP)
         && get(accP).data.role in roles
-        && exists(/databases/$(database)/documents/claus/$(get(accP).data.key));
+        && exists(/databases/$(database)/documents/claus/$(get(accP).data.key))
+        && groupOk(c);
     }
     function accMember(c) { return get(/databases/$(database)/documents/cors/$(c)/access/$(request.auth.uid)).data.get('memberId', '-'); }
 
     function canEdit(c) { return hasRole(c, ['edit']) || (isStaff(c) && staffData(c).role in ['admin', 'director', 'leader']); }
     function isAdmin(c) { return hasRole(c, ['edit']) || (isStaff(c) && staffData(c).role == 'admin'); }
     function isSinger(c) { return hasRole(c, ['singer']); }
-    // El cantaire de qui som: de la fitxa (compte) o de l'enllaç personal.
+    // El membre de la plantilla de qui som: de la fitxa (compte) o de l'enllaç personal.
     function myMember(c) { return isStaff(c) ? staffData(c).get('memberId', '-') : accMember(c); }
     // Té espai personal: pot avisar, confirmar, votar i fer de substitut.
     function hasSpace(c) { return isStaff(c) || isSinger(c); }
     function mine(c, mid) { return mid == myMember(c) && mid != '-'; }
 
+    // Es crea una agrupació nova en aquest mateix lot d'escriptures: abans no hi havia res i després sí.
+    function creating(c) {
+      return !exists(dirDoc(c)) && existsAfter(dirDoc(c))
+        && !exists(/databases/$(database)/documents/cors/$(c)/config/main)
+        && existsAfter(/databases/$(database)/documents/cors/$(c)/config/main);
+    }
+    function creationOpen() {
+      return !exists(/databases/$(database)/documents/plataforma/config)
+        || get(/databases/$(database)/documents/plataforma/config).data.get('openCreation', true) == true;
+    }
+
+    match /plataforma/equip {
+      allow get: if isPlatform() || resource == null;
+      allow create: if verified()
+        && exists(/databases/$(database)/documents/cors/$(founder())/staff/$(email()))
+        && get(/databases/$(database)/documents/cors/$(founder())/staff/$(email())).data.role == 'admin'
+        && request.resource.data.keys().hasOnly(['emails', 'at'])
+        && request.resource.data.emails == [email()];
+      allow update: if isPlatform()
+        && request.resource.data.keys().hasOnly(['emails', 'at'])
+        && request.resource.data.emails is list
+        && email() in request.resource.data.emails;
+    }
+    match /plataforma/config {
+      allow get: if signedIn();
+      allow create, update: if isPlatform();
+    }
+
+    match /agrupacions/{c} {
+      allow get: if isPlatform() || isService() || isMember(c) || hasRole(c, ['edit']);
+      allow list: if isPlatform() || isService();
+      // Nova agrupació: qui la crea en queda d'administrador, tot en un sol lot.
+      allow create: if c.size() >= 20 && c.size() <= 40
+        && request.resource.data.keys().hasOnly(['name', 'kind', 'status', 'createdAt', 'createdBy'])
+        && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 80
+        && request.resource.data.status == 'active'
+        && ((verified() && (creationOpen() || isPlatform())
+              && request.resource.data.createdBy == email()
+              && creating(c)
+              && getAfter(/databases/$(database)/documents/cors/$(c)/staff/$(email())).data.role == 'admin')
+            // Registrar al directori una agrupació que ja existia d'abans.
+            || (isAdmin(c) && exists(/databases/$(database)/documents/cors/$(c)/config/main)));
+      allow update: if isPlatform()
+        || (isAdmin(c) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'kind', 'stats'])
+            && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 80)
+        || (canEdit(c) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stats']))
+        || (isAdmin(c) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'deletedAt'])
+            && request.resource.data.status == 'deleted');
+      allow delete: if isPlatform();
+    }
+
     match /claus/{k} {
       allow get: if true;
       allow list: if false;
-      allow create: if request.auth != null && k.size() >= 24
+      allow create: if signedIn() && k.size() >= 24
         && request.resource.data.keys().hasOnly(['choirId', 'role', 'at', 'memberId'])
-        && request.resource.data.role in ['edit', 'singer', 'calendar', 'backup']
-        && ((request.resource.data.role == 'singer' && canEdit(request.resource.data.choirId))
-            || isAdmin(request.resource.data.choirId)
-            || (!exists(/databases/$(database)/documents/cors/$(request.resource.data.choirId)/config/main)
-                && existsAfter(/databases/$(database)/documents/cors/$(request.resource.data.choirId)/config/main)));
-      allow delete: if (resource.data.role == 'singer' && canEdit(resource.data.choirId)) || isAdmin(resource.data.choirId);
+        && request.resource.data.role in ['edit', 'calendar', 'backup']
+        && isAdmin(request.resource.data.choirId);
+      allow delete: if isAdmin(resource.data.choirId)
+        || (resource.data.role == 'singer' && canEdit(resource.data.choirId));
     }
 
     match /staffIndex/{e} {
-      allow get: if request.auth != null && request.auth.token.get('email_verified', false) == true && email() == e;
-      allow create, update: if request.resource.data.keys().hasOnly(['choirId']) && isAdmin(request.resource.data.choirId);
+      // Índex antic (una sola agrupació per correu). Ja no s'hi escriu, però es llegeix si falta el nou.
+      allow get: if verified() && email() == e;
+      allow create: if request.resource.data.keys().hasOnly(['choirId'])
+        && request.resource.data.choirId == founder() && isAdmin(founder());
+      allow update: if request.resource.data.keys().hasOnly(['choirId'])
+        && resource.data.choirId == request.resource.data.choirId && isAdmin(resource.data.choirId);
       allow delete: if isAdmin(resource.data.choirId);
+
+      // Les agrupacions de cada persona: només les pot apuntar o treure l'administració de cadascuna.
+      match /agrupacions/{g} {
+        allow read: if verified() && email() == e;
+        allow create, update: if request.resource.data.keys().hasOnly(['at', 'name'])
+          && (isAdmin(g) || (verified() && email() == e && creating(g)));
+        allow delete: if isAdmin(g) || (verified() && email() == e);
+      }
     }
 
     match /cors/{c} {
       match /access/{u} {
-        allow read: if request.auth != null && request.auth.uid == u;
-        allow create, update: if request.auth != null && request.auth.uid == u
+        allow read: if signedIn() && request.auth.uid == u;
+        allow create, update: if signedIn() && request.auth.uid == u
           && request.resource.data.keys().hasOnly(['role', 'key', 'at', 'memberId'])
           && getAfter(/databases/$(database)/documents/claus/$(request.resource.data.key)).data.choirId == c
           && getAfter(/databases/$(database)/documents/claus/$(request.resource.data.key)).data.role == request.resource.data.role
           && getAfter(/databases/$(database)/documents/claus/$(request.resource.data.key)).data.get('memberId', '') == request.resource.data.get('memberId', '');
-        allow delete: if request.auth != null && request.auth.uid == u;
+        allow delete: if signedIn() && request.auth.uid == u;
       }
+      // La configuració es crea amb l'agrupació i no es pot esborrar mai: així ningú no pot
+      // tornar a «crear» una agrupació que ja té dades i fer-se'n administrador.
       match /config/main {
-        allow create: if request.auth != null && !exists(/databases/$(database)/documents/cors/$(c)/config/main);
+        allow create: if verified() && creating(c);
       }
       match /{col}/{doc} {
         allow read: if (col in ['members', 'productions', 'attendance', 'config', 'staff', 'subs', 'rsvp', 'absences',
                                 'announcements', 'polls', 'pollVotes', 'memberMarks', 'push'] && canEdit(c))
-                    // Cantaires i treballadors del Palau: veuen tota l'app, però no poden canviar res.
+                    // Cantaires, músics i personal de l'entitat: veuen tota l'app, però no poden canviar res.
                     || (col in ['members', 'productions', 'attendance', 'config', 'subs',
                                 'announcements', 'polls'] && isStaff(c))
                     || (col in ['members', 'productions', 'config', 'announcements', 'polls'] && isSinger(c))
                     || (col in ['productions', 'config'] && hasRole(c, ['calendar']))
                     || (col in ['members', 'productions', 'attendance', 'config', 'staff', 'subs', 'rsvp', 'absences',
-                                'announcements', 'polls', 'pollVotes', 'push'] && hasRole(c, ['backup']));
-        allow write: if col in ['members', 'productions', 'attendance', 'config', 'subs', 'rsvp',
-                                'announcements', 'polls', 'pollVotes', 'memberMarks'] && canEdit(c);
+                                'announcements', 'polls', 'pollVotes', 'push'] && (hasRole(c, ['backup']) || isService()));
+        allow create, update: if col in ['members', 'productions', 'attendance', 'config', 'subs', 'rsvp',
+                                         'announcements', 'polls', 'pollVotes', 'memberMarks'] && canEdit(c);
+        allow delete: if col in ['members', 'productions', 'attendance', 'config', 'subs', 'rsvp',
+                                 'announcements', 'polls', 'pollVotes', 'memberMarks'] && canEdit(c)
+          && !(col == 'config' && doc == 'main');
       }
       // Cadascú pot llegir la seva pròpia fitxa per saber quin rol té, i deixar-hi
       // constància de l'última vegada que ha entrat. La resta, només administració.
       match /staff/{e} {
-        allow read: if request.auth != null && email() == e;
-        allow create, delete: if isAdmin(c);
+        allow read: if signedIn() && email() == e;
+        allow create: if isAdmin(c)
+          || (verified() && email() == e && creating(c) && request.resource.data.role == 'admin');
+        allow delete: if isAdmin(c);
         allow update: if isAdmin(c)
-          || (request.auth != null && email() == e
+          || (signedIn() && email() == e && groupOk(c)
               && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastSeen']));
       }
       // Avisos al mòbil: cada aparell es dona d'alta ell mateix i només toca la seva fitxa.
       match /push/{id} {
-        allow read: if request.auth != null && resource.data.uid == request.auth.uid;
+        allow read: if signedIn() && resource.data.uid == request.auth.uid;
         allow create: if (hasSpace(c) || canEdit(c)) && request.resource.data.uid == request.auth.uid;
-        allow update: if request.auth != null && resource.data.uid == request.auth.uid
-          && request.resource.data.uid == request.auth.uid;
-        allow delete: if canEdit(c) || (request.auth != null && resource.data.uid == request.auth.uid);
+        allow update: if signedIn() && resource.data.uid == request.auth.uid
+          && request.resource.data.uid == request.auth.uid && groupOk(c);
+        allow delete: if canEdit(c) || (signedIn() && resource.data.uid == request.auth.uid);
       }
       // Còpia de les marques de cada cantaire: només les seves.
       match /memberMarks/{mid} {
@@ -118,7 +207,7 @@ service cloud.firestore {
       match /secrets/{doc} {
         allow read, write: if canEdit(c);
       }
-      // Substitut: pot passar llista d'aquella sessió i corda fins que caduca.
+      // Substitut: pot passar llista d'aquella sessió i secció fins que caduca.
       match /attendance/{id} {
         allow read, write: if hasSpace(c)
           && exists(/databases/$(database)/documents/cors/$(c)/subs/$(id))
