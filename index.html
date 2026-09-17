@@ -2761,7 +2761,7 @@ function boardAnnouncements() {
       <div class="ann-m">${a.pinned ? '<span class="pin">Fixat</span>' : ''}<span>${esc(a.author || '')}</span><span class="mono">${a.createdAt ? ddmm(a.createdAt.slice(0, 10)) : ''}</span>
         ${a.sections?.length ? `<span>Per a: ${esc(a.sections.map(x => SEC[x].name).join(', '))}</span>` : ''}${a.until ? `<span>Fins al ${ddmm(a.until)}</span>` : ''}</div>
     </article>`;
-  return `${canEdit() ? '<div class="sec-h" style="margin-top:6px"><span class="muted" style="font-size:13px">Els veuen tots els ${V.members} (o només les ${V.sections} triades).</span><button class="btn btn-sm btn-primary" data-act="ann-new">+ Anunci</button></div>' : ''}
+  return `${canEdit() ? `<div class="sec-h" style="margin-top:6px"><span class="muted" style="font-size:13px">Els veuen tots els ${V.members} (o només les ${V.sections} triades).</span><button class="btn btn-sm btn-primary" data-act="ann-new">+ Anunci</button></div>` : ''}
     ${active.length ? `<div class="panel">${active.map(card).join('')}</div>` : `<div class="empty"><p>No hi ha anuncis.</p></div>`}
     ${canEdit() && expired.length ? `<details class="np-group"><summary><span>Caducats (${expired.length})</span>${ICON.chev}</summary><div class="panel">${expired.map(card).join('')}</div></details>` : ''}`;
 }
