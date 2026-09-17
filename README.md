@@ -34,6 +34,14 @@ Cada persona té un o més rols (`roles` a la seva fitxa):
 
 Qui també és de la plantilla (per exemple, un cap de corda que canta) té, a més, «El meu espai», amb la seva assistència i els seus avisos d'absència. Cada persona té l'índex de les seves agrupacions a `staffIndex/<correu>/agrupacions/`.
 
+## Classes de cant
+
+S'activen a Ajustos (`config/main.classesOn`) quan l'agrupació fa classes individuals.
+
+- `classes/<id>` és un dia de classe: data, lloc, professorat i `slots` (hora, durada i qui hi va).
+- `classReq/<id>` és un avís de retard o d'absència, o una petició de canvi d'hora entre dos companys, amb `status` pendent, acceptada, rebutjada o retirada. Un canvi acceptat val només per a aquell dia: no canvia el calendari, s'hi aplica a sobre.
+- Qui té el rol `voice` (professor de cant) fa el calendari i respon els avisos; no pot editar res més de l'app. Cada persona veu i escriu només els seus avisos.
+
 ## Tasques automàtiques (GitHub Actions)
 
 Llegeixen amb el compte de servei (secret `SERVICE_REFRESH_TOKEN`), que pot llegir totes les agrupacions però no escriure-hi.

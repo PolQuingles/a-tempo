@@ -12,6 +12,7 @@ service cloud.firestore {
     // a cors/<agrupació>/staff/<correu> amb un o més rols (roles; les fitxes antigues, un sol role):
     //   admin                     → ho pot fer tot: persones, identitat, dades
     //   director | leader | palau → passen llista, publiquen avisos, pugen documents… (leader = cap de corda o de secció)
+    //   voice                     → professor de cant: porta les classes (classes i classReq), la resta només lectura
     //   singer                    → només lectura de tota l'app
     // La fitxa pot portar memberId: llavors la persona té el seu espai personal, sigui quin sigui el rol.
     // Cada persona té un índex de les seves agrupacions a staffIndex/<correu>/agrupacions/<agrupació>.
@@ -72,6 +73,8 @@ service cloud.firestore {
     function myMember(c) { return staffData(c).get('memberId', '-'); }
     // Té espai personal: pot avisar, confirmar, votar i fer de substitut.
     function hasSpace(c) { return isStaff(c); }
+    // Porta les classes de cant: el professorat i l'administració.
+    function teaches(c) { return isStaff(c) && rolesOf(staffData(c)).hasAny(['voice', 'admin']); }
     // Pot canviar la identitat de l'agrupació o esborrar-la: n'és administrador i és Usuari Pro.
     function canManage(c) { return isAdmin(c) && isPro(); }
     // Camps de config/main que fan d'identitat de l'agrupació.
@@ -180,13 +183,13 @@ service cloud.firestore {
       }
       match /{col}/{doc} {
         allow read: if (col in ['members', 'productions', 'attendance', 'config', 'staff', 'subs', 'rsvp', 'absences',
-                                'announcements', 'polls', 'pollVotes', 'memberMarks', 'push'] && canEdit(c))
+                                'announcements', 'polls', 'pollVotes', 'memberMarks', 'push', 'classes', 'classReq'] && canEdit(c))
                     // Cantaires i músics: veuen tota l'app, però no poden canviar res.
                     || (col in ['members', 'productions', 'attendance', 'config', 'subs',
                                 'announcements', 'polls'] && isStaff(c))
                     || (col in ['productions', 'config'] && hasRole(c, ['calendar']))
                     || (col in ['members', 'productions', 'attendance', 'config', 'staff', 'subs', 'rsvp', 'absences',
-                                'announcements', 'polls', 'pollVotes', 'push'] && (hasRole(c, ['backup']) || isService()));
+                                'announcements', 'polls', 'pollVotes', 'push', 'classes', 'classReq'] && (hasRole(c, ['backup']) || isService()));
         allow create, update: if col in ['members', 'productions', 'attendance', 'config', 'subs', 'rsvp',
                                          'announcements', 'polls', 'pollVotes', 'memberMarks'] && canEdit(c)
           && !(col == 'config' && doc == 'main');
@@ -212,6 +215,33 @@ service cloud.firestore {
         allow update: if signedIn() && resource.data.uid == request.auth.uid
           && request.resource.data.uid == request.auth.uid && groupOk(c);
         allow delete: if canEdit(c) || (signedIn() && resource.data.uid == request.auth.uid);
+      }
+      // Classes de cant: el calendari el fa el professorat; tothom de l'agrupació el pot veure.
+      match /classes/{id} {
+        allow read: if isStaff(c) || hasRole(c, ['backup']) || isService();
+        allow create, update, delete: if teaches(c);
+      }
+      // Avisos de retard o absència a una classe i peticions de canvi d'hora entre companys.
+      match /classReq/{id} {
+        allow read: if teaches(c) || canEdit(c) || (hasSpace(c) && (mine(c, resource.data.memberId) || mine(c, resource.data.get('withMemberId', '-'))));
+        allow create: if hasSpace(c)
+          && request.resource.data.uid == request.auth.uid
+          && mine(c, request.resource.data.memberId)
+          && request.resource.data.kind in ['late', 'absent', 'swap']
+          && request.resource.data.status == 'pending'
+          && (request.resource.data.kind != 'swap' || request.resource.data.get('withMemberId', '-') != myMember(c));
+        allow update: if teaches(c)
+          // El company a qui es demana el canvi: només pot respondre que sí o que no.
+          || (hasSpace(c) && mine(c, resource.data.get('withMemberId', '-'))
+              && resource.data.status == 'pending'
+              && request.resource.data.status in ['accepted', 'rejected']
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewedAt', 'reviewedBy']))
+          // Qui l'ha demanat: només la pot retirar mentre ningú no hagi respost.
+          || (hasSpace(c) && mine(c, resource.data.memberId)
+              && resource.data.status == 'pending'
+              && request.resource.data.status == 'cancelled'
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewedAt', 'reviewedBy']));
+        allow delete: if teaches(c) || (hasSpace(c) && mine(c, resource.data.memberId) && resource.data.status == 'pending');
       }
       // Còpia de les marques de cada cantaire: només les seves.
       match /memberMarks/{mid} {

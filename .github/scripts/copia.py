@@ -29,7 +29,7 @@ def backup(gid):
         "productions": list(r.list(f"{base}/productions").values()),
         "attendance": r.list(f"{base}/attendance"),
     }
-    for name in ["absences", "rsvp", "subs", "staff", "announcements", "polls", "pollVotes"]:
+    for name in ["absences", "rsvp", "subs", "staff", "announcements", "polls", "pollVotes", "classes", "classReq"]:
         data[name] = list(r.list(f"{base}/{name}").values())
 
     out = dades.folder(OUT, gid)

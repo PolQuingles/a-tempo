@@ -125,6 +125,18 @@ input,select,textarea{font:inherit;color:var(--ink)}
 .tabs-in{max-width:760px;margin-inline:auto;display:grid;grid-auto-flow:column;grid-auto-columns:1fr;height:var(--nav-h)}
 .tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11.5px;font-weight:600;color:var(--muted);letter-spacing:.01em}
 .tabs-in.n6 .tab{font-size:10.5px;letter-spacing:0}
+.tabs-in.n7 .tab{font-size:10px}
+.tabs-in.n7 .tab-ico{width:44px}
+.cl-day{display:grid;gap:2px;padding:12px 14px;border-top:1px solid var(--line)}
+.cl-day:first-child{border-top:0}
+.cl-slot{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:7px 0;border-top:1px dashed var(--line)}
+.cl-slot:first-of-type{border-top:0}
+.cl-slot .t{font-variant-numeric:tabular-nums;font-weight:700;min-width:48px}
+.cl-slot.me{color:var(--accent)}
+.cl-slot .who{flex:1 1 120px;min-width:0}
+.cl-acts{display:flex;gap:4px;flex-wrap:wrap;flex-basis:100%;margin-left:58px}
+.tab{line-height:1.12}
+.cl-free{color:var(--muted);font-style:italic}
 .tab svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .tab[aria-current="page"]{color:var(--accent)}
 .tab[aria-current="page"] .tab-ico{background:var(--accent-soft)}
@@ -893,6 +905,7 @@ const WEEKDAYS = [ ['1','dl'], ['2','dt'], ['3','dc'], ['4','dj'], ['5','dv'], [
 const LATE_CHIPS = [5, 10, 15, 20, 30];
 const LS_UI = 'atempo:ui:v1';
 const COLS = ['members', 'productions', 'attendance'];
+const CLASS_COLS = ['classes', 'classReq'];
 
 /* ================= Agrupacions: tipus, seccions i paraules ================= */
 // L'app serveix per a cors, orquestres, bandes i altres agrupacions. El tipus decideix les paraules
@@ -970,7 +983,8 @@ function applyGroupConfig() {
   RULE_SKIP = new Set([...k.shows, 'Altres', 'Reunió']);
   const w = k.words;
   V = { ...w, kind, Member: capz(w.member), Members: capz(w.members), Section: capz(w.section), Sections: capz(w.sections),
-    Leader: capz(w.leader), Part: capz(w.part), Group: capz(w.group), Tot: capz(w.tot), Kind: k.label };
+    Leader: capz(w.leader), Part: capz(w.part), Group: capz(w.group), Tot: capz(w.tot), Kind: k.label,
+    Teacher: kind === 'cor' ? 'Professor de cant' : 'Professor', classes: kind === 'cor' ? 'Classes de cant' : 'Classes' };
   if (SECTIONS.length && !SEC_MAP[ui.section]) ui.section = SECTIONS[0].id;
   if (ui.rollSec && !SEC_MAP[ui.rollSec]) ui.rollSec = null;
   if (ui.statsSec && !SEC_MAP[ui.statsSec]) ui.statsSec = '';
@@ -1041,6 +1055,8 @@ const S = {
   announcements: new Map(),
   polls: new Map(),
   pollVotes: new Map(),   // <pollId>_<memberId> -> { choices, note }
+  classes: new Map(),     // <id> -> one day of singing lessons, with its slots
+  classReq: new Map(),    // <id> -> a lateness/absence notice or a swap request
   memberMarks: new Map(), // staff: per-singer copy of their own marks
   myMarks: null,          // singer: my own marks
   secrets: null,
@@ -1085,9 +1101,9 @@ function saveUI() {
 }
 // Rols de les persones de l'agrupació. Una persona pot tenir-ne més d'un (p. ex. cap de corda i cantaire).
 // Administració ho pot fer tot; direcció, caps i equip passen llista i editen; cantaires i músics només llegeixen.
-const ROLE_KEYS = ['admin', 'director', 'leader', 'palau', 'singer'];
+const ROLE_KEYS = ['admin', 'director', 'leader', 'palau', 'voice', 'singer'];
 const staffLabel = () => (S.config.labels && S.config.labels.palau) || 'Equip tècnic';
-const roleLabel = r => ({ admin: 'Administració', director: 'Director', leader: V.Leader, singer: V.Member, palau: staffLabel() }[r] || r);
+const roleLabel = r => ({ admin: 'Administració', director: 'Director', leader: V.Leader, singer: V.Member, palau: staffLabel(), voice: V.Teacher }[r] || r);
 const EDIT_ROLES = new Set(['admin', 'director', 'leader', 'palau']);
 /** The roles of a person record, in ROLE_KEYS order: the list, or the single role of older records. */
 const rolesOf = p => { const list = !p ? [] : Array.isArray(p.roles) && p.roles.length ? p.roles : p.role ? [p.role] : []; return ROLE_KEYS.filter(k => list.includes(k)); };
@@ -1101,6 +1117,7 @@ const rolesHint = roles => !roles.length ? 'Tria almenys un rol.' : [
     : 'Veu tota l’app en mode lectura, sense poder-hi canviar res.',
   roles.includes('singer') ? `Té el seu espai: avisa de les seves absències i veu la seva assistència.` : '',
   roles.includes('leader') ? `Porta una ${V.section}.` : '',
+  roles.includes('voice') ? `Porta les ${V.classes.toLowerCase()}: en fa el calendari i rep els avisos dels ${V.members}.` : '',
 ].filter(Boolean).join(' ');
 // «Mira-ho com un cantaire»: només canvia el que es veu en aquest mòbil, no els permisos.
 let PREVIEW = null;
@@ -1108,6 +1125,34 @@ const canEdit = () => S.role === 'edit' && !PREVIEW;
 const isAdmin = () => S.role === 'edit' && !PREVIEW && hasRole(S.me, 'admin');
 /** Name, type, sections and look of the group, and deleting it: only a Pro user who runs it. */
 const canManageGroup = () => isAdmin() && S.pro;
+/* ---------- Classes de cant ---------- */
+const classesOn = () => !!S.config.classesOn;
+/** Fa el calendari de classes i respon els avisos: el professorat i l'administració. */
+const teachesClasses = () => !PREVIEW && (hasRole(S.me, 'voice') || hasRole(S.me, 'admin'));
+const classDays = () => [...S.classes.values()].sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.id || '').localeCompare(b.id || ''));
+/** Els llocs del dia, amb els canvis d'hora acceptats ja aplicats. */
+function classSlots(c) {
+  const slots = (c.slots || []).map(x => ({ ...x }));
+  const by = new Map(slots.map(x => [x.id, x]));
+  for (const r of S.classReq.values()) {
+    if (r.classId !== c.id || r.kind !== 'swap' || r.status !== 'accepted') continue;
+    const a = by.get(r.slotId), b = by.get(r.withSlotId);
+    if (a && b) { const t = a.memberId; a.memberId = b.memberId; b.memberId = t; a.swapped = b.swapped = true; }
+  }
+  return slots;
+}
+const mySlot = c => { const id = myId(); return id ? classSlots(c).find(x => x.memberId === id) : null; };
+const inClasses = () => !!myId() && classDays().some(c => (c.slots || []).some(x => x.memberId === myId()));
+const seeClasses = () => classesOn() && (teachesClasses() || inClasses());
+/** Els avisos que toquen una hora concreta: els de retard o absència segueixen la persona
+ *  (si s'ha fet un canvi, van amb ella a l'hora nova); els canvis d'hora, les dues hores. */
+const slotReqs = (c, slot) => [...S.classReq.values()]
+  .filter(r => r.classId === c.id && !['cancelled', 'rejected'].includes(r.status)
+    && (r.kind === 'swap' ? (r.slotId === slot.id || r.withSlotId === slot.id) : r.memberId === slot.memberId))
+  .sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
+const reqsToAnswer = () => { const id = myId(); return id ? [...S.classReq.values()].filter(r => r.kind === 'swap' && r.status === 'pending' && r.withMemberId === id) : []; };
+const reqsForTeacher = () => [...S.classReq.values()].filter(r => r.status === 'pending' && r.kind !== 'swap');
+const classBadge = () => reqsToAnswer().length + (teachesClasses() ? reqsForTeacher().length : 0);
 /** The member this account really is (from the account record or a personal link), if any. */
 const myId = () => { const id = PREVIEW ? PREVIEW.memberId : S.memberId; return id && S.members.has(id) ? id : null; };
 /** Narrow personal link: only «El meu espai», no access to the rest of the app. */
@@ -1201,7 +1246,8 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 function subscribe() {
   const staff = S.role === 'edit';
   const reader = S.role === 'read' || S.role === 'view';   // account with read-only access to the whole app
-  const wanted = ['members', 'productions', 'config', 'absences', 'subs', 'rsvp', 'announcements', 'polls', 'pollVotes'];
+  const teach = staff || hasRole(S.me, 'voice');           // veu tots els avisos de les classes
+  const wanted = ['members', 'productions', 'config', 'absences', 'subs', 'rsvp', 'announcements', 'polls', 'pollVotes', 'classes', 'classReq'];
   if (staff) wanted.push('attendance', 'secrets', 'secretsMembers', 'staff', 'memberMarks', 'push');
   else if (reader) wanted.push('attendance');
   else wanted.push('myMarks');
@@ -1222,6 +1268,18 @@ function subscribe() {
     if (S.ready) scheduleRender();
   };
   const mine = col => staff ? db.collection(col) : db.collection(col).where('memberId', '==', S.memberId || '-');
+  // Classes de cant: el calendari el veu tothom; els avisos, el professorat tots i cadascú els seus.
+  db.collection('classes').onSnapshot(onCol('classes'), () => markLoaded('classes'));
+  if (teach) db.collection('classReq').onSnapshot(onCol('classReq'), () => markLoaded('classReq'));
+  else {
+    const mid = S.memberId || '-';
+    let fromMe = new Map(), toMe = new Map();
+    const mergeReq = () => { S.classReq = new Map([...fromMe, ...toMe]); markLoaded('classReq'); if (S.ready) scheduleRender(); };
+    const grab = (field, set) => db.collection('classReq').where(field, '==', mid)
+      .onSnapshot(snap => { set(new Map(snap.docs.map(d => [d.id, d.data()]))); mergeReq(); }, () => markLoaded('classReq'));
+    grab('memberId', m => { fromMe = m; });
+    grab('withMemberId', m => { toMe = m; });
+  }
   for (const col of ['members', 'productions', 'announcements', 'polls']) db.collection(col).onSnapshot(onCol(col), e => { markLoaded(col); if (col === 'members' || col === 'productions') onDbError(e); });
   for (const col of ['absences', 'subs', 'rsvp', 'pollVotes']) mine(col).onSnapshot(onCol(col), e => { markLoaded(col); if (staff && col !== 'pollVotes') onDbError(e); });
   if (reader) db.collection('attendance').onSnapshot(onCol('attendance'), e => { markLoaded('attendance'); onDbError(e); });
@@ -1547,15 +1605,17 @@ const TAB_ICONS = {
   gestio: '<circle cx="9" cy="8" r="3.2"/><path d="M3.5 19.5c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><path d="M16 5.2a3 3 0 010 5.6M18 14.8c1.5.7 2.4 2.2 2.6 4.7"/>',
   avisos: '<circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c.8-3.8 3.7-6 7.5-6s6.7 2.2 7.5 6"/>',
   tauler: '<rect x="3.5" y="4" width="17" height="16" rx="2.5"/><path d="M7.5 9h9M7.5 13h9M7.5 17h5"/>',
+  classes: '<path d="M12 6.6c-2-1.5-4-2-6.5-2v12c2.5 0 4.5.5 6.5 2 2-1.5 4-2 6.5-2v-12c-2.5 0-4.5.5-6.5 2Z"/><path d="M12 6.6v12"/>',
 };
-const TAB_LABEL = { llista: 'Llista', calendari: 'Calendari', stats: 'Estadístiques', gestio: 'Gestió', avisos: 'El meu espai', tauler: 'Tauler' };
+const TAB_LABEL = { llista: 'Llista', calendari: 'Calendari', stats: 'Estadístiques', gestio: 'Gestió', avisos: 'El meu espai', tauler: 'Tauler', classes: 'Classes de cant' };
 // Amb sis pestanyes (qui edita i també és a la plantilla) els noms llargs no hi caben.
-const TAB_SHORT = { stats: 'Estad.', avisos: 'Espai' };
+const TAB_SHORT = { stats: 'Estad.', avisos: 'Espai', classes: 'Classes', calendari: 'Calend.' };
 const tabsForRole = () => {
+  const cl = seeClasses() ? ['classes'] : [];
   if (isLinkOnly()) return ['avisos', 'tauler', ...(mySubs().length ? ['llista'] : []), 'calendari'];
-  if (!canEdit()) return [...(myId() ? ['avisos'] : []), 'llista', 'calendari', 'stats', 'tauler'];
+  if (!canEdit()) return [...(myId() ? ['avisos'] : []), ...cl, 'llista', 'calendari', 'stats', 'tauler'];
   // Qui edita i també és a la plantilla (p. ex. un cap de corda) té, a més, el seu espai.
-  return [...(myId() ? ['avisos'] : []), 'llista', 'calendari', 'stats', 'tauler', 'gestio'];
+  return [...(myId() ? ['avisos'] : []), ...cl, 'llista', 'calendari', 'stats', 'tauler', 'gestio'];
 };
 function renderTabs() {
   const tabs = tabsForRole();
@@ -1563,8 +1623,9 @@ function renderTabs() {
   const badge = S.role === 'edit' ? pendingAbsences().length : 0;
   const short = tabs.length > 5;
   $('.tabs-in').classList.toggle('n6', short);
+  $('.tabs-in').classList.toggle('n7', tabs.length > 6);
   $('.tabs-in').innerHTML = tabs.map(t => `<button class="tab" data-act="tab" data-tab="${t}" aria-current="${t === ui.tab ? 'page' : 'false'}"${short && TAB_SHORT[t] ? ` aria-label="${TAB_LABEL[t]}"` : ''}>
-    <span class="tab-ico"><svg viewBox="0 0 24 24">${TAB_ICONS[t]}</svg>${t === 'gestio' && badge ? `<span class="tab-badge">${badge}</span>` : ''}${t === 'tauler' && boardBadge() ? `<span class="tab-badge">${boardBadge()}</span>` : ''}</span>${short && TAB_SHORT[t] || TAB_LABEL[t]}</button>`).join('');
+    <span class="tab-ico"><svg viewBox="0 0 24 24">${TAB_ICONS[t]}</svg>${t === 'gestio' && badge ? `<span class="tab-badge">${badge}</span>` : ''}${t === 'tauler' && boardBadge() ? `<span class="tab-badge">${boardBadge()}</span>` : ''}${t === 'classes' && classBadge() ? `<span class="tab-badge">${classBadge()}</span>` : ''}</span>${short && TAB_SHORT[t] || TAB_LABEL[t]}</button>`).join('');
 }
 /* ---------- Brand: logo and accent colour ---------- */
 function hexToHsl(hex) {
@@ -1724,7 +1785,7 @@ function render() {
     v.innerHTML = `<div class="empty">${staffSvg()}<p>Carregant les dades de l’agrupació…</p></div>`;
     return;
   }
-  const html = { llista: viewRoll, calendari: viewCalendar, stats: viewStats, gestio: viewManage, avisos: viewSinger, tauler: viewBoard }[ui.tab]();
+  const html = { llista: viewRoll, calendari: viewCalendar, stats: viewStats, gestio: viewManage, avisos: viewSinger, tauler: viewBoard, classes: viewClasses }[ui.tab]();
   v.innerHTML = html;
   afterRender();
 }
@@ -2608,7 +2669,7 @@ async function deleteGroup(el) {
   const at = new Date().toISOString();
   try {
     const refs = [];
-    for (const col of ['members', 'productions', 'attendance', 'absences', 'subs', 'rsvp', 'announcements', 'polls', 'pollVotes', 'memberMarks', 'push', 'config']) {
+    for (const col of ['members', 'productions', 'attendance', 'absences', 'subs', 'rsvp', 'announcements', 'polls', 'pollVotes', 'memberMarks', 'push', 'classes', 'classReq', 'config']) {
       say('Preparant…');
       const snap = await db.collection(col).get();
       for (const d of snap.docs) if (!(col === 'config' && d.id === 'main')) refs.push(d.ref);
@@ -2702,6 +2763,11 @@ function manageConfig() {
     ${themeRow()}
   </div>
   ${adminBlocks}
+  ${isAdmin() ? `<div class="sec-h"><h2 class="h2">${esc(V.classes)}</h2></div>
+  <div class="panel"><div class="toggle-row setting"><span><b>${classesOn() ? 'Activades' : 'Desactivades'}</b><br><span class="muted" style="font-size:12.5px">${classesOn()
+      ? `Hi ha una pestanya amb el calendari de les classes. El porta qui tingui el rol de ${esc(V.Teacher.toLowerCase())}; cada ${esc(V.member)} hi veu la seva hora, hi pot avisar d’un retard o d’una absència i demanar un canvi d’hora a un company.`
+      : `Activa-les si l’agrupació fa classes individuals. Hi haurà una pestanya amb el calendari, que portarà qui tingui el rol de ${esc(V.Teacher.toLowerCase())}.`}</span></span>
+      <label class="switch"><input type="checkbox" id="cfg-classes" ${classesOn() ? 'checked' : ''} data-bind="cfg-classes"><span></span></label></div></div>` : ''}
   <div class="sec-h"><h2 class="h2">Calendari subscrit</h2></div>
   <div class="panel">${isAdmin()
     ? `<div class="toggle-row setting"><span><b>${icsOn() ? 'Activat' : 'Desactivat'}</b><br><span class="muted" style="font-size:12.5px">${icsOn() ? 'Qui s’hi subscrigui tindrà les sessions a Google Calendar, Apple o Outlook, sempre al dia. L’adreça és pública però difícil d’endevinar, i no porta noms de persones.' : 'Activa’l perquè tothom pugui tenir les sessions a l’app de calendari del mòbil. Funciona al cap d’unes hores.'}</span></span>
@@ -3093,6 +3159,231 @@ function sheetMyAttendance() {
       <p class="muted" style="font-size:12px">Només tu i l’equip ${V.del} veieu aquestes dades. Si hi ha algun error, parla amb el teu ${V.leader}.</p>`,
   });
 }
+/* ---------- View: Classes de cant ---------- */
+// El calendari de les classes, hora per hora. El professorat el fa i el manté; cada persona pot
+// avisar que arribarà tard o que no hi anirà, i demanar el canvi d'hora d'un dia a un company.
+const REQ_WORD = { late: 'Arribarà tard', absent: 'No hi anirà', swap: 'Canvi d’hora' };
+const reqMemberName = r => S.members.get(r.memberId)?.name || r.memberName || '';
+const slotAt = (c, id) => (c.slots || []).find(x => x.id === id);
+const slotTime = (c, id) => slotAt(c, id)?.time || '';
+
+function classReqLine(r) {
+  const c = S.classes.get(r.classId);
+  const when = c ? `${longDate(c.date)}${slotTime(c, r.slotId) ? `, a les ${slotTime(c, r.slotId)}` : ''}` : '';
+  if (r.kind === 'late') return `${esc(reqMemberName(r))} arribarà ${r.mins ? `${r.mins} min ` : ''}tard · ${esc(when)}`;
+  if (r.kind === 'absent') return `${esc(reqMemberName(r))} no hi podrà anar · ${esc(when)}`;
+  const otherTime = c ? slotTime(c, r.withSlotId) : '';
+  return `${esc(reqMemberName(r))} (${esc(slotTime(c, r.slotId) || '')}) vol canviar l’hora amb ${esc(S.members.get(r.withMemberId)?.name || r.withName || '')} (${esc(otherTime)}) · ${esc(when)}`;
+}
+function classSlotRow(c, x, past) {
+  const m = S.members.get(x.memberId);
+  const meNow = myId() && x.memberId === myId();
+  const rq = slotReqs(c, x);
+  const late = rq.find(r => r.kind === 'late');
+  const absent = rq.find(r => r.kind === 'absent');
+  const swap = rq.find(r => r.kind === 'swap');
+  const pills = [
+    absent ? `<span class="st-pill ${absent.status === 'pending' ? 'st-pending' : 'st-rejected'}">No hi va</span>` : '',
+    late ? `<span class="st-pill ${late.status === 'pending' ? 'st-pending' : 'st-accepted'}">Tard${late.mins ? ` ${late.mins}′` : ''}</span>` : '',
+    swap && swap.status === 'accepted' ? '<span class="st-pill st-accepted">Canvi</span>' : swap && swap.status === 'pending' ? '<span class="st-pill st-pending">Canvi demanat</span>' : '',
+  ].filter(Boolean).join(' ');
+  const acts = meNow && !past
+    ? `<span class="cl-acts">
+        <button class="btn btn-sm" data-act="cl-notice" data-c="${esc(c.id)}" data-s="${esc(x.id)}" data-k="late">Tard</button>
+        <button class="btn btn-sm" data-act="cl-notice" data-c="${esc(c.id)}" data-s="${esc(x.id)}" data-k="absent">No hi vaig</button>
+        ${classSlots(c).length > 1 ? `<button class="btn btn-sm" data-act="cl-swap" data-c="${esc(c.id)}" data-s="${esc(x.id)}">Canvia l’hora</button>` : ''}
+      </span>`
+    : '';
+  return `<div class="cl-slot ${meNow ? 'me' : ''}">
+    <span class="t">${esc(x.time || '')}</span>
+    <span class="who">${m ? esc(m.name) : '<span class="cl-free">lliure</span>'}${m && m.section ? ` <span class="m">· ${esc(SEC[m.section].short)}</span>` : ''}${x.swapped ? ' <span class="m">(canviat)</span>' : ''}${pills ? `<br>${pills}` : ''}</span>
+    ${acts}</div>`;
+}
+function classDayCard(c, past) {
+  const teach = teachesClasses();
+  const who = S.staff.get(c.teacher || '')?.name || '';
+  const facts = [c.place, who, c.note].filter(Boolean).join(' · ');
+  const slots = classSlots(c);
+  return `<div class="cl-day">
+    <div style="display:flex;justify-content:space-between;gap:10px;align-items:center">
+      <span><b>${esc(longDate(c.date))}</b>${facts ? `<br><span class="m">${esc(facts)}</span>` : ''}</span>
+      ${teach ? `<button class="icon-btn" data-act="cl-edit" data-c="${esc(c.id)}" aria-label="Edita el dia de classe">${ICON.more}</button>` : ''}
+    </div>
+    ${slots.length ? slots.map(x => classSlotRow(c, x, past)).join('') : '<p class="muted" style="margin:6px 0 0;font-size:13px">Encara no hi ha hores posades.</p>'}
+  </div>`;
+}
+function viewClasses() {
+  const teach = teachesClasses();
+  const days = classDays();
+  const next = days.filter(c => c.date >= TODAY);
+  const past = days.filter(c => c.date < TODAY).reverse();
+  const answer = reqsToAnswer();
+  const pending = teach ? reqsForTeacher() : [];
+  const mineReq = myId() ? [...S.classReq.values()].filter(r => r.memberId === myId() && r.status === 'pending').sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')) : [];
+  const swapCard = r => {
+    const c = S.classes.get(r.classId);
+    return `<div class="conv-card">
+      <div class="a-h"><b>${esc(reqMemberName(r))}</b> et demana canviar l’hora</div>
+      <span class="muted" style="font-size:13.5px">${c ? esc(longDate(c.date)) : ''} · ell/a té les <b>${esc(slotTime(c, r.slotId))}</b> i tu les <b>${esc(slotTime(c, r.withSlotId))}</b>. Només per aquest dia.</span>
+      ${r.reason ? `<span style="font-size:13px">${esc(r.reason)}</span>` : ''}
+      <span style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><button class="btn btn-sm btn-primary" data-act="cl-answer" data-r="${esc(r.id)}" data-v="accepted">Accepto el canvi</button><button class="btn btn-sm" data-act="cl-answer" data-r="${esc(r.id)}" data-v="rejected">Ara no puc</button></span>
+    </div>`;
+  };
+  const pendCard = r => `<div class="conv-card">
+      <div class="a-h">${classReqLine(r)}</div>
+      ${r.reason ? `<span style="font-size:13px">${esc(r.reason)}</span>` : ''}
+      <span style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><button class="btn btn-sm btn-primary" data-act="cl-review" data-r="${esc(r.id)}" data-v="accepted">Vist</button><button class="btn btn-sm" data-act="cl-review" data-r="${esc(r.id)}" data-v="rejected">No pot ser</button></span>
+    </div>`;
+  const mineCard = r => `<li><span>${classReqLine(r)}<br><span class="m">${r.kind === 'swap' ? 'Esperant que respongui' : 'Esperant que ho vegi el professorat'}</span></span>
+      <button class="btn btn-sm" data-act="cl-cancel" data-r="${esc(r.id)}">Retira</button></li>`;
+  return `${teach ? `<div class="sec-h"><h2 class="h2">${esc(V.classes)}</h2><button class="btn btn-sm btn-primary" data-act="cl-new">+ Dia de classe</button></div>` : `<div class="section-title"><h2 class="h2">${esc(V.classes)}</h2><span class="eyebrow">${next.length ? 'properes' : 'sense dies'}</span></div>`}
+    ${answer.length ? `<div class="section-title"><h2 class="h2">Et demanen un canvi</h2><span class="eyebrow">respon</span></div><div class="panel" style="display:grid;gap:10px;padding:12px">${answer.map(swapCard).join('')}</div>` : ''}
+    ${pending.length ? `<div class="section-title"><h2 class="h2">Avisos per veure</h2><span class="eyebrow">${pending.length}</span></div><div class="panel" style="display:grid;gap:10px;padding:12px">${pending.map(pendCard).join('')}</div>` : ''}
+    ${mineReq.length ? `<div class="section-title"><h2 class="h2">Els teus avisos</h2></div><ul class="mini-list" style="max-height:none">${mineReq.map(mineCard).join('')}</ul>` : ''}
+    ${next.length ? `<div class="panel" style="margin-top:14px">${next.map(c => classDayCard(c, false)).join('')}</div>`
+      : `<div class="empty"><p>${teach ? 'Encara no hi ha cap dia de classe. Crea’n un i posa-hi les hores de cadascú.' : `Encara no hi ha cap classe apuntada. El ${esc(V.Teacher.toLowerCase())} les anirà posant aquí.`}</p></div>`}
+    ${past.length ? `<details class="np-group" style="margin-top:14px"><summary><span>Dies passats (${past.length})</span>${ICON.chev}</summary><div class="panel">${past.slice(0, 20).map(c => classDayCard(c, true)).join('')}</div></details>` : ''}
+    <p class="muted" style="font-size:12.5px;margin-top:12px">Els canvis d’hora valen només per al dia que es demanen. Qui rep la petició ha de dir que sí perquè es faci.</p>`;
+}
+/* ---------- Classes: fitxes ---------- */
+function saveClassDay(rec) { S.classes.set(rec.id, rec); persist('classes', rec.id, rec, 10); }
+function saveClassReq(rec) { S.classReq.set(rec.id, rec); persist('classReq', rec.id, rec, 10); }
+function sheetClassDay(id) {
+  const ex = id ? S.classes.get(id) : null;
+  const rec = ex ? { ...ex, slots: (ex.slots || []).map(x => ({ ...x })) }
+    : { id: uid('cl'), date: TODAY, place: '', note: '', teacher: S.email || '', slots: [] };
+  const taken = () => new Set(rec.slots.map(x => x.memberId).filter(Boolean));
+  const rows = () => rec.slots.map((x, i) => `<div class="sec-row" data-i="${i}" style="display:flex;gap:6px;align-items:center">
+      <input class="inp" type="time" value="${esc(x.time || '')}" data-f="time" style="width:110px">
+      <select class="inp" data-f="member" style="flex:1"><option value="">— lliure —</option>${memberOptions(x.memberId || '')}</select>
+      <button type="button" class="icon-btn" data-rm="${i}" aria-label="Treu aquesta hora">${ICON.close}</button>
+    </div>`).join('');
+  const read = el => {
+    el.querySelectorAll('.sec-row').forEach(row => {
+      const i = +row.dataset.i;
+      if (!rec.slots[i]) return;
+      rec.slots[i].time = row.querySelector('[data-f="time"]').value;
+      rec.slots[i].memberId = row.querySelector('[data-f="member"]').value;
+    });
+  };
+  const paint = el => { el.querySelector('#cd-rows').innerHTML = rows(); wire(el); };
+  const wire = el => {
+    el.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { read(el); rec.slots.splice(+b.dataset.rm, 1); paint(el); });
+  };
+  openSheet({
+    title: ex ? 'Dia de classe' : 'Nou dia de classe',
+    wide: true,
+    body: `<div class="kv">
+      <div class="row3">
+        <label class="field"><span>Dia</span><input class="inp" id="cd-date" type="date" value="${esc(rec.date)}"></label>
+        <label class="field"><span>Lloc</span><input class="inp" id="cd-place" type="text" maxlength="40" value="${esc(rec.place || '')}" placeholder="p. ex. Aula 2"></label>
+      </div>
+      <label class="field"><span>Nota</span><input class="inp" id="cd-note" type="text" maxlength="80" value="${esc(rec.note || '')}" placeholder="p. ex. Preparació del concert"></label>
+      <div class="field"><span>Genera les hores</span>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          <input class="inp" id="cd-from" type="time" value="17:00" style="width:110px">
+          <input class="inp" id="cd-mins" type="number" min="5" max="120" step="5" value="30" style="width:80px" aria-label="Minuts per classe">
+          <span class="muted" style="font-size:13px">min ·</span>
+          <input class="inp" id="cd-n" type="number" min="1" max="20" value="6" style="width:70px" aria-label="Quantes classes">
+          <button type="button" class="btn btn-sm" id="cd-gen">Genera</button>
+        </div><small>Omple les hores seguides; després hi tries qui ve a cadascuna.</small></div>
+      <div class="field"><span>Hores</span><div id="cd-rows" style="display:grid;gap:8px">${rows()}</div>
+        <button type="button" class="btn btn-sm" id="cd-add" style="justify-self:start;margin-top:8px">+ Afegeix una hora</button></div>
+    </div>`,
+    foot: `${ex ? '<button class="btn btn-danger-ghost" id="cd-del">Esborra el dia</button>' : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="cd-save">Desa</button>`,
+    onMount: el => {
+      wire(el);
+      el.querySelector('#cd-add').onclick = () => { read(el); rec.slots.push({ id: uid('sl'), time: '', mins: 30, memberId: '' }); paint(el); };
+      el.querySelector('#cd-gen').onclick = () => {
+        read(el);
+        const [h, m] = (el.querySelector('#cd-from').value || '17:00').split(':').map(Number);
+        const mins = Math.max(5, +el.querySelector('#cd-mins').value || 30), n = Math.min(20, Math.max(1, +el.querySelector('#cd-n').value || 1));
+        const old = rec.slots.slice();
+        rec.slots = [];
+        for (let i = 0; i < n; i++) {
+          const t = h * 60 + m + i * mins;
+          rec.slots.push({ id: old[i]?.id || uid('sl'), time: `${String(Math.floor(t / 60) % 24).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`, mins, memberId: old[i]?.memberId || '' });
+        }
+        paint(el);
+      };
+      el.querySelector('#cd-save').onclick = () => {
+        read(el);
+        const date = el.querySelector('#cd-date').value;
+        if (!date) { toast('Posa-hi el dia'); return; }
+        const dup = rec.slots.filter(x => x.memberId).map(x => x.memberId);
+        if (new Set(dup).size !== dup.length) { toast(`Hi ha algun ${V.member} en dues hores del mateix dia`); return; }
+        saveClassDay({ ...rec, date, place: el.querySelector('#cd-place').value.trim(), note: el.querySelector('#cd-note').value.trim(),
+          slots: rec.slots.filter(x => x.time).sort((a, b) => a.time.localeCompare(b.time)), at: new Date().toISOString(), by: S.email || '' });
+        closeSheet(); toast('Dia de classe desat'); render();
+      };
+      const del = el.querySelector('#cd-del');
+      if (del) del.onclick = async () => {
+        if (!await confirmSheet('Esborrar el dia de classe?', 'S’esborraran les hores d’aquell dia. Els avisos que hi hagi deixaran de sortir.', 'Esborra')) return;
+        S.classes.delete(rec.id); persist('classes', rec.id, null, 10);
+        closeSheet(); toast('Dia esborrat'); render();
+      };
+    },
+  });
+}
+function sheetClassNotice(classId, slotId, kind) {
+  const c = S.classes.get(classId);
+  if (!c) return;
+  const late = kind === 'late';
+  openSheet({
+    title: late ? 'Arribaré tard' : 'No hi podré anar',
+    body: `<div class="kv">
+      <p style="margin:0">Classe ${esc(longDate(c.date))}, a les <b>${esc(slotTime(c, slotId))}</b>.</p>
+      ${late ? '<label class="field"><span>Minuts de retard aproximats</span><input class="inp" id="cn-min" type="number" inputmode="numeric" min="1" max="120" value="10" style="width:120px"></label>' : ''}
+      <label class="field"><span>Motiu</span><textarea class="inp" id="cn-why" maxlength="200" style="min-height:80px" placeholder="p. ex. Tinc classe fins a les 17:15"></textarea></label>
+      <p class="muted" style="font-size:12.5px;margin:0">Ho rebrà el ${esc(V.Teacher.toLowerCase())} al mòbil.</p>
+    </div>`,
+    foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="cn-go">Envia l’avís</button>`,
+    onMount: el => {
+      el.querySelector('#cn-go').onclick = () => {
+        const m = S.members.get(myId());
+        const rec = { id: uid('cr'), classId, slotId, memberId: myId(), memberName: m ? m.name : '', kind, status: 'pending',
+          reason: el.querySelector('#cn-why').value.trim(), createdAt: new Date().toISOString(), uid: S.uid };
+        if (late) { const v = parseInt(el.querySelector('#cn-min').value, 10); if (v > 0) rec.mins = Math.min(120, v); }
+        saveClassReq(rec);
+        closeSheet(); toast('Avís enviat'); render();
+      };
+    },
+  });
+}
+function sheetClassSwap(classId, slotId) {
+  const c = S.classes.get(classId);
+  if (!c) return;
+  const others = classSlots(c).filter(x => x.id !== slotId && x.memberId && S.members.get(x.memberId));
+  if (!others.length) { toast('Aquell dia no hi ha ningú més amb hora'); return; }
+  openSheet({
+    title: 'Canvia l’hora amb algú',
+    body: `<div class="kv">
+      <p style="margin:0">Classe ${esc(longDate(c.date))}. Ara tens les <b>${esc(slotTime(c, slotId))}</b>. El canvi val <b>només per aquest dia</b>, i l’ha d’acceptar qui triïs.</p>
+      <label class="field"><span>Amb qui</span><select class="inp" id="cs-who">${others.map(x => `<option value="${esc(x.id)}">${esc(S.members.get(x.memberId).name)} · ${esc(x.time)}</option>`).join('')}</select></label>
+      <label class="field"><span>Missatge</span><textarea class="inp" id="cs-why" maxlength="200" style="min-height:70px" placeholder="p. ex. Aquell dia treballo fins a les 18h"></textarea></label>
+    </div>`,
+    foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="cs-go">Demana el canvi</button>`,
+    onMount: el => {
+      el.querySelector('#cs-go').onclick = () => {
+        const withSlotId = el.querySelector('#cs-who').value;
+        const other = classSlots(c).find(x => x.id === withSlotId);
+        const m = S.members.get(myId());
+        saveClassReq({ id: uid('cr'), classId, slotId, memberId: myId(), memberName: m ? m.name : '', kind: 'swap',
+          withSlotId, withMemberId: other.memberId, withName: S.members.get(other.memberId)?.name || '',
+          reason: el.querySelector('#cs-why').value.trim(), status: 'pending', createdAt: new Date().toISOString(), uid: S.uid });
+        closeSheet(); toast('Petició enviada'); render();
+      };
+    },
+  });
+}
+function answerClassReq(id, status) {
+  const r = S.classReq.get(id);
+  if (!r || r.status !== 'pending') return;
+  saveClassReq({ ...r, status, reviewedAt: new Date().toISOString(), reviewedBy: S.email || '' });
+  toast(status === 'accepted' ? 'Acceptat' : status === 'cancelled' ? 'Avís retirat' : 'Rebutjat');
+  render();
+}
+
 /* ---------- View: Singer (avisos) ---------- */
 function myMemberId() {
   if (myId()) return myId();
@@ -3789,6 +4080,7 @@ function sheetStaff(email) {
           await b.commit();
           indexPerson(mail);
           S.staff.set(mail, rec);
+          if (roles.includes('voice') && !classesOn() && isAdmin()) saveConfig({ classesOn: true });
           if (existing) { closeSheet(); toast('Canvis desats'); render(); }
           else { render(); sheetInvite(rec, true); }
         } catch { toast('No s’ha pogut desar. Només l’administració pot donar accessos.'); }
@@ -3997,13 +4289,14 @@ const pushKinds = () => ({
   enquestes: ['Enquestes obertes', 'Quan una enquesta és a punt de tancar-se.'],
   absencies: ['Resposta als teus avisos', 'Quan t’accepten o no un avís d’absència.'],
   assajos: ['Recordatori d’assaig', `La vespra, amb la fitxa ${V.sh.del} si n’hi ha.`],
+  ...(classesOn() ? { classes: [V.classes, `Avisos i canvis d’hora de les ${V.classes.toLowerCase()}.`] } : {}),
 });
 // Només per a qui edita: avisos sobre les seccions que porta.
 const leaderKinds = () => ({
   llistes: ['Llista a mitges', 'Mitja hora després d’acabar l’assaig, si la llista no és completa.'],
   risc: [`${V.Members} en risc`, 'Quan algú baixa de la norma d’assistència.'],
 });
-const DEFAULT_PREFS = { anuncis: true, materials: true, convocatories: true, enquestes: true, absencies: true, assajos: false, llistes: true, risc: true };
+const DEFAULT_PREFS = { anuncis: true, materials: true, convocatories: true, enquestes: true, absencies: true, assajos: false, llistes: true, risc: true, classes: true };
 const LS_PUSH_PREFS = 'atempo:avis-prefs';
 /** The sections a leader looks after: their own, from the account or from their roster record. */
 function defaultCordes() {
@@ -4473,6 +4766,8 @@ function sheetHelp() {
     <p>A <b>Gestió › ${w.Members}</b>: ${w.section}, ${w.part}, baixes temporals amb dates i telèfon. L’accés a l’app es dona amb el correu, a <b>Ajustos › Persones</b> (<b>+ Persona</b> o <b>Enganxa una llista</b>). Amb <b>Mira-ho com un ${w.member}</b> comproves què veu cadascú; <b>Qui ha entrat</b> i <b>Comprova els correus</b> t’ajuden a fer que tothom hi entri.</p>
     <h3>Tipus d’agrupació i ${w.sections}</h3>
     <p>A <b>Ajustos › Agrupació</b> tries si és un cor, una orquestra, una banda, una cobla, un grup de cambra o una altra agrupació: canvien les paraules de l’app i els tipus de sessió. A <b>Ajustos › ${w.Sections}</b> en canvies els noms i les abreviatures, n’afegeixes o en treus. El nom, el tipus, les ${w.sections} i la imatge només els pot canviar un <b>Usuari Pro</b> que administri l’agrupació.</p>
+    <h3>${esc(V.classes)}</h3>
+    <p>Si l’agrupació fa classes individuals, s’activen a <b>Ajustos › ${esc(V.classes)}</b>. Qui tingui el rol de <b>${esc(V.Teacher.toLowerCase())}</b> fa el calendari: crea un dia, genera les hores seguides i hi posa qui ve a cadascuna. Cada ${w.member} hi veu la seva hora i pot <b>avisar que arribarà tard</b>, que <b>no hi anirà</b> o <b>demanar el canvi d’hora d’un dia</b> a un company, que l’ha d’acceptar. El ${esc(V.Teacher.toLowerCase())} rep tots aquests avisos al mòbil.</p>
     <h3>Més d’una agrupació</h3>
     <p>Amb el mateix compte pots ser a diverses agrupacions: toca el nom a dalt de tot, o <b>Ajustos › Agrupacions</b>, per canviar-ne. Els <b>Usuaris Pro</b> també hi poden <b>crear una agrupació nova</b>, de la qual en són l’administrador/a. Cada agrupació té les seves dades, i ningú d’una altra no les pot veure.</p>
     <h3>Avisos al mòbil</h3>
@@ -4707,7 +5002,8 @@ function offerFile(filename, text, mime) {
 function exportJSON() {
   const data = { app: 'a-tempo', version: 1, exportedAt: new Date().toISOString(), config: S.config,
     members: [...S.members.values()], productions: [...S.productions.values()], attendance: Object.fromEntries(S.attendance), absences: [...S.absences.values()],
-    rsvp: [...S.rsvp.values()], announcements: [...S.announcements.values()], polls: [...S.polls.values()], pollVotes: [...S.pollVotes.values()] };
+    rsvp: [...S.rsvp.values()], announcements: [...S.announcements.values()], polls: [...S.polls.values()], pollVotes: [...S.pollVotes.values()],
+    classes: [...S.classes.values()], classReq: [...S.classReq.values()] };
   const slug = (S.config.name || 'agrupacio').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   offerFile(`${slug}-${TODAY}.json`, JSON.stringify(data, null, 2), 'application/json');
 }
@@ -4740,7 +5036,7 @@ async function importJSON(file) {
 function applyData(data, demo) {
   const incoming = { members: new Map(data.members.map(m => [m.id, m])), productions: new Map(data.productions.map(p => [p.id, p])), attendance: new Map(Object.entries(data.attendance || {})) };
   // La identitat de l'agrupació (nom, tipus, seccions, imatge) no la canvia ni una còpia ni l'exemple.
-  const keep = ['name', 'shortName', 'kind', 'sections', 'types', 'labels', 'brand', 'createdAt', 'icsOn', 'shared', 'onboarded', 'documents'];
+  const keep = ['name', 'shortName', 'kind', 'sections', 'types', 'labels', 'brand', 'createdAt', 'icsOn', 'classesOn', 'shared', 'onboarded', 'documents'];
   const cfg = Object.fromEntries(Object.entries(data.config || {}).filter(([k]) => !keep.includes(k) || (!demo && k === 'documents')));
   for (const col of COLS) {
     for (const id of [...S[col].keys()]) if (!incoming[col].has(id)) { S[col].delete(id); persist(col, id, null, 10); }
@@ -4803,7 +5099,7 @@ async function wipeAll(demo) {
     ? `S’eliminaran els ${V.members}, les produccions i les llistes d’exemple perquè puguis començar amb les dades reals.`
     : `S’eliminaran tots els ${V.members}, les produccions i les llistes. Fes abans una còpia de seguretat si en vols conservar res.`, 'Esborra-ho');
   if (!ok) return;
-  const paths = [...COLS, 'absences'].flatMap(col => [...S[col].keys()].map(id => [col, id]));
+  const paths = [...COLS, 'absences', ...CLASS_COLS].flatMap(col => [...S[col].keys()].map(id => [col, id]));
   let i = 0;
   for (const [col, id] of paths) { S[col].delete(id); persist(col, id, null, 10 + (i++ % 40) * 15); }
   saveConfig({ demo: false });
@@ -5201,12 +5497,21 @@ const SUB_OK = new Set(['mark', 'min', 'mark-rest']);
 const ADMIN_ONLY = new Set(['staff-new', 'staff-edit', 'staff-bulk', 'preview-on', 'who-in', 'mail-check', 'wipe-all', 'share-app', 'onboard-hide']);
 // La identitat de l'agrupació i esborrar-la: només un Usuari Pro que l'administri.
 const PRO_ONLY = new Set(['brand-color', 'logo-remove', 'kind-set', 'group-delete', 'sections-save', 'sections-undo']);
+// El calendari de les classes: només el professorat de cant i l'administració.
+const CLASS_ONLY = new Set(['cl-new', 'cl-edit', 'cl-review']);
 const EDIT_ONLY = new Set(['mark', 'min', 'mark-rest', 'session-new', 'sub-set', 'ann-new', 'ann-edit', 'mat-new', 'mat-edit', 'poll-new', 'poll-edit', 'poll-results', 'poll-remind', 'rsvp-remind', 'doc-new', 'doc-edit', 'share-app', 'staff-bulk', 'preview-on', 'who-in', 'mail-check', 'concert-list', 'concert-toggle', 'session-edit', 'member-edit', 'member-bulk', 'prod-new', 'prod-edit',
   'wipe-demo', 'wipe-all', 'load-demo', 'export-json', 'abs-accept', 'abs-reject', 'abs-delete', 'manage']);
 const actions = {
   'tab': el => { ui.tab = el.dataset.tab; ui.rollSec = null; ui._calScrolled = false; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
   'reload': () => location.reload(),
   'google-in': () => signInGoogle(),
+  'cl-new': () => sheetClassDay(),
+  'cl-edit': el => sheetClassDay(el.dataset.c),
+  'cl-notice': el => sheetClassNotice(el.dataset.c, el.dataset.s, el.dataset.k),
+  'cl-swap': el => sheetClassSwap(el.dataset.c, el.dataset.s),
+  'cl-answer': el => answerClassReq(el.dataset.r, el.dataset.v),
+  'cl-review': el => answerClassReq(el.dataset.r, el.dataset.v),
+  'cl-cancel': el => answerClassReq(el.dataset.r, 'cancelled'),
   'mail-in': () => mailStart('signin'),
   'mail-step': el => { MAIL = { ...(MAIL || {}), step: el.dataset.step, email: $('#ml-email')?.value.trim() || MAIL?.email || '', msg: '', ok: '' }; render(); },
   'mail-cancel': () => { MAIL = null; render(); },
@@ -5393,6 +5698,7 @@ document.addEventListener('click', e => {
   if (EDIT_ONLY.has(act) && !canEdit() && !subAllowed) { toast('Amb aquest enllaç no pots fer aquesta acció'); return; }
   if (ADMIN_ONLY.has(act) && !isAdmin()) { toast('Només l’administració de l’agrupació pot fer-ho'); return; }
   if (PRO_ONLY.has(act) && !canManageGroup()) { toast('Només un Usuari Pro que administri l’agrupació pot canviar-ho'); return; }
+  if (CLASS_ONLY.has(act) && !teachesClasses()) { toast(`Només el ${V.Teacher.toLowerCase()} pot fer-ho`); return; }
   fn(el, e);
 });
 
@@ -5446,6 +5752,7 @@ document.addEventListener('change', e => {
   if (color && canManageGroup()) setBrandColor(color.value);
   const el = e.target.closest('[data-bind="import"]');
   if (el && el.files && el.files[0]) { importJSON(el.files[0]); el.value = ''; }
+  if (e.target.closest('[data-bind="cfg-classes"]') && isAdmin()) { saveConfig({ classesOn: e.target.checked }); toast(e.target.checked ? `${V.classes} activades` : `${V.classes} desactivades`); render(); }
   if (e.target.closest('[data-bind="cfg-ics"]') && isAdmin()) { saveConfig({ icsOn: e.target.checked }); toast(e.target.checked ? 'Calendari subscrit activat: funcionarà d’aquí a unes hores' : 'Calendari subscrit desactivat'); render(); }
   if (e.target.closest('[data-bind="min"]')) refreshRow(e.target.closest('.row').dataset.mid);
 });

@@ -47,7 +47,7 @@ EVENING = 18 <= NOW.hour < 21                   # finestra dels recordatoris del
 RISK_TIME = os.environ.get("AVISOS_RISK") == "1" or (NOW.hour in (10, 19) and NOW.minute < 30)
 
 DEFAULT_PREFS = {"anuncis": True, "convocatories": True, "enquestes": True, "assajos": False,
-                 "materials": True, "absencies": True, "llistes": True, "risc": True}
+                 "materials": True, "absencies": True, "llistes": True, "risc": True, "classes": True}
 EDIT_ROLES = {"admin", "director", "leader", "palau"}
 
 
@@ -340,6 +340,78 @@ class Group:
             for did, d in self.targets("absencies", member_ids={a.get("memberId")}):
                 self.deliver(f"abs:{aid}:{status}:{did}", d, body, f"abs-{aid}")
 
+    # ---------- Classes de cant ----------
+    def teachers(self):
+        """Els correus que porten les classes: professorat de cant i administració."""
+        return {e for e, p in self.people.items() if roles_of(p) & {"voice", "admin"}}
+
+    def to_emails(self, emails):
+        for did, d in self.targets("classes"):
+            if d.get("email") in emails:
+                yield did, d
+
+    def classes(self):
+        """Avisos de retard o absència a una classe i peticions de canvi d'hora."""
+        if QUIET or not self.config.get("classesOn"):
+            return
+        since = self.state.setdefault("class_since", UTC_NOW.isoformat().replace("+00:00", "Z"))
+        fresh = max(since, FRESH)
+        reqs = dict(r.query(self.base, "classReq", [("createdAt", ">=", fresh)]))
+        reqs.update(r.query(self.base, "classReq", [("reviewedAt", ">=", fresh)]))
+        if not reqs:
+            return
+        days = r.list(f"{self.base}/classes")
+        members = self.members()
+        teachers = self.teachers()
+        name = lambda mid: (members.get(mid or "") or {}).get("name") or "Algú"
+
+        def when(req):
+            day = days.get(req.get("classId") or "")
+            if not day:
+                return "la classe"
+            slot = next((x for x in day.get("slots") or [] if x.get("id") == req.get("slotId")), None)
+            return f"la classe de {day_label(day['date'])}" + (f" ({slot['time']})" if slot and slot.get("time") else "")
+
+        def other_time(req):
+            day = days.get(req.get("classId") or "")
+            slot = next((x for x in (day or {}).get("slots") or [] if x.get("id") == req.get("withSlotId")), None)
+            return (slot or {}).get("time") or ""
+
+        for rid, req in sorted(reqs.items()):
+            kind, status = req.get("kind"), req.get("status")
+            who, mate = name(req.get("memberId")), name(req.get("withMemberId"))
+            if status == "pending":
+                if kind == "late":
+                    body = f"{who} arribarà {req.get('mins') or ''}{'′ ' if req.get('mins') else ''}tard a {when(req)}."
+                elif kind == "absent":
+                    body = f"{who} no podrà venir a {when(req)}."
+                else:
+                    body = f"{who} demana canviar l'hora de {when(req)} amb {mate} ({other_time(req)})."
+                for did, d in self.to_emails(teachers):
+                    self.deliver(f"cls:{rid}:{status}:{did}", d, body, f"cls-{rid}")
+                if kind == "swap":
+                    msg = f"{who} et demana canviar l'hora de {when(req)}: tens les {other_time(req)}. Respon-hi des de l'app."
+                    for did, d in self.targets("classes", member_ids={req.get("withMemberId")}):
+                        self.deliver(f"cls:{rid}:ask:{did}", d, msg, f"cls-{rid}")
+                continue
+            if status == "cancelled":
+                body = f"{who} ha retirat l'avís de {when(req)}."
+                for did, d in self.to_emails(teachers):
+                    self.deliver(f"cls:{rid}:{status}:{did}", d, body, f"cls-{rid}")
+                continue
+            done = status == "accepted"
+            if kind == "swap":
+                body = f"{mate} {'accepta' if done else 'no pot fer'} el canvi d'hora de {when(req)}."
+                teach_body = f"{who} i {mate} {'es canvien' if done else 'no es canvien'} l'hora de {when(req)}."
+            else:
+                body = f"El professorat {'ha vist' if done else 'no pot acceptar'} el teu avís de {when(req)}."
+                teach_body = None
+            for did, d in self.targets("classes", member_ids={req.get("memberId")}):
+                self.deliver(f"cls:{rid}:{status}:{did}", d, body, f"cls-{rid}")
+            if teach_body:
+                for did, d in self.to_emails(teachers):
+                    self.deliver(f"cls:{rid}:{status}:t:{did}", d, teach_body, f"cls-{rid}")
+
     # ---------- Caps de corda o de secció ----------
     def leader_sections(self, d):
         """Seccions de les quals aquest aparell vol els avisos de cap."""
@@ -474,6 +546,7 @@ class Group:
             self.rehearsals()
         self.materials()
         self.absences()
+        self.classes()
         if not self.first_run:
             self.rolls()
         self.risk()
