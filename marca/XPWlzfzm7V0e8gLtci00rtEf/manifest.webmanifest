@@ -1,11 +1,11 @@
 {
-  "name": "Orquestra de la Universitat Politècnica de Catalunya",
+  "name": "Orquestra de la UPC",
   "short_name": "OUPC",
   "description": "Assistència, calendari i avisos",
   "lang": "ca",
   "display": "standalone",
-  "background_color": "#CCCCCC",
-  "theme_color": "#CCCCCC",
+  "background_color": "#28265B",
+  "theme_color": "#28265B",
   "start_url": "../../?a=XPWlzfzm7V0e8gLtci00rtEf",
   "scope": "../../",
   "icons": [
