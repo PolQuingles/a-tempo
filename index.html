@@ -129,6 +129,8 @@ input,select,textarea{font:inherit;color:var(--ink)}
 .tabs-in.n7 .tab-ico{width:44px}
 .cl-day{display:grid;gap:2px;padding:12px 14px;border-top:1px solid var(--line)}
 .cl-day:first-child{border-top:0}
+.cl-day.off .cl-slot{opacity:.55}
+.cl-day.off .cl-slot .t{text-decoration:line-through}
 .cl-slot{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:7px 0;border-top:1px dashed var(--line)}
 .cl-slot:first-of-type{border-top:0}
 .cl-slot .t{font-variant-numeric:tabular-nums;font-weight:700;min-width:48px}
@@ -1156,6 +1158,33 @@ function classSlots(c) {
 }
 const mySlot = c => { const id = myId(); return id ? classSlots(c).find(x => x.memberId === id) : null; };
 const classNoteFor = (classId, slotId) => S.classNotes.get(`${classId}_${slotId}`);
+const classLive = c => c && !c.cancelled;
+/** Canvis d'hora oberts que puc agafar: d'un altre, pendents, i aquell dia hi tinc hora. */
+const openSwaps = () => {
+  const id = myId();
+  if (!id) return [];
+  return [...S.classReq.values()].filter(r => r.kind === 'swap' && r.open && r.status === 'pending' && r.memberId !== id
+    && classLive(S.classes.get(r.classId)) && S.classes.get(r.classId)?.date >= TODAY
+    && !!mySlot(S.classes.get(r.classId)));
+};
+/** Assajos o concerts que es trepitgen amb una hora de classe. */
+function classClash(c, x) {
+  const m = S.members.get(x.memberId || '');
+  if (!m || !x.time) return null;
+  const from = parseTime(x.time), to = from + (+x.mins || 30);
+  return allSessions().find(s => s.date === c.date && s.time && convoked(s, m.section)
+    && parseTime(s.time) < to && (parseTime(s.end) || parseTime(s.time) + 120) > from) || null;
+}
+/** La meva propera classe: el primer dia que ve on tinc hora. */
+function nextClass() {
+  if (!classesOn() || !myId()) return null;
+  for (const c of classDays()) {
+    if (c.date < TODAY || !classLive(c)) continue;
+    const x = mySlot(c);
+    if (x) return { c, slot: x };
+  }
+  return null;
+}
 /** De qui és una hora de classe un cop aplicats els canvis d'hora. */
 const slotMember = x => x.markFor || x.memberId || '';
 const inClasses = () => !!myId() && classDays().some(c => (c.slots || []).some(x => x.memberId === myId()));
@@ -1296,12 +1325,13 @@ function subscribe() {
   if (teach) db.collection('classReq').onSnapshot(onCol('classReq'), () => markLoaded('classReq'));
   else {
     const mid = S.memberId || '-';
-    let fromMe = new Map(), toMe = new Map();
-    const mergeReq = () => { S.classReq = new Map([...fromMe, ...toMe]); markLoaded('classReq'); if (S.ready) scheduleRender(); };
-    const grab = (field, set) => db.collection('classReq').where(field, '==', mid)
-      .onSnapshot(snap => { set(new Map(snap.docs.map(d => [d.id, d.data()]))); mergeReq(); }, () => markLoaded('classReq'));
-    grab('memberId', m => { fromMe = m; });
-    grab('withMemberId', m => { toMe = m; });
+    let fromMe = new Map(), toMe = new Map(), openOnes = new Map();
+    const mergeReq = () => { S.classReq = new Map([...openOnes, ...fromMe, ...toMe]); markLoaded('classReq'); if (S.ready) scheduleRender(); };
+    const grab = (q, set) => q.onSnapshot(snap => { set(new Map(snap.docs.map(d => [d.id, d.data()]))); mergeReq(); }, () => markLoaded('classReq'));
+    grab(db.collection('classReq').where('memberId', '==', mid), m => { fromMe = m; });
+    grab(db.collection('classReq').where('withMemberId', '==', mid), m => { toMe = m; });
+    // Els canvis d'hora oberts són una crida a qui pugui: els veu tothom de l'agrupació.
+    grab(db.collection('classReq').where('open', '==', true), m => { openOnes = m; });
   }
   for (const col of ['members', 'productions', 'announcements', 'polls']) db.collection(col).onSnapshot(onCol(col), e => { markLoaded(col); if (col === 'members' || col === 'productions') onDbError(e); });
   for (const col of ['absences', 'subs', 'rsvp', 'pollVotes']) mine(col).onSnapshot(onCol(col), e => { markLoaded(col); if (staff && col !== 'pollVotes') onDbError(e); });
@@ -3257,6 +3287,17 @@ function classDates(from, to, days, skipText) {
   }
   return out;
 }
+/** Quantes hores generades es trepitgen amb un assaig o un concert. */
+function countClashes(dates, rows) {
+  let n = 0;
+  for (const date of dates) {
+    const day = new Date(date + 'T12:00:00').getDay();
+    for (const r of rows.filter(x => x.day === day && x.memberId)) {
+      if (classClash({ id: '', date }, { time: hhmm(r.from), mins: r.mins, memberId: r.memberId })) n++;
+    }
+  }
+  return n;
+}
 /** Escriu un dia de classe per data, amb les hores que toquen aquell dia de la setmana. */
 async function writeClassDays(dates, rows, teacher) {
   const at = new Date().toISOString();
@@ -3331,7 +3372,8 @@ function sheetClassPaste() {
         const dates = plannedDates(el);
         if (!dates.length) { toast('Tria un període que tingui aquests dies de la setmana'); return; }
         const who = el.querySelector('#cp-who')?.value || mine;
-        if (!await confirmSheet('Crear el calendari?', `Es crearan <b>${dates.length} dies de classe</b>, del ${ddmm(dates[0])} al ${ddmm(dates[dates.length - 1])}, amb ${rows.length} hores cada setmana. Els dies que ja hi hagi d’aquest ${esc(V.Teacher.toLowerCase())} es reescriuran.`, 'Crea-les')) return;
+        const clashes = countClashes(dates, rows);
+        if (!await confirmSheet('Crear el calendari?', `Es crearan <b>${dates.length} dies de classe</b>, del ${ddmm(dates[0])} al ${ddmm(dates[dates.length - 1])}, amb ${rows.length} hores cada setmana. Els dies que ja hi hagi d’aquest ${esc(V.Teacher.toLowerCase())} es reescriuran.${clashes ? `<br><br><b>Atenció:</b> ${clashes} ${clashes === 1 ? 'hora coincideix' : 'hores coincideixen'} amb un assaig o un concert. Les marcarà al calendari perquè les puguis moure.` : ''}`, 'Crea-les')) return;
         try {
           const done = await writeClassDays(dates, rows, who);
           if (el.querySelector('#cp-plan').checked) savePlan(who, rows.map(r => ({ id: uid('pl'), day: r.day, time: hhmm(r.from), mins: r.mins, memberId: r.memberId || '', ...(r.memberId ? {} : { name: r.name || '' }) })));
@@ -3354,7 +3396,9 @@ function classReqLine(r) {
   const when = c ? `${longDate(c.date)}${slotTime(c, r.slotId) ? `, a les ${slotTime(c, r.slotId)}` : ''}` : '';
   if (r.kind === 'late') return `${esc(reqMemberName(r))} arribarà ${r.mins ? `${r.mins} min ` : ''}tard · ${esc(when)}`;
   if (r.kind === 'absent') return `${esc(reqMemberName(r))} no hi podrà anar · ${esc(when)}`;
+  if (r.kind === 'take') return `${esc(reqMemberName(r))} demana l’hora lliure · ${esc(when)}`;
   const otherTime = c ? slotTime(c, r.withSlotId) : '';
+  if (!r.withMemberId) return `${esc(reqMemberName(r))} (${esc(slotTime(c, r.slotId) || '')}) busca algú per canviar l’hora · ${esc(when)}`;
   return `${esc(reqMemberName(r))} (${esc(slotTime(c, r.slotId) || '')}) vol canviar l’hora amb ${esc(S.members.get(r.withMemberId)?.name || r.withName || '')} (${esc(otherTime)}) · ${esc(when)}`;
 }
 function classSlotRow(c, x, past) {
@@ -3364,12 +3408,17 @@ function classSlotRow(c, x, past) {
   const late = rq.find(r => r.kind === 'late');
   const absent = rq.find(r => r.kind === 'absent');
   const swap = rq.find(r => r.kind === 'swap');
+  const clash = classClash(c, x);
+  const takeReq = [...S.classReq.values()].find(r => r.kind === 'take' && r.classId === c.id && r.slotId === x.id && r.status === 'pending');
+  const free = !x.memberId && !x.name && !past && classLive(c) && !!myId();
   const pills = [
     absent ? `<span class="st-pill ${absent.status === 'pending' ? 'st-pending' : 'st-rejected'}">No hi va</span>` : '',
+    clash ? `<span class="st-pill st-pending">Xoca amb ${esc(clash.type || 'l’assaig')}${clash.time ? ` de les ${esc(clash.time)}` : ''}</span>` : '',
+    takeReq ? `<span class="st-pill st-pending">Demanada${teachesClasses() || takeReq.memberId === myId() ? ` per ${esc(reqMemberName(takeReq))}` : ''}</span>` : '',
     late ? `<span class="st-pill ${late.status === 'pending' ? 'st-pending' : 'st-accepted'}">Tard${late.mins ? ` ${late.mins}′` : ''}</span>` : '',
     swap && swap.status === 'accepted' ? '<span class="st-pill st-accepted">Canvi</span>' : swap && swap.status === 'pending' ? '<span class="st-pill st-pending">Canvi demanat</span>' : '',
   ].filter(Boolean).join(' ');
-  const acts = meNow && !past
+  const acts = meNow && !past && classLive(c)
     ? `<span class="cl-acts">
         <button class="btn btn-sm" data-act="cl-notice" data-c="${esc(c.id)}" data-s="${esc(x.id)}" data-k="late">Tard</button>
         <button class="btn btn-sm" data-act="cl-notice" data-c="${esc(c.id)}" data-s="${esc(x.id)}" data-k="absent">No hi vaig</button>
@@ -3386,16 +3435,16 @@ function classSlotRow(c, x, past) {
   return `<div class="cl-slot ${meNow ? 'me' : ''}">
     <span class="t">${esc(x.time || '')}</span>
     <span class="who">${m ? esc(m.name) : x.name ? `${esc(x.name)} <span class="m">· sense fitxa</span>` : '<span class="cl-free">lliure</span>'}${m && m.section ? ` <span class="m">· ${esc(SEC[m.section].short)}</span>` : ''}${x.swapped ? ' <span class="m">(canviat)</span>' : ''}${pills || mark ? `<br>${[mark, pills].filter(Boolean).join(' ')}` : ''}${note ? `<span class="cl-note">${esc(note.text)}</span>` : ''}</span>
-    ${acts}${marks}${noteBtn}</div>`;
+    ${acts}${free ? `<button class="btn btn-sm" data-act="cl-free" data-c="${esc(c.id)}" data-s="${esc(x.id)}">Demana-la</button>` : ''}${marks}${noteBtn}</div>`;
 }
 function classDayCard(c, past) {
   const teach = teachesClasses();
   const who = S.staff.get(c.teacher || '')?.name || '';
   const facts = [c.place, who, c.note].filter(Boolean).join(' · ');
   const slots = classSlots(c);
-  return `<div class="cl-day">
+  return `<div class="cl-day ${c.cancelled ? 'off' : ''}">
     <div style="display:flex;justify-content:space-between;gap:10px;align-items:center">
-      <span><b>${esc(longDate(c.date))}</b>${facts ? `<br><span class="m">${esc(facts)}</span>` : ''}</span>
+      <span><b>${esc(longDate(c.date))}</b>${c.cancelled ? ' <span class="st-pill st-rejected">Anul·lada</span>' : ''}${facts ? `<br><span class="m">${esc(facts)}</span>` : ''}</span>
       ${teach ? `<button class="icon-btn" data-act="cl-edit" data-c="${esc(c.id)}" aria-label="Edita el dia de classe">${ICON.more}</button>` : ''}
     </div>
     ${slots.length ? slots.map(x => classSlotRow(c, x, past)).join('') : '<p class="muted" style="margin:6px 0 0;font-size:13px">Encara no hi ha hores posades.</p>'}
@@ -3411,6 +3460,16 @@ function viewClasses() {
   const mineReq = myId() ? [...S.classReq.values()].filter(r => r.memberId === myId() && r.status === 'pending').sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')) : [];
   const myNotes = !teach && myId() ? [...S.classNotes.values()].filter(n => n.memberId === myId() && n.text)
     .sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, 6) : [];
+  const open = openSwaps();
+  const openCard = r => {
+    const c = S.classes.get(r.classId), mySl = mySlot(c);
+    return `<div class="conv-card">
+      <div class="a-h"><b>${esc(reqMemberName(r))}</b> busca algú per canviar l’hora</div>
+      <span class="muted" style="font-size:13.5px">${esc(longDate(c.date))} · té les <b>${esc(slotTime(c, r.slotId))}</b> i tu les <b>${esc(mySl ? mySl.time : '')}</b>. Només per aquell dia.</span>
+      ${r.reason ? `<span style="font-size:13px">${esc(r.reason)}</span>` : ''}
+      <span style="margin-top:6px"><button class="btn btn-sm btn-primary" data-act="cl-open-take" data-r="${esc(r.id)}">Me’l quedo</button></span>
+    </div>`;
+  };
   const swapCard = r => {
     const c = S.classes.get(r.classId);
     return `<div class="conv-card">
@@ -3428,6 +3487,8 @@ function viewClasses() {
   const mineCard = r => `<li><span>${classReqLine(r)}<br><span class="m">${r.kind === 'swap' ? 'Esperant que respongui' : 'Esperant que ho vegi el professorat'}</span></span>
       <button class="btn btn-sm" data-act="cl-cancel" data-r="${esc(r.id)}">Retira</button></li>`;
   return `${teach ? `<div class="sec-h"><h2 class="h2">${esc(V.classes)}</h2><span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" data-act="cl-paste">Enganxa un horari</button><button class="btn btn-sm btn-primary" data-act="cl-new">+ Dia de classe</button></span></div>` : `<div class="section-title"><h2 class="h2">${esc(V.classes)}</h2><span class="eyebrow">${next.length ? 'properes' : 'sense dies'}</span></div>`}
+    ${open.length ? `<div class="section-title"><h2 class="h2">Canvis d’hora oberts</h2><span class="eyebrow">qui vulgui</span></div>
+      <div class="panel" style="display:grid;gap:10px;padding:12px">${open.map(openCard).join('')}</div>` : ''}
     ${answer.length ? `<div class="section-title"><h2 class="h2">Et demanen un canvi</h2><span class="eyebrow">respon</span></div><div class="panel" style="display:grid;gap:10px;padding:12px">${answer.map(swapCard).join('')}</div>` : ''}
     ${pending.length ? `<div class="section-title"><h2 class="h2">Avisos per veure</h2><span class="eyebrow">${pending.length}</span></div><div class="panel" style="display:grid;gap:10px;padding:12px">${pending.map(pendCard).join('')}</div>` : ''}
     ${mineReq.length ? `<div class="section-title"><h2 class="h2">Els teus avisos</h2></div><ul class="mini-list" style="max-height:none">${mineReq.map(mineCard).join('')}</ul>` : ''}
@@ -3437,8 +3498,10 @@ function viewClasses() {
       <div class="setting"><div><div class="t">Assistència del curs</div><div class="s">Qui ha vingut a classe i qui no, de tot el curs.</div></div>
         <button class="btn btn-sm" data-act="cl-stats">Mira-la</button></div>
     </div>` : ''}
-    ${!teach && myId() ? `<div class="panel" style="margin-top:14px"><div class="setting"><div><div class="t">La teva assistència</div><div class="s">Les classes on has vingut durant el curs.</div></div>
-      <button class="btn btn-sm" data-act="cl-mystats">Mira-la</button></div></div>` : ''}
+    ${myId() ? `<div class="panel" style="margin-top:14px">${teach ? '' : `<div class="setting"><div><div class="t">La teva assistència</div><div class="s">Les classes on has vingut durant el curs.</div></div>
+      <button class="btn btn-sm" data-act="cl-mystats">Mira-la</button></div>`}
+      <div class="setting"><div><div class="t">Les teves classes al calendari del mòbil</div><div class="s">Subscriu-t’hi i les tindràs al Google Calendar, a l’Apple o a l’Outlook, sempre al dia.</div></div>
+        <button class="btn btn-sm" data-act="cl-ics">Com fer-ho</button></div></div>` : ''}
     ${myNotes.length ? `<div class="section-title"><h2 class="h2">Notes de les teves classes</h2></div>
       <ul class="mini-list" style="max-height:none">${myNotes.map(n => `<li style="display:grid;gap:2px"><span class="m mono">${esc(shortDate(n.date))}</span><span style="white-space:pre-wrap">${esc(n.text)}</span></li>`).join('')}</ul>` : ''}
     ${next.length ? `<div class="panel" style="margin-top:14px">${next.map(c => classDayCard(c, false)).join('')}</div>`
@@ -3506,7 +3569,8 @@ function sheetClassPlan(who) {
         const list = keep.map(r => ({ name: S.members.get(r.memberId)?.name || r.name || '', day: +r.day, from: parseTime(r.time) ?? 0, mins: +r.mins || 30, memberId: r.memberId || '' }));
         const dates = classDates(el.querySelector('#pl-from').value, el.querySelector('#pl-to').value, [...new Set(list.map(r => r.day))], el.querySelector('#pl-skip').value);
         if (!dates.length) { toast('Tria un període que tingui aquests dies de la setmana'); return; }
-        if (!await confirmSheet('Generar els dies?', `Es crearan <b>${dates.length} dies de classe</b>, del ${ddmm(dates[0])} al ${ddmm(dates[dates.length - 1])}, amb ${list.length} hores cada setmana.`, 'Genera-los')) return;
+        const clashes = countClashes(dates, list);
+        if (!await confirmSheet('Generar els dies?', `Es crearan <b>${dates.length} dies de classe</b>, del ${ddmm(dates[0])} al ${ddmm(dates[dates.length - 1])}, amb ${list.length} hores cada setmana.${clashes ? `<br><br><b>Atenció:</b> ${clashes} ${clashes === 1 ? 'hora coincideix' : 'hores coincideixen'} amb un assaig o un concert.` : ''}`, 'Genera-los')) return;
         try { const done = await writeClassDays(dates, list, who); closeSheet(); toast(`${done} dies de classe creats`); render(); }
         catch { toast('No s’han pogut desar. Comprova la connexió.'); }
       };
@@ -3538,6 +3602,33 @@ function sheetClassNote(classId, slotId) {
         closeSheet(); toast('Nota desada'); render();
       };
       el.querySelector('#cn-del')?.addEventListener('click', () => { S.classNotes.delete(id); persist('classNotes', id, null, 10); closeSheet(); toast('Nota esborrada'); render(); });
+    },
+  });
+}
+/** El calendari de les meves classes, per subscriure-s'hi des del mòbil. */
+async function sheetClassIcs() {
+  const mid = myId();
+  if (!mid) { toast('El teu compte no està vinculat a cap fitxa de la plantilla'); return; }
+  let token = '';
+  try {
+    const snap = await db.doc(`classIcs/${mid}`).get();
+    token = snap.exists ? snap.data().token : '';
+    if (!token) { token = newKey() + newKey(); await db.doc(`classIcs/${mid}`).set({ memberId: mid, token, at: new Date().toISOString() }); }
+  } catch { toast('No s’ha pogut preparar el calendari'); return; }
+  const url = `${location.origin}${location.pathname.replace(/[^/]*$/, '')}calendaris/classes/${token}.ics`;
+  openSheet({
+    title: 'Les teves classes al calendari',
+    body: `<p style="margin-top:0">Aquesta adreça porta <b>només les teves classes</b>. Si te la subscrius, se t’aniran actualitzant soles cada poques hores.</p>
+      <div class="linkbox">${esc(url)}</div>
+      <p class="muted" style="font-size:12.5px;margin:10px 0 0">És una adreça personal: no la comparteixis. Si algú l’hagués de deixar de tenir, digues-ho a l’administració.</p>
+      <h3 style="margin:14px 0 4px;font-size:14px">Com subscriure-s’hi</h3>
+      <ul class="mini-list" style="max-height:none"><li><span><b>iPhone</b><br><span class="m">Calendari › Calendaris › Afegeix calendari › Afegeix calendari subscrit, i hi enganxes l’adreça.</span></span></li>
+        <li><span><b>Android o ordinador</b><br><span class="m">Google Calendar › Altres calendaris › + › Des d’un URL, i hi enganxes l’adreça.</span></span></li></ul>
+      <p class="muted" style="font-size:12.5px;margin:10px 0 0">Les classes noves hi surten al cap d’unes hores, no immediatament.</p>`,
+    foot: `${navigator.share ? '<button class="btn" id="ci-share">Comparteix…</button>' : ''}<span class="spacer"></span><button class="btn btn-primary" id="ci-copy">Copia l’adreça</button>`,
+    onMount: el => {
+      el.querySelector('#ci-copy').onclick = () => copyText(url, 'Adreça copiada');
+      el.querySelector('#ci-share')?.addEventListener('click', () => navigator.share({ title: 'Les meves classes', url }).catch(() => {}));
     },
   });
 }
@@ -3616,7 +3707,7 @@ function sheetClassDay(id) {
       <div class="field"><span>Hores</span><div id="cd-rows" style="display:grid;gap:8px">${rows()}</div>
         <button type="button" class="btn btn-sm" id="cd-add" style="justify-self:start;margin-top:8px">+ Afegeix una hora</button></div>
     </div>`,
-    foot: `${ex ? '<button class="btn btn-danger-ghost" id="cd-del">Esborra el dia</button>' : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="cd-save">Desa</button>`,
+    foot: `${ex ? `<button class="btn btn-danger-ghost" id="cd-del">Esborra</button><button class="btn" data-act="cl-cancel-day" data-c="${esc(rec.id)}">${ex.cancelled ? 'Restableix el dia' : 'Anul·la el dia'}</button>` : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="cd-save">Desa</button>`,
     onMount: el => {
       wire(el);
       el.querySelector('#cd-add').onclick = () => { read(el); rec.slots.push({ id: uid('sl'), time: '', mins: 30, memberId: '' }); paint(el); };
@@ -3685,19 +3776,20 @@ function sheetClassSwap(classId, slotId) {
     title: 'Canvia l’hora amb algú',
     body: `<div class="kv">
       <p style="margin:0">Classe ${esc(longDate(c.date))}. Ara tens les <b>${esc(slotTime(c, slotId))}</b>. El canvi val <b>només per aquest dia</b>, i l’ha d’acceptar qui triïs.</p>
-      <label class="field"><span>Amb qui</span><select class="inp" id="cs-who">${others.map(x => `<option value="${esc(x.id)}">${esc(S.members.get(x.memberId).name)} · ${esc(x.time)}</option>`).join('')}</select></label>
+      <label class="field"><span>Amb qui</span><select class="inp" id="cs-who"><option value="">Qualsevol que pugui aquell dia</option>${others.map(x => `<option value="${esc(x.id)}">${esc(S.members.get(x.memberId).name)} · ${esc(x.time)}</option>`).join('')}</select>
+        <small>Si tries «qualsevol», ho veuran tots els qui tenen classe aquell dia i s’ho queda el primer que digui que sí.</small></label>
       <label class="field"><span>Missatge</span><textarea class="inp" id="cs-why" maxlength="200" style="min-height:70px" placeholder="p. ex. Aquell dia treballo fins a les 18h"></textarea></label>
     </div>`,
     foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="cs-go">Demana el canvi</button>`,
     onMount: el => {
       el.querySelector('#cs-go').onclick = () => {
         const withSlotId = el.querySelector('#cs-who').value;
-        const other = classSlots(c).find(x => x.id === withSlotId);
+        const other = withSlotId ? classSlots(c).find(x => x.id === withSlotId) : null;
         const m = S.members.get(myId());
         saveClassReq({ id: uid('cr'), classId, slotId, memberId: myId(), memberName: m ? m.name : '', kind: 'swap',
-          withSlotId, withMemberId: other.memberId, withName: S.members.get(other.memberId)?.name || '',
+          ...(other ? { withSlotId, withMemberId: other.memberId, withName: S.members.get(other.memberId)?.name || '' } : { open: true }),
           reason: el.querySelector('#cs-why').value.trim(), status: 'pending', createdAt: new Date().toISOString(), uid: S.uid });
-        closeSheet(); toast('Petició enviada'); render();
+        closeSheet(); toast(other ? 'Petició enviada' : 'Demanat a tothom qui té classe aquell dia'); render();
       };
     },
   });
@@ -3717,9 +3809,45 @@ function markClass(classId, slotId, value) {
   saveClassDay({ ...c, slots });
   render();
 }
+/** Em quedo un canvi d'hora obert: hi poso la meva hora i queda fet. */
+function takeOpenSwap(id) {
+  const r = S.classReq.get(id);
+  const c = r && S.classes.get(r.classId);
+  const x = c && mySlot(c);
+  if (!r || !x || r.status !== 'pending') { toast('Aquest canvi ja no hi és'); return; }
+  saveClassReq({ ...r, status: 'accepted', open: false, withMemberId: myId(), withSlotId: x.id,
+    reviewedAt: new Date().toISOString(), reviewedBy: S.email || '' });
+  toast('Fet: heu canviat l’hora'); render();
+}
+/** Demano una hora que ha quedat lliure (per recuperar una classe). */
+function askFreeSlot(classId, slotId) {
+  const c = S.classes.get(classId), m = S.members.get(myId() || '');
+  if (!c || !m) return;
+  if ([...S.classReq.values()].some(r => r.kind === 'take' && r.classId === classId && r.slotId === slotId && r.memberId === m.id && r.status === 'pending')) {
+    toast('Ja l’has demanada'); return;
+  }
+  saveClassReq({ id: uid('cr'), classId, slotId, memberId: m.id, memberName: m.name, kind: 'take', status: 'pending',
+    reason: '', createdAt: new Date().toISOString(), uid: S.uid });
+  toast(`Demanada. El ${V.Teacher.toLowerCase()} t’ho dirà`); render();
+}
+/** Anul·la (o torna a activar) un dia sencer de classe. */
+async function cancelClassDay(id) {
+  const c = S.classes.get(id);
+  if (!c) return;
+  if (c.cancelled) { saveClassDay({ ...c, cancelled: false, cancelledAt: '' }); toast('Dia restablert'); render(); return; }
+  const who = classSlots(c).filter(x => x.memberId).length;
+  if (!await confirmSheet('Anul·lar el dia?', `S’avisarà ${who === 1 ? 'la persona' : `les ${who} persones`} que hi tenen hora. El dia queda marcat com a anul·lat, i el pots tornar a activar quan vulguis.`, 'Anul·la’l')) return;
+  saveClassDay({ ...c, cancelled: true, cancelledAt: new Date().toISOString() });
+  toast('Dia anul·lat'); render();
+}
 function answerClassReq(id, status) {
   const r = S.classReq.get(id);
   if (!r || r.status !== 'pending') return;
+  // Acceptar una hora lliure vol dir donar-la: es posa aquella persona al calendari.
+  if (r.kind === 'take' && status === 'accepted') {
+    const c = S.classes.get(r.classId);
+    if (c) saveClassDay({ ...c, slots: (c.slots || []).map(x => x.id === r.slotId ? { ...x, memberId: r.memberId, name: '' } : x) });
+  }
   saveClassReq({ ...r, status, reviewedAt: new Date().toISOString(), reviewedBy: S.email || '' });
   toast(status === 'accepted' ? 'Acceptat' : status === 'cancelled' ? 'Avís retirat' : 'Rebutjat');
   render();
@@ -3750,6 +3878,20 @@ function viewSinger() {
       <span style="font-size:14px">${longDate(s.date)} · ${esc(s.type)}${s.time ? ` · ${esc(timeRange(s))}` : ''}. Tens permís fins que acabi el dia.</span>
       <button class="btn" data-act="tab" data-tab="llista" style="color:var(--p)">Passa llista</button></div>` : '';
   }).join('');
+  const nx = nextClass();
+  const classCard = nx ? `<div class="section-title"><h2 class="h2">La teva propera classe</h2></div>
+    <div class="panel"><div class="cl-day">
+      <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap">
+        <span><b>${esc(longDate(nx.c.date))}</b> · <b class="mono">${esc(nx.slot.time || '')}</b>${nx.c.place ? `<br><span class="m">${esc(nx.c.place)}</span>` : ''}</span>
+        <button class="btn btn-sm" data-act="tab" data-tab="classes">Les classes</button>
+      </div>
+      ${classClash(nx.c, nx.slot) ? `<span class="st-pill st-pending" style="align-self:start">Xoca amb ${esc(classClash(nx.c, nx.slot).type || 'l’assaig')}</span>` : ''}
+      <span class="cl-acts" style="margin-left:0;margin-top:8px">
+        <button class="btn btn-sm" data-act="cl-notice" data-c="${esc(nx.c.id)}" data-s="${esc(nx.slot.id)}" data-k="late">Arribaré tard</button>
+        <button class="btn btn-sm" data-act="cl-notice" data-c="${esc(nx.c.id)}" data-s="${esc(nx.slot.id)}" data-k="absent">No hi podré anar</button>
+        ${classSlots(nx.c).length > 1 ? `<button class="btn btn-sm" data-act="cl-swap" data-c="${esc(nx.c.id)}" data-s="${esc(nx.slot.id)}">Canvia l’hora</button>` : ''}
+      </span>
+    </div></div>` : '';
   const convHtml = convs.length ? `<div class="section-title"><h2 class="h2">Convocatòries</h2><span class="eyebrow">confirma si hi seràs</span></div>
     <div class="panel">${convs.map(s => {
       const a = S.rsvp.get(`${s.id}_${me.id}`);
@@ -3766,6 +3908,7 @@ function viewSinger() {
   return `<div class="page-head"><div><div class="eyebrow">Hola, ${esc(me.name.split(',').pop().trim())}</div><h1 class="h1">El teu espai</h1></div></div>
     <div class="me-line" style="margin-top:-6px"><span><b>${esc(me.name)}</b> · ${esc(SEC[me.section].name)}${me.part ? ` ${esc(me.part)}` : ''}${lv ? ` · ${lv}` : ''}</span></div>
     ${subCards}
+    ${classCard}
     ${(() => {
       const ann = visibleAnnouncements().filter(a => !a.until || a.until >= TODAY).slice(0, 2);
       const polls = openPolls().filter(p => !S.pollVotes.get(`${p.id}_${me.id}`));
@@ -5109,6 +5252,7 @@ function sheetHelp() {
     <p>A <b>Ajustos › Agrupació</b> tries si és un cor, una orquestra, una banda, una cobla, un grup de cambra o una altra agrupació: canvien les paraules de l’app i els tipus de sessió. A <b>Ajustos › ${w.Sections}</b> en canvies els noms i les abreviatures, n’afegeixes o en treus. El nom, el tipus, les ${w.sections} i la imatge només els pot canviar un <b>Usuari Pro</b> que administri l’agrupació.</p>
     <h3>${esc(V.classes)}</h3>
     <p>Si l’agrupació fa classes individuals, s’activen a <b>Ajustos › ${esc(V.classes)}</b>. Qui tingui el rol de <b>${esc(V.Teacher.toLowerCase())}</b> fa el calendari: crea un dia, genera les hores seguides i hi posa qui ve a cadascuna. Cada ${w.member} hi veu la seva hora i pot <b>avisar que arribarà tard</b>, que <b>no hi anirà</b> o <b>demanar el canvi d’hora d’un dia</b> a un company, que l’ha d’acceptar. El ${esc(V.Teacher.toLowerCase())} rep tots aquests avisos al mòbil.</p>
+    <p>Un canvi d’hora es pot demanar a algú concret o deixar-lo <b>obert</b>: llavors el veuen tots els qui tenen classe aquell dia i se’l queda el primer que digui que sí. Si una hora ha quedat <b>lliure</b>, qualsevol la pot demanar per recuperar una classe, i el ${esc(V.Teacher.toLowerCase())} l’hi dona amb un toc. Un dia sencer es pot <b>anul·lar</b>, i s’avisa tothom qui hi tenia hora. Cadascú pot <b>subscriure’s a les seves classes</b> des del calendari del mòbil, i si una classe cau dins d’un assaig l’app ho avisa.</p>
     <p>A cada hora, el ${esc(V.Teacher.toLowerCase())} hi <b>marca l’assistència</b> (present, retard, justificada o no justificada) i hi pot deixar una <b>nota</b> del que s’ha treballat i del que cal preparar: la nota només la veuen ell i aquell ${w.member}. A <b>Horari fix</b> hi ha l’hora setmanal de cadascú, i des d’allà es generen els dies de tot un trimestre de cop, saltant els festius.</p>
     <h3>Més d’una agrupació</h3>
     <p>Amb el mateix compte pots ser a diverses agrupacions: toca el nom a dalt de tot, o <b>Ajustos › Agrupacions</b>, per canviar-ne. Els <b>Usuaris Pro</b> també hi poden <b>crear una agrupació nova</b>, de la qual en són l’administrador/a. Cada agrupació té les seves dades, i ningú d’una altra no les pot veure.</p>
@@ -5840,7 +5984,7 @@ const ADMIN_ONLY = new Set(['staff-new', 'staff-edit', 'staff-bulk', 'preview-on
 // La identitat de l'agrupació i esborrar-la: només un Usuari Pro que l'administri.
 const PRO_ONLY = new Set(['brand-color', 'logo-remove', 'kind-set', 'group-delete', 'sections-save', 'sections-undo']);
 // El calendari de les classes: només el professorat de cant i l'administració.
-const CLASS_ONLY = new Set(['cl-new', 'cl-edit', 'cl-review', 'cl-paste', 'cl-plan', 'cl-note', 'cl-mark', 'cl-stats']);
+const CLASS_ONLY = new Set(['cl-new', 'cl-edit', 'cl-review', 'cl-paste', 'cl-plan', 'cl-note', 'cl-mark', 'cl-stats', 'cl-cancel-day']);
 const EDIT_ONLY = new Set(['mark', 'min', 'mark-rest', 'session-new', 'sub-set', 'ann-new', 'ann-edit', 'mat-new', 'mat-edit', 'poll-new', 'poll-edit', 'poll-results', 'poll-remind', 'rsvp-remind', 'doc-new', 'doc-edit', 'share-app', 'staff-bulk', 'preview-on', 'who-in', 'mail-check', 'concert-list', 'concert-toggle', 'session-edit', 'member-edit', 'member-bulk', 'prod-new', 'prod-edit',
   'wipe-demo', 'wipe-all', 'load-demo', 'export-json', 'abs-accept', 'abs-reject', 'abs-delete', 'manage']);
 const actions = {
@@ -5853,6 +5997,10 @@ const actions = {
   'cl-note': el => sheetClassNote(el.dataset.c, el.dataset.s),
   'cl-mark': el => markClass(el.dataset.c, el.dataset.s, el.dataset.v),
   'cl-stats': () => sheetClassStats(false),
+  'cl-open-take': el => takeOpenSwap(el.dataset.r),
+  'cl-free': el => askFreeSlot(el.dataset.c, el.dataset.s),
+  'cl-cancel-day': el => cancelClassDay(el.dataset.c),
+  'cl-ics': () => sheetClassIcs(),
   'cl-mystats': () => sheetClassStats(true),
   'cl-edit': el => sheetClassDay(el.dataset.c),
   'cl-notice': el => sheetClassNotice(el.dataset.c, el.dataset.s, el.dataset.k),

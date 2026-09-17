@@ -4,6 +4,8 @@ Per a cada agrupació activa:
   · si té el calendari subscrit activat, genera el seu fitxer .ics amb totes les sessions
     (la primera agrupació a calendari.ics, com sempre; la resta a calendaris/<agrupació>.ics)
   · genera la seva marca (nom, logotip, icones i manifest) a marca/<agrupació>/
+  · si fa classes de cant, escriu el calendari personal de qui se n'ha fet la clau des de l'app,
+    a calendaris/classes/<clau>.ics: només hi surten les classes d'aquella persona.
 Els calendaris no porten noms de persones: només produccions, dates, llocs i indicacions.
 """
 import datetime, os, re, sys
@@ -70,6 +72,42 @@ def ics(cfg, prods):
     return "\r\n".join(fold(x) for x in L) + "\r\n", len(sessions)
 
 
+def classes_ics(cfg, days, mid, name):
+    """El calendari d'una sola persona: les seves hores de classe, sense ningú més."""
+    rows = []
+    for c in sorted(days.values(), key=lambda x: x.get("date") or ""):
+        if c.get("cancelled"):
+            continue
+        for x in c.get("slots") or []:
+            if x.get("memberId") == mid and c.get("date") and x.get("time"):
+                rows.append((c, x))
+    L = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//A Tempo//CA", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
+         f"X-WR-CALNAME:{esc('Classes · ' + (cfg.get('name') or 'Agrupació'))}", "X-WR-TIMEZONE:Europe/Madrid",
+         "REFRESH-INTERVAL;VALUE=DURATION:PT3H",
+         "BEGIN:VTIMEZONE", "TZID:Europe/Madrid",
+         "BEGIN:DAYLIGHT", "TZOFFSETFROM:+0100", "TZOFFSETTO:+0200", "TZNAME:CEST", "DTSTART:19700329T020000", "RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU", "END:DAYLIGHT",
+         "BEGIN:STANDARD", "TZOFFSETFROM:+0200", "TZOFFSETTO:+0100", "TZNAME:CET", "DTSTART:19701025T030000", "RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU", "END:STANDARD",
+         "END:VTIMEZONE"]
+    for c, x in rows:
+        start = x["time"]
+        try:
+            begin = datetime.datetime.fromisoformat(f"{c['date']}T{start}")
+        except ValueError:
+            continue
+        end = begin + datetime.timedelta(minutes=int(x.get("mins") or 30))
+        L += ["BEGIN:VEVENT", f"UID:{c['id']}-{x.get('id', '')}@a-tempo", "DTSTAMP:20260101T000000Z",
+              f"DTSTART;TZID=Europe/Madrid:{begin:%Y%m%dT%H%M%S}",
+              f"DTEND;TZID=Europe/Madrid:{end:%Y%m%dT%H%M%S}",
+              f"SUMMARY:{esc('Classe de cant')}"]
+        if c.get("place"):
+            L.append(f"LOCATION:{esc(c['place'])}")
+        if c.get("note"):
+            L.append(f"DESCRIPTION:{esc(c['note'])}")
+        L.append("END:VEVENT")
+    L.append("END:VCALENDAR")
+    return "\r\n".join(fold(x) for x in L) + "\r\n", len(rows)
+
+
 def write(path, text):
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     old = open(path, newline="").read() if os.path.exists(path) else None
@@ -78,7 +116,7 @@ def write(path, text):
             f.write(text)
 
 
-published, branded = set(), set()
+published, branded, personal = set(), set(), 0
 for gid, entry in groups.items():
     try:
         cfg = r.get(f"cors/{gid}/config/main") or {}
@@ -94,6 +132,19 @@ for gid, entry in groups.items():
         write(target, text)
         published.add(target)
         print(f"{label}: {n} sessions al calendari")
+    # Calendari personal de les classes de qui se n'ha fet la clau des de l'app.
+    if cfg.get("classesOn"):
+        keys = r.list(f"cors/{gid}/classIcs")
+        if keys:
+            days = r.list(f"cors/{gid}/classes")
+            for mid, k in keys.items():
+                token = str(k.get("token") or "")
+                if not re.fullmatch(r"[A-Za-z0-9_-]{24,64}", token):
+                    continue
+                text, n = classes_ics(cfg, days, mid, k.get("memberId") or mid)
+                write(f"calendaris/classes/{token}.ics", text)
+                published.add(f"calendaris/classes/{token}.ics")
+                personal += 1
     marca.build(cfg, ".", gid)
     branded.add(gid)
     if gid == dades.FOUNDER:
@@ -104,6 +155,10 @@ if r.full and os.path.isdir("calendaris"):
     for f in os.listdir("calendaris"):
         if re.fullmatch(r"[A-Za-z0-9_-]{20,40}\.ics", f) and f"calendaris/{f}" not in published:
             os.remove(os.path.join("calendaris", f))
+if r.full and os.path.isdir("calendaris/classes"):
+    for f in os.listdir("calendaris/classes"):
+        if f.endswith(".ics") and f"calendaris/classes/{f}" not in published:
+            os.remove(os.path.join("calendaris/classes", f))
 if r.full:
     marca.prune(".", branded)
-print(f"{len(branded)} agrupacions · {len(published)} calendaris · {r.reads} lectures")
+print(f"{len(branded)} agrupacions · {len(published) - personal} calendaris · {personal} calendaris personals de classes · {r.reads} lectures")

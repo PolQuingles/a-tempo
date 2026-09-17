@@ -189,7 +189,7 @@ service cloud.firestore {
                                 'announcements', 'polls'] && isStaff(c))
                     || (col in ['productions', 'config'] && hasRole(c, ['calendar']))
                     || (col in ['members', 'productions', 'attendance', 'config', 'staff', 'subs', 'rsvp', 'absences',
-                                'announcements', 'polls', 'pollVotes', 'push', 'classes', 'classReq', 'classPlan', 'classNotes'] && (hasRole(c, ['backup']) || isService()));
+                                'announcements', 'polls', 'pollVotes', 'push', 'classes', 'classReq', 'classPlan', 'classNotes', 'classIcs'] && (hasRole(c, ['backup']) || isService()));
         allow create, update: if col in ['members', 'productions', 'attendance', 'config', 'subs', 'rsvp',
                                          'announcements', 'polls', 'pollVotes', 'memberMarks'] && canEdit(c)
           && !(col == 'config' && doc == 'main');
@@ -226,6 +226,16 @@ service cloud.firestore {
         allow read: if isStaff(c) || hasRole(c, ['backup']) || isService();
         allow create, update, delete: if teaches(c);
       }
+      // La clau del calendari de classes de cada persona: només la seva.
+      match /classIcs/{mid} {
+        allow read: if teaches(c) || (hasSpace(c) && mine(c, mid)) || hasRole(c, ['backup']) || isService();
+        allow create, update: if hasSpace(c) && mine(c, mid)
+          && request.resource.data.keys().hasOnly(['memberId', 'token', 'at'])
+          && request.resource.data.memberId == mid
+          && request.resource.data.token is string
+          && request.resource.data.token.size() >= 24 && request.resource.data.token.size() <= 64;
+        allow delete: if teaches(c) || (hasSpace(c) && mine(c, mid));
+      }
       // Les notes de cada classe: només les veuen el professorat i l'alumne de qui són.
       match /classNotes/{id} {
         allow read: if teaches(c) || (hasSpace(c) && mine(c, resource.data.memberId)) || hasRole(c, ['backup']) || isService();
@@ -233,14 +243,23 @@ service cloud.firestore {
       }
       // Avisos de retard o absència a una classe i peticions de canvi d'hora entre companys.
       match /classReq/{id} {
-        allow read: if teaches(c) || canEdit(c) || (hasSpace(c) && (mine(c, resource.data.memberId) || mine(c, resource.data.get('withMemberId', '-'))));
+        allow read: if teaches(c) || canEdit(c)
+          // Un canvi d'hora obert el pot veure tothom de l'agrupació: és una crida a qui pugui.
+          || (hasSpace(c) && (resource.data.get('open', false) == true || mine(c, resource.data.memberId) || mine(c, resource.data.get('withMemberId', '-'))));
         allow create: if hasSpace(c)
           && request.resource.data.uid == request.auth.uid
           && mine(c, request.resource.data.memberId)
-          && request.resource.data.kind in ['late', 'absent', 'swap']
+          && request.resource.data.kind in ['late', 'absent', 'swap', 'take']
           && request.resource.data.status == 'pending'
           && (request.resource.data.kind != 'swap' || request.resource.data.get('withMemberId', '-') != myMember(c));
         allow update: if teaches(c)
+          // Canvi obert a tothom: qui se'l queda s'hi posa ell mateix i queda acceptat.
+          || (hasSpace(c) && resource.data.kind == 'swap' && !('withMemberId' in resource.data)
+              && resource.data.status == 'pending'
+              && request.resource.data.status == 'accepted'
+              && request.resource.data.withMemberId == myMember(c)
+              && request.resource.data.memberId != myMember(c)
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewedAt', 'reviewedBy', 'withMemberId', 'withSlotId', 'open']))
           // El company a qui es demana el canvi: només pot respondre que sí o que no.
           || (hasSpace(c) && mine(c, resource.data.get('withMemberId', '-'))
               && resource.data.status == 'pending'

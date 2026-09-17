@@ -358,7 +358,8 @@ class Group:
         fresh = max(since, FRESH)
         reqs = dict(r.query(self.base, "classReq", [("createdAt", ">=", fresh)]))
         reqs.update(r.query(self.base, "classReq", [("reviewedAt", ">=", fresh)]))
-        if not reqs:
+        off = r.query(self.base, "classes", [("cancelledAt", ">=", fresh)])
+        if not reqs and not off:
             return
         days = r.list(f"{self.base}/classes")
         members = self.members()
@@ -377,21 +378,41 @@ class Group:
             slot = next((x for x in (day or {}).get("slots") or [] if x.get("id") == req.get("withSlotId")), None)
             return (slot or {}).get("time") or ""
 
+        # Dies anul·lats: s'avisa qui hi tenia hora.
+        for cid, day in sorted(off.items()):
+            if not day.get("cancelled"):
+                continue
+            who = {x.get("memberId") for x in day.get("slots") or [] if x.get("memberId")}
+            body = f"S'ha anul·lat {when({'classId': cid})}."
+            for did, d in self.targets("classes", member_ids=who):
+                self.deliver(f"cls:off:{cid}:{day.get('cancelledAt')}:{did}", d, body, f"cls-{cid}")
+
         for rid, req in sorted(reqs.items()):
             kind, status = req.get("kind"), req.get("status")
             who, mate = name(req.get("memberId")), name(req.get("withMemberId"))
             if status == "pending":
-                if kind == "late":
+                if kind == "take":
+                    body = f"{who} demana l'hora lliure de {when(req)}."
+                elif kind == "late":
                     body = f"{who} arribarà {req.get('mins') or ''}{'′ ' if req.get('mins') else ''}tard a {when(req)}."
                 elif kind == "absent":
                     body = f"{who} no podrà venir a {when(req)}."
-                else:
+                elif req.get("withMemberId"):
                     body = f"{who} demana canviar l'hora de {when(req)} amb {mate} ({other_time(req)})."
+                else:
+                    body = f"{who} busca algú per canviar l'hora de {when(req)}."
                 for did, d in self.to_emails(teachers):
                     self.deliver(f"cls:{rid}:{status}:{did}", d, body, f"cls-{rid}")
-                if kind == "swap":
+                if kind == "swap" and req.get("withMemberId"):
                     msg = f"{who} et demana canviar l'hora de {when(req)}: tens les {other_time(req)}. Respon-hi des de l'app."
                     for did, d in self.targets("classes", member_ids={req.get("withMemberId")}):
+                        self.deliver(f"cls:{rid}:ask:{did}", d, msg, f"cls-{rid}")
+                elif kind == "swap":
+                    # Canvi obert: ho saben tots els qui tenen classe aquell dia, tret de qui el demana.
+                    day = days.get(req.get("classId") or "") or {}
+                    others = {x.get("memberId") for x in day.get("slots") or [] if x.get("memberId")} - {req.get("memberId")}
+                    msg = f"{who} busca algú per canviar l'hora de {when(req)}. Si et va bé, queda-te'l des de l'app."
+                    for did, d in self.targets("classes", member_ids=others):
                         self.deliver(f"cls:{rid}:ask:{did}", d, msg, f"cls-{rid}")
                 continue
             if status == "cancelled":
@@ -403,6 +424,9 @@ class Group:
             if kind == "swap":
                 body = f"{mate} {'accepta' if done else 'no pot fer'} el canvi d'hora de {when(req)}."
                 teach_body = f"{who} i {mate} {'es canvien' if done else 'no es canvien'} l'hora de {when(req)}."
+            elif kind == "take":
+                body = f"{'Ja tens' if done else 'No et podem donar'} l'hora lliure de {when(req)}."
+                teach_body = None
             else:
                 body = f"El professorat {'ha vist' if done else 'no pot acceptar'} el teu avís de {when(req)}."
                 teach_body = None
