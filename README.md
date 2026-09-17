@@ -17,7 +17,15 @@ Assistència, calendari i avisos per a cors, orquestres, bandes, cobles i altres
 
 ## Accés
 
-Tothom entra amb Google, amb el correu que l'administració ha donat d'alta a Gestió › Ajustos › Persones. Els rols són administració, director, cap de corda o de secció (poden editar) i membre de la plantilla o equip tècnic (només lectura). Cada persona té l'índex de les seves agrupacions a `staffIndex/<correu>/agrupacions/`.
+Ningú no hi entra sense identificar-se: tothom entra amb Google, amb el correu que l'administració ha donat d'alta a Gestió › Ajustos › Persones. No hi ha enllaços d'accés.
+
+Cada persona té un o més rols (`roles` a la seva fitxa):
+
+- **Administració**: ho pot fer tot (persones, identitat, dades).
+- **Director**, **cap de corda o de secció** i **equip tècnic** (al Cor Jove, «Treballador del Palau»): passen llista, publiquen anuncis, convocatòries i enquestes, i pugen materials i documents.
+- **Membre de la plantilla** (cantaire, músic): veu tota l'app en mode lectura i té el seu espai personal.
+
+Qui també és de la plantilla (per exemple, un cap de corda que canta) té, a més, «El meu espai», amb la seva assistència i els seus avisos d'absència. Cada persona té l'índex de les seves agrupacions a `staffIndex/<correu>/agrupacions/`.
 
 ## Tasques automàtiques (GitHub Actions)
 

@@ -118,6 +118,7 @@ input,select,textarea{font:inherit;color:var(--ink)}
 .tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;background:color-mix(in srgb, var(--surface) 92%, transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
 .tabs-in{max-width:760px;margin-inline:auto;display:grid;grid-auto-flow:column;grid-auto-columns:1fr;height:var(--nav-h)}
 .tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11.5px;font-weight:600;color:var(--muted);letter-spacing:.01em}
+.tabs-in.n6 .tab{font-size:10.5px;letter-spacing:0}
 .tab svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .tab[aria-current="page"]{color:var(--accent)}
 .tab[aria-current="page"] .tab-ico{background:var(--accent-soft)}
@@ -1018,7 +1019,7 @@ const S = {
   productions: new Map(),
   attendance: new Map(),
   absences: new Map(),
-  staff: new Map(),       // email -> { email, name, role: admin|director|leader, section }
+  staff: new Map(),       // email -> { email, name, roles: [admin|director|leader|palau|singer], role (the first one), section?, memberId? }
   subs: new Map(),        // <sessionId>_<corda> -> substitute for that roll call
   rsvp: new Map(),        // <sessionId>_<memberId> -> { answer: yes|no, note }
   announcements: new Map(),
@@ -1066,23 +1067,29 @@ function loadUI() {
 function saveUI() {
   lsSet(LS_UI, JSON.stringify({ tab: ui.tab, section: ui.section, calProd: ui.calProd, calView: ui.calView, statsScope: ui.statsScope, statsSec: ui.statsSec, statsSort: ui.statsSort, manage: ui.manage }));
 }
-// Rols de les persones de l'agrupació. Els tres primers poden editar; els altres només llegir.
-const ROLE_KEYS = ['admin', 'director', 'leader', 'singer', 'palau'];
+// Rols de les persones de l'agrupació. Una persona pot tenir-ne més d'un (p. ex. cap de corda i cantaire).
+// Administració ho pot fer tot; direcció, caps i equip passen llista i editen; cantaires i músics només llegeixen.
+const ROLE_KEYS = ['admin', 'director', 'leader', 'palau', 'singer'];
 const staffLabel = () => (S.config.labels && S.config.labels.palau) || 'Equip tècnic';
 const roleLabel = r => ({ admin: 'Administració', director: 'Director', leader: V.Leader, singer: V.Member, palau: staffLabel() }[r] || r);
-const roleHint = r => ({
-  admin: 'Ho pot fer tot, i gestiona les persones, la imatge i les dades.',
-  director: 'Pot passar llista i editar-ho tot.',
-  leader: `Pot passar llista i editar-ho tot. Se li assigna una ${V.section}.`,
-  singer: 'Veu tota l’app en mode lectura i té el seu espai personal.',
-  palau: `Veu tota l’app en mode lectura. No és ${V.member}.`,
-}[r] || '');
-const EDIT_ROLES = new Set(['admin', 'director', 'leader']);
-const roleLevel = r => EDIT_ROLES.has(r) ? 'edit' : 'read';
+const EDIT_ROLES = new Set(['admin', 'director', 'leader', 'palau']);
+/** The roles of a person record, in ROLE_KEYS order: the list, or the single role of older records. */
+const rolesOf = p => { const list = !p ? [] : Array.isArray(p.roles) && p.roles.length ? p.roles : p.role ? [p.role] : []; return ROLE_KEYS.filter(k => list.includes(k)); };
+const hasRole = (p, r) => rolesOf(p).includes(r);
+const rolesText = p => rolesOf(p).map(roleLabel).join(' · ') || 'Sense rol';
+const roleLevel = p => rolesOf(p).some(r => EDIT_ROLES.has(r)) ? 'edit' : 'read';
+/** What a set of roles lets that person do, in one or two sentences. */
+const rolesHint = roles => !roles.length ? 'Tria almenys un rol.' : [
+  roles.includes('admin') ? 'Ho pot fer tot: persones, identitat i dades de l’agrupació.'
+    : roles.some(r => EDIT_ROLES.has(r)) ? 'Passa llista, publica anuncis, convocatòries i enquestes, i puja materials i documents.'
+    : 'Veu tota l’app en mode lectura, sense poder-hi canviar res.',
+  roles.includes('singer') ? `Té el seu espai: avisa de les seves absències i veu la seva assistència.` : '',
+  roles.includes('leader') ? `Porta una ${V.section}.` : '',
+].filter(Boolean).join(' ');
 // «Mira-ho com un cantaire»: només canvia el que es veu en aquest mòbil, no els permisos.
 let PREVIEW = null;
 const canEdit = () => S.role === 'edit' && !PREVIEW;
-const isAdmin = () => S.role === 'edit' && !PREVIEW && (!S.me || S.me.role === 'admin');
+const isAdmin = () => S.role === 'edit' && !PREVIEW && hasRole(S.me, 'admin');
 /** The member this account really is (from the account record or a personal link), if any. */
 const myId = () => { const id = PREVIEW ? PREVIEW.memberId : S.memberId; return id && S.members.has(id) ? id : null; };
 /** Narrow personal link: only «El meu espai», no access to the rest of the app. */
@@ -1096,8 +1103,7 @@ const mySubs = () => { const id = myId(); return id ? [...S.subs.values()].filte
 
 /* ================= Persistence (Firebase) ================= */
 // Everyone signs in with Google; the account's groups are listed in staffIndex/<email>/agrupacions.
-// Old links still work: they carry a secret (#k=…), claus/<secret> says which group and role it opens,
-// and each device signs in anonymously and registers under cors/<group>/access/<uid>.
+// Nobody gets in without an account: old links (#k=…) only show a message asking to sign in.
 const LS_KEY = 'corpresent:clau';
 const LS_LINK = 'corpresent:enllac';
 const LS_ME = 'corpresent:jo';
@@ -1107,18 +1113,14 @@ const queue = new Map();   // path -> { data | null, timer }  (debounce window)
 let inflight = 0;
 
 const SECRET_RE = /^[A-Za-z0-9_-]{24,64}$/;
-function readSecret() {
-  const m = location.hash.match(/k=([A-Za-z0-9_-]{24,64})/);
-  if (m) return m[1];
+/** An old access link (in the address or saved on this device): forget it and say whether there was one. */
+function dropOldLink() {
   let saved = null;
   try { saved = localStorage.getItem(LS_KEY); } catch {}
-  if (saved && SECRET_RE.test(saved)) { history.replaceState(null, '', `#k=${saved}`); return saved; }
-  return null;
-}
-function rememberLink(link) {
-  LINK = link;
-  try { localStorage.setItem(LS_KEY, link.secret); localStorage.setItem(LS_LINK, JSON.stringify(link)); } catch {}
-  history.replaceState(null, '', `#k=${link.secret}`);
+  const inUrl = /k=[A-Za-z0-9_-]{24,64}/.test(location.hash);
+  forgetLink();
+  if (inUrl) history.replaceState(null, '', location.pathname + location.search);
+  return inUrl || !!(saved && SECRET_RE.test(saved));
 }
 function forgetLink() { try { localStorage.removeItem(LS_KEY); localStorage.removeItem(LS_LINK); } catch {} }
 function newKey() {
@@ -1126,8 +1128,6 @@ function newKey() {
   crypto.getRandomValues(b);
   return btoa(String.fromCharCode(...b)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
-const shareUrl = (secret = LINK?.secret) => `${location.origin}${location.pathname}#k=${secret}`;
-window.addEventListener('hashchange', () => { const m = location.hash.match(/k=([A-Za-z0-9_-]{24,64})/); if (m && m[1] !== LINK?.secret) location.reload(); });
 
 const isDirty = path => queue.has(path);
 
@@ -1531,17 +1531,22 @@ const TAB_ICONS = {
   tauler: '<rect x="3.5" y="4" width="17" height="16" rx="2.5"/><path d="M7.5 9h9M7.5 13h9M7.5 17h5"/>',
 };
 const TAB_LABEL = { llista: 'Llista', calendari: 'Calendari', stats: 'Estadístiques', gestio: 'Gestió', avisos: 'El meu espai', tauler: 'Tauler' };
+// Amb sis pestanyes (qui edita i també és a la plantilla) els noms llargs no hi caben.
+const TAB_SHORT = { stats: 'Estad.', avisos: 'Espai' };
 const tabsForRole = () => {
   if (isLinkOnly()) return ['avisos', 'tauler', ...(mySubs().length ? ['llista'] : []), 'calendari'];
   if (!canEdit()) return [...(myId() ? ['avisos'] : []), 'llista', 'calendari', 'stats', 'tauler'];
-  return ['llista', 'calendari', 'stats', 'tauler', 'gestio'];
+  // Qui edita i també és a la plantilla (p. ex. un cap de corda) té, a més, el seu espai.
+  return [...(myId() ? ['avisos'] : []), 'llista', 'calendari', 'stats', 'tauler', 'gestio'];
 };
 function renderTabs() {
   const tabs = tabsForRole();
   if (!tabs.includes(ui.tab)) ui.tab = tabs[0];
   const badge = S.role === 'edit' ? pendingAbsences().length : 0;
-  $('.tabs-in').innerHTML = tabs.map(t => `<button class="tab" data-act="tab" data-tab="${t}" aria-current="${t === ui.tab ? 'page' : 'false'}">
-    <span class="tab-ico"><svg viewBox="0 0 24 24">${TAB_ICONS[t]}</svg>${t === 'gestio' && badge ? `<span class="tab-badge">${badge}</span>` : ''}${t === 'tauler' && boardBadge() ? `<span class="tab-badge">${boardBadge()}</span>` : ''}</span>${TAB_LABEL[t]}</button>`).join('');
+  const short = tabs.length > 5;
+  $('.tabs-in').classList.toggle('n6', short);
+  $('.tabs-in').innerHTML = tabs.map(t => `<button class="tab" data-act="tab" data-tab="${t}" aria-current="${t === ui.tab ? 'page' : 'false'}"${short && TAB_SHORT[t] ? ` aria-label="${TAB_LABEL[t]}"` : ''}>
+    <span class="tab-ico"><svg viewBox="0 0 24 24">${TAB_ICONS[t]}</svg>${t === 'gestio' && badge ? `<span class="tab-badge">${badge}</span>` : ''}${t === 'tauler' && boardBadge() ? `<span class="tab-badge">${boardBadge()}</span>` : ''}</span>${short && TAB_SHORT[t] || TAB_LABEL[t]}</button>`).join('');
 }
 /* ---------- Brand: logo and accent colour ---------- */
 function hexToHsl(hex) {
@@ -1661,7 +1666,7 @@ function render() {
   }
   if (S.mode === 'badlink' || S.mode === 'nokey') {
     const intro = S.mode === 'badlink'
-      ? `<h2 class="h2">Aquest enllaç ja no funciona</h2><p>Pot ser que estigui incomplet o que s’hagi renovat. No passa res: entra amb el teu correu.</p>`
+      ? `<h2 class="h2">Aquest enllaç ja no funciona</h2><p>Ara tothom entra amb el seu correu, el mateix que has donat a l’agrupació.</p>`
       : `<h2 class="h2">Entra-hi</h2><p>Fes servir el correu que has donat a la teva agrupació.</p>`;
     v.innerHTML = `<section class="entry">${hero()}
       <div class="login-card">${intro}
@@ -2616,13 +2621,13 @@ function manageConfig() {
   const people = peopleSorted();
   const withAccount = members.filter(m => accountFor(m.id)).length;
   const brand = S.config.brand || {};
-  const who = S.me ? `${esc(S.me.name || S.me.email)} · ${esc(roleLabel(S.me.role))}` : 'Enllaç compartit d’edició';
+  const who = S.me ? `${esc(S.me.name || S.me.email)} · ${esc(rolesText(S.me))}` : '';
   if (!CFG_DIRTY || !CFG_SECTIONS) CFG_SECTIONS = SECTIONS.map(x => ({ ...x }));
   const used = groupFileBytes(), quota = fileQuotaMB();
   const adminBlocks = isAdmin() ? `
   <div class="sec-h"><h2 class="h2">Persones</h2><button class="btn btn-sm btn-primary" data-act="staff-new">+ Persona</button></div>
   <div class="panel">
-    <div class="setting"><div><div class="t">${withAccount} de ${members.length} ${esc(V.members)} ja tenen accés</div><div class="s">Tothom entra pel mateix enllaç amb el seu correu. ${esc(V.Members)} i ${esc(staffLabel().toLowerCase())} ho veuen tot en <b>mode lectura</b>; administració, direcció i ${esc(V.leaders)} poden editar.</div></div>
+    <div class="setting"><div><div class="t">${withAccount} de ${members.length} ${esc(V.members)} ja tenen accés</div><div class="s">Tothom entra pel mateix enllaç amb el seu correu, i només si és en aquesta llista. L’administració ho pot fer tot; direcció, ${esc(V.leaders)} i ${esc(staffLabel().toLowerCase())} passen llista, publiquen avisos i pugen documents; ${esc(V.members)} ho veuen tot en <b>mode lectura</b>. Una persona pot tenir més d’un rol.</div></div>
       <span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" data-act="share-app">Enllaç de l’app</button><button class="btn btn-sm" data-act="staff-bulk">Enganxa una llista</button><button class="btn btn-sm" data-act="preview-on">Mira-ho com un ${esc(V.member)}</button></span></div>
     ${(r => `<div class="setting"><div><div class="t">${r.inApp.length} han entrat${r.never.length ? `, ${r.never.length} encara no` : ''}</div><div class="s">Qui ha obert l’app almenys un cop, i qui té el correu mal escrit o sense vincular.</div></div>
       <span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" data-act="who-in">Qui ha entrat</button><button class="btn btn-sm ${mailProblems().length ? 'btn-primary' : ''}" data-act="mail-check">Comprova els correus${mailProblems().length ? ` (${mailProblems().length})` : ''}</button></span></div>`)(accessReport())}
@@ -2632,11 +2637,6 @@ function manageConfig() {
       : '<p style="margin:0;padding:14px;font-size:13.5px;border-top:1px solid var(--line)">Encara no hi ha ningú. Afegeix els correus un per un o enganxa’n una llista.</p>'}
     <p class="muted" style="margin:0;padding:10px 14px 12px;font-size:12px;border-top:1px solid var(--line)">Si algú marxa, treu-lo d’aquí i perd l’accés a l’instant. Treure l’accés no esborra la seva fitxa ni les llistes.</p>
   </div>
-  ${S.secrets?.edit ? `<div class="sec-h"><h2 class="h2">Enllaç compartit d’edició</h2></div>
-  <div class="panel">
-    <div class="setting link-row"><div><div class="t">Actiu</div><div class="s">Qui tingui aquest enllaç pot editar-ho tot sense entrar amb Google. Quan l’equip ja entri amb Google, desactiva’l.</div></div>
-      <span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" data-act="share" data-role="edit">Comparteix</button><button class="btn btn-sm btn-danger-ghost" data-act="edit-link-off">Desactiva</button></span></div>
-  </div>` : ''}
   <div class="sec-h"><h2 class="h2">Agrupació</h2></div>
   <div class="panel">
     <div class="setting" style="display:grid;grid-template-columns:1fr;gap:12px">
@@ -2644,7 +2644,7 @@ function manageConfig() {
       <div class="field"><span>Tipus</span><div class="pickers" id="cfg-kind">${Object.entries(KINDS).map(([k, x]) => `<button type="button" class="pick" data-act="kind-set" data-k="${k}" aria-pressed="${kindOf() === k}">${esc(x.label)}</button>`).join('')}</div>
         <small>Decideix les paraules de l’app (${esc(V.members)}, ${esc(V.sections)}, ${esc(V.leaders)}…) i els tipus de sessió que es proposen.</small></div>
       <label class="field"><span>Nom del rol de qui no ${esc(V.plays)}</span><input class="inp" id="cfg-staff" type="text" maxlength="40" value="${esc((S.config.labels && S.config.labels.palau) || '')}" data-bind="cfg-staff" placeholder="Equip tècnic">
-        <small>Persones que veuen l’app en mode lectura sense ser a la plantilla: gestió, producció, personal de la sala…</small></label>
+        <small>Persones que no són de la plantilla però passen llista i editen: gestió, producció, personal de la sala…</small></label>
     </div>
   </div>
   <div class="sec-h"><h2 class="h2">${esc(V.Sections)}</h2><span class="eyebrow">${SECTIONS.length}</span></div>
@@ -3630,7 +3630,7 @@ function sheetWhoAmI(then) {
   });
 }
 function sheetAbsence(presetSid) {
-  const singer = !canEdit();                       // reporting on my own behalf
+  const singer = !canEdit() || (ui.tab === 'avisos' && !!myId());   // reporting on my own behalf
   let memberId = singer ? myMemberId() : null;
   if (singer && !memberId) { toast('El teu compte no està vinculat a cap fitxa de la plantilla'); return; }
   let kind = 'absent';
@@ -3696,80 +3696,62 @@ function sheetAbsence(presetSid) {
   });
 }
 
-/* ---------- Links ---------- */
-async function regenerateLink(role) {
-  const has = !!S.secrets?.[role];
-  if (has) {
-    const ok = await confirmSheet('Renovar l’enllaç?', role === 'edit'
-      ? 'Es crearà un enllaç nou d’edició, i <b>l’actual deixarà de funcionar</b>. Aquest mòbil passarà a fer servir el nou; a la resta els l’hauràs d’enviar.'
-      : 'Es crearà un enllaç nou i <b>l’actual deixarà de funcionar</b>.', 'Renova', false);
-    if (!ok) return;
-  }
-  const k = newKey(), at = new Date().toISOString(), old = S.secrets?.[role];
-  const choirId = LINK.choirId;
-  const b = fs.batch();
-  b.set(fs.doc(`claus/${k}`), { choirId, role, at });
-  if (old) b.delete(fs.doc(`claus/${old}`));
-  b.set(fs.doc(`cors/${choirId}/secrets/main`), { ...(S.secrets || {}), [role]: k });
-  if (role === 'edit') b.set(fs.doc(`cors/${choirId}/access/${S.uid}`), { role: 'edit', key: k, at });
-  try {
-    await b.commit();
-    if (role === 'edit') rememberLink({ ...LINK, secret: k });
-    S.secrets = { ...(S.secrets || {}), [role]: k };
-    toast(has ? 'Enllaç renovat' : 'Enllaç creat');
-    render();
-    sheetShare(role);
-  } catch (e) { toast('No s’ha pogut canviar l’enllaç. Comprova la connexió.'); }
-}
-
 /* ---------- People and access (Google accounts) ---------- */
 const accountFor = mid => mid ? [...S.staff.values()].find(p => p.memberId === mid) : null;
+const roleRank = p => { const r = rolesOf(p)[0]; return r ? ROLE_KEYS.indexOf(r) : ROLE_KEYS.length; };
 const peopleSorted = () => [...S.staff.values()].sort((a, b) =>
-  ROLE_KEYS.indexOf(a.role) - ROLE_KEYS.indexOf(b.role)
+  roleRank(a) - roleRank(b)
   || (a.name || a.email).localeCompare(b.name || b.email, 'ca'));
 function roleSummary(p) {
-  const bits = [roleLabel(p.role)];
-  if (p.role === 'leader' && p.section) bits.push(SEC[p.section].name);
-  const m = p.memberId && S.members.get(p.memberId);
-  if (m && p.role !== 'leader') bits.push(SEC[m.section].name);
+  const bits = rolesOf(p).map(roleLabel);
+  if (!bits.length) bits.push('Sense rol');
+  const sec = hasRole(p, 'leader') && p.section ? p.section : S.members.get(p.memberId || '')?.section;
+  if (sec) bits.push(SEC[sec].name);
   return bits.join(' · ');
 }
 function sheetStaff(email) {
   const existing = email ? S.staff.get(email) : null;
-  const p = existing ? { ...existing } : { email: '', name: '', role: 'singer', section: SECTIONS[0]?.id || '', memberId: '' };
+  const p = existing ? { ...existing } : { email: '', name: '', section: SECTIONS[0]?.id || '', memberId: '' };
+  const roles = existing ? rolesOf(existing) : ['singer'];
   openSheet({
     title: existing ? (p.name || p.email) : 'Dona accés a una persona',
     body: `<div class="kv">
       <label class="field"><span>Correu (compte de Google)</span><input class="inp" id="st-email" type="email" autocomplete="off" value="${esc(p.email)}" ${existing ? 'disabled' : ''} placeholder="nom@gmail.com"></label>
       <label class="field"><span>Nom</span><input class="inp" id="st-name" type="text" maxlength="60" value="${esc(p.name || '')}" placeholder="p. ex. Quingles, Pol"></label>
-      <div class="field"><span>Rol</span><div class="pickers" id="st-role">${ROLE_KEYS.map(k => `<button type="button" class="pick" data-role="${k}" aria-pressed="${p.role === k}">${esc(roleLabel(k))}</button>`).join('')}</div>
-        <small id="st-hint">${esc(roleHint(p.role))}</small></div>
-      <div class="field" id="st-sec-f" ${p.role === 'leader' ? '' : 'hidden'}><span>${V.Section} que porta</span><div class="pickers" id="st-sec">${SECTIONS.map(x => secPick(x, p.section === x.id)).join('')}</div></div>
-      <label class="field" id="st-mem-f" ${p.role === 'palau' ? 'hidden' : ''}><span>Fitxa de la plantilla</span>
-        <select class="inp" id="st-mem"><option value="">— cap —</option>${memberOptions(p.memberId || '')}</select>
+      <div class="field"><span>Rols <span class="muted" style="font-weight:500">· pots triar-ne més d’un</span></span><div class="pickers" id="st-role">${ROLE_KEYS.map(k => `<button type="button" class="pick" data-role="${k}" aria-pressed="${roles.includes(k)}">${esc(roleLabel(k))}</button>`).join('')}</div>
+        <small id="st-hint">${esc(rolesHint(roles))}</small></div>
+      <div class="field" id="st-sec-f" ${roles.includes('leader') ? '' : 'hidden'}><span>${V.Section} que porta</span><div class="pickers" id="st-sec">${SECTIONS.map(x => secPick(x, p.section === x.id)).join('')}</div></div>
+      <label class="field" id="st-mem-f" ${roles.includes('singer') ? '' : 'hidden'}><span>Fitxa de la plantilla</span>
+        <select class="inp" id="st-mem"><option value="">— tria qui és —</option>${memberOptions(p.memberId || '')}</select>
         <small>Vincula el compte amb la seva fitxa: així té «El meu espai» i pot avisar d’absències, confirmar convocatòries i veure la seva assistència.</small></label>
     </div>`,
     foot: `${existing ? '<button class="btn btn-danger-ghost" id="st-del">Treu l’accés</button>' : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="st-save">Desa</button>`,
     onMount: el => {
+      const picked = () => [...el.querySelectorAll('#st-role .pick[aria-pressed="true"]')].map(x => x.dataset.role);
       el.querySelectorAll('#st-role .pick').forEach(b => b.onclick = () => {
-        el.querySelectorAll('#st-role .pick').forEach(x => x.setAttribute('aria-pressed', x === b));
-        el.querySelector('#st-sec-f').hidden = b.dataset.role !== 'leader';
-        el.querySelector('#st-mem-f').hidden = b.dataset.role === 'palau';
-        el.querySelector('#st-hint').textContent = roleHint(b.dataset.role);
+        b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') !== 'true');
+        const now = picked();
+        el.querySelector('#st-sec-f').hidden = !now.includes('leader');
+        el.querySelector('#st-mem-f').hidden = !now.includes('singer');
+        el.querySelector('#st-hint').textContent = rolesHint(now);
       });
       el.querySelectorAll('#st-sec .pick').forEach(b => b.onclick = () => el.querySelectorAll('#st-sec .pick').forEach(x => x.setAttribute('aria-pressed', x === b)));
       el.querySelector('#st-save').onclick = async () => {
         const mail = (existing ? p.email : el.querySelector('#st-email').value).trim().toLowerCase();
         if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail)) { toast('Escriu un correu vàlid'); return; }
-        const role = el.querySelector('#st-role .pick[aria-pressed="true"]').dataset.role;
-        const memberId = role === 'palau' ? '' : el.querySelector('#st-mem').value;
-        if (role === 'singer' && !memberId) { toast('Tria de qui de la plantilla és aquest correu'); return; }
+        const roles = picked();
+        if (!roles.length) { toast('Tria almenys un rol'); return; }
+        const memberId = roles.includes('singer') ? el.querySelector('#st-mem').value : '';
+        if (roles.includes('singer') && !memberId) { toast(`Tria de qui de la plantilla és aquest correu, o treu-li el rol de ${V.member}`); return; }
+        const sec = el.querySelector('#st-sec .pick[aria-pressed="true"]')?.dataset.sec;
+        if (roles.includes('leader') && !sec) { toast(`Tria quina ${V.section} porta`); return; }
         const clash = memberId && [...S.staff.values()].find(x => x.memberId === memberId && x.email !== mail);
         if (clash) { toast(`Aquesta fitxa ja està vinculada a ${clash.email}`); return; }
-        const rec = { email: mail, name: el.querySelector('#st-name').value.trim() || S.members.get(memberId)?.name || '', role, addedAt: existing?.addedAt || new Date().toISOString() };
-        if (role === 'leader') rec.section = el.querySelector('#st-sec .pick[aria-pressed="true"]').dataset.sec;
+        const rec = { email: mail, name: el.querySelector('#st-name').value.trim() || S.members.get(memberId)?.name || '', role: roles[0], roles, addedAt: existing?.addedAt || new Date().toISOString() };
+        if (existing?.lastSeen) rec.lastSeen = existing.lastSeen;
+        if (roles.includes('leader')) rec.section = sec;
         if (memberId) rec.memberId = memberId;
-        if (existing && existing.role === 'admin' && role !== 'admin' && [...S.staff.values()].filter(x => x.role === 'admin').length === 1 && S.me) { toast('Ha de quedar almenys una persona d’administració'); return; }
+        if (existing && hasRole(existing, 'admin') && !roles.includes('admin') && [...S.staff.values()].filter(x => hasRole(x, 'admin')).length === 1) { toast('Ha de quedar almenys una persona d’administració'); return; }
         try {
           const b = fs.batch();
           b.set(db.doc(`staff/${mail}`), rec);
@@ -3832,7 +3814,8 @@ function sheetStaffBulk() {
     body: `<p style="margin-top:0">Enganxa una línia per persona, amb el nom i el correu en qualsevol ordre. Per exemple:</p>
       <div class="linkbox">Quingles, Pol — pol@exemple.com<br>Mata, Martina &lt;martina@exemple.com&gt;<br>anna@exemple.com</div>
       <label class="field" style="margin-top:12px"><span>Llista</span><textarea class="inp" id="bk-text" style="min-height:150px" placeholder="Cognom, Nom  correu@exemple.com"></textarea></label>
-      <div class="field"><span>Rol per a tothom</span><div class="pickers" id="bk-role">${ROLE_KEYS.map(k => `<button type="button" class="pick" data-role="${k}" aria-pressed="${k === 'singer'}">${esc(roleLabel(k))}</button>`).join('')}</div></div>
+      <div class="field"><span>Rol per a tothom</span><div class="pickers" id="bk-role">${ROLE_KEYS.map(k => `<button type="button" class="pick" data-role="${k}" aria-pressed="${k === 'singer'}">${esc(roleLabel(k))}</button>`).join('')}</div>
+        <small>Qui ja hi era conserva els rols que tenia i hi suma aquest. Els altres rols es donen d’un en un.</small></div>
       <div id="bk-prev" style="margin-top:10px"></div>`,
     foot: `<button class="btn" id="bk-check">Comprova</button><span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="bk-save">Desa’ls</button>`,
     onMount: el => {
@@ -3852,10 +3835,12 @@ function sheetStaffBulk() {
             const b = fs.batch();
             for (const r of rows.slice(i, i + 200)) {
               const prev = S.staff.get(r.mail);
-              const rec = { email: r.mail, name: r.member?.name || r.name || prev?.name || '', role, addedAt: prev?.addedAt || at };
-              const mid = role === 'palau' ? '' : (r.member?.id || prev?.memberId || '');
+              const roles = ROLE_KEYS.filter(k => k === role || hasRole(prev, k));
+              const rec = { ...(prev || {}), email: r.mail, name: r.member?.name || r.name || prev?.name || '', role: roles[0], roles, addedAt: prev?.addedAt || at };
+              const mid = roles.includes('singer') ? (prev?.memberId || r.member?.id || '') : '';
+              delete rec.memberId;
               if (mid && (!taken.has(mid) || prev?.memberId === mid)) { rec.memberId = mid; taken.add(mid); }
-              if (role === 'leader' && (prev?.section || r.member?.section)) rec.section = prev?.section || r.member.section;
+              if (roles.includes('leader') && (prev?.section || r.member?.section)) rec.section = prev?.section || r.member.section;
               b.set(db.doc(`staff/${r.mail}`), rec);
               if (GID === FOUNDER) b.set(fs.doc(`staffIndex/${r.mail}`), { choirId: GID });
               S.staff.set(r.mail, rec); n++;
@@ -3891,20 +3876,6 @@ function sheetPreview() {
     },
   });
 }
-async function disableEditLink() {
-  if (!S.me) { toast('Primer entra amb Google, o et quedaries sense accés'); return; }
-  if (!await confirmSheet('Desactivar l’enllaç compartit?', 'Qui entri amb aquest enllaç perdrà l’accés d’edició. L’equip haurà d’entrar amb Google.', 'Desactiva')) return;
-  const old = S.secrets?.edit;
-  try {
-    const b = fs.batch();
-    if (old) b.delete(fs.doc(`claus/${old}`));
-    const rest = { ...(S.secrets || {}) }; delete rest.edit;
-    b.set(db.doc('secrets/main'), rest);
-    await b.commit();
-    S.secrets = rest; toast('Enllaç compartit desactivat'); render();
-  } catch { toast('No s’ha pogut desactivar. Comprova la connexió.'); }
-}
-
 /* ---------- Avisos al mòbil (Web Push) ---------- */
 const LS_PUSH = 'corpresent:avis-id';
 const LS_PUSH_AT = 'corpresent:avis-refresc';
@@ -3927,7 +3898,7 @@ const LS_PUSH_PREFS = 'corpresent:avis-prefs';
 /** The sections a leader looks after: their own, from the account or from their roster record. */
 function defaultCordes() {
   if (!canEdit()) return [];
-  if (S.me?.role === 'leader' && S.me.section) return [S.me.section];
+  if (hasRole(S.me, 'leader') && S.me.section) return [S.me.section];
   const m = S.members.get(myId() || '');
   return m && m.leader ? [m.section] : [];
 }
@@ -4087,7 +4058,8 @@ function maybeWelcome() {
        <ul class="welcome"><li><b>Llista</b> · toca el quadre de la teva ${V.section} i marca cadascú.</li>
        <li><b>Calendari</b> · totes les sessions, per produccions.</li>
        <li><b>Tauler</b> · anuncis, partitures i enquestes.</li>
-       <li><b>Gestió</b> · ${V.members}, avisos d’absència i ajustos.</li></ul>`
+       <li><b>Gestió</b> · ${V.members}, avisos d’absència i ajustos.</li>${myId() ? `
+       <li><b>El meu espai</b> · la teva assistència i els teus avisos d’absència.</li>` : ''}</ul>`
     : `<p style="margin-top:0">Hola${first ? `, ${esc(first)}` : ''}. Benvingut/da a l’app ${esc(ofName())}.</p>
        <ul class="welcome"><li><b>El meu espai</b> · avisa si no pots venir, confirma les convocatòries i mira la teva assistència.</li>
        <li><b>Llista</b>, <b>Calendari</b> i <b>Estadístiques</b> · ho pots consultar tot, però no canviar-hi res.</li>
@@ -4149,7 +4121,7 @@ function sheetWhoIn() {
       ${noAccount.length ? `<div class="section-title" style="margin-top:16px"><h2 class="h2">${V.Members} sense accés</h2><span class="eyebrow">falta el correu</span></div>
         <ul class="mini-list" style="max-height:220px">${noAccount.map(m => `<li><span>${esc(m.name)}<br><span class="m">${SEC[m.section].name}</span></span><button class="btn btn-sm" data-act="staff-new">Dona-li accés</button></li>`).join('')}</ul>` : ''}
       ${inApp.length ? `<div class="section-title" style="margin-top:16px"><h2 class="h2">Ja hi entren</h2></div>
-        <ul class="mini-list" style="max-height:260px">${inApp.sort((a, b) => (b.lastSeen || '').localeCompare(a.lastSeen || '')).map(p => `<li><span>${esc(p.name || p.email)}<br><span class="m">${esc(roleLabel(p.role))}${pushBy.get(p.email) ? ' · avisos actius' : ''}</span></span><span class="m">${agoText(p.lastSeen)}</span></li>`).join('')}</ul>` : ''}
+        <ul class="mini-list" style="max-height:260px">${inApp.sort((a, b) => (b.lastSeen || '').localeCompare(a.lastSeen || '')).map(p => `<li><span>${esc(p.name || p.email)}<br><span class="m">${esc(rolesText(p))}${pushBy.get(p.email) ? ' · avisos actius' : ''}</span></span><span class="m">${agoText(p.lastSeen)}</span></li>`).join('')}</ul>` : ''}
       <p class="muted" style="font-size:12.5px">De ${roster.length} ${V.members} de la plantilla, ${roster.length - noAccount.length} tenen el correu donat d’alta. «Han entrat» vol dir que han obert l’app almenys un cop.</p>`,
     foot: never.length ? '<button class="btn btn-primary" id="wi-all">Copia el missatge per al grup</button>' : '',
     onMount: el => {
@@ -4189,7 +4161,7 @@ function mailProblems() {
   for (const p of S.staff.values()) {
     const w = mailWarning(p.email);
     if (w) out.push({ kind: 'mail', email: p.email, name: p.name, text: w });
-    if (p.role === 'singer' && !p.memberId) out.push({ kind: 'link', email: p.email, name: p.name, text: `${V.Member} sense fitxa de la plantilla` });
+    if (hasRole(p, 'singer') && !p.memberId) out.push({ kind: 'link', email: p.email, name: p.name, text: `${V.Member} sense fitxa de la plantilla` });
     if (p.memberId) {
       const m = S.members.get(p.memberId);
       if (!m) out.push({ kind: 'link', email: p.email, name: p.name, text: 'Vinculat a una fitxa que ja no hi és' });
@@ -4366,8 +4338,8 @@ function sheetHelp() {
   const w = V;
   const body = staff ? `<div class="manual">
     <h3>Entrar</h3>
-    <p>Tothom entra pel mateix enllaç amb <b>el seu correu</b>. L’administració dona d’alta cada persona a <b>Gestió › Ajustos › Persones</b> amb un rol: administració, director, ${w.leader}, ${w.member} o ${esc(staffLabel().toLowerCase())}.</p>
-    <p>Administració, direcció i ${w.leaders} poden editar-ho tot. ${w.Members} i ${esc(staffLabel().toLowerCase())} ho veuen tot en <b>mode lectura</b>, i els ${w.members} tenen a més el seu espai personal.</p>
+    <p>Tothom entra pel mateix enllaç amb <b>el seu correu</b>. L’administració dona d’alta cada persona a <b>Gestió › Ajustos › Persones</b> amb un o més rols: administració, director, ${w.leader}, ${esc(staffLabel().toLowerCase())} o ${w.member}.</p>
+    <p>L’administració ho pot fer tot. Direcció, ${w.leaders} i ${esc(staffLabel().toLowerCase())} passen llista, publiquen anuncis i convocatòries i pugen materials i documents. ${w.Members} ho veuen tot en <b>mode lectura</b>. Qui també és ${w.member} (per exemple, un ${w.leader}) té a més <b>El meu espai</b>, amb la seva assistència i els seus avisos d’absència.</p>
     <h3>Passar llista</h3>
     <ul><li>A <b>Llista</b> surt la sessió d’avui. Toca el quadre de la teva ${w.section}.</li>
     <li>Toca l’estat de cadascú: <b>Present</b>, <b>Retard</b>, <b>No justificada</b>, <b>Justificada</b> o <b>No fa</b>. Toca’l un altre cop per desmarcar.</li>
@@ -4698,11 +4670,6 @@ async function loadDemo() {
     toast('Dades d’exemple carregades');
   } catch { toast('No s’han pogut carregar les dades d’exemple'); }
 }
-const SHARE_TEXT = {
-  edit: ['Enllaç compartit d’edició', 'Qui tingui aquest enllaç podrà passar llista, veure les estadístiques i editar-ho tot des del mòbil.', 'qualsevol persona amb aquest enllaç pot veure i modificar les dades.'],
-  view: ['Enllaç de consulta', 'Per a la direcció o qui hagi de veure l’assistència sense modificar-la.', 'qui el tingui veurà l’assistència de tothom.'],
-  singer: ['Enllaç personal', 'Cadascú podrà veure el calendari i avisar de les seves absències.', 'qui el tingui pot enviar avisos i veure el calendari, però no l’assistència.'],
-};
 /** The one link everybody uses: no secret, everyone signs in with their own email. It opens this group. */
 const appUrl = () => `${location.origin}${location.pathname}${GID && GID !== FOUNDER ? `?a=${encodeURIComponent(GID)}` : ''}`;
 function sheetShareApp() {
@@ -4719,29 +4686,6 @@ function sheetShareApp() {
       el.querySelector('#sa-copy').onclick = () => copyText(url, 'Enllaç copiat');
       el.querySelector('#sa-msg').onclick = () => copyText(msg, 'Missatge copiat');
       el.querySelector('#sa-native')?.addEventListener('click', () => navigator.share({ title: S.config.name || PLATFORM.name, text: `L’app ${ofName()}`, url }).catch(() => {}));
-    },
-  });
-}
-function sheetShare(role = 'edit') {
-  const secret = S.secrets?.[role] || (role === LINK?.role ? LINK.secret : null);
-  if (!secret) { toast('Primer crea aquest enllaç'); return; }
-  const url = shareUrl(secret);
-  const [title, intro, warn] = SHARE_TEXT[role];
-  openSheet({
-    title,
-    body: `<p style="margin-top:0">${intro}</p>
-      <textarea class="summary-pre" id="share-url" readonly style="min-height:90px;word-break:break-all">${esc(url)}</textarea>
-      <p class="muted" style="font-size:12.5px;margin:10px 0 0"><b>Important:</b> ${warn} No el publiquis a xarxes ni a llocs oberts.</p>
-      <p class="muted" style="font-size:12.5px;margin:8px 0 0">Consell: obre’l al mòbil i, des del menú del navegador, tria «Afegeix a la pantalla d’inici» per tenir-lo com una app.</p>`,
-    foot: `${navigator.share ? '<button class="btn" id="share-native">Comparteix…</button>' : ''}<button class="btn btn-primary" id="share-copy">Copia l’enllaç</button>`,
-    onMount: el => {
-      el.querySelector('#share-copy').onclick = async () => {
-        const ta = el.querySelector('#share-url');
-        try { await navigator.clipboard.writeText(url); toast('Enllaç copiat'); }
-        catch { ta.focus(); ta.select(); try { document.execCommand('copy'); toast('Enllaç copiat'); } catch { toast('Selecciona l’enllaç i copia’l'); } }
-      };
-      const nat = el.querySelector('#share-native');
-      if (nat) nat.onclick = () => navigator.share({ title: S.config.name || PLATFORM.name, text: `L’app ${ofName()}`, url }).catch(() => {});
     },
   });
 }
@@ -4855,7 +4799,7 @@ function switchGroup(gid) {
 }
 function sheetGroups() {
   const canCreate = S.openCreation || S.platform;
-  const claim = S.platformFree && GID === FOUNDER && S.me?.role === 'admin' && !PREVIEW;
+  const claim = S.platformFree && GID === FOUNDER && hasRole(S.me, 'admin') && !PREVIEW;
   openSheet({
     title: 'Les teves agrupacions',
     body: `<div id="gr-list">${groupList()}</div>
@@ -4982,7 +4926,7 @@ async function createGroup() {
     const b = fs.batch();
     b.set(fs.doc(`agrupacions/${gid}`), { name, kind: c.kind, status: 'active', createdAt: at, createdBy: email });
     b.set(fs.doc(`cors/${gid}/config/main`), { name, ...(short ? { shortName: short } : {}), kind: c.kind, sections: r.list, alertFNJ: 3, minAttendance: 80, demo: false, createdAt: at });
-    b.set(fs.doc(`cors/${gid}/staff/${email}`), { email, name: S.userName || '', role: 'admin', addedAt: at });
+    b.set(fs.doc(`cors/${gid}/staff/${email}`), { email, name: S.userName || '', role: 'admin', roles: ['admin'], addedAt: at });
     b.set(fs.doc(`staffIndex/${email}/agrupacions/${gid}`), { at, name });
     await b.commit();
   } catch (e) {
@@ -5113,7 +5057,7 @@ async function syncDirectory(force) {
   try {
     if (!S.group || !S.group.status) {
       // Agrupació d'abans del directori: se n'hi fa la fitxa el primer cop que entra l'administració.
-      if (S.me.role !== 'admin') return;
+      if (!hasRole(S.me, 'admin')) return;
       const rec = { name: (S.config.name || 'Agrupació').slice(0, 80), kind: kindOf(), status: 'active', createdAt: S.config.createdAt || new Date().toISOString(), createdBy: S.me.email };
       await ref.set(rec);
       S.group = { id: GID, ...rec };
@@ -5121,7 +5065,7 @@ async function syncDirectory(force) {
       S.group.stats = stats;
       return;
     }
-    const renamed = S.me.role === 'admin' && ((S.config.name && S.config.name !== S.group.name) || kindOf() !== (S.group.kind || 'cor'));
+    const renamed = hasRole(S.me, 'admin') && ((S.config.name && S.config.name !== S.group.name) || kindOf() !== (S.group.kind || 'cor'));
     const last = S.group.stats && S.group.stats.at ? Date.parse(S.group.stats.at) : 0;
     if (!force && !renamed && Date.now() - last < 20 * 3600 * 1000) return;
     const patch = { stats };
@@ -5133,14 +5077,13 @@ async function syncDirectory(force) {
 
 /* ================= Events ================= */
 const SUB_OK = new Set(['mark', 'min', 'mark-rest']);
-const ADMIN_ONLY = new Set(['staff-new', 'staff-edit', 'staff-bulk', 'preview-on', 'who-in', 'mail-check', 'edit-link-off', 'link-regen', 'brand-color', 'logo-remove', 'wipe-all', 'share-app',
+const ADMIN_ONLY = new Set(['staff-new', 'staff-edit', 'staff-bulk', 'preview-on', 'who-in', 'mail-check', 'brand-color', 'logo-remove', 'wipe-all', 'share-app',
   'kind-set', 'group-delete', 'sections-save', 'sections-undo', 'onboard-hide']);
 const EDIT_ONLY = new Set(['mark', 'min', 'mark-rest', 'session-new', 'sub-set', 'ann-new', 'ann-edit', 'mat-new', 'mat-edit', 'poll-new', 'poll-edit', 'poll-results', 'poll-remind', 'rsvp-remind', 'doc-new', 'doc-edit', 'share-app', 'staff-bulk', 'preview-on', 'who-in', 'mail-check', 'concert-list', 'concert-toggle', 'session-edit', 'member-edit', 'member-bulk', 'prod-new', 'prod-edit',
-  'wipe-demo', 'wipe-all', 'load-demo', 'export-json', 'abs-accept', 'abs-reject', 'abs-delete', 'link-regen', 'manage']);
+  'wipe-demo', 'wipe-all', 'load-demo', 'export-json', 'abs-accept', 'abs-reject', 'abs-delete', 'manage']);
 const actions = {
   'tab': el => { ui.tab = el.dataset.tab; ui.rollSec = null; ui._calScrolled = false; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
   'reload': () => location.reload(),
-  'share': el => sheetShare(el.dataset.role || 'edit'),
   'google-in': () => signInGoogle(),
   'sign-out': () => signOut(),
   'help': () => sheetHelp(),
@@ -5165,7 +5108,6 @@ const actions = {
   'preview-off': () => { PREVIEW = null; ui.tab = 'gestio'; ui.manage = 'config'; ui.rollSec = null; render(); window.scrollTo({ top: 0 }); },
   'share-app': () => sheetShareApp(),
   'staff-edit': el => sheetStaff(el.dataset.email),
-  'edit-link-off': () => disableEditLink(),
   'sub-set': el => sheetSub(el.dataset.sid, el.dataset.sec),
   'rsvp-list': el => sheetRsvpList(el.dataset.sid),
   'rsvp-yes': el => rsvpAnswer(el.dataset.sid, 'yes'),
@@ -5188,7 +5130,6 @@ const actions = {
   'my-att': () => sheetMyAttendance(),
   'brand-color': el => setBrandColor(el.dataset.color),
   'logo-remove': () => { const b = { ...(S.config.brand || {}) }; delete b.logo; saveConfig({ brand: b }); render(); },
-  'link-regen': el => regenerateLink(el.dataset.role),
   'absence-new': el => sheetAbsence(el.dataset.sid),
   'who-am-i': () => sheetWhoAmI(),
   'abs-filter': el => { ui.absFilter = el.dataset.k; render(); },
@@ -5232,7 +5173,7 @@ const actions = {
          <p style="margin-top:0">Si et quedes sense cobertura, pots continuar passant llista: els canvis s’envien sols quan torni la connexió.</p>
          <p class="muted" style="margin-bottom:0">${!navigator.onLine ? 'Ara mateix no hi ha connexió.' : pendingWrites() ? `Desant ${pendingWrites()} canvis…` : 'Tots els canvis estan desats.'}</p>`
       : `<p style="margin:0">Encara no hi ha cap cor connectat en aquest dispositiu.</p>`,
-    foot: S.mode === 'shared' && canEdit() ? '<button class="btn btn-primary" data-act="manage" data-k="config">Enllaços</button>' : '',
+    foot: S.mode === 'shared' && canEdit() ? '<button class="btn btn-primary" data-act="manage" data-k="config">Ajustos</button>' : '',
   }),
   'open-sec': el => { ui.rollSec = ui.section = el.dataset.sec; saveUI(); render(); window.scrollTo({ top: 0 }); },
   'close-sec': () => { ui.rollSec = null; render(); window.scrollTo({ top: 0 }); },
@@ -5410,19 +5351,6 @@ function afterReady() {
   setTimeout(maybeWelcome, 500);
 }
 const waitForUser = () => new Promise(res => { const un = auth.onAuthStateChanged(u => { un(); res(u); }); });
-async function resolveLink(secret) {
-  const snap = await fs.doc(`claus/${secret}`).get();
-  if (!snap.exists) { const e = new Error('bad-link'); e.code = 'bad-link'; throw e; }
-  const { choirId, role, memberId } = snap.data();
-  const accRef = fs.doc(`cors/${choirId}/access/${S.uid}`);
-  let acc = null;
-  try { acc = await accRef.get(); } catch {}
-  const want = { role, key: secret, at: new Date().toISOString(), ...(memberId ? { memberId } : {}) };
-  if (!acc || !acc.exists || acc.data().key !== secret || acc.data().role !== role || (acc.data().memberId || '') !== (memberId || '')) {
-    await accRef.set(want);
-  }
-  return { secret, choirId, role, ...(memberId ? { memberId } : {}) };
-}
 /** Signed in with Google: this person's record and role in one group, and the group's directory record. */
 async function resolveStaff(gid) {
   const [me, dir] = await Promise.all([
@@ -5435,7 +5363,7 @@ async function resolveStaff(gid) {
   const g = S.groups.find(x => x.id === gid);
   if (g && dir && dir.exists) { Object.assign(g, { name: S.group.name || g.name, kind: S.group.kind, status: S.group.status }); saveGroupsCache(); }
   if (S.group.status && S.group.status !== 'active') { const e = new Error('suspended'); e.code = 'suspended'; throw e; }
-  return { choirId: gid, role: roleLevel(S.me.role), via: 'google', email: S.email, memberId: S.me.memberId || null };
+  return { choirId: gid, role: roleLevel(S.me), via: 'google', email: S.email, memberId: S.me.memberId || null };
 }
 async function enterGroup(gid) {
   S.mode = 'loading'; render();
@@ -5476,11 +5404,9 @@ async function init() {
   S.mode = 'loading'; render();
   try { await auth.getRedirectResult(); } catch {}
   let user = auth.currentUser || await waitForUser();
-  const secret = readSecret();
-  let cached = null;
-  try { cached = JSON.parse(localStorage.getItem(LS_LINK) || 'null'); } catch {}
+  const oldLink = dropOldLink();
 
-  if (!secret && user && !user.isAnonymous) {
+  if (user && !user.isAnonymous) {
     S.uid = user.uid;
     S.email = (user.email || '').toLowerCase();
     S.userName = user.displayName || '';
@@ -5495,17 +5421,8 @@ async function init() {
     if (urlGroup() && pick.id !== urlGroup()) setTimeout(() => toast('No tens accés a l’agrupació de l’enllaç'), 800);
     return enterGroup(pick.id);
   }
-  if (!secret) { S.mode = 'nokey'; render(); return; }
-  try {
-    if (!user) user = (await auth.signInAnonymously()).user;
-    S.uid = user.uid;
-    rememberLink(await resolveLink(secret));
-  } catch (e) {
-    if (e && e.code === 'bad-link') { forgetLink(); S.mode = 'badlink'; render(); return; }
-    if (cached && cached.secret === secret && auth.currentUser) { S.uid = auth.currentUser.uid; LINK = cached; }
-    else { S.mode = 'badlink'; render(); return; }
-  }
-  connect();
+  // Sense compte no s'hi entra: els enllaços antics només diuen que cal entrar amb el correu.
+  S.mode = oldLink ? 'badlink' : 'nokey'; render();
 }
 async function signInGoogle() {
   const provider = new firebase.auth.GoogleAuthProvider();

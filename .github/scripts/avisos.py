@@ -48,7 +48,13 @@ RISK_TIME = os.environ.get("AVISOS_RISK") == "1" or (NOW.hour in (10, 19) and NO
 
 DEFAULT_PREFS = {"anuncis": True, "convocatories": True, "enquestes": True, "assajos": False,
                  "materials": True, "absencies": True, "llistes": True, "risc": True}
-EDIT_ROLES = {"admin", "director", "leader"}
+EDIT_ROLES = {"admin", "director", "leader", "palau"}
+
+
+def roles_of(person):
+    """Els rols d'una fitxa: la llista roles o, a les fitxes d'abans, el rol únic."""
+    roles = person.get("roles")
+    return set(roles) if isinstance(roles, list) and roles else {person.get("role")}
 WEEKDAYS = ["dl", "dt", "dc", "dj", "dv", "ds", "dg"]
 
 r, groups = dades.connect("BACKUP_REFRESH_TOKEN")
@@ -338,11 +344,11 @@ class Group:
     def leader_sections(self, d):
         """Seccions de les quals aquest aparell vol els avisos de cap."""
         person = self.people.get(d.get("email") or "")
-        if not person or person.get("role") not in EDIT_ROLES:
+        if not person or not roles_of(person) & EDIT_ROLES:
             return set()
         if isinstance(d.get("cordes"), list):
             return set(d["cordes"])
-        if person.get("role") == "leader" and person.get("section"):
+        if "leader" in roles_of(person) and person.get("section"):
             return {person["section"]}
         m = self.members().get(person.get("memberId") or "")
         return {m["section"]} if m and m.get("leader") and m.get("section") else set()

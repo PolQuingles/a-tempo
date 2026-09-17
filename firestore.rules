@@ -8,10 +8,12 @@ service cloud.firestore {
     // el tipus i l'estat (active | suspended | deleted). Cap agrupació pot veure res d'una altra.
     //
     // ---- Qui és qui dins d'una agrupació ----
-    // Tothom entra amb el seu compte de Google i té una fitxa a cors/<agrupació>/staff/<correu>:
-    //   admin | director | leader  → poden editar-ho tot (leader = cap de corda o de secció)
-    //   singer | palau             → només lectura de tota l'app
-    // La fitxa pot portar memberId: llavors la persona té el seu espai personal.
+    // Ningú no hi entra sense identificar-se: tothom entra amb el seu compte de Google i té una fitxa
+    // a cors/<agrupació>/staff/<correu> amb un o més rols (roles; les fitxes antigues, un sol role):
+    //   admin                     → ho pot fer tot: persones, identitat, dades
+    //   director | leader | palau → passen llista, publiquen avisos, pugen documents… (leader = cap de corda o de secció)
+    //   singer                    → només lectura de tota l'app
+    // La fitxa pot portar memberId: llavors la persona té el seu espai personal, sigui quin sigui el rol.
     // Cada persona té un índex de les seves agrupacions a staffIndex/<correu>/agrupacions/<agrupació>.
     //
     // ---- Plataforma ----
@@ -19,9 +21,9 @@ service cloud.firestore {
     // però no les dades de dins). plataforma/config diu si qualsevol pot crear agrupacions.
     // El compte de servei (avisos, calendari, còpies) llegeix totes les agrupacions i no escriu res.
     //
-    // ---- Enllaços antics (#k=…) ----
-    // claus/<secret> diu l'agrupació i el rol; cada mòbil anònim es registra a cors/<agrupació>/access/<uid>.
-    //   edit → enllaç compartit d'edició · calendar i backup → lectors de les tasques automàtiques
+    // ---- Lectors antics de les tasques automàtiques ----
+    // claus/<secret> diu l'agrupació i el rol (calendar o backup); cada lector anònim es registra a
+    // cors/<agrupació>/access/<uid>. Només llegeixen. Ja no hi ha cap enllaç per entrar a l'app.
 
     function signedIn() { return request.auth != null; }
     function email() { return request.auth.token.get('email', '').lower(); }
@@ -52,15 +54,15 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/claus/$(get(accP).data.key))
         && groupOk(c);
     }
-    function accMember(c) { return get(/databases/$(database)/documents/cors/$(c)/access/$(request.auth.uid)).data.get('memberId', '-'); }
+    // Els rols d'una fitxa: la llista roles o, a les fitxes d'abans, el rol únic.
+    function rolesOf(d) { return d.get('roles', [d.get('role', '')]); }
 
-    function canEdit(c) { return hasRole(c, ['edit']) || (isStaff(c) && staffData(c).role in ['admin', 'director', 'leader']); }
-    function isAdmin(c) { return hasRole(c, ['edit']) || (isStaff(c) && staffData(c).role == 'admin'); }
-    function isSinger(c) { return hasRole(c, ['singer']); }
-    // El membre de la plantilla de qui som: de la fitxa (compte) o de l'enllaç personal.
-    function myMember(c) { return isStaff(c) ? staffData(c).get('memberId', '-') : accMember(c); }
+    function canEdit(c) { return isStaff(c) && rolesOf(staffData(c)).hasAny(['admin', 'director', 'leader', 'palau']); }
+    function isAdmin(c) { return isStaff(c) && rolesOf(staffData(c)).hasAny(['admin']); }
+    // El membre de la plantilla de qui som (si la fitxa en porta).
+    function myMember(c) { return staffData(c).get('memberId', '-'); }
     // Té espai personal: pot avisar, confirmar, votar i fer de substitut.
-    function hasSpace(c) { return isStaff(c) || isSinger(c); }
+    function hasSpace(c) { return isStaff(c); }
     function mine(c, mid) { return mid == myMember(c) && mid != '-'; }
 
     // Es crea una agrupació nova en aquest mateix lot d'escriptures: abans no hi havia res i després sí.
@@ -78,7 +80,7 @@ service cloud.firestore {
       allow get: if isPlatform() || resource == null;
       allow create: if verified()
         && exists(/databases/$(database)/documents/cors/$(founder())/staff/$(email()))
-        && get(/databases/$(database)/documents/cors/$(founder())/staff/$(email())).data.role == 'admin'
+        && rolesOf(get(/databases/$(database)/documents/cors/$(founder())/staff/$(email())).data).hasAny(['admin'])
         && request.resource.data.keys().hasOnly(['emails', 'at'])
         && request.resource.data.emails == [email()];
       allow update: if isPlatform()
@@ -92,7 +94,7 @@ service cloud.firestore {
     }
 
     match /agrupacions/{c} {
-      allow get: if isPlatform() || isService() || isMember(c) || hasRole(c, ['edit']);
+      allow get: if isPlatform() || isService() || isMember(c);
       allow list: if isPlatform() || isService();
       // Nova agrupació: qui la crea en queda d'administrador, tot en un sol lot.
       allow create: if c.size() >= 20 && c.size() <= 40
@@ -102,7 +104,7 @@ service cloud.firestore {
         && ((verified() && (creationOpen() || isPlatform())
               && request.resource.data.createdBy == email()
               && creating(c)
-              && getAfter(/databases/$(database)/documents/cors/$(c)/staff/$(email())).data.role == 'admin')
+              && rolesOf(getAfter(/databases/$(database)/documents/cors/$(c)/staff/$(email())).data).hasAny(['admin']))
             // Registrar al directori una agrupació que ja existia d'abans.
             || (isAdmin(c) && exists(/databases/$(database)/documents/cors/$(c)/config/main)));
       allow update: if isPlatform()
@@ -119,10 +121,9 @@ service cloud.firestore {
       allow list: if false;
       allow create: if signedIn() && k.size() >= 24
         && request.resource.data.keys().hasOnly(['choirId', 'role', 'at', 'memberId'])
-        && request.resource.data.role in ['edit', 'calendar', 'backup']
+        && request.resource.data.role in ['calendar', 'backup']
         && isAdmin(request.resource.data.choirId);
-      allow delete: if isAdmin(resource.data.choirId)
-        || (resource.data.role == 'singer' && canEdit(resource.data.choirId));
+      allow delete: if isAdmin(resource.data.choirId);
     }
 
     match /staffIndex/{e} {
@@ -161,10 +162,9 @@ service cloud.firestore {
       match /{col}/{doc} {
         allow read: if (col in ['members', 'productions', 'attendance', 'config', 'staff', 'subs', 'rsvp', 'absences',
                                 'announcements', 'polls', 'pollVotes', 'memberMarks', 'push'] && canEdit(c))
-                    // Cantaires, músics i personal de l'entitat: veuen tota l'app, però no poden canviar res.
+                    // Cantaires i músics: veuen tota l'app, però no poden canviar res.
                     || (col in ['members', 'productions', 'attendance', 'config', 'subs',
                                 'announcements', 'polls'] && isStaff(c))
-                    || (col in ['members', 'productions', 'config', 'announcements', 'polls'] && isSinger(c))
                     || (col in ['productions', 'config'] && hasRole(c, ['calendar']))
                     || (col in ['members', 'productions', 'attendance', 'config', 'staff', 'subs', 'rsvp', 'absences',
                                 'announcements', 'polls', 'pollVotes', 'push'] && (hasRole(c, ['backup']) || isService()));
@@ -179,7 +179,7 @@ service cloud.firestore {
       match /staff/{e} {
         allow read: if signedIn() && email() == e;
         allow create: if isAdmin(c)
-          || (verified() && email() == e && creating(c) && request.resource.data.role == 'admin');
+          || (verified() && email() == e && creating(c) && rolesOf(request.resource.data).hasAny(['admin']));
         allow delete: if isAdmin(c);
         allow update: if isAdmin(c)
           || (signedIn() && email() == e && groupOk(c)
