@@ -906,6 +906,8 @@ const LATE_CHIPS = [5, 10, 15, 20, 30];
 const LS_UI = 'atempo:ui:v1';
 const COLS = ['members', 'productions', 'attendance'];
 const CLASS_COLS = ['classes', 'classReq'];
+// Fins on enrere es llegeixen els dies de classe.
+const CLASS_FROM = new Date(Date.now() - 14 * 86400000).toISOString().slice(0, 10);
 
 /* ================= Agrupacions: tipus, seccions i paraules ================= */
 // L'app serveix per a cors, orquestres, bandes i altres agrupacions. El tipus decideix les paraules
@@ -1269,7 +1271,8 @@ function subscribe() {
   };
   const mine = col => staff ? db.collection(col) : db.collection(col).where('memberId', '==', S.memberId || '-');
   // Classes de cant: el calendari el veu tothom; els avisos, el professorat tots i cadascú els seus.
-  db.collection('classes').onSnapshot(onCol('classes'), () => markLoaded('classes'));
+  // Només es llegeixen les dues últimes setmanes i el que ve: un curs sencer serien massa lectures.
+  db.collection('classes').where('date', '>=', CLASS_FROM).onSnapshot(onCol('classes'), () => markLoaded('classes'));
   if (teach) db.collection('classReq').onSnapshot(onCol('classReq'), () => markLoaded('classReq'));
   else {
     const mid = S.memberId || '-';
@@ -3159,6 +3162,147 @@ function sheetMyAttendance() {
       <p class="muted" style="font-size:12px">Només tu i l’equip ${V.del} veieu aquestes dades. Si hi ha algun error, parla amb el teu ${V.leader}.</p>`,
   });
 }
+/* ---------- Classes: enganxar l'horari setmanal ---------- */
+// Del full de càlcul de cada professor/a: una graella amb els dies de la setmana i, a sota,
+// el nom de cada alumne i l'hora d'inici i de final. Genera un dia de classe per setmana.
+const DAYS_CA = ['diumenge', 'dilluns', 'dimarts', 'dimecres', 'dijous', 'divendres', 'dissabte'];
+const DAY_SHORT = ['dg.', 'dl.', 'dt.', 'dc.', 'dj.', 'dv.', 'ds.'];
+const SKIP_WORDS = new Set(['alumne', 'alumna', 'horari', 'hora', 'professor', 'professora', 'professor/a', 'curs', 'nom', 'inici', 'final', 'de', 'a']);
+const normTxt = t => String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+/** «15'00h», «15:00», «15.00», «1500», «15h» → minuts des de mitjanit. */
+function parseTime(cell) {
+  const t = String(cell || '').trim().replace(/\s/g, '');
+  let m = t.match(/^(\d{1,2})[^\d]?(\d{2})?h?$/i);
+  if (!m) return null;
+  const h = +m[1], min = m[2] ? +m[2] : 0;
+  return h < 24 && min < 60 ? h * 60 + min : null;
+}
+const hhmm = v => `${String(Math.floor(v / 60) % 24).padStart(2, '0')}:${String(v % 60).padStart(2, '0')}`;
+/** Busca de qui és cada nom de la graella dins la plantilla. */
+function matchMember(name) {
+  const words = normTxt(name).split(' ').filter(w => w.length > 1);
+  if (!words.length) return { hits: [] };
+  const list = membersOf(null, true).filter(m => m.active !== false);
+  const score = m => {
+    const mw = normTxt(m.name).split(' ');
+    let n = 0;
+    for (const w of words) {
+      if (mw.includes(w)) n += 1;
+      else if (mw.some(x => x.length > 3 && w.length > 3 && (x.startsWith(w.slice(0, 4)) || w.startsWith(x.slice(0, 4))))) n += 0.8;
+    }
+    return n;
+  };
+  const scored = list.map(m => ({ m, s: score(m) })).filter(x => x.s > 0).sort((a, b) => b.s - a.s);
+  if (!scored.length) return { hits: [] };
+  const top = scored.filter(x => x.s === scored[0].s);
+  return { hits: top.map(x => x.m), sure: top.length === 1 && scored[0].s >= words.length * 0.8 };
+}
+/** Llegeix la graella enganxada: retorna { rows, days } amb el dia de la setmana de cada fila. */
+function parseSchedule(text, fallbackDay) {
+  const lines = String(text || '').split(/\r?\n/);
+  let cols = [];   // [{ day: 0-6, at: índex de columna }]
+  const rows = [];
+  for (const line of lines) {
+    const cells = line.split('\t').map(c => c.trim());
+    const found = [];
+    cells.forEach((c, i) => { const d = DAYS_CA.indexOf(normTxt(c)); if (d >= 0) found.push({ day: d, at: i }); });
+    if (found.length) { cols = found; continue; }
+    // Cada nom seguit de dues hores és una classe; la columna diu de quin dia és.
+    for (let i = 0; i < cells.length; i++) {
+      const name = cells[i];
+      if (!name || parseTime(name) != null || SKIP_WORDS.has(normTxt(name)) || normTxt(name).length < 2) continue;
+      const from = parseTime(cells[i + 1]), to = parseTime(cells[i + 2]);
+      if (from == null || to == null || to <= from) continue;
+      const col = cols.filter(c => c.at <= i).pop() || cols[0];
+      const day = col ? col.day : fallbackDay;
+      rows.push({ name, day, from, to, mins: to - from, ...matchMember(name) });
+      i += 2;
+    }
+  }
+  return { rows, days: [...new Set(rows.map(r => r.day))].sort() };
+}
+function sheetClassPaste() {
+  const teachers = [...S.staff.values()].filter(p => hasRole(p, 'voice'));
+  const me = S.staff.get(S.email || '');
+  const mine = me && hasRole(me, 'voice') ? me.email : (teachers[0]?.email || S.email || '');
+  const season = seasonCfg().season;
+  let parsed = { rows: [], days: [] };
+  const draw = el => {
+    const box = el.querySelector('#cp-prev');
+    if (!parsed.rows.length) { box.innerHTML = '<span class="muted" style="font-size:13px">Enganxa la graella i prem «Comprova».</span>'; return; }
+    const dates = plannedDates(el);
+    const perDay = parsed.days.map(d => `${DAYS_CA[d]}: ${parsed.rows.filter(r => r.day === d).length} classes`).join(' · ');
+    box.innerHTML = `<p style="margin:0 0 8px;font-size:13.5px"><b>${parsed.rows.length}</b> hores per setmana (${esc(perDay)}) · es crearan <b>${dates.length}</b> dies de classe</p>
+      <ul class="mini-list" style="max-height:280px">${parsed.rows.map((r, i) => `<li><span>${esc(DAY_SHORT[r.day])} ${esc(hhmm(r.from))}–${esc(hhmm(r.to))}<br><span class="m">${esc(r.name)}</span></span>
+        <select class="inp" data-row="${i}" style="max-width:52%"><option value="">— sense fitxa —</option>${memberOptions(r.memberId || (r.sure ? r.hits[0].id : ''))}</select></li>`).join('')}</ul>
+      ${parsed.rows.some(r => !r.sure) ? '<p class="muted" style="font-size:12.5px;margin:8px 0 0">Comprova els noms que l’app no ha sabut lligar: tria’ls a la llista.</p>' : ''}`;
+    box.querySelectorAll('[data-row]').forEach(sel => sel.onchange = () => { parsed.rows[+sel.dataset.row].memberId = sel.value; });
+  };
+  const plannedDates = el => {
+    const from = el.querySelector('#cp-from').value, to = el.querySelector('#cp-to').value;
+    if (!from || !to || to < from) return [];
+    const skip = new Set((el.querySelector('#cp-skip').value || '').split(/[,;\s]+/).filter(Boolean).map(x => {
+      const m = x.match(/^(\d{1,2})[\/.-](\d{1,2})(?:[\/.-](\d{2,4}))?$/);
+      if (!m) return x;
+      const y = m[3] ? (m[3].length === 2 ? `20${m[3]}` : m[3]) : from.slice(0, 4);
+      return `${y}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+    }));
+    const out = [];
+    for (let d = new Date(from + 'T12:00:00'); d <= new Date(to + 'T12:00:00'); d.setDate(d.getDate() + 1)) {
+      const iso = d.toISOString().slice(0, 10);
+      if (parsed.days.includes(d.getDay()) && !skip.has(iso)) out.push(iso);
+    }
+    return out;
+  };
+  openSheet({
+    title: 'Enganxa un horari',
+    wide: true,
+    body: `<p style="margin-top:0">Copia la graella del full de càlcul (dies de la setmana a dalt i, a sota, cada alumne amb l’hora d’inici i la de final) i enganxa-la aquí. L’app crearà un dia de classe per cada setmana.</p>
+      <label class="field"><span>Graella</span><textarea class="inp" id="cp-text" style="min-height:130px" placeholder="Dilluns&#9;&#9;&#9;Dimecres&#10;Anna García&#9;15'00h&#9;15'40h&#9;Martina Mata&#9;16'20h&#9;17'00h"></textarea></label>
+      <div class="row3" style="margin-top:10px">
+        <label class="field"><span>Des del</span><input class="inp" id="cp-from" type="date" value="${TODAY}"></label>
+        <label class="field"><span>Fins al</span><input class="inp" id="cp-to" type="date" value="${esc(season.to || TODAY)}"></label>
+      </div>
+      <label class="field" style="margin-top:10px"><span>Dies sense classe</span><input class="inp" id="cp-skip" type="text" placeholder="12/10, 8/12, 26/12">
+        <small>Festius i vacances, separats per comes.</small></label>
+      ${teachers.length > 1 || !mine ? `<label class="field" style="margin-top:10px"><span>${esc(V.Teacher)}</span><select class="inp" id="cp-who">${teachers.map(t => `<option value="${esc(t.email)}" ${t.email === mine ? 'selected' : ''}>${esc(t.name || t.email)}</option>`).join('')}</select></label>` : ''}
+      <div id="cp-prev" style="margin-top:12px"></div>`,
+    foot: `<button class="btn" id="cp-check">Comprova</button><span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="cp-go">Crea el calendari</button>`,
+    onMount: el => {
+      el.querySelector('#cp-check').onclick = () => { parsed = parseSchedule(el.querySelector('#cp-text').value, new Date(el.querySelector('#cp-from').value + 'T12:00:00').getDay()); draw(el); };
+      ['#cp-from', '#cp-to', '#cp-skip'].forEach(id => el.querySelector(id).onchange = () => draw(el));
+      el.querySelector('#cp-go').onclick = async () => {
+        if (!parsed.rows.length) { parsed = parseSchedule(el.querySelector('#cp-text').value, new Date(el.querySelector('#cp-from').value + 'T12:00:00').getDay()); draw(el); }
+        const rows = parsed.rows.map(r => ({ ...r, memberId: r.memberId != null ? r.memberId : (r.sure ? r.hits[0].id : '') }));
+        if (!rows.length) { toast('No s’hi ha trobat cap classe'); return; }
+        const dates = plannedDates(el);
+        if (!dates.length) { toast('Tria un període que tingui aquests dies de la setmana'); return; }
+        const who = el.querySelector('#cp-who')?.value || mine;
+        if (!await confirmSheet('Crear el calendari?', `Es crearan <b>${dates.length} dies de classe</b>, del ${ddmm(dates[0])} al ${ddmm(dates[dates.length - 1])}, amb ${rows.length} hores cada setmana. Els dies que ja hi hagi d’aquest ${esc(V.Teacher.toLowerCase())} es reescriuran.`, 'Crea-les')) return;
+        const at = new Date().toISOString();
+        const older = new Map([...S.classes.values()].filter(c => (c.teacher || '') === who).map(c => [c.date, c.id]));
+        let done = 0;
+        try {
+          for (let i = 0; i < dates.length; i += 100) {
+            const b = fs.batch();
+            for (const date of dates.slice(i, i + 100)) {
+              const day = new Date(date + 'T12:00:00').getDay();
+              const slots = rows.filter(r => r.day === day).sort((a, b2) => a.from - b2.from)
+                .map(r => ({ id: uid('sl'), time: hhmm(r.from), mins: r.mins, memberId: r.memberId || '' }));
+              if (!slots.length) continue;
+              const rec = { id: older.get(date) || uid('cl'), date, place: '', note: '', teacher: who, slots, at, by: S.email || '' };
+              b.set(db.doc(`classes/${rec.id}`), rec);
+              S.classes.set(rec.id, rec);
+              done++;
+            }
+            await b.commit();
+          }
+          closeSheet(); toast(`${done} dies de classe creats`); render();
+        } catch { toast('No s’han pogut desar. Comprova la connexió.'); render(); }
+      };
+    },
+  });
+}
 /* ---------- View: Classes de cant ---------- */
 // El calendari de les classes, hora per hora. El professorat el fa i el manté; cada persona pot
 // avisar que arribarà tard o que no hi anirà, i demanar el canvi d'hora d'un dia a un company.
@@ -3236,13 +3380,13 @@ function viewClasses() {
     </div>`;
   const mineCard = r => `<li><span>${classReqLine(r)}<br><span class="m">${r.kind === 'swap' ? 'Esperant que respongui' : 'Esperant que ho vegi el professorat'}</span></span>
       <button class="btn btn-sm" data-act="cl-cancel" data-r="${esc(r.id)}">Retira</button></li>`;
-  return `${teach ? `<div class="sec-h"><h2 class="h2">${esc(V.classes)}</h2><button class="btn btn-sm btn-primary" data-act="cl-new">+ Dia de classe</button></div>` : `<div class="section-title"><h2 class="h2">${esc(V.classes)}</h2><span class="eyebrow">${next.length ? 'properes' : 'sense dies'}</span></div>`}
+  return `${teach ? `<div class="sec-h"><h2 class="h2">${esc(V.classes)}</h2><span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" data-act="cl-paste">Enganxa un horari</button><button class="btn btn-sm btn-primary" data-act="cl-new">+ Dia de classe</button></span></div>` : `<div class="section-title"><h2 class="h2">${esc(V.classes)}</h2><span class="eyebrow">${next.length ? 'properes' : 'sense dies'}</span></div>`}
     ${answer.length ? `<div class="section-title"><h2 class="h2">Et demanen un canvi</h2><span class="eyebrow">respon</span></div><div class="panel" style="display:grid;gap:10px;padding:12px">${answer.map(swapCard).join('')}</div>` : ''}
     ${pending.length ? `<div class="section-title"><h2 class="h2">Avisos per veure</h2><span class="eyebrow">${pending.length}</span></div><div class="panel" style="display:grid;gap:10px;padding:12px">${pending.map(pendCard).join('')}</div>` : ''}
     ${mineReq.length ? `<div class="section-title"><h2 class="h2">Els teus avisos</h2></div><ul class="mini-list" style="max-height:none">${mineReq.map(mineCard).join('')}</ul>` : ''}
     ${next.length ? `<div class="panel" style="margin-top:14px">${next.map(c => classDayCard(c, false)).join('')}</div>`
       : `<div class="empty"><p>${teach ? 'Encara no hi ha cap dia de classe. Crea’n un i posa-hi les hores de cadascú.' : `Encara no hi ha cap classe apuntada. El ${esc(V.Teacher.toLowerCase())} les anirà posant aquí.`}</p></div>`}
-    ${past.length ? `<details class="np-group" style="margin-top:14px"><summary><span>Dies passats (${past.length})</span>${ICON.chev}</summary><div class="panel">${past.slice(0, 20).map(c => classDayCard(c, true)).join('')}</div></details>` : ''}
+    ${past.length ? `<details class="np-group" style="margin-top:14px"><summary><span>Dies passats (${past.length}, últimes 2 setmanes)</span>${ICON.chev}</summary><div class="panel">${past.slice(0, 20).map(c => classDayCard(c, true)).join('')}</div></details>` : ''}
     <p class="muted" style="font-size:12.5px;margin-top:12px">Els canvis d’hora valen només per al dia que es demanen. Qui rep la petició ha de dir que sí perquè es faci.</p>`;
 }
 /* ---------- Classes: fitxes ---------- */
@@ -5498,7 +5642,7 @@ const ADMIN_ONLY = new Set(['staff-new', 'staff-edit', 'staff-bulk', 'preview-on
 // La identitat de l'agrupació i esborrar-la: només un Usuari Pro que l'administri.
 const PRO_ONLY = new Set(['brand-color', 'logo-remove', 'kind-set', 'group-delete', 'sections-save', 'sections-undo']);
 // El calendari de les classes: només el professorat de cant i l'administració.
-const CLASS_ONLY = new Set(['cl-new', 'cl-edit', 'cl-review']);
+const CLASS_ONLY = new Set(['cl-new', 'cl-edit', 'cl-review', 'cl-paste']);
 const EDIT_ONLY = new Set(['mark', 'min', 'mark-rest', 'session-new', 'sub-set', 'ann-new', 'ann-edit', 'mat-new', 'mat-edit', 'poll-new', 'poll-edit', 'poll-results', 'poll-remind', 'rsvp-remind', 'doc-new', 'doc-edit', 'share-app', 'staff-bulk', 'preview-on', 'who-in', 'mail-check', 'concert-list', 'concert-toggle', 'session-edit', 'member-edit', 'member-bulk', 'prod-new', 'prod-edit',
   'wipe-demo', 'wipe-all', 'load-demo', 'export-json', 'abs-accept', 'abs-reject', 'abs-delete', 'manage']);
 const actions = {
@@ -5506,6 +5650,7 @@ const actions = {
   'reload': () => location.reload(),
   'google-in': () => signInGoogle(),
   'cl-new': () => sheetClassDay(),
+  'cl-paste': () => sheetClassPaste(),
   'cl-edit': el => sheetClassDay(el.dataset.c),
   'cl-notice': el => sheetClassNotice(el.dataset.c, el.dataset.s, el.dataset.k),
   'cl-swap': el => sheetClassSwap(el.dataset.c, el.dataset.s),
