@@ -23,7 +23,7 @@ def backup(gid):
     if config.get("deleted"):
         return None
     data = {
-        "app": "cor-present", "version": 1, "group": gid,
+        "app": "a-tempo", "version": 1, "group": gid,
         "config": config,
         "members": list(r.list(f"{base}/members").values()),
         "productions": list(r.list(f"{base}/productions").values()),

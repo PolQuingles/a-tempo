@@ -17,12 +17,18 @@
 <script>
 // Abans de pintar: tema triat i, si ja se sap de quina agrupació és qui entra, la seva icona i el seu nom.
 try{
-  var t=localStorage.getItem('corpresent:tema');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);
-  var m=location.search.match(/[?&]a=([A-Za-z0-9_-]{20,40})/),g=m?m[1]:localStorage.getItem('corpresent:agrupacio');
-  if(g&&/^[A-Za-z0-9_-]{20,40}$/.test(g)&&localStorage.getItem('corpresent:marca-ok:'+g)){
+  // L'app es deia «cor-present»: el que hi havia desat al mòbil es copia a les claus noves.
+  if(!localStorage.getItem('atempo:migrat')){
+    var ks=[];for(var i=0;i<localStorage.length;i++){var kk=localStorage.key(i);if(kk&&kk.indexOf('atempo:')===0)ks.push(kk);}
+    for(var j=0;j<ks.length;j++){var nk='atempo:'+ks[j].slice(11);if(localStorage.getItem(nk)==null)localStorage.setItem(nk,localStorage.getItem(ks[j]));}
+    localStorage.setItem('atempo:migrat','1');
+  }
+  var t=localStorage.getItem('atempo:tema');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);
+  var m=location.search.match(/[?&]a=([A-Za-z0-9_-]{20,40})/),g=m?m[1]:localStorage.getItem('atempo:agrupacio');
+  if(g&&/^[A-Za-z0-9_-]{20,40}$/.test(g)&&localStorage.getItem('atempo:marca-ok:'+g)){
     var b='marca/'+g+'/',d=document;
     d.getElementById('ln-icon').href=b+'favicon-48.png';d.getElementById('ln-touch').href=b+'icon-180.png';d.getElementById('ln-manifest').href=b+'manifest.webmanifest';
-    var k=JSON.parse(localStorage.getItem('corpresent:marca:'+g)||'null');
+    var k=JSON.parse(localStorage.getItem('atempo:marca:'+g)||'null');
     if(k){if(k.short||k.name)d.querySelector('meta[name="apple-mobile-web-app-title"]').content=k.short||k.name;if(k.bg)d.querySelector('meta[name="theme-color"]').content=k.bg;}
   }
 }catch(e){}
@@ -885,7 +891,7 @@ const ORDER = ['P', 'R', 'FNJ', 'FJ', 'NP'];
 const PARTS = ['1', '2', '1 o 2'];
 const WEEKDAYS = [ ['1','dl'], ['2','dt'], ['3','dc'], ['4','dj'], ['5','dv'], ['6','ds'], ['0','dg'] ];
 const LATE_CHIPS = [5, 10, 15, 20, 30];
-const LS_UI = 'corpresent:ui:v1';
+const LS_UI = 'atempo:ui:v1';
 const COLS = ['members', 'productions', 'attendance'];
 
 /* ================= Agrupacions: tipus, seccions i paraules ================= */
@@ -1116,9 +1122,9 @@ const mySubs = () => { const id = myId(); return id ? [...S.subs.values()].filte
 /* ================= Persistence (Firebase) ================= */
 // Everyone signs in with Google; the account's groups are listed in staffIndex/<email>/agrupacions.
 // Nobody gets in without an account: old links (#k=…) only show a message asking to sign in.
-const LS_KEY = 'corpresent:clau';
-const LS_LINK = 'corpresent:enllac';
-const LS_ME = 'corpresent:jo';
+const LS_KEY = 'atempo:clau';
+const LS_LINK = 'atempo:enllac';
+const LS_ME = 'atempo:jo';
 const ROLE_NAME = { edit: 'Edició', read: 'Només lectura', view: 'Només lectura', singer: 'Enllaç personal' };
 let db = null, fs = null, auth = null, LINK = null;   // LINK = { secret, choirId, role }
 const queue = new Map();   // path -> { data | null, timer }  (debounce window)
@@ -1595,7 +1601,7 @@ function applyBrand() {
 }
 
 /* ---------- Aparença: clara, fosca o automàtica ---------- */
-const LS_THEME = 'corpresent:tema';
+const LS_THEME = 'atempo:tema';
 const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
 function currentTheme() { try { return localStorage.getItem(LS_THEME) || ''; } catch { return ''; } }
 const isDark = () => { const t = document.documentElement.getAttribute('data-theme'); return t ? t === 'dark' : darkQuery.matches; };
@@ -1620,8 +1626,8 @@ function themeRow() {
 // Cada agrupació té la seva marca pública a marca/<agrupació>/ (nom, logotip, icones i manifest), que
 // genera l'acció «Calendari» cada poques hores. Mentre no se sap de quina agrupació és qui entra,
 // es mostra la de la plataforma.
-const LS_BRAND = 'corpresent:marca';
-const LS_GROUP = 'corpresent:agrupacio';
+const LS_BRAND = 'atempo:marca';
+const LS_GROUP = 'atempo:agrupacio';
 const GID_RE = /^[A-Za-z0-9_-]{20,40}$/;
 const PLATFORM = { name: 'A Tempo', sub: 'Assistència, calendari i avisos per a cors, orquestres i altres agrupacions' };
 const urlGroup = () => { const m = location.search.match(/[?&]a=([A-Za-z0-9_-]{20,40})/); return m ? m[1] : null; };
@@ -1632,7 +1638,7 @@ function loadMarca(gid = urlGroup() || rememberedGroup()) {
   if (!gid) return;
   try { MARCA = JSON.parse(localStorage.getItem(`${LS_BRAND}:${gid}`) || (gid === FOUNDER && localStorage.getItem(LS_BRAND)) || 'null'); } catch {}
   fetch(`marca/${gid}/marca.json`, { cache: 'no-cache' }).then(r => r.ok ? r.json() : null).then(m => {
-    try { m ? localStorage.setItem(`corpresent:marca-ok:${gid}`, '1') : localStorage.removeItem(`corpresent:marca-ok:${gid}`); } catch {}
+    try { m ? localStorage.setItem(`atempo:marca-ok:${gid}`, '1') : localStorage.removeItem(`atempo:marca-ok:${gid}`); } catch {}
     if (!m || (GID && GID !== gid)) return;
     MARCA = { ...m, name: (S.ready && S.config.name) || m.name };
     try { localStorage.setItem(`${LS_BRAND}:${gid}`, JSON.stringify(MARCA)); } catch {}
@@ -2744,7 +2750,7 @@ function groupsRow() {
 }
 
 /* ---------- View: Board (announcements, materials, polls) ---------- */
-const LS_SEEN = 'corpresent:tauler-vist';
+const LS_SEEN = 'atempo:tauler-vist';
 const MAT_KINDS = { partitura: 'Partitura', audio: 'Àudio', video: 'Vídeo', altres: 'Altres' };
 const linkify = t => esc(t).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
 const mySection = () => S.members.get(myMemberId())?.section || null;
@@ -3981,9 +3987,9 @@ function sheetPreview() {
   });
 }
 /* ---------- Avisos al mòbil (Web Push) ---------- */
-const LS_PUSH = 'corpresent:avis-id';
-const LS_PUSH_AT = 'corpresent:avis-refresc';
-const LS_WELCOME = 'corpresent:benvinguda';
+const LS_PUSH = 'atempo:avis-id';
+const LS_PUSH_AT = 'atempo:avis-refresc';
+const LS_WELCOME = 'atempo:benvinguda';
 const pushKinds = () => ({
   anuncis: ['Anuncis nous', 'Quan l’equip publica alguna cosa al tauler.'],
   materials: ['Material nou', `Partitures, àudios i documents nous per a la teva ${V.section} i ${V.part}.`],
@@ -3998,7 +4004,7 @@ const leaderKinds = () => ({
   risc: [`${V.Members} en risc`, 'Quan algú baixa de la norma d’assistència.'],
 });
 const DEFAULT_PREFS = { anuncis: true, materials: true, convocatories: true, enquestes: true, absencies: true, assajos: false, llistes: true, risc: true };
-const LS_PUSH_PREFS = 'corpresent:avis-prefs';
+const LS_PUSH_PREFS = 'atempo:avis-prefs';
 /** The sections a leader looks after: their own, from the account or from their roster record. */
 function defaultCordes() {
   if (!canEdit()) return [];
@@ -4366,7 +4372,7 @@ function buildIcs(sessions, name) {
   const dt = (d, t) => `${d.replace(/-/g, '')}T${t.replace(':', '')}00`;
   const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//A Tempo//CA', 'CALSCALE:GREGORIAN', `X-WR-CALNAME:${icsEscape(name)}`, 'X-WR-TIMEZONE:Europe/Madrid'];
   for (const s of sessions) {
-    lines.push('BEGIN:VEVENT', `UID:${s.id}@cor-present`, `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').slice(0, 15)}Z`);
+    lines.push('BEGIN:VEVENT', `UID:${s.id}@a-tempo`, `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').slice(0, 15)}Z`);
     if (s.time) {
       lines.push(`DTSTART;TZID=Europe/Madrid:${dt(s.date, s.time)}`);
       const end = s.end || `${pad(Math.min(23, +s.time.slice(0, 2) + 2))}:${s.time.slice(3, 5)}`;
@@ -4699,7 +4705,7 @@ function offerFile(filename, text, mime) {
   } catch { toast('No s’ha pogut preparar el fitxer'); }
 }
 function exportJSON() {
-  const data = { app: 'cor-present', version: 1, exportedAt: new Date().toISOString(), config: S.config,
+  const data = { app: 'a-tempo', version: 1, exportedAt: new Date().toISOString(), config: S.config,
     members: [...S.members.values()], productions: [...S.productions.values()], attendance: Object.fromEntries(S.attendance), absences: [...S.absences.values()],
     rsvp: [...S.rsvp.values()], announcements: [...S.announcements.values()], polls: [...S.polls.values()], pollVotes: [...S.pollVotes.values()] };
   const slug = (S.config.name || 'agrupacio').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -4725,7 +4731,7 @@ function exportCSV() {
 async function importJSON(file) {
   let data;
   try { data = JSON.parse(await file.text()); } catch { toast('El fitxer no és una còpia vàlida d’A Tempo'); return; }
-  if (!data || data.app !== 'cor-present' || !Array.isArray(data.members) || !Array.isArray(data.productions)) { toast('El fitxer no és una còpia vàlida d’A Tempo'); return; }
+  if (!data || !['a-tempo', 'cor-present'].includes(data.app) || !Array.isArray(data.members) || !Array.isArray(data.productions)) { toast('El fitxer no és una còpia vàlida d’A Tempo'); return; }
   const ok = await confirmSheet('Restaurar la còpia?', `Se substituiran les dades actuals per ${data.members.length} ${V.members} i ${data.productions.length} produccions del fitxer.`, 'Restaura');
   if (!ok) return;
   applyData(data, false);
@@ -4808,8 +4814,8 @@ async function wipeAll(demo) {
 }
 
 /* ================= Agrupacions: triar-ne, crear-ne i plataforma ================= */
-const LS_GROUPS = 'corpresent:agrupacions';
-const LS_INTENT = 'corpresent:intencio';
+const LS_GROUPS = 'atempo:agrupacions';
+const LS_INTENT = 'atempo:intencio';
 const groupName = g => g.name || (g.id === GID ? S.config.name : '') || 'Agrupació';
 /** «del Cor Jove», «de l’Orquestra de Cambra», «de la Banda Municipal»: the group's own name with the right article. */
 function ofName(name = S.config.name) {
@@ -5558,8 +5564,8 @@ async function init() {
 // que li envia Firebase: les regles només deixen entrar comptes amb el correu confirmat.
 let MAIL = null;   // { step: signin | create | reset | verify, email, msg, ok, busy }
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
-const LS_MAIL = 'corpresent:correu';
-const LS_VERIFY_AT = 'corpresent:verificacio';
+const LS_MAIL = 'atempo:correu';
+const LS_VERIFY_AT = 'atempo:verificacio';
 const backUrl = () => location.origin + location.pathname + location.search;
 const AUTH_MSG = {
   'auth/invalid-email': 'Aquest correu no és vàlid.',

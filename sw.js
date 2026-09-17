@@ -13,7 +13,7 @@ self.addEventListener('push', e => {
     icon: d.icon ? `./${d.icon}` : './app/icon-192.png',
     badge: './app/icon-192.png',
     lang: 'ca',
-    tag: d.tag || 'cor-present',
+    tag: d.tag || 'a-tempo',
     renotify: true,
     data: { url: d.url || './' },
   }));

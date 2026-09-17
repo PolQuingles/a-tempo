@@ -19,7 +19,7 @@ jobs:
           printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
-          git clone git@github.com:PolQuingles/cor-present-copies.git copies
+          git clone git@github.com:PolQuingles/a-tempo-copies.git copies
       - name: Descarrega les dades
         env:
           SERVICE_REFRESH_TOKEN: ${{ secrets.SERVICE_REFRESH_TOKEN }}

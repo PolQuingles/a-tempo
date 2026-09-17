@@ -45,7 +45,7 @@ def ics(cfg, prods):
          "END:VTIMEZONE"]
     for s, pnames in sessions:
         d = s["date"].replace("-", "")
-        L += ["BEGIN:VEVENT", f"UID:{s['id']}@cor-present", "DTSTAMP:20260101T000000Z"]
+        L += ["BEGIN:VEVENT", f"UID:{s['id']}@a-tempo", "DTSTAMP:20260101T000000Z"]
         if s.get("time"):
             start = s["time"]
             end = s.get("end") or f"{min(23, int(start[:2]) + 2):02d}:{start[3:5]}"
