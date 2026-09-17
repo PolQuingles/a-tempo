@@ -41,7 +41,8 @@ Qui també és de la plantilla (per exemple, un cap de corda que canta) té, a m
 
 S'activen a Ajustos (`config/main.classesOn`) quan l'agrupació fa classes individuals.
 
-- `classes/<id>` és un dia de classe: data, lloc, professorat i `slots` (hora, durada i qui hi va).
+- La pestanya té dos nivells: el **quadre del professorat** (una casella per a cadascú, com les cordes de la llista) i, a dins, l'**espai** d'aquell professor/a: el mes amb els dies de classe marcats, el dia triat hora per hora i els dies que vénen.
+- `classes/<id>` és un dia de classe: data, lloc, professorat (`teacher`, i `teacherName` per a qui no llegeix les fitxes de l'equip) i `slots` (hora, durada i qui hi va).
 - `classReq/<id>` és un avís de retard o d'absència, o una petició de canvi d'hora entre dos companys, amb `status` pendent, acceptada, rebutjada o retirada. Un canvi acceptat val només per a aquell dia: no canvia el calendari, s'hi aplica a sobre.
 - El professorat que encara no entra a l'app es posa a Ajustos (`config/main.teachers` = [{id, name}]): els dies i els horaris fixos es guarden amb la seva clau (el correu si té compte, si no l'id de la fitxa).
 - `classPlan/<clau>` és l'horari fix d'un professor/a (l'hora setmanal de cada alumne): des d'allà es generen els dies de tot un trimestre, saltant els festius, i els dies que ja hi eren es reescriuen mantenint l'assistència marcada.
