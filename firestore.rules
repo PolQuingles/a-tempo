@@ -183,13 +183,13 @@ service cloud.firestore {
       }
       match /{col}/{doc} {
         allow read: if (col in ['members', 'productions', 'attendance', 'config', 'staff', 'subs', 'rsvp', 'absences',
-                                'announcements', 'polls', 'pollVotes', 'memberMarks', 'push', 'classes', 'classReq'] && canEdit(c))
+                                'announcements', 'polls', 'pollVotes', 'memberMarks', 'push', 'classes', 'classReq', 'classPlan'] && canEdit(c))
                     // Cantaires i músics: veuen tota l'app, però no poden canviar res.
                     || (col in ['members', 'productions', 'attendance', 'config', 'subs',
                                 'announcements', 'polls'] && isStaff(c))
                     || (col in ['productions', 'config'] && hasRole(c, ['calendar']))
                     || (col in ['members', 'productions', 'attendance', 'config', 'staff', 'subs', 'rsvp', 'absences',
-                                'announcements', 'polls', 'pollVotes', 'push', 'classes', 'classReq'] && (hasRole(c, ['backup']) || isService()));
+                                'announcements', 'polls', 'pollVotes', 'push', 'classes', 'classReq', 'classPlan', 'classNotes'] && (hasRole(c, ['backup']) || isService()));
         allow create, update: if col in ['members', 'productions', 'attendance', 'config', 'subs', 'rsvp',
                                          'announcements', 'polls', 'pollVotes', 'memberMarks'] && canEdit(c)
           && !(col == 'config' && doc == 'main');
@@ -219,6 +219,16 @@ service cloud.firestore {
       // Classes de cant: el calendari el fa el professorat; tothom de l'agrupació el pot veure.
       match /classes/{id} {
         allow read: if isStaff(c) || hasRole(c, ['backup']) || isService();
+        allow create, update, delete: if teaches(c);
+      }
+      // L'horari fix de cada professor/a: un document per professor/a, per generar els trimestres.
+      match /classPlan/{id} {
+        allow read: if isStaff(c) || hasRole(c, ['backup']) || isService();
+        allow create, update, delete: if teaches(c);
+      }
+      // Les notes de cada classe: només les veuen el professorat i l'alumne de qui són.
+      match /classNotes/{id} {
+        allow read: if teaches(c) || (hasSpace(c) && mine(c, resource.data.memberId)) || hasRole(c, ['backup']) || isService();
         allow create, update, delete: if teaches(c);
       }
       // Avisos de retard o absència a una classe i peticions de canvi d'hora entre companys.
