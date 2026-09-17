@@ -369,7 +369,7 @@ details.np-group[open] summary .chev{transform:rotate(180deg)}
 .li .t{font-weight:600}
 .li .s{font-size:12.5px;color:var(--muted)}
 .li .dim{opacity:.55}
-.sec-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-block:22px 8px;padding-inline:2px}
+.sec-h{display:flex;align-items:center;justify-content:space-between;gap:10px 12px;margin-block:22px 8px;padding-inline:2px;flex-wrap:wrap}
 .sec-h .h2 em{font-style:italic;color:var(--accent);margin-right:6px}
 .prod-card > button{display:block;padding:14px}
 .prod-card .h2{font-size:20px}
@@ -625,6 +625,7 @@ textarea.inp{padding:10px 12px;min-height:120px;resize:vertical;line-height:1.4}
 .section-title,.sec-h{align-items:center}
 .section-title > .h2,.sec-h > .h2,.cal-prod-h > .h2{flex:1 1 auto;min-width:0}
 .section-title > :not(.h2),.sec-h > :not(.h2){flex:none}
+.section-title > span.muted,.sec-h > span.muted{flex:1 1 160px;min-width:0}
 @media (max-width:480px){
   .h1{font-size:clamp(24px, 7.4vw, 30px)}
   .section-title .h2,.sec-h .h2,.cal-prod-h .h2,.prod-band .h2{font-size:18px}
@@ -912,7 +913,6 @@ const STATUS = {
 const ORDER = ['P', 'R', 'FNJ', 'FJ', 'NP'];
 const PARTS = ['1', '2', '1 o 2'];
 const WEEKDAYS = [ ['1','dl'], ['2','dt'], ['3','dc'], ['4','dj'], ['5','dv'], ['6','ds'], ['0','dg'] ];
-const LATE_CHIPS = [5, 10, 15, 20, 30];
 const LS_UI = 'atempo:ui:v1';
 const COLS = ['members', 'productions', 'attendance'];
 const CLASS_COLS = ['classes', 'classReq', 'classPlan', 'classNotes'];
@@ -1093,7 +1093,7 @@ const ui = {
   tab: 'llista', section: '', sessionId: null, rollSec: null,
   calProd: 'all', calPast: false,
   statsScope: 'prod', statsProd: null, statsTerm: null, statsSec: '', statsSort: 'pct',
-  manage: 'cantaires', absFilter: 'pending',
+  manage: 'personal', people: 'singer', absFilter: 'pending',
 };
 /* ---------- Memòria del mòbil, per agrupació ---------- */
 // Cada agrupació guarda a part la pestanya oberta, els avisos vistos, etc. La primera agrupació
@@ -1112,16 +1112,19 @@ function loadUI() {
   ui.sessionId = null;
 }
 function saveUI() {
-  lsSet(LS_UI, JSON.stringify({ tab: ui.tab, section: ui.section, calProd: ui.calProd, calView: ui.calView, statsScope: ui.statsScope, statsSec: ui.statsSec, statsSort: ui.statsSort, manage: ui.manage }));
+  lsSet(LS_UI, JSON.stringify({ tab: ui.tab, section: ui.section, calProd: ui.calProd, calView: ui.calView, statsScope: ui.statsScope, statsSec: ui.statsSec, statsSort: ui.statsSort, manage: ui.manage, people: ui.people }));
 }
 // Rols de les persones de l'agrupació. Una persona pot tenir-ne més d'un (p. ex. cap de corda i cantaire).
 // Administració ho pot fer tot; direcció, caps i equip passen llista i editen; cantaires i músics només llegeixen.
-const ROLE_KEYS = ['admin', 'director', 'leader', 'palau', 'voice', 'singer'];
-const staffLabel = () => (S.config.labels && S.config.labels.palau) || 'Equip tècnic';
-const roleLabel = r => ({ admin: 'Administració', director: 'Director', leader: V.Leader, singer: V.Member, palau: staffLabel(), voice: V.Teacher }[r] || r);
-const EDIT_ROLES = new Set(['admin', 'director', 'leader', 'palau']);
-/** The roles of a person record, in ROLE_KEYS order: the list, or the single role of older records. */
-const rolesOf = p => { const list = !p ? [] : Array.isArray(p.roles) && p.roles.length ? p.roles : p.role ? [p.role] : []; return ROLE_KEYS.filter(k => list.includes(k)); };
+const ROLE_KEYS = ['admin', 'director', 'gerencia', 'secretaria', 'leader', 'voice', 'singer'];
+const roleLabel = r => ({ admin: 'Administració', director: 'Director', gerencia: 'Gerència', secretaria: 'Secretaria', leader: V.Leader, singer: V.Member, voice: V.Teacher }[r] || r);
+const EDIT_ROLES = new Set(['admin', 'director', 'gerencia', 'secretaria', 'leader']);
+/** The roles of a person record, in ROLE_KEYS order: the list, or the single role of older records.
+ *  «palau» (l'antic rol únic de l'equip tècnic) es llegeix com a gerència fins que se'n desa un de nou. */
+const rolesOf = p => {
+  const list = !p ? [] : Array.isArray(p.roles) && p.roles.length ? p.roles : p.role ? [p.role] : [];
+  return ROLE_KEYS.filter(k => list.includes(k) || (k === 'gerencia' && list.includes('palau')));
+};
 const hasRole = (p, r) => rolesOf(p).includes(r);
 const rolesText = p => rolesOf(p).map(roleLabel).join(' · ') || 'Sense rol';
 const roleLevel = p => rolesOf(p).some(r => EDIT_ROLES.has(r)) ? 'edit' : 'read';
@@ -1132,6 +1135,7 @@ const rolesHint = roles => !roles.length ? 'Tria almenys un rol.' : [
     : 'Veu tota l’app en mode lectura, sense poder-hi canviar res.',
   roles.includes('singer') ? `Té el seu espai: avisa de les seves absències i veu la seva assistència.` : '',
   roles.includes('leader') ? `Porta una ${V.section}.` : '',
+  roles.includes('gerencia') || roles.includes('secretaria') ? 'Forma part de l’equip de l’agrupació.' : '',
   roles.includes('voice') ? `Porta les ${V.classes.toLowerCase()}: en fa el calendari i rep els avisos dels ${V.members}.` : '',
 ].filter(Boolean).join(' ');
 // «Mira-ho com un cantaire»: només canvia el que es veu en aquest mòbil, no els permisos.
@@ -2085,7 +2089,7 @@ function rowHtml(session, m) {
     if (s === 'R') {
       const now = lateNow(session);
       body += `<div class="extra x-R"><label for="min-${m.id}">Minuts</label>
-        <div class="mins">${now ? `<button class="min-chip now" data-act="min" data-min="${now}" aria-pressed="${+mk.min === now}">Arriba ara · ${now}′</button>` : ''}${LATE_CHIPS.map(n => `<button class="min-chip" aria-pressed="${+mk.min === n}" data-act="min" data-min="${n}">${n}</button>`).join('')}</div>
+        ${now ? `<div class="mins"><button class="min-chip now" data-act="min" data-min="${now}" aria-pressed="${+mk.min === now}">Arriba ara · ${now}′</button></div>` : ''}
         <input class="min-input" id="min-${m.id}" type="number" inputmode="numeric" min="1" max="240" placeholder="—" value="${mk.min || ''}" data-bind="min" aria-label="Minuts de retard"></div>`;
     } else if ((s === 'FJ' || s === 'FNJ') && !mk.auto) {
       body += `<div class="extra x-${s}"><label for="note-${m.id}">Motiu</label>
@@ -2556,13 +2560,53 @@ function sheetConcertList(pid) {
 /* ---------- View: Manage ---------- */
 function viewManage() {
   const pend = pendingAbsences().length;
-  const tabs = [['avisos', `Avisos${pend ? ` (${pend})` : ''}`], ['cantaires', V.Members], ['produccions', 'Produccions'], ['config', 'Ajustos']];
+  if (ui.manage === 'cantaires') ui.manage = 'personal';   // es deia així abans
+  const tabs = [['avisos', `Avisos${pend ? ` (${pend})` : ''}`], ['personal', 'Personal'], ['produccions', 'Produccions'], ['config', 'Ajustos']];
   const head = `<div class="page-head"><h1 class="h1">Gestió</h1></div>
     <div class="subtabs" role="tablist" style="grid-template-columns:repeat(4,1fr)">${tabs.map(([k, l]) => `<button class="subtab" role="tab" aria-selected="${ui.manage === k}" data-act="manage" data-k="${k}" style="font-size:12.5px">${l}</button>`).join('')}</div>`;
   if (ui.manage === 'produccions') return head + manageProductions();
   if (ui.manage === 'config') return head + manageConfig();
   if (ui.manage === 'avisos') return head + manageAbsences();
-  return head + manageMembers();
+  return head + managePeople();
+}
+/* ---------- Personal: la gent de l'agrupació, rol per rol ---------- */
+// Al menú, la plantilla va primer (és la llista que més es mira) i els noms van en plural.
+const PEOPLE_MENU = ['singer', 'admin', 'director', 'gerencia', 'secretaria', 'leader', 'voice'];
+const rolePlural = r => ({ admin: 'Administració', director: 'Direcció', gerencia: 'Gerència', secretaria: 'Secretaria',
+  leader: capz(V.leaders), singer: V.Members, voice: V.kind === 'cor' ? 'Professors de cant' : 'Professors' }[r] || roleLabel(r));
+/** Qui té aquest rol. Els de la plantilla són tota la plantilla, tinguin compte o no. */
+const peopleWithRole = r => peopleSorted().filter(p => hasRole(p, r));
+const roleCount = r => r === 'singer' ? membersOf(null, true).filter(m => m.active !== false).length : peopleWithRole(r).length;
+/** Una persona de l'equip, amb els seus rols i si ja ha entrat a l'app. */
+function personRow(p) {
+  const inside = isAdmin() ? `data-act="staff-edit" data-email="${esc(p.email)}"` : '';
+  const state = p.lastSeen ? '' : p.invitedAt ? 'Convidat · encara no ha entrat' : 'Encara no ha entrat · sense convidar';
+  return `<li class="li" data-find="${esc(normText(p.name || p.email))}"><button ${inside}>
+    <span><span class="t">${esc(p.name || p.email)}</span> <span class="role-tag">${esc(roleSummary(p))}</span><br><span class="s mono">${esc(p.email)}</span>${state ? `<br><span class="s">${state}</span>` : ''}</span>
+    ${isAdmin() ? `<span class="icon-btn" aria-hidden="true">${ICON.go}</span>` : ''}</button></li>`;
+}
+function managePeople() {
+  if (!ROLE_KEYS.includes(ui.people)) ui.people = 'singer';
+  const role = ui.people;
+  const menu = `<div class="chips" id="people-menu" role="tablist" aria-label="Rols">${PEOPLE_MENU.map(k => {
+    const n = roleCount(k);
+    return `<button class="chip" role="tab" aria-pressed="${role === k}" data-act="people-role" data-k="${k}">${esc(rolePlural(k))}${n ? ` · ${n}` : ''}</button>`;
+  }).join('')}</div>`;
+  if (role === 'singer') return menu + manageMembers();
+  const list = peopleWithRole(role);
+  const add = isAdmin() ? `<button class="btn btn-sm btn-primary" data-act="staff-new" data-role="${role}">+ Persona</button>` : '';
+  const what = {
+    admin: 'Ho poden fer tot: donar accés, canviar dades i esborrar.',
+    director: `Passa llista, publica anuncis i convocatòries i puja materials.`,
+    gerencia: 'Passa llista, publica anuncis i convocatòries i puja materials i documents.',
+    secretaria: 'Passa llista, publica anuncis i convocatòries i puja materials i documents.',
+    leader: `Cada ${V.leader} porta una ${V.section}: hi passa llista i en rep els avisos.`,
+    voice: `Porta les ${V.classes.toLowerCase()}: en fa el calendari i rep els avisos dels ${V.members}.`,
+  }[role] || '';
+  return `${menu}<div class="sec-h" style="margin-top:4px"><span class="muted" style="font-size:13px">${esc(what)}</span>${add}</div>
+    ${list.length ? `<ul class="list">${list.map(personRow).join('')}</ul>`
+      : `<div class="empty"><p>Encara no hi ha ningú amb el rol de ${esc(roleLabel(role).toLowerCase())}.${isAdmin() ? ' Dona-li accés amb el seu correu i tria-li el rol.' : ''}</p></div>`}
+    <p class="muted" style="margin:10px 2px 0;font-size:12px">Una persona pot tenir més d’un rol i, per tant, sortir a més d’una llista.</p>`;
 }
 function leaveText(m) {
   const now = onLeave(m, TODAY);
@@ -2638,7 +2682,7 @@ const BRAND_COLORS = ['#5A3577', '#8E1B3A', '#B0413E', '#1F4E79', '#1B6E6A', '#2
 /* ---------- Primers passos d'una agrupació nova ---------- */
 function onboardingSteps() {
   return [
-    { done: S.members.size > 0, t: `Afegeix els ${V.members}`, s: `A Gestió › ${V.Members}, per ${V.sections}. Pots enganxar-ne els noms d’un full de càlcul.`, act: 'manage', k: 'cantaires', b: `Ves-hi` },
+    { done: S.members.size > 0, t: `Afegeix els ${V.members}`, s: `A Gestió › Personal, per ${V.sections}. Pots enganxar-ne els noms d’un full de càlcul.`, act: 'manage', k: 'personal', b: `Ves-hi` },
     { done: S.productions.size > 0, t: 'Crea la primera producció', s: 'Un concert o un projecte, amb totes les seves sessions d’assaig.', act: 'prod-new', b: 'Nova producció' },
     { done: S.staff.size > 1, t: 'Dona accés a l’equip', s: `Cada persona entra amb el seu correu. Pots enganxar una llista de correus de cop.`, act: 'staff-new', b: '+ Persona' },
     { skip: !canManageGroup(), done: !!(S.config.brand && (S.config.brand.logo || S.config.brand.accent)), t: 'Posa-hi el logotip i el color', s: 'Surten a l’entrada de l’app i a la icona del mòbil.', act: 'manage', k: 'config', b: 'Identitat' },
@@ -2766,7 +2810,7 @@ function manageConfig() {
   const adminBlocks = isAdmin() ? `
   <div class="sec-h"><h2 class="h2">Persones</h2><button class="btn btn-sm btn-primary" data-act="staff-new">+ Persona</button></div>
   <div class="panel">
-    <div class="setting"><div><div class="t">${withAccount} de ${members.length} ${esc(V.members)} ja tenen accés</div><div class="s">Tothom entra pel mateix enllaç amb el seu correu, i només si és en aquesta llista. L’administració ho pot fer tot; direcció, ${esc(V.leaders)} i ${esc(staffLabel().toLowerCase())} passen llista, publiquen avisos i pugen documents; ${esc(V.members)} ho veuen tot en <b>mode lectura</b>. Una persona pot tenir més d’un rol.</div></div>
+    <div class="setting"><div><div class="t">${withAccount} de ${members.length} ${esc(V.members)} ja tenen accés</div><div class="s">Tothom entra pel mateix enllaç amb el seu correu, i només si és en aquesta llista. L’administració ho pot fer tot; direcció, ${esc(V.leaders)}, gerència i secretaria passen llista, publiquen avisos i pugen documents; ${esc(V.members)} ho veuen tot en <b>mode lectura</b>. Una persona pot tenir més d’un rol.</div></div>
       <span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" data-act="share-app">Enllaç de l’app</button><button class="btn btn-sm" data-act="staff-bulk">Enganxa una llista</button><button class="btn btn-sm" data-act="preview-on">Mira-ho com un ${esc(V.member)}</button></span></div>
     ${(r => `<div class="setting"><div><div class="t">${r.inApp.length} han entrat${r.never.length ? `, ${r.never.length} encara no` : ''}</div><div class="s">Qui ha obert l’app almenys un cop, i qui té el correu mal escrit o sense vincular.</div></div>
       <span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" data-act="who-in">Qui ha entrat</button><button class="btn btn-sm ${mailProblems().length ? 'btn-primary' : ''}" data-act="mail-check">Comprova els correus${mailProblems().length ? ` (${mailProblems().length})` : ''}</button></span></div>`)(accessReport())}
@@ -2782,8 +2826,6 @@ function manageConfig() {
       <label class="field"><span>Nom de l’agrupació</span><input class="inp" id="cfg-name" type="text" maxlength="60" value="${esc(S.config.name || '')}" data-bind="cfg-name" placeholder="p. ex. ${esc(NAME_EXAMPLES[kindOf()])}"></label>
       <div class="field"><span>Tipus</span><div class="pickers" id="cfg-kind">${Object.entries(KINDS).map(([k, x]) => `<button type="button" class="pick" data-act="kind-set" data-k="${k}" aria-pressed="${kindOf() === k}">${esc(x.label)}</button>`).join('')}</div>
         <small>Decideix les paraules de l’app (${esc(V.members)}, ${esc(V.sections)}, ${esc(V.leaders)}…) i els tipus de sessió que es proposen.</small></div>
-      <label class="field"><span>Nom del rol de qui no ${esc(V.plays)}</span><input class="inp" id="cfg-staff" type="text" maxlength="40" value="${esc((S.config.labels && S.config.labels.palau) || '')}" data-bind="cfg-staff" placeholder="Equip tècnic">
-        <small>Persones que no són de la plantilla però passen llista i editen: gestió, producció, personal de la sala…</small></label>
     </div>
   </div>
   <div class="sec-h"><h2 class="h2">${esc(V.Sections)}</h2><span class="eyebrow">${SECTIONS.length}</span></div>
@@ -3945,6 +3987,8 @@ function afterRender() {
     const t = $('.cal-row.is-today') || $$('.cal-row').find(r => r.dataset.date >= TODAY);
     if (t && ui.calPast) t.scrollIntoView({ block: 'center' });
   }
+  const chip = ui.tab === 'gestio' && $('#people-menu .chip[aria-pressed="true"]');
+  if (chip) chip.scrollIntoView({ block: 'nearest', inline: 'center' });
   const ctx = $('#ctx');
   if (ctx) onScroll();
 }
@@ -4512,10 +4556,10 @@ function roleSummary(p) {
   if (sec) bits.push(SEC[sec].name);
   return bits.join(' · ');
 }
-function sheetStaff(email) {
+function sheetStaff(email, preset) {
   const existing = email ? S.staff.get(email) : null;
   const p = existing ? { ...existing } : { email: '', name: '', section: SECTIONS[0]?.id || '', memberId: '' };
-  const roles = existing ? rolesOf(existing) : ['singer'];
+  const roles = existing ? rolesOf(existing) : (preset || []).filter(r => ROLE_KEYS.includes(r)).length ? preset : ['singer'];
   openSheet({
     title: existing ? (p.name || p.email) : 'Dona accés a una persona',
     body: `<div class="kv">
@@ -5224,8 +5268,8 @@ function sheetHelp() {
   const w = V;
   const body = staff ? `<div class="manual">
     <h3>Entrar</h3>
-    <p>Tothom entra pel mateix enllaç amb <b>el seu correu</b>: amb Google o, si el correu no és de Google, creant una contrasenya («Entra amb un altre correu»). L’administració dona d’alta cada persona a <b>Gestió › Ajustos › Persones</b>, li envia la <b>invitació</b> per correu o WhatsApp i li dona un o més rols: administració, director, ${w.leader}, ${esc(staffLabel().toLowerCase())} o ${w.member}.</p>
-    <p>L’administració ho pot fer tot. Direcció, ${w.leaders} i ${esc(staffLabel().toLowerCase())} passen llista, publiquen anuncis i convocatòries i pugen materials i documents. ${w.Members} ho veuen tot en <b>mode lectura</b>. Qui també és ${w.member} (per exemple, un ${w.leader}) té a més <b>El meu espai</b>, amb la seva assistència i els seus avisos d’absència.</p>
+    <p>Tothom entra pel mateix enllaç amb <b>el seu correu</b>: amb Google o, si el correu no és de Google, creant una contrasenya («Entra amb un altre correu»). L’administració dona d’alta cada persona a <b>Gestió › Ajustos › Persones</b>, li envia la <b>invitació</b> per correu o WhatsApp i li dona un o més rols: administració, director, ${w.leader}, gerència, secretaria, ${esc(V.Teacher.toLowerCase())} o ${w.member}.</p>
+    <p>L’administració ho pot fer tot. Direcció, ${w.leaders}, gerència i secretaria passen llista, publiquen anuncis i convocatòries i pugen materials i documents. ${w.Members} ho veuen tot en <b>mode lectura</b>. Qui també és ${w.member} (per exemple, un ${w.leader}) té a més <b>El meu espai</b>, amb la seva assistència i els seus avisos d’absència.</p>
     <h3>Passar llista</h3>
     <ul><li>A <b>Llista</b> surt la sessió d’avui. Toca el quadre de la teva ${w.section}.</li>
     <li>Toca l’estat de cadascú: <b>Present</b>, <b>Retard</b>, <b>No justificada</b>, <b>Justificada</b> o <b>No fa</b>. Toca’l un altre cop per desmarcar.</li>
@@ -5247,7 +5291,7 @@ function sheetHelp() {
     <h3>Fitxa ${w.sh.del} i calendari</h3>
     <p>A la fitxa d’una sessió pots posar l’<b>hora de convocatòria</b>, el <b>vestuari</b>, el <b>punt de trobada</b> i què cal portar. La veuen tots els convocats i es pot copiar per al grup. Al <b>Calendari</b>, el botó <b>Mes</b> mostra la graella mensual.</p>
     <h3>${w.Members} i persones</h3>
-    <p>A <b>Gestió › ${w.Members}</b>: ${w.section}, ${w.part}, baixes temporals amb dates i telèfon. L’accés a l’app es dona amb el correu, a <b>Ajustos › Persones</b> (<b>+ Persona</b> o <b>Enganxa una llista</b>). Amb <b>Mira-ho com un ${w.member}</b> comproves què veu cadascú; <b>Qui ha entrat</b> i <b>Comprova els correus</b> t’ajuden a fer que tothom hi entri.</p>
+    <p>A <b>Gestió › Personal</b> hi ha tothom, rol per rol: administració, direcció, gerència, secretaria, ${w.leaders}, ${esc(V.kind === 'cor' ? 'professors de cant' : 'professors')} i ${w.members}. De cada ${w.member}: ${w.section}, ${w.part}, baixes temporals amb dates i telèfon. L’accés a l’app es dona amb el correu, a <b>Ajustos › Persones</b> (<b>+ Persona</b> o <b>Enganxa una llista</b>). Amb <b>Mira-ho com un ${w.member}</b> comproves què veu cadascú; <b>Qui ha entrat</b> i <b>Comprova els correus</b> t’ajuden a fer que tothom hi entri.</p>
     <h3>Tipus d’agrupació i ${w.sections}</h3>
     <p>A <b>Ajustos › Agrupació</b> tries si és un cor, una orquestra, una banda, una cobla, un grup de cambra o una altra agrupació: canvien les paraules de l’app i els tipus de sessió. A <b>Ajustos › ${w.Sections}</b> en canvies els noms i les abreviatures, n’afegeixes o en treus. El nom, el tipus, les ${w.sections} i la imatge només els pot canviar un <b>Usuari Pro</b> que administri l’agrupació.</p>
     <h3>${esc(V.classes)}</h3>
@@ -5590,7 +5634,7 @@ async function wipeAll(demo) {
   for (const [col, id] of paths) { S[col].delete(id); persist(col, id, null, 10 + (i++ % 40) * 15); }
   saveConfig({ demo: false });
   ui.sessionId = null; ui.statsProd = null;
-  ui.tab = 'gestio'; ui.manage = 'cantaires';
+  ui.tab = 'gestio'; ui.manage = 'personal'; ui.people = 'singer';
   toast(`Dades esborrades. Comença afegint ${V.members}.`);
   render();
 }
@@ -6016,7 +6060,7 @@ const actions = {
   'mail-out': async () => { try { await auth.signOut(); } catch {} MAIL = null; location.replace(location.pathname + location.search); },
   'sign-out': () => signOut(),
   'help': () => sheetHelp(),
-  'staff-new': () => sheetStaff(null),
+  'staff-new': el => sheetStaff(null, el && el.dataset.role ? [el.dataset.role] : null),
   'staff-bulk': () => sheetStaffBulk(),
   'preview-on': () => sheetPreview(),
   'push-setup': () => sheetPush(),
@@ -6175,6 +6219,7 @@ const actions = {
   'export-csv': () => exportCSV(),
   'export-json': () => exportJSON(),
   'manage': el => { ui.manage = el.dataset.k; ui.tab = 'gestio'; closeSheet(); saveUI(); render(); },
+  'people-role': el => { ui.people = el.dataset.k; saveUI(); render(); },
   'member-edit': el => sheetMember(el.dataset.mid),
   'member-bulk': el => sheetBulk(el.dataset.sec || ui.section),
   'prod-new': () => sheetProduction(null),
@@ -6231,12 +6276,11 @@ document.addEventListener('input', e => {
   } else if (kind === 'cfg-min') {
     clearTimeout(bindTimer);
     bindTimer = setTimeout(() => { const v = parseInt(el.value, 10); if (v > 0 && v <= 100) saveConfig({ minAttendance: v }); }, 500);
-  } else if (kind === 'cfg-name' || kind === 'cfg-alert' || kind === 'cfg-short' || kind === 'cfg-staff') {
+  } else if (kind === 'cfg-name' || kind === 'cfg-alert' || kind === 'cfg-short') {
     clearTimeout(bindTimer);
     bindTimer = setTimeout(() => {
       if (kind === 'cfg-name') { if (!canManageGroup() || !el.value.trim()) return; saveConfig({ name: el.value.trim() }); paintBrandName(); syncDirectory(true); }
       else if (kind === 'cfg-short') { if (canManageGroup()) saveConfig({ shortName: el.value.trim().slice(0, 16) }); }
-      else if (kind === 'cfg-staff') { if (canManageGroup()) saveConfig({ labels: { ...(S.config.labels || {}), palau: el.value.trim().slice(0, 40) } }); }
       else { const v = parseInt(el.value, 10); if (v > 0) saveConfig({ alertFNJ: v }); }
     }, 500);
   }

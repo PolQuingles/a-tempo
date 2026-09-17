@@ -48,7 +48,7 @@ RISK_TIME = os.environ.get("AVISOS_RISK") == "1" or (NOW.hour in (10, 19) and NO
 
 DEFAULT_PREFS = {"anuncis": True, "convocatories": True, "enquestes": True, "assajos": False,
                  "materials": True, "absencies": True, "llistes": True, "risc": True, "classes": True}
-EDIT_ROLES = {"admin", "director", "leader", "palau"}
+EDIT_ROLES = {"admin", "director", "gerencia", "secretaria", "leader", "palau"}
 
 
 def roles_of(person):

@@ -11,7 +11,8 @@ service cloud.firestore {
     // Ningú no hi entra sense identificar-se: tothom entra amb el seu compte de Google i té una fitxa
     // a cors/<agrupació>/staff/<correu> amb un o més rols (roles; les fitxes antigues, un sol role):
     //   admin                     → ho pot fer tot: persones, identitat, dades
-    //   director | leader | palau → passen llista, publiquen avisos, pugen documents… (leader = cap de corda o de secció)
+    //   director | gerencia | secretaria | leader → passen llista, publiquen avisos, pugen documents…
+    //                             (leader = cap de corda o de secció; «palau» és l'antic rol únic de l'equip, que encara val)
     //   voice                     → professor de cant: porta les classes (classes i classReq), la resta només lectura
     //   singer                    → només lectura de tota l'app
     // La fitxa pot portar memberId: llavors la persona té el seu espai personal, sigui quin sigui el rol.
@@ -67,7 +68,7 @@ service cloud.firestore {
     // Els rols d'una fitxa: la llista roles o, a les fitxes d'abans, el rol únic.
     function rolesOf(d) { return d.get('roles', [d.get('role', '')]); }
 
-    function canEdit(c) { return isStaff(c) && rolesOf(staffData(c)).hasAny(['admin', 'director', 'leader', 'palau']); }
+    function canEdit(c) { return isStaff(c) && rolesOf(staffData(c)).hasAny(['admin', 'director', 'gerencia', 'secretaria', 'leader', 'palau']); }
     function isAdmin(c) { return isStaff(c) && rolesOf(staffData(c)).hasAny(['admin']); }
     // El membre de la plantilla de qui som (si la fitxa en porta).
     function myMember(c) { return staffData(c).get('memberId', '-'); }

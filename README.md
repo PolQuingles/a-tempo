@@ -29,8 +29,11 @@ El repositori, l'adreça de l'app (`polquingles.github.io/a-tempo/`) i el reposi
 Cada persona té un o més rols (`roles` a la seva fitxa):
 
 - **Administració**: ho pot fer tot (persones, identitat, dades).
-- **Director**, **cap de corda o de secció** i **equip tècnic** (al Cor Jove, «Treballador del Palau»): passen llista, publiquen anuncis, convocatòries i enquestes, i pugen materials i documents.
+- **Director**, **gerència**, **secretaria** i **cap de corda o de secció**: passen llista, publiquen anuncis, convocatòries i enquestes, i pugen materials i documents.
+- **Professor de cant** (`voice`): porta les classes i prou.
 - **Membre de la plantilla** (cantaire, músic): veu tota l'app en mode lectura i té el seu espai personal.
+
+A **Gestió › Personal** hi ha tothom, rol per rol: el menú de dalt tria el rol i a sota hi surt qui el té (la plantilla, per seccions). Les fitxes antigues amb el rol únic `palau` (l'antic equip tècnic) es llegeixen com a gerència.
 
 Qui també és de la plantilla (per exemple, un cap de corda que canta) té, a més, «El meu espai», amb la seva assistència i els seus avisos d'absència. Cada persona té l'índex de les seves agrupacions a `staffIndex/<correu>/agrupacions/`.
 
