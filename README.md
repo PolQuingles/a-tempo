@@ -43,7 +43,8 @@ S'activen a Ajustos (`config/main.classesOn`) quan l'agrupació fa classes indiv
 
 - `classes/<id>` és un dia de classe: data, lloc, professorat i `slots` (hora, durada i qui hi va).
 - `classReq/<id>` és un avís de retard o d'absència, o una petició de canvi d'hora entre dos companys, amb `status` pendent, acceptada, rebutjada o retirada. Un canvi acceptat val només per a aquell dia: no canvia el calendari, s'hi aplica a sobre.
-- `classPlan/<correu>` és l'horari fix d'un professor/a (l'hora setmanal de cada alumne): des d'allà es generen els dies de tot un trimestre, saltant els festius, i els dies que ja hi eren es reescriuen mantenint l'assistència marcada.
+- El professorat que encara no entra a l'app es posa a Ajustos (`config/main.teachers` = [{id, name}]): els dies i els horaris fixos es guarden amb la seva clau (el correu si té compte, si no l'id de la fitxa).
+- `classPlan/<clau>` és l'horari fix d'un professor/a (l'hora setmanal de cada alumne): des d'allà es generen els dies de tot un trimestre, saltant els festius, i els dies que ja hi eren es reescriuen mantenint l'assistència marcada.
 - L'assistència de cada classe es desa al mateix `slots[]` (`mark` i `markFor`, de qui era l'hora quan es va marcar). `classNotes/<classe>_<hora>` guarda què s'ha treballat: només ho llegeixen el professorat i aquell alumne.
 - Un canvi d'hora pot anar a algú concret o quedar **obert** (`open: true`, el veu tothom de l'agrupació i se'l queda el primer que l'accepta). Una hora lliure es pot demanar (`kind: take`): quan el professorat l'accepta, aquella persona queda posada al calendari. Un dia sencer es pot anul·lar (`cancelled`), i qui hi tenia hora rep l'avís.
 - `classIcs/<membre>` guarda la clau del calendari personal de classes. La tasca «Calendari» escriu `calendaris/classes/<clau>.ics` amb només les classes d'aquella persona.

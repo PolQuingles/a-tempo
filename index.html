@@ -449,6 +449,7 @@ textarea.inp{padding:10px 12px;min-height:120px;resize:vertical;line-height:1.4}
 .rule.out{background:var(--fnj-soft);color:var(--fnj)}
 .rule.risk{background:var(--fj-soft);color:var(--fj-ink)}
 .min-chip.now{font-family:var(--f-ui);font-weight:600;padding:0 10px}
+.min-chip[disabled]{opacity:.4}
 .ro-state{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600}
 .ro-state i{width:10px;height:10px;border-radius:3px}
 .abs-card{padding:12px 14px;border-top:1px solid var(--line);display:grid;gap:6px}
@@ -2089,7 +2090,7 @@ function rowHtml(session, m) {
     if (s === 'R') {
       const now = lateNow(session);
       body += `<div class="extra x-R"><label for="min-${m.id}">Minuts</label>
-        ${now ? `<div class="mins"><button class="min-chip now" data-act="min" data-min="${now}" aria-pressed="${+mk.min === now}">Arriba ara · ${now}′</button></div>` : ''}
+        <div class="mins"><button class="min-chip now" data-act="min" data-min="${now}" aria-pressed="${!!now && +mk.min === now}" ${now ? '' : `disabled title="Calcula els minuts des de l’hora d’inici: només funciona mentre dura la sessió"`}>Arriba ara${now ? ` · ${now}′` : ''}</button></div>
         <input class="min-input" id="min-${m.id}" type="number" inputmode="numeric" min="1" max="240" placeholder="—" value="${mk.min || ''}" data-bind="min" aria-label="Minuts de retard"></div>`;
     } else if ((s === 'FJ' || s === 'FNJ') && !mk.auto) {
       body += `<div class="extra x-${s}"><label for="note-${m.id}">Motiu</label>
@@ -2862,7 +2863,9 @@ function manageConfig() {
   <div class="panel"><div class="toggle-row setting"><span><b>${classesOn() ? 'Activades' : 'Desactivades'}</b><br><span class="muted" style="font-size:12.5px">${classesOn()
       ? `Hi ha una pestanya amb el calendari de les classes. El porta qui tingui el rol de ${esc(V.Teacher.toLowerCase())}; cada ${esc(V.member)} hi veu la seva hora, hi pot avisar d’un retard o d’una absència i demanar un canvi d’hora a un company.`
       : `Activa-les si l’agrupació fa classes individuals. Hi haurà una pestanya amb el calendari, que portarà qui tingui el rol de ${esc(V.Teacher.toLowerCase())}.`}</span></span>
-      <label class="switch"><input type="checkbox" id="cfg-classes" ${classesOn() ? 'checked' : ''} data-bind="cfg-classes"><span></span></label></div></div>` : ''}
+      <label class="switch"><input type="checkbox" id="cfg-classes" ${classesOn() ? 'checked' : ''} data-bind="cfg-classes"><span></span></label></div>
+    ${classesOn() ? `<div class="setting"><div><div class="t">Professorat sense compte</div><div class="s">Per posar el calendari d’un ${esc(V.Teacher.toLowerCase())} que encara no entra a l’app. Quan en tingui, dona-li accés amb el rol i passa-li els dies.</div></div>
+      <button class="btn btn-sm" data-act="cl-seats">${teacherSeats().length ? `Són ${teacherSeats().length}` : 'Afegeix-ne'}</button></div>` : ''}</div>` : ''}
   <div class="sec-h"><h2 class="h2">Calendari subscrit</h2></div>
   <div class="panel">${isAdmin()
     ? `<div class="toggle-row setting"><span><b>${icsOn() ? 'Activat' : 'Desactivat'}</b><br><span class="muted" style="font-size:12.5px">${icsOn() ? 'Qui s’hi subscrigui tindrà les sessions a Google Calendar, Apple o Outlook, sempre al dia. L’adreça és pública però difícil d’endevinar, i no porta noms de persones.' : 'Activa’l perquè tothom pugui tenir les sessions a l’app de calendari del mòbil. Funciona al cap d’unes hores.'}</span></span>
@@ -3371,9 +3374,9 @@ const planToRows = who => planRows(who).map(r => ({ name: S.members.get(r.member
   from: parseTime(r.time) ?? 0, to: (parseTime(r.time) ?? 0) + (+r.mins || 30), mins: +r.mins || 30, memberId: r.memberId || '' }));
 
 function sheetClassPaste() {
-  const teachers = [...S.staff.values()].filter(p => hasRole(p, 'voice'));
+  const teachers = teacherOptions();
   const me = S.staff.get(S.email || '');
-  const mine = me && hasRole(me, 'voice') ? me.email : (teachers[0]?.email || S.email || '');
+  const mine = me && hasRole(me, 'voice') ? me.email : (teachers[0]?.key || S.email || '');
   const season = seasonCfg().season;
   let parsed = { rows: [], days: [] };
   const draw = el => {
@@ -3401,7 +3404,7 @@ function sheetClassPaste() {
         <small>Festius i vacances, separats per comes.</small></label>
       <label class="toggle-row setting" style="margin-top:10px;padding:10px 0"><span><b>Desa-ho com a horari fix</b><br><span class="muted" style="font-size:12.5px">Així, el trimestre següent no caldrà tornar a enganxar la graella: només dir les dates.</span></span>
         <span class="switch"><input type="checkbox" id="cp-plan" checked><span></span></span></label>
-      ${teachers.length > 1 || !mine ? `<label class="field" style="margin-top:10px"><span>${esc(V.Teacher)}</span><select class="inp" id="cp-who">${teachers.map(t => `<option value="${esc(t.email)}" ${t.email === mine ? 'selected' : ''}>${esc(t.name || t.email)}</option>`).join('')}</select></label>` : ''}
+      ${teachers.length ? `<label class="field" style="margin-top:10px"><span>${esc(V.Teacher)}</span><select class="inp" id="cp-who">${teachers.map(t => `<option value="${esc(t.key)}" ${t.key === mine ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></label>` : ''}
       <div id="cp-prev" style="margin-top:12px"></div>`,
     foot: `<button class="btn" id="cp-check">Comprova</button><span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="cp-go">Crea el calendari</button>`,
     onMount: el => {
@@ -3481,7 +3484,7 @@ function classSlotRow(c, x, past) {
 }
 function classDayCard(c, past) {
   const teach = teachesClasses();
-  const who = S.staff.get(c.teacher || '')?.name || '';
+  const who = teacherName(c.teacher);
   const facts = [c.place, who, c.note].filter(Boolean).join(' · ');
   const slots = classSlots(c);
   return `<div class="cl-day ${c.cancelled ? 'off' : ''}">
@@ -3552,14 +3555,53 @@ function viewClasses() {
     <p class="muted" style="font-size:12.5px;margin-top:12px">Els canvis d’hora valen només per al dia que es demanen. Qui rep la petició ha de dir que sí perquè es faci.</p>`;
 }
 /* ---------- Classes: fitxes ---------- */
+/** Professorat que encara no entra a l'app: només un nom, per poder-ne fer el calendari. */
+function sheetTeacherSeats() {
+  const seats = teacherSeats().map(t => ({ ...t }));
+  const withAccount = [...S.staff.values()].filter(p => hasRole(p, 'voice'));
+  const rows = () => seats.length ? seats.map((t, i) => `<div class="sec-row" data-i="${i}" style="display:flex;gap:6px;align-items:center">
+      <input class="inp" type="text" maxlength="40" value="${esc(t.name)}" data-f="name" style="flex:1" placeholder="Nom i cognom">
+      <button type="button" class="icon-btn" data-rm="${i}" aria-label="Treu-lo">${ICON.close}</button>
+    </div>`).join('') : '<p class="muted" style="margin:0;font-size:13px">Encara no n’hi ha cap.</p>';
+  const read = el => el.querySelectorAll('.sec-row').forEach(r => { const t = seats[+r.dataset.i]; if (t) t.name = r.querySelector('[data-f="name"]').value.trim(); });
+  const paint = el => { el.querySelector('#ts-rows').innerHTML = rows(); el.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { read(el); seats.splice(+b.dataset.rm, 1); paint(el); }); };
+  openSheet({
+    title: `${V.Teacher}s sense compte`,
+    body: `<p style="margin-top:0">Posa-hi qui fa classes però encara no entra a l’app: així ja en pots fer el calendari i els ${esc(V.members)} hi veuen la seva hora. Quan tingui compte, dona-li accés a <b>Gestió › Personal</b> amb el rol de ${esc(V.Teacher.toLowerCase())}.</p>
+      <div id="ts-rows" style="display:grid;gap:8px"></div>
+      <button type="button" class="btn btn-sm" id="ts-add" style="margin-top:10px">+ Afegeix</button>
+      ${withAccount.length ? `<p class="muted" style="font-size:12.5px;margin:14px 0 0">Amb compte: ${esc(withAccount.map(p => p.name || p.email).join(', '))}.</p>` : ''}`,
+    foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="ts-save">Desa</button>`,
+    onMount: el => {
+      paint(el);
+      el.querySelector('#ts-add').onclick = () => { read(el); seats.push({ id: uid('pf'), name: '' }); paint(el); };
+      el.querySelector('#ts-save').onclick = () => {
+        read(el);
+        const keep = seats.filter(t => t.name);
+        const gone = teacherSeats().filter(t => !keep.some(k => k.id === t.id) && [...S.classes.values()].some(c => c.teacher === t.id));
+        if (gone.length) { toast(`${gone[0].name} té dies de classe: esborra’ls abans de treure’l`); return; }
+        saveConfig({ teachers: keep });
+        closeSheet(); toast('Desat'); render();
+      };
+    },
+  });
+}
 function saveClassDay(rec) { S.classes.set(rec.id, rec); persist('classes', rec.id, rec, 10); }
 function saveClassReq(rec) { S.classReq.set(rec.id, rec); persist('classReq', rec.id, rec, 10); }
+/** El professorat de l'agrupació: els comptes amb el rol, i els que encara no en tenen (config/main.teachers).
+ *  Cada dia de classe i cada horari fix es guarda amb la clau del seu professor/a: el correu, o l'id de la fitxa. */
+const teacherSeats = () => (S.config.teachers || []).filter(t => t && t.id && t.name);
+const teacherOptions = () => [
+  ...[...S.staff.values()].filter(p => hasRole(p, 'voice')).map(p => ({ key: p.email, name: p.name || p.email, account: true }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'ca')),
+  ...teacherSeats().map(t => ({ key: t.id, name: t.name, account: false })),
+];
+const teacherName = key => S.staff.get(key || '')?.name || teacherSeats().find(t => t.id === key)?.name || '';
 /** De qui és l'horari fix que es toca: el meu si en soc, si no el primer professor/a de l'agrupació. */
 function planWho() {
   const me = S.staff.get(S.email || '');
   if (me && hasRole(me, 'voice')) return me.email;
-  const first = [...S.staff.values()].find(p => hasRole(p, 'voice'));
-  return first ? first.email : (S.email || '');
+  return teacherOptions()[0]?.key || S.email || '';
 }
 function savePlan(who, rows) {
   const rec = { id: who, teacher: who, rows, at: new Date().toISOString(), by: S.email || '' };
@@ -3586,10 +3628,12 @@ function sheetClassPlan(who) {
     if (r.memberId) delete r.name;
   });
   const paint = el => { el.querySelector('#pl-rows').innerHTML = rows(); el.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { read(el); rec.rows.splice(+b.dataset.rm, 1); paint(el); }); };
+  const opts = teacherOptions();
   openSheet({
-    title: 'Horari fix',
+    title: `Horari fix${teacherName(who) ? ` · ${teacherName(who)}` : ''}`,
     wide: true,
     body: `<p style="margin-top:0">L’hora de cada setmana de cada ${esc(V.member)}. Serveix per generar els dies de tot un trimestre sense haver de posar-los un per un. Els canvis d’un dia concret es fan al calendari i no toquen aquest horari.</p>
+      ${opts.length > 1 ? `<label class="field" style="margin-bottom:12px"><span>${esc(V.Teacher)}</span><select class="inp" id="pl-who">${opts.map(t => `<option value="${esc(t.key)}" ${t.key === who ? 'selected' : ''}>${esc(t.name)}${planRows(t.key).length ? ` · ${planRows(t.key).length} hores` : ''}</option>`).join('')}</select></label>` : ''}
       <div id="pl-rows" style="display:grid;gap:8px">${rows()}</div>
       <button type="button" class="btn btn-sm" id="pl-add" style="margin-top:10px">+ Afegeix una hora</button>
       <div class="sec-h" style="margin-top:18px"><h2 class="h2">Genera els dies</h2></div>
@@ -3602,6 +3646,7 @@ function sheetClassPlan(who) {
     foot: `<button class="btn" id="pl-gen">Genera els dies</button><span class="spacer"></span><button class="btn" data-act="sheet-close">Tanca</button><button class="btn btn-primary" id="pl-save">Desa l’horari</button>`,
     onMount: el => {
       paint(el);
+      el.querySelector('#pl-who')?.addEventListener('change', e => sheetClassPlan(e.target.value));
       el.querySelector('#pl-add').onclick = () => { read(el); rec.rows.push({ id: uid('pl'), day: 1, time: '17:00', mins: 30, memberId: '' }); paint(el); };
       el.querySelector('#pl-save').onclick = () => { read(el); savePlan(who, rec.rows.filter(r => r.time)); closeSheet(); toast('Horari fix desat'); render(); };
       el.querySelector('#pl-gen').onclick = async () => {
@@ -3709,7 +3754,7 @@ function sheetClassStats(onlyMine) {
 function sheetClassDay(id) {
   const ex = id ? S.classes.get(id) : null;
   const rec = ex ? { ...ex, slots: (ex.slots || []).map(x => ({ ...x })) }
-    : { id: uid('cl'), date: TODAY, place: '', note: '', teacher: S.email || '', slots: [] };
+    : { id: uid('cl'), date: TODAY, place: '', note: '', teacher: planWho(), slots: [] };
   const taken = () => new Set(rec.slots.map(x => x.memberId).filter(Boolean));
   const rows = () => rec.slots.map((x, i) => `<div class="sec-row" data-i="${i}" style="display:flex;gap:6px;align-items:center">
       <input class="inp" type="time" value="${esc(x.time || '')}" data-f="time" style="width:110px">
@@ -3738,6 +3783,7 @@ function sheetClassDay(id) {
         <label class="field"><span>Lloc</span><input class="inp" id="cd-place" type="text" maxlength="40" value="${esc(rec.place || '')}" placeholder="p. ex. Aula 2"></label>
       </div>
       <label class="field"><span>Nota</span><input class="inp" id="cd-note" type="text" maxlength="80" value="${esc(rec.note || '')}" placeholder="p. ex. Preparació del concert"></label>
+      ${teacherOptions().length > 1 ? `<label class="field"><span>${esc(V.Teacher)}</span><select class="inp" id="cd-who">${teacherOptions().map(t => `<option value="${esc(t.key)}" ${t.key === (rec.teacher || '') ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></label>` : ''}
       <div class="field"><span>Genera les hores</span>
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
           <input class="inp" id="cd-from" type="time" value="17:00" style="width:110px">
@@ -3772,6 +3818,7 @@ function sheetClassDay(id) {
         const dup = rec.slots.filter(x => x.memberId).map(x => x.memberId);
         if (new Set(dup).size !== dup.length) { toast(`Hi ha algun ${V.member} en dues hores del mateix dia`); return; }
         saveClassDay({ ...rec, date, place: el.querySelector('#cd-place').value.trim(), note: el.querySelector('#cd-note').value.trim(),
+          teacher: el.querySelector('#cd-who')?.value || rec.teacher || '',
           slots: rec.slots.filter(x => x.time).sort((a, b) => a.time.localeCompare(b.time)), at: new Date().toISOString(), by: S.email || '' });
         closeSheet(); toast('Dia de classe desat'); render();
       };
@@ -5566,7 +5613,7 @@ async function importJSON(file) {
 function applyData(data, demo) {
   const incoming = { members: new Map(data.members.map(m => [m.id, m])), productions: new Map(data.productions.map(p => [p.id, p])), attendance: new Map(Object.entries(data.attendance || {})) };
   // La identitat de l'agrupació (nom, tipus, seccions, imatge) no la canvia ni una còpia ni l'exemple.
-  const keep = ['name', 'shortName', 'kind', 'sections', 'types', 'labels', 'brand', 'createdAt', 'icsOn', 'classesOn', 'shared', 'onboarded', 'documents'];
+  const keep = ['name', 'shortName', 'kind', 'sections', 'types', 'labels', 'brand', 'createdAt', 'icsOn', 'classesOn', 'teachers', 'shared', 'onboarded', 'documents'];
   const cfg = Object.fromEntries(Object.entries(data.config || {}).filter(([k]) => !keep.includes(k) || (!demo && k === 'documents')));
   for (const col of COLS) {
     for (const id of [...S[col].keys()]) if (!incoming[col].has(id)) { S[col].delete(id); persist(col, id, null, 10); }
@@ -6024,7 +6071,7 @@ async function syncDirectory(force) {
 
 /* ================= Events ================= */
 const SUB_OK = new Set(['mark', 'min', 'mark-rest']);
-const ADMIN_ONLY = new Set(['staff-new', 'staff-edit', 'staff-bulk', 'preview-on', 'who-in', 'mail-check', 'wipe-all', 'share-app', 'onboard-hide']);
+const ADMIN_ONLY = new Set(['staff-new', 'staff-edit', 'staff-bulk', 'preview-on', 'who-in', 'mail-check', 'wipe-all', 'share-app', 'onboard-hide', 'cl-seats']);
 // La identitat de l'agrupació i esborrar-la: només un Usuari Pro que l'administri.
 const PRO_ONLY = new Set(['brand-color', 'logo-remove', 'kind-set', 'group-delete', 'sections-save', 'sections-undo']);
 // El calendari de les classes: només el professorat de cant i l'administració.
@@ -6038,6 +6085,7 @@ const actions = {
   'cl-new': () => sheetClassDay(),
   'cl-paste': () => sheetClassPaste(),
   'cl-plan': () => sheetClassPlan(planWho()),
+  'cl-seats': () => sheetTeacherSeats(),
   'cl-note': el => sheetClassNote(el.dataset.c, el.dataset.s),
   'cl-mark': el => markClass(el.dataset.c, el.dataset.s, el.dataset.v),
   'cl-stats': () => sheetClassStats(false),
