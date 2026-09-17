@@ -3288,7 +3288,7 @@ function sheetClassPaste() {
             for (const date of dates.slice(i, i + 100)) {
               const day = new Date(date + 'T12:00:00').getDay();
               const slots = rows.filter(r => r.day === day).sort((a, b2) => a.from - b2.from)
-                .map(r => ({ id: uid('sl'), time: hhmm(r.from), mins: r.mins, memberId: r.memberId || '' }));
+                .map(r => ({ id: uid('sl'), time: hhmm(r.from), mins: r.mins, memberId: r.memberId || '', ...(r.memberId ? {} : { name: r.name }) }));
               if (!slots.length) continue;
               const rec = { id: older.get(date) || uid('cl'), date, place: '', note: '', teacher: who, slots, at, by: S.email || '' };
               b.set(db.doc(`classes/${rec.id}`), rec);
@@ -3340,7 +3340,7 @@ function classSlotRow(c, x, past) {
     : '';
   return `<div class="cl-slot ${meNow ? 'me' : ''}">
     <span class="t">${esc(x.time || '')}</span>
-    <span class="who">${m ? esc(m.name) : '<span class="cl-free">lliure</span>'}${m && m.section ? ` <span class="m">· ${esc(SEC[m.section].short)}</span>` : ''}${x.swapped ? ' <span class="m">(canviat)</span>' : ''}${pills ? `<br>${pills}` : ''}</span>
+    <span class="who">${m ? esc(m.name) : x.name ? `${esc(x.name)} <span class="m">· sense fitxa</span>` : '<span class="cl-free">lliure</span>'}${m && m.section ? ` <span class="m">· ${esc(SEC[m.section].short)}</span>` : ''}${x.swapped ? ' <span class="m">(canviat)</span>' : ''}${pills ? `<br>${pills}` : ''}</span>
     ${acts}</div>`;
 }
 function classDayCard(c, past) {
@@ -3408,6 +3408,7 @@ function sheetClassDay(id) {
       if (!rec.slots[i]) return;
       rec.slots[i].time = row.querySelector('[data-f="time"]').value;
       rec.slots[i].memberId = row.querySelector('[data-f="member"]').value;
+      if (rec.slots[i].memberId) delete rec.slots[i].name;
     });
   };
   const paint = el => { el.querySelector('#cd-rows').innerHTML = rows(); wire(el); };
