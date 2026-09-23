@@ -362,6 +362,12 @@ details.np-group[open] summary .chev{transform:rotate(180deg)}
 .subtabs{display:grid;grid-template-columns:repeat(3,1fr);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px;margin-bottom:6px}
 .subtab{min-height:36px;border-radius:999px;font-size:13.5px;font-weight:600;color:var(--ink-2)}
 .subtab[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+.board-tabs .subtab{font-size:12.5px;padding-inline:4px;min-width:0}
+.board-tabs .sm{display:none}
+@media (max-width:520px){.board-tabs .lg{display:none}.board-tabs .sm{display:inline}.board-tabs .subtab{font-size:12px}}
+@media (max-width:360px){.board-tabs{padding:2px}.board-tabs .subtab{font-size:11px;padding-inline:1px;letter-spacing:-.01em}}
+.page-head.in-board{margin-top:4px}
+.stats-t{font-size:clamp(24px, 6.4vw, 32px)}
 .list{list-style:none;margin:0;padding:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden}
 .li{border-top:1px solid var(--line)}
 .li:first-child{border-top:0}
@@ -476,6 +482,19 @@ textarea.inp{padding:10px 12px;min-height:120px;resize:vertical;line-height:1.4}
 .hero-cta .btn{background:var(--surface);color:var(--accent);border-color:transparent;justify-self:start}
 .me-line{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;font-size:13.5px;color:var(--muted);margin-top:10px}
 .me-line b{color:var(--ink)}
+/* El meu espai › Gestió: quatre entrades, com un tauler de comandament */
+.mg-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media (min-width:640px){.mg-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.mg{display:grid;align-content:start;justify-items:start;gap:3px;padding:14px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);text-align:left;color:var(--ink);transition:background .15s,border-color .15s}
+.mg:hover{background:var(--surface-2);border-color:var(--line-strong)}
+.mg:active{background:var(--accent-soft)}
+.mg-i{position:relative;display:grid;place-items:center;width:40px;height:40px;margin-bottom:6px;border-radius:13px;background:var(--accent-soft);color:var(--accent)}
+.mg-i svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.mg-i .tab-badge{top:-6px;right:-8px}
+.mg b{font-size:15px}
+.mg small{font-size:12.5px;color:var(--muted);line-height:1.35}
+.mg.warn small{color:var(--fnj-text);font-weight:600}
+.ph-back{display:flex;align-items:center;gap:12px}
 .link-row .t small{font-weight:400;color:var(--muted)}
 
 /* ---------- Roll overview: four quadrants ---------- */
@@ -907,8 +926,6 @@ button.mday:hover{background:var(--surface-2)}
   <div class="tabs-in">
     <button class="tab" data-act="tab" data-tab="llista"><span class="tab-ico"><svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M3.5 6l1.2 1.2L7 4.8M3.5 12l1.2 1.2L7 10.8M3.5 18l1.2 1.2L7 16.8"/></svg></span>Llista</button>
     <button class="tab" data-act="tab" data-tab="calendari"><span class="tab-ico"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></span>Calendari</button>
-    <button class="tab" data-act="tab" data-tab="stats"><span class="tab-ico"><svg viewBox="0 0 24 24"><path d="M5 20V11M10 20V5M15 20v-7M20 20V8"/></svg></span>Estadístiques</button>
-    <button class="tab" data-act="tab" data-tab="gestio"><span class="tab-ico"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19.5c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><path d="M16 5.2a3 3 0 010 5.6M18 14.8c1.5.7 2.4 2.2 2.6 4.7"/></svg></span>Gestió</button>
   </div>
 </nav>
 <div id="sheet-root"></div>
@@ -1134,7 +1151,7 @@ function loadUI() {
   ui.clWho = null;   // les classes comencen sempre pel quadre del professorat
 }
 function saveUI() {
-  lsSet(LS_UI, JSON.stringify({ tab: ui.tab, section: ui.section, calProd: ui.calProd, calView: ui.calView, statsScope: ui.statsScope, statsSec: ui.statsSec, statsSort: ui.statsSort, manage: ui.manage, people: ui.people }));
+  lsSet(LS_UI, JSON.stringify({ tab: ui.tab, section: ui.section, calProd: ui.calProd, calView: ui.calView, statsScope: ui.statsScope, statsSec: ui.statsSec, statsSort: ui.statsSort, manage: ui.manage, people: ui.people, board: ui.board }));
 }
 // Rols de les persones de l'agrupació. Una persona pot tenir-ne més d'un (p. ex. cap de corda i cantaire).
 // Administració ho pot fer tot; direcció, caps i equip passen llista i editen; cantaires i músics només llegeixen.
@@ -1690,22 +1707,28 @@ const TAB_ICONS = {
 const TAB_LABEL = { llista: 'Llista', calendari: 'Calendari', stats: 'Estadístiques', gestio: 'Gestió', avisos: 'El meu espai', tauler: 'Tauler', classes: 'Classes de cant' };
 // Amb sis pestanyes (qui edita i també és a la plantilla) els noms llargs no hi caben.
 const TAB_SHORT = { stats: 'Estad.', avisos: 'Espai', classes: 'Classes', calendari: 'Calend.' };
+// Les estadístiques són un apartat del Tauler, i la gestió, un apartat d'«El meu espai»:
+// qui edita sempre té el seu espai, encara que no sigui de la plantilla.
 const tabsForRole = () => {
   const cl = seeClasses() ? ['classes'] : [];
   if (isLinkOnly()) return ['avisos', 'tauler', ...(mySubs().length ? ['llista'] : []), 'calendari'];
-  if (!canEdit()) return [...(myId() ? ['avisos'] : []), ...cl, 'llista', 'calendari', 'stats', 'tauler'];
-  // Qui edita i també és a la plantilla (p. ex. un cap de corda) té, a més, el seu espai.
-  return [...(myId() ? ['avisos'] : []), ...cl, 'llista', 'calendari', 'stats', 'tauler', 'gestio'];
+  return [...(myId() || canEdit() ? ['avisos'] : []), ...cl, 'llista', 'calendari', 'tauler'];
 };
+/** La pestanya de baix que s'il·lumina: Gestió és dins d'«El meu espai». */
+const navTab = () => ui.tab === 'gestio' ? 'avisos' : ui.tab;
 function renderTabs() {
   const tabs = tabsForRole();
-  if (!tabs.includes(ui.tab)) ui.tab = tabs[0];
-  const badge = S.role === 'edit' ? pendingAbsences().length : 0;
+  if (ui.tab === 'stats') { ui.tab = 'tauler'; ui.board = 'estadistiques'; }   // la pestanya d'abans
+  if (ui.tab === 'gestio' && !canEdit()) ui.tab = tabs[0];
+  if (ui.tab !== 'gestio' && !tabs.includes(ui.tab)) ui.tab = tabs[0];
+  const badge = canEdit() ? pendingAbsences().length : 0;
   const short = tabs.length > 5;
   $('.tabs-in').classList.toggle('n6', short);
   $('.tabs-in').classList.toggle('n7', tabs.length > 6);
-  $('.tabs-in').innerHTML = tabs.map(t => `<button class="tab" data-act="tab" data-tab="${t}" aria-current="${t === ui.tab ? 'page' : 'false'}"${short && TAB_SHORT[t] ? ` aria-label="${TAB_LABEL[t]}"` : ''}>
-    <span class="tab-ico"><svg viewBox="0 0 24 24">${TAB_ICONS[t]}</svg>${t === 'gestio' && badge ? `<span class="tab-badge">${badge}</span>` : ''}${t === 'tauler' && boardBadge() ? `<span class="tab-badge">${boardBadge()}</span>` : ''}${t === 'classes' && classBadge() ? `<span class="tab-badge">${classBadge()}</span>` : ''}</span>${short && TAB_SHORT[t] || TAB_LABEL[t]}</button>`).join('');
+  // Amb cinc pestanyes, els noms llargs (El meu espai, Classes de cant) van escurçats.
+  const shortName = t => (short || (tabs.length === 5 && t !== 'calendari')) && TAB_SHORT[t];
+  $('.tabs-in').innerHTML = tabs.map(t => `<button class="tab" data-act="tab" data-tab="${t}" aria-current="${t === navTab() ? 'page' : 'false'}"${shortName(t) ? ` aria-label="${TAB_LABEL[t]}"` : ''}>
+    <span class="tab-ico"><svg viewBox="0 0 24 24">${TAB_ICONS[t]}</svg>${t === 'avisos' && badge ? `<span class="tab-badge">${badge}</span>` : ''}${t === 'tauler' && boardBadge() ? `<span class="tab-badge">${boardBadge()}</span>` : ''}${t === 'classes' && classBadge() ? `<span class="tab-badge">${classBadge()}</span>` : ''}</span>${shortName(t) || TAB_LABEL[t]}</button>`).join('');
 }
 /* ---------- Brand: logo and accent colour ---------- */
 function hexToHsl(hex) {
@@ -1865,7 +1888,7 @@ function render() {
     v.innerHTML = `<div class="empty">${staffSvg()}<p>Carregant les dades de l’agrupació…</p></div>`;
     return;
   }
-  const html = { llista: viewRoll, calendari: viewCalendar, stats: viewStats, gestio: viewManage, avisos: viewSinger, tauler: viewBoard, classes: viewClasses }[ui.tab]();
+  const html = { llista: viewRoll, calendari: viewCalendar, stats: () => viewStats(false), gestio: viewManage, avisos: viewSinger, tauler: viewBoard, classes: viewClasses }[ui.tab]();
   v.innerHTML = html;
   afterRender();
 }
@@ -2271,11 +2294,13 @@ function calRow(s, underProd, tone) {
 }
 
 /* ---------- View: Stats ---------- */
-function viewStats() {
+function viewStats(inBoard) {
   const prods = productionsSorted();
-  if (!prods.length) return `<div class="page-head"><h1 class="h1">Estadístiques</h1></div><div class="empty">${staffSvg()}<p>Quan hi hagi produccions amb llistes passades, veuràs aquí l’assistència.</p></div>`;
+  // Dins del Tauler, el títol de cada vista és un subtítol: la pàgina ja es diu «Tauler».
+  const title = t => inBoard ? `<h2 class="h1 stats-t">${t}</h2>` : `<h1 class="h1">${t}</h1>`;
+  if (!prods.length) return `${inBoard ? '' : `<div class="page-head">${title('Estadístiques')}</div>`}<div class="empty">${staffSvg()}<p>Quan hi hagi produccions amb llistes passades, veuràs aquí l’assistència.</p></div>`;
   const scopeTabs = `<div class="subtabs" role="tablist" style="margin-bottom:10px;grid-template-columns:repeat(4,1fr)">${[['prod', 'Producció'], ['term', 'Trimestre'], ['season', 'Temporada'], ['risk', 'Risc']].map(([k, l]) => `<button class="subtab" role="tab" aria-selected="${ui.statsScope === k}" data-act="stats-scope" data-k="${k}" style="font-size:12.5px">${l}</button>`).join('')}</div>`;
-  if (ui.statsScope === 'risk') return `<div class="page-head"><div><div class="eyebrow">Estadístiques</div><h1 class="h1">Norma del ${minAttendance()}%</h1></div></div>` + scopeTabs + riskView();
+  if (ui.statsScope === 'risk') return `<div class="page-head${inBoard ? ' in-board' : ''}"><div><div class="eyebrow">Estadístiques</div>${title(`Norma del ${minAttendance()}%`)}</div></div>` + scopeTabs + riskView();
   const scope = currentScope();
   const { terms } = seasonCfg();
   const st = computeStats(scope, ui.statsSec);
@@ -2289,7 +2314,7 @@ function viewStats() {
     ${SECTIONS.map(x => `<button class="chip" aria-pressed="${ui.statsSec === x.id}" data-act="stats-sec" data-sec="${x.id}">${esc(x.name)}</button>`).join('')}</div>`;
   const sub = scope.kind === 'range' ? `<p class="muted mono" style="margin:4px 0 0;font-size:12.5px">${ddmm(scope.from)}/${scope.from.slice(0, 4)} – ${ddmm(scope.to)}/${scope.to.slice(0, 4)}</p>` : '';
   const tone = scope.kind === 'prod' ? ` prod-tone tinted" style="--ph:${prodHue(S.productions.get(scope.id))}` : '';
-  const head = `<div class="page-head${tone}"><div><div class="eyebrow">${scope.kind === 'prod' ? '<i class="pdot"></i>Producció' : 'Estadístiques'}</div><h1 class="h1">${esc(scope.name)}</h1>${sub}</div>
+  const head = `<div class="page-head${inBoard ? ' in-board' : ''}${tone}"><div><div class="eyebrow">${scope.kind === 'prod' ? '<i class="pdot"></i>Producció' : 'Estadístiques'}</div>${title(esc(scope.name))}${sub}</div>
     <button class="btn btn-sm" data-act="export-csv">Exporta CSV</button></div>`;
   const top = head + scopeTabs + choice + secChips;
 
@@ -2585,7 +2610,7 @@ function viewManage() {
   const pend = pendingAbsences().length;
   if (ui.manage === 'cantaires') ui.manage = 'personal';   // es deia així abans
   const tabs = [['avisos', `Avisos${pend ? ` (${pend})` : ''}`], ['personal', 'Personal'], ['produccions', 'Produccions'], ['config', 'Ajustos']];
-  const head = `<div class="page-head"><h1 class="h1">Gestió</h1></div>
+  const head = `<div class="page-head"><div class="ph-back"><button class="nav-arrow" data-act="tab" data-tab="avisos" aria-label="Torna a El meu espai">${ICON.left}</button><div><div class="eyebrow">El meu espai</div><h1 class="h1">Gestió</h1></div></div></div>
     <div class="subtabs" role="tablist" style="grid-template-columns:repeat(4,1fr)">${tabs.map(([k, l]) => `<button class="subtab" role="tab" aria-selected="${ui.manage === k}" data-act="manage" data-k="${k}" style="font-size:12.5px">${l}</button>`).join('')}</div>`;
   if (ui.manage === 'produccions') return head + manageProductions();
   if (ui.manage === 'config') return head + manageConfig();
@@ -2955,11 +2980,13 @@ function boardBadge() {
   return news + polls;
 }
 function viewBoard() {
-  if (!['anuncis', 'materials', 'documents', 'enquestes'].includes(ui.board)) ui.board = 'anuncis';
+  const tabs = [['anuncis', 'Anuncis'], ['materials', 'Materials'], ['documents', 'Documents'], ['enquestes', 'Enquestes'],
+    ...(isLinkOnly() ? [] : [['estadistiques', '<span class="lg">Estadístiques</span><span class="sm">Estad.</span>']])];
+  if (!tabs.some(([k]) => k === ui.board)) ui.board = 'anuncis';
   if (ui.board === 'anuncis') { lsSet(LS_SEEN, new Date().toISOString()); setTimeout(renderTabs, 0); }
-  const tabs = [['anuncis', 'Anuncis'], ['materials', 'Materials'], ['documents', 'Documents'], ['enquestes', 'Enquestes']];
   const head = `<div class="page-head"><h1 class="h1">Tauler</h1></div>
-    <div class="subtabs" role="tablist" style="margin-bottom:10px;grid-template-columns:repeat(4,1fr)">${tabs.map(([k, l]) => `<button class="subtab" role="tab" aria-selected="${ui.board === k}" data-act="board" data-k="${k}" style="font-size:12.5px">${l}</button>`).join('')}</div>`;
+    <div class="subtabs board-tabs" role="tablist" style="margin-bottom:10px;grid-template-columns:repeat(${tabs.length},1fr)">${tabs.map(([k, l]) => `<button class="subtab" role="tab" aria-selected="${ui.board === k}" data-act="board" data-k="${k}"${k === 'estadistiques' ? ' aria-label="Estadístiques"' : ''}>${l}</button>`).join('')}</div>`;
+  if (ui.board === 'estadistiques') return head + viewStats(true);
   if (ui.board === 'materials') return head + boardMaterials();
   if (ui.board === 'documents') return head + boardDocuments();
   if (ui.board === 'enquestes') return head + boardPolls();
@@ -4112,8 +4139,41 @@ function openConvocations(me) {
   if (!me) return [];
   return allSessions().filter(s => s.rsvp && s.date >= TODAY && convoked(s, me.section) && !isOut(s, me));
 }
+/** L'apartat de gestió d'«El meu espai», per a qui edita: avisos, personal, produccions i ajustos. */
+const MG_ICONS = {
+  avisos: '<path d="M6 16.5V11a6 6 0 0112 0v5.5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 004 0"/>',
+  personal: TAB_ICONS.gestio,
+  produccions: '<path d="M9 18V6.5l10-2.5v11.5"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="15.5" r="2.5"/>',
+  config: '<circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/>',
+};
+function manageBlock() {
+  if (!canEdit()) return '';
+  const pend = pendingAbsences().length;
+  const people = S.staff.size;
+  const active = membersOf(null).length;
+  const prods = productionsSorted();
+  const live = prods.filter(p => (!p.end || p.end >= TODAY) && p.start <= TODAY).length;
+  const items = [
+    ['avisos', 'Avisos', pend ? `${pend} per veure` : 'Absències i retards', pend],
+    ['personal', 'Personal', `${active} ${V.members}${people ? ` · ${people} amb accés` : ''}`],
+    ['produccions', 'Produccions', prods.length ? `${prods.length} ${prods.length === 1 ? 'producció' : 'produccions'}${live ? ` · ${live} en curs` : ''}` : 'Encara cap'],
+    ['config', 'Ajustos', isAdmin() ? 'Persones, agrupació i dades' : 'Temporada i norma'],
+  ];
+  return `<div class="section-title"><h2 class="h2">Gestió</h2><span class="eyebrow">${esc(rolesText(S.me))}</span></div>
+    <div class="mg-grid">${items.map(([k, t, sub, n]) => `<button class="mg ${n ? 'warn' : ''}" data-act="manage" data-k="${k}">
+      <span class="mg-i"><svg viewBox="0 0 24 24" aria-hidden="true">${MG_ICONS[k]}</svg>${n ? `<span class="tab-badge">${n}</span>` : ''}</span>
+      <b>${t}</b><small>${esc(sub)}</small></button>`).join('')}</div>`;
+}
 function viewSinger() {
   const me = S.members.get(myMemberId());
+  // Qui edita però no és de la plantilla (direcció, gerència, secretaria…): el seu espai és la gestió.
+  if (!me && canEdit()) {
+    const first = (S.me?.name || S.userName || '').split(',').pop().trim().split(' ')[0];
+    return `<div class="page-head"><div><div class="eyebrow">Hola${first ? `, ${esc(first)}` : ''}</div><h1 class="h1">El teu espai</h1></div></div>
+      <div class="me-line" style="margin-top:-6px"><span><b>${esc(S.me?.name || S.email || '')}</b> · ${esc(rolesText(S.me))}</span></div>
+      ${manageBlock()}
+      <div class="panel" style="margin-top:18px">${groupsRow()}${pushRow()}${themeRow()}</div>`;
+  }
   if (!me) return `<div class="empty">${staffSvg()}<h2 class="h2">Compte sense fitxa</h2><p>El teu correu encara no està vinculat a cap fitxa de la plantilla. Demana-ho a l’administració ${V.del}.</p></div>`;
   const mine = [...S.absences.values()].filter(a => a.memberId === me.id).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
   const next = allSessions().filter(s => s.date >= TODAY && convoked(s, me.section))[0];
@@ -4156,6 +4216,7 @@ function viewSinger() {
   return `<div class="page-head"><div><div class="eyebrow">Hola, ${esc(me.name.split(',').pop().trim())}</div><h1 class="h1">El teu espai</h1></div></div>
     <div class="me-line" style="margin-top:-6px"><span><b>${esc(me.name)}</b> · ${esc(SEC[me.section].name)}${me.part ? ` ${esc(me.part)}` : ''}${lv ? ` · ${lv}` : ''}</span></div>
     ${subCards}
+    ${manageBlock()}
     ${classCard}
     ${(() => {
       const ann = visibleAnnouncements().filter(a => !a.until || a.until >= TODAY).slice(0, 2);
@@ -5194,13 +5255,12 @@ function maybeWelcome() {
     ? `<p style="margin-top:0">Hola${first ? `, ${esc(first)}` : ''}. Des d’aquí passaràs llista i gestionaràs ${esc(S.config.name || V.el)}.</p>
        <ul class="welcome"><li><b>Llista</b> · toca el quadre de la teva ${V.section} i marca cadascú.</li>
        <li><b>Calendari</b> · totes les sessions, per produccions.</li>
-       <li><b>Tauler</b> · anuncis, partitures i enquestes.</li>
-       <li><b>Gestió</b> · ${V.members}, avisos d’absència i ajustos.</li>${myId() ? `
-       <li><b>El meu espai</b> · la teva assistència i els teus avisos d’absència.</li>` : ''}</ul>`
+       <li><b>Tauler</b> · anuncis, partitures, enquestes i estadístiques.</li>
+       <li><b>El meu espai</b> · la <b>Gestió</b> (avisos d’absència, personal, produccions i ajustos)${myId() ? ', i la teva assistència i els teus avisos' : ''}.</li></ul>`
     : `<p style="margin-top:0">Hola${first ? `, ${esc(first)}` : ''}. Benvingut/da a l’app ${esc(ofName())}.</p>
        <ul class="welcome"><li><b>El meu espai</b> · avisa si no pots venir, confirma les convocatòries i mira la teva assistència.</li>
-       <li><b>Llista</b>, <b>Calendari</b> i <b>Estadístiques</b> · ho pots consultar tot, però no canviar-hi res.</li>
-       <li><b>Tauler</b> · anuncis, partitures i àudios de la teva ${V.part}, i enquestes.</li></ul>`;
+       <li><b>Llista</b> i <b>Calendari</b> · ho pots consultar tot, però no canviar-hi res.</li>
+       <li><b>Tauler</b> · anuncis, partitures i àudios de la teva ${V.part}, enquestes i estadístiques.</li></ul>`;
   openSheet({
     title: 'Com funciona',
     body: body + `<p class="muted" style="font-size:13px">Consell: al navegador del mòbil, tria <b>Afegeix a la pantalla d’inici</b> i la tindràs com una app.</p>`,
@@ -5475,7 +5535,7 @@ function sheetHelp() {
   const body = staff ? `<div class="manual">
     <h3>Entrar</h3>
     <p>Tothom entra pel mateix enllaç amb <b>el seu correu</b>: amb Google o, si el correu no és de Google, creant una contrasenya («Entra amb un altre correu»). L’administració dona d’alta cada persona a <b>Gestió › Ajustos › Persones</b>, li envia la <b>invitació</b> per correu o WhatsApp i li dona un o més rols: administració, director, ${w.leader}, gerència, secretaria, ${esc(V.Teacher.toLowerCase())} o ${w.member}.</p>
-    <p>L’administració ho pot fer tot. Direcció, ${w.leaders}, gerència i secretaria passen llista, publiquen anuncis i convocatòries i pugen materials i documents. ${w.Members} ho veuen tot en <b>mode lectura</b>. Qui també és ${w.member} (per exemple, un ${w.leader}) té a més <b>El meu espai</b>, amb la seva assistència i els seus avisos d’absència.</p>
+    <p>L’administració ho pot fer tot. Direcció, ${w.leaders}, gerència i secretaria passen llista, publiquen anuncis i convocatòries i pugen materials i documents. ${w.Members} ho veuen tot en <b>mode lectura</b>. Qui edita té la <b>Gestió</b> dins d’<b>El meu espai</b>: avisos d’absència, personal, produccions i ajustos. Els camins «Gestió › …» d’aquesta ajuda comencen allà. Qui també és ${w.member} (per exemple, un ${w.leader}) hi té a més la seva assistència i els seus avisos.</p>
     <h3>Passar llista</h3>
     <ul><li>A <b>Llista</b> surt la sessió d’avui. Toca el quadre de la teva ${w.section}.</li>
     <li>Toca l’estat de cadascú: <b>Present</b>, <b>Retard</b>, <b>No justificada</b>, <b>Justificada</b> o <b>No fa</b>. Toca’l un altre cop per desmarcar.</li>
@@ -5490,10 +5550,10 @@ function sheetHelp() {
     <h3>Convocatòries</h3>
     <p>A la fitxa d’una sessió (${w.sh.show}, viatge…) activa <b>Demana confirmació</b>. Els ${w.members} responen Sí/No i a la Llista veus el recompte.</p>
     <h3>Tauler</h3>
-    <p><b>Anuncis</b> per a tothom o per ${w.sections}, <b>materials</b> de cada producció (partitures, àudios, vídeos), <b>documents</b> de tota la temporada i <b>enquestes</b> de disponibilitat. A les convocatòries i enquestes, <b>Recorda-ho</b> prepara missatges de WhatsApp per als que no han respost.</p>
+    <p><b>Anuncis</b> per a tothom o per ${w.sections}, <b>materials</b> de cada producció (partitures, àudios, vídeos), <b>documents</b> de tota la temporada, <b>enquestes</b> de disponibilitat i les <b>estadístiques</b> d’assistència. A les convocatòries i enquestes, <b>Recorda-ho</b> prepara missatges de WhatsApp per als que no han respost.</p>
     <p>Els fitxers (PDF, àudio, imatges, fins a 20 MB) es poden pujar directament des de l’ordinador o el mòbil, o bé posar-hi un enllaç.</p>
     <h3>Estadístiques i norma</h3>
-    <p>Per producció, trimestre o temporada. La <b>norma del ${minAttendance()}%</b> avisa de qui no pot fer ${w.sh.el} o està en risc. A <b>Estadístiques › Risc</b> tens totes les produccions en curs i, des d’allà, la <b>${w.sh.list.toLowerCase()}</b>: qui hi pot ${w.play}, la ${w.balance.toLowerCase()} i els canvis fets a mà, amb el motiu.</p>
+    <p>Per producció, trimestre o temporada. La <b>norma del ${minAttendance()}%</b> avisa de qui no pot fer ${w.sh.el} o està en risc. A <b>Tauler › Estadístiques › Risc</b> tens totes les produccions en curs i, des d’allà, la <b>${w.sh.list.toLowerCase()}</b>: qui hi pot ${w.play}, la ${w.balance.toLowerCase()} i els canvis fets a mà, amb el motiu.</p>
     <h3>Fitxa ${w.sh.del} i calendari</h3>
     <p>A la fitxa d’una sessió pots posar l’<b>hora de convocatòria</b>, el <b>vestuari</b>, el <b>punt de trobada</b> i què cal portar. La veuen tots els convocats i es pot copiar per al grup. Al <b>Calendari</b>, el botó <b>Mes</b> mostra la graella mensual.</p>
     <h3>${w.Members} i persones</h3>
@@ -5516,7 +5576,7 @@ function sheetHelp() {
     <h3>Entrar</h3>
     <p>Entres amb <b>el teu correu</b>, sempre pel mateix enllaç: amb Google o, si el teu correu no és de Google, amb «Entra amb un altre correu» i la teva contrasenya. Si l’oblides, la pots recuperar des d’allà mateix. Afegeix l’enllaç a la pantalla d’inici del mòbil i el tindràs com una app.</p>
     <h3>Què hi pots fer</h3>
-    <p>Pots consultar <b>tota l’app</b>: les llistes de totes les ${w.sections}, el calendari, les estadístiques i el tauler. No pots canviar-hi res. Al <b>teu espai</b> sí que pots avisar d’absències, confirmar convocatòries i respondre enquestes.</p>
+    <p>Pots consultar <b>tota l’app</b>: les llistes de totes les ${w.sections}, el calendari i el tauler (amb les estadístiques). No pots canviar-hi res. Al <b>teu espai</b> sí que pots avisar d’absències, confirmar convocatòries i respondre enquestes.</p>
     <h3>Avisar d’una absència</h3>
     <p><b>Avisa d’una absència</b>, tria els dies i explica el motiu. El teu ${w.leader} l’acceptarà o no; ho veuràs a «Els meus avisos».</p>
     <h3>Convocatòries</h3>
@@ -6297,7 +6357,7 @@ const actions = {
   'rsvp-yes': el => rsvpAnswer(el.dataset.sid, 'yes'),
   'rsvp-no': el => sheetRsvpNo(el.dataset.sid),
   'cal-subscribe': () => sheetCalendar(),
-  'board': el => { ui.board = el.dataset.k; render(); },
+  'board': el => { ui.board = el.dataset.k; saveUI(); render(); },
   'board-polls': () => { ui.tab = 'tauler'; ui.board = 'enquestes'; render(); window.scrollTo({ top: 0 }); },
   'ann-new': () => sheetAnnouncement(null),
   'ann-edit': el => sheetAnnouncement(el.dataset.id),

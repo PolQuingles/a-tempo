@@ -16,6 +16,10 @@ Assistència, calendari i avisos per a cors, orquestres, bandes, cobles i altres
 - **Usuaris Pro** (`plataforma/pro`): són els únics que poden crear agrupacions i, de les que administren, canviar-ne el nom, el tipus, les seccions i la imatge o esborrar-les. Els administradors que no són Pro gestionen les persones i les dades, però no la identitat de l'agrupació.
 - **Plataforma** (`plataforma/equip`): veu el directori de totes les agrupacions (sense veure'n les dades), pot suspendre-les i decideix qui és Usuari Pro. L'equip de la plataforma és Pro sempre.
 
+## Pestanyes
+
+A baix hi ha, com a màxim, cinc pestanyes: **El meu espai**, **Classes de cant** (si n'hi ha), **Llista**, **Calendari** i **Tauler**. Les **estadístiques** són un apartat del Tauler (amb Anuncis, Materials, Documents i Enquestes). La **Gestió** (avisos, personal, produccions i ajustos) és un apartat d'El meu espai per a qui edita; qui edita i no és de la plantilla (direcció, gerència, secretaria) també hi té el seu espai, amb només la gestió.
+
 ## Accés
 
 Ningú no hi entra sense identificar-se: tothom entra amb el correu que l'administració ha donat d'alta a Gestió › Ajustos › Persones. No hi ha enllaços d'accés.
