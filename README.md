@@ -18,7 +18,15 @@ Assistència, calendari i avisos per a cors, orquestres, bandes, cobles i altres
 
 ## Pestanyes
 
-A baix hi ha, com a màxim, cinc pestanyes: **El meu espai**, **Classes de cant** (si n'hi ha), **Llista**, **Calendari** i **Tauler**. Les **estadístiques** són un apartat del Tauler (amb Anuncis, Materials, Documents i Enquestes). La **Gestió** (avisos, personal, produccions i ajustos) és un apartat d'El meu espai per a qui edita; qui edita i no és de la plantilla (direcció, gerència, secretaria) també hi té el seu espai, amb només la gestió.
+Una pestanya per feina, cinc com a màxim:
+
+- **Inici**: la sessió d'avui (amb **Passa llista** per a qui edita), **Per fer** (tot el que espera una resposta: avisos d'absència per acceptar, llistes per acabar, canvis d'hora, avisos de classes, convocatòries i enquestes per respondre, anuncis nous), la **Gestió** per a qui edita (Avisos, Personal, Produccions, Ajustos), **Properament** i, per a la plantilla, la seva assistència i els seus avisos. L'únic número vermell de la barra és el d'Inici.
+- **Assistència**: Llista (passar llista), Estadístiques (per producció, trimestre o temporada) i Risc (la norma).
+- **Calendari**: les sessions i, per a qui en fa o en dona, les seves classes.
+- **Tauler**: anuncis, materials, documents i enquestes.
+- **Classes de cant**, si l'agrupació en fa.
+
+El **compte** és a les inicials, a dalt a la dreta: calendari al mòbil, avisos, agrupacions, aparença, manual i tancar la sessió. **Personal** reuneix tota la gent: la plantilla per seccions, qui té accés i els rols, amb les eines d'accés (donar-ne, invitar, comprovar correus). **Ajustos** queda per a l'agrupació, en blocs plegables.
 
 ## Accés
 
