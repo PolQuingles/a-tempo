@@ -28,6 +28,13 @@ Una pestanya per feina, cinc com a màxim:
 
 El **compte** és a les inicials, a dalt a la dreta: calendari al mòbil, avisos, agrupacions, aparença, manual i tancar la sessió. **Personal** reuneix tota la gent: la plantilla per seccions, qui té accés i els rols, amb les eines d'accés (donar-ne, invitar, comprovar correus). **Ajustos** queda per a l'agrupació, en blocs plegables.
 
+## Aspecte
+
+- La Bodoni Moda és per als títols grans i els números destacats; els subtítols i la resta van amb la Hanken Grotesk.
+- Les vores es reserven per al que es toca (llistes, caselles, botons); la resta són plans sense vora.
+- A partir de 1000 px d'amplada (ordinador), el menú de pestanyes passa a una columna a l'esquerra, Inici i Assistència van en dues columnes, i Personal, Estadístiques i Produccions es mostren com a taules (`.only-wide`); al mòbil hi ha les llistes de sempre (`.only-narrow`).
+- Cada pantalla entra amb una transició curta, mentre carreguen les dades es veu la silueta de la pàgina, i les pantalles buides porten un pentagrama del color de l'agrupació. Tot això s'apaga si el mòbil té les animacions reduïdes.
+
 ## Accés
 
 Ningú no hi entra sense identificar-se: tothom entra amb el correu que l'administració ha donat d'alta a Gestió › Ajustos › Persones. No hi ha enllaços d'accés.

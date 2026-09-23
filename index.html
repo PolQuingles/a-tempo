@@ -952,6 +952,99 @@ button.mday:hover{background:var(--surface-2)}
   .session-date{font-size:30px}
   .opt{font-size:12.5px}
 }
+/* =================== Estil: menys caixes, tipografia, escriptori i detalls =================== */
+/* Menys caixes: la vora es reserva per al que es toca (llistes, caselles, botons); la resta és un pla. */
+.panel,.kpi{border-color:transparent}
+.panel.prod-card{border-color:var(--pline, var(--line))}
+.cfg-h + .cfg-p{border:1px solid var(--line);border-top:0}
+.soon{gap:0;background:var(--surface);border-radius:var(--r-lg);overflow:hidden}
+.soon > .panel{background:transparent;border-radius:0;border:0;border-top:1px solid var(--line)}
+.soon > .panel:first-child{border-top:0}
+/* Tipografia: la Bodoni per als títols grans i els números; la Hanken en negreta per als subtítols. */
+.h2{font-family:var(--f-ui);font-weight:700;font-size:18px;line-height:1.25;letter-spacing:-.012em}
+.sec-h .h2 em{font-family:var(--f-display);font-weight:600;font-size:1.3em;line-height:1}
+.hero-cta .h2{font-family:var(--f-display);font-weight:600;font-size:26px;line-height:1.1;letter-spacing:-.01em}
+.today-hero .h2{font-size:32px}
+.prod-card .h2{font-size:18px}
+.empty .h2{font-size:19px}
+.ann-t{font-family:var(--f-ui);font-weight:700;font-size:16.5px;line-height:1.3;letter-spacing:-.01em}
+.manual h3{font-family:var(--f-ui);font-weight:700;font-size:16px}
+.vm{font-family:var(--f-ui);font-style:normal;font-weight:700;font-size:10px}
+.mrow .mname em{font-family:var(--f-ui);font-style:normal;font-weight:800;font-size:12.5px}
+.pick .vl{font-family:var(--f-ui);font-style:normal;font-weight:700;font-size:14px}
+.kind-secs{font-family:var(--f-ui);font-style:normal;font-weight:700;font-size:13px}
+.wiz-sum .setting .s b{font-family:var(--f-ui);font-style:normal}
+/* Un sol nivell de pestanyes: els filtres són selectors petits. */
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 14px}
+.sel{position:relative;display:inline-flex;align-items:center;max-width:100%}
+.sel select{appearance:none;-webkit-appearance:none;min-height:36px;max-width:100%;padding:0 34px 0 14px;border-radius:999px;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);font:inherit;font-size:13.5px;font-weight:600;text-overflow:ellipsis}
+.sel::after{content:"";position:absolute;right:14px;top:50%;width:6px;height:6px;border-right:1.75px solid var(--muted);border-bottom:1.75px solid var(--muted);transform:translateY(-75%) rotate(45deg);pointer-events:none}
+.sel select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+/* Icones: un sol gruix de traç a tota l'app. */
+.tab svg,.mg-i svg,.todo-i svg,.icon-btn svg{stroke-width:1.75}
+.nav-arrow svg{stroke-width:1.9}
+/* Detalls: resposta en tocar, entrada suau de cada pantalla i silueta mentre carrega. */
+.btn,.chip,.mg,.quad,.cfg-h,.subtab,.tab,.seg3 button{transition:transform .12s ease, background .15s, border-color .15s}
+.btn:active,.chip:active,.mg:active,.cfg-h:active,.subtab:active,.seg3 button:active{transform:scale(.97)}
+.quad:active{transform:scale(.985)}
+@keyframes viewIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+#view.view-in{animation:viewIn .24s cubic-bezier(.2,.8,.2,1)}
+.skel{display:grid;gap:12px;padding-top:6px}
+.sk{display:block;border-radius:12px;background:linear-gradient(90deg,var(--surface) 0%,var(--surface-2) 50%,var(--surface) 100%);background-size:200% 100%;animation:shimmer 1.4s ease-in-out infinite}
+.sk-eyebrow{width:36%;height:11px}
+.sk-title{width:58%;height:30px;margin-bottom:6px}
+.sk-hero{height:148px;border-radius:var(--r-lg)}
+.sk-row{height:60px}
+.sk-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.sk-tile{height:92px;border-radius:var(--r-lg)}
+@keyframes shimmer{0%{background-position:100% 0}100%{background-position:-100% 0}}
+/* Pantalles buides: un pentagrama amb tres notes, del color de l'agrupació. */
+.empty:not(:has(> svg))::before{content:"";display:block;width:128px;height:56px;margin:0 auto 16px;background:var(--accent-line);
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 56'%3E%3Cg stroke='%23000' stroke-width='1.4'%3E%3Cpath d='M2 12h124M2 20h124M2 28h124M2 36h124M2 44h124'/%3E%3C/g%3E%3Cg fill='%23000'%3E%3Cellipse cx='40' cy='40' rx='5.6' ry='4' transform='rotate(-20 40 40)'/%3E%3Cellipse cx='72' cy='32' rx='5.6' ry='4' transform='rotate(-20 72 32)'/%3E%3Cellipse cx='96' cy='24' rx='5.6' ry='4' transform='rotate(-20 96 24)'/%3E%3Cpath d='M44.6 38.6V10h2v28.6zM76.6 30.6V4h2v26.6zM100.6 22.6V2h2v20.6z'/%3E%3Cpath d='M76.6 4l26 -2v5l-26 2z'/%3E%3C/g%3E%3C/svg%3E") center/contain no-repeat;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 56'%3E%3Cg stroke='%23000' stroke-width='1.4'%3E%3Cpath d='M2 12h124M2 20h124M2 28h124M2 36h124M2 44h124'/%3E%3C/g%3E%3Cg fill='%23000'%3E%3Cellipse cx='40' cy='40' rx='5.6' ry='4' transform='rotate(-20 40 40)'/%3E%3Cellipse cx='72' cy='32' rx='5.6' ry='4' transform='rotate(-20 72 32)'/%3E%3Cellipse cx='96' cy='24' rx='5.6' ry='4' transform='rotate(-20 96 24)'/%3E%3Cpath d='M44.6 38.6V10h2v28.6zM76.6 30.6V4h2v26.6zM100.6 22.6V2h2v20.6z'/%3E%3Cpath d='M76.6 4l26 -2v5l-26 2z'/%3E%3C/g%3E%3C/svg%3E") center/contain no-repeat}
+/* Taules per a l'ordinador (a la pantalla petita hi ha les llistes de sempre). */
+.only-wide{display:none}
+.side-brand{display:none}
+.table-wrap{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden}
+.dtable{width:100%;border-collapse:collapse;font-size:14px}
+.dtable th{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--surface)}
+.dtable td{padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:middle}
+.dtable tbody:last-child tr:last-child td{border-bottom:0}
+.dtable tr[data-act]{cursor:pointer}
+.dtable tr[data-act]:hover td{background:var(--surface-2)}
+.dtable .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.dtable .m{color:var(--muted);font-size:13px}
+.dtable .grp td{background:var(--surface-2);padding:8px 14px;font-weight:700}
+.dtable .grp em{font-family:var(--f-display);font-style:italic;font-weight:600;font-size:19px;color:var(--accent);margin-right:8px}
+.dtable .grp .btn{float:right;min-height:28px}
+/* =================== Escriptori: menú lateral i dues columnes =================== */
+@media (min-width:1000px){
+  :root{--side-w:236px}
+  body{padding-left:calc(var(--side-w) + 40px);padding-right:40px;padding-block:0 48px}
+  .wrap{max-width:1120px}
+  .ctx{margin-inline:0;padding-inline:0}
+  .tabs{top:0;right:auto;bottom:0;width:var(--side-w);border-top:0;border-right:1px solid var(--line);padding:18px 12px 20px;background:var(--surface);backdrop-filter:none;-webkit-backdrop-filter:none}
+  .tabs-in,.tabs-in.n6,.tabs-in.n7{display:flex;flex-direction:column;gap:2px;height:auto;max-width:none}
+  .tab,.tabs-in.n6 .tab,.tabs-in.n7 .tab{flex-direction:row;justify-content:flex-start;gap:12px;padding:9px 10px;border-radius:12px;font-size:14.5px;letter-spacing:0;color:var(--ink-2);line-height:1.2}
+  .tab:hover{background:var(--surface-2)}
+  .tab[aria-current="page"]{background:var(--accent-soft);color:var(--accent)}
+  .tab[aria-current="page"] .tab-ico{background:transparent}
+  .tab-ico,.tabs-in.n7 .tab-ico{width:26px;height:26px}
+  .tab-badge{top:-5px;right:-9px}
+  .side-brand{display:flex;align-items:center;gap:10px;padding:4px 8px 18px;margin-bottom:10px;border-bottom:1px solid var(--line)}
+  .side-brand img,.side-brand .sb-ini{width:34px;height:34px;border-radius:9px;flex:none;object-fit:contain}
+  .side-brand .sb-ini{display:grid;place-items:center;background:var(--accent);color:var(--accent-ink);font-family:var(--f-display);font-style:italic;font-weight:600;font-size:16px}
+  .side-brand b{font-size:14px;line-height:1.2;color:var(--ink)}
+  .side-brand small{display:block;font-size:11.5px;color:var(--muted);font-weight:500}
+  .only-wide{display:block}
+  .only-narrow{display:none !important}
+  .home-grid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:0 36px;align-items:start}
+  .home-b > .section-title:first-child{margin-top:4px}
+  .roll-grid{display:grid;grid-template-columns:minmax(0,500px) minmax(0,1fr);gap:0 36px;align-items:start}
+  .roll-grid .quads{margin-top:6px}
+  .roll-b > .section-title:first-child{margin-top:6px}
+  .ann-b,.panel p{max-width:76ch}
+}
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation:none !important;transition:none !important}
 }
@@ -1776,7 +1869,10 @@ function renderTabs() {
   $('.tabs-in').classList.toggle('n7', tabs.length > 6);
   // Amb cinc pestanyes, els noms llargs (Classes de cant) van escurçats.
   const shortName = t => (short || (tabs.length === 5 && t !== 'calendari')) && TAB_SHORT[t];
-  $('.tabs-in').innerHTML = tabs.map(t => `<button class="tab" data-act="tab" data-tab="${t}" aria-current="${t === navTab() ? 'page' : 'false'}"${shortName(t) ? ` aria-label="${TAB_LABEL[t]}"` : ''}>
+  const logo = S.config.brand?.logo || MARCA?.logo;
+  const gname = S.config.shortName || S.config.name || MARCA?.short || '';
+  const side = `<div class="side-brand" aria-hidden="true">${logo ? `<img src="${esc(logo)}" alt="">` : `<span class="sb-ini">${esc(personInitials(gname))}</span>`}<span><b>${esc(gname)}</b><small>A Tempo</small></span></div>`;
+  $('.tabs-in').innerHTML = side + tabs.map(t => `<button class="tab" data-act="tab" data-tab="${t}" aria-current="${t === navTab() ? 'page' : 'false'}"${shortName(t) ? ` aria-label="${TAB_LABEL[t]}"` : ''}>
     <span class="tab-ico"><svg viewBox="0 0 24 24">${TAB_ICONS[t]}</svg>${t === 'avisos' && badge ? `<span class="tab-badge">${badge > 99 ? '99+' : badge}</span>` : ''}</span>${shortName(t) || TAB_LABEL[t]}</button>`).join('');
 }
 /* ---------- Brand: logo and accent colour ---------- */
@@ -1935,13 +2031,20 @@ function render() {
     return;
   }
   if (S.mode === 'loading' || (S.mode === 'shared' && !S.ready)) {
-    v.innerHTML = `<div class="empty">${staffSvg()}<p>Carregant les dades de l’agrupació…</p></div>`;
+    // La silueta de la pàgina, en lloc d'un text: l'app sembla a punt des del primer moment.
+    v.innerHTML = `<div class="skel" aria-label="Carregant les dades de l’agrupació" role="status">
+      <span class="sk sk-eyebrow"></span><span class="sk sk-title"></span><span class="sk sk-hero"></span>
+      <span class="sk sk-row"></span><span class="sk sk-row"></span>
+      <div class="sk-grid"><span class="sk sk-tile"></span><span class="sk sk-tile"></span></div></div>`;
     return;
   }
   const html = { llista: viewRoll, calendari: viewCalendar, stats: () => viewStats(false), gestio: viewManage, avisos: viewHome, tauler: viewBoard, classes: viewClasses }[ui.tab]();
   v.innerHTML = html;
+  const key = [ui.tab, ui.att, ui.board, ui.manage, ui.people, ui.rollSec, ui.clWho, ui.sessionId].join('|');
+  if (key !== lastViewKey) { lastViewKey = key; v.classList.remove('view-in'); void v.offsetWidth; v.classList.add('view-in'); }
   afterRender();
 }
+let lastViewKey = '';
 function renderBanner() {
   const b = $('#banner');
   let h = '';
@@ -2058,10 +2161,13 @@ function viewRollOverview(cur, list, pendingBySec) {
     </div>`;
   return `${attTabs()}<div class="ctx" id="ctx">${sessionNav(cur, list, false)}</div>
     ${fitxaChip(cur)}
+    <div class="roll-grid"><div class="roll-a">
     <div class="quads ${SECTIONS.length === 4 ? '' : `n-other${SECTIONS.length > 6 ? ' n-many' : ''}`}" data-n="${SECTIONS.length}">${quads}</div>
     <div class="q-legend"><span><i style="background:var(--p)"></i>Llista completa</span>${anyPend ? '<span><i style="background:var(--fnj)"></i>Té llistes pendents</span>' : ''}</div>
+    </div><div class="roll-b">
+    ${day}
     ${cur.rsvp && canEdit() ? rsvpPanel(cur) : ''}
-    ${day}`;
+    </div></div>`;
 }
 function rsvpCounts(session) {
   const out = { yes: 0, no: 0, none: 0, bySec: {} };
@@ -2417,7 +2523,13 @@ function viewStats(inBoard) {
   const tone = scope.kind === 'prod' ? ` prod-tone tinted" style="--ph:${prodHue(S.productions.get(scope.id))}` : '';
   const head = `<div class="page-head${inBoard ? ' in-board' : ''}${tone}"><div><div class="eyebrow">${scope.kind === 'prod' ? '<i class="pdot"></i>Producció' : 'Estadístiques'}</div>${title(esc(scope.name))}${sub}</div>
     <button class="btn btn-sm" data-act="export-csv">Exporta CSV</button></div>`;
-  const top = head + scopeTabs + choice + secChips;
+  // Dins d'Assistència: una sola fila de filtres (període, producció o trimestre, i secció) sobre el títol.
+  const selProd = `<label class="sel"><span class="sr">Producció</span><select data-pick="stats-prod">${prods.map(p => `<option value="${p.id}" ${p.id === scope.id ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select></label>`;
+  const selTerm = `<label class="sel"><span class="sr">Trimestre</span><select data-pick="stats-term">${terms.map((t, i) => `<option value="${i}" ${i === ui.statsTerm ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></label>`;
+  const selSec = `<label class="sel"><span class="sr">${esc(V.Section)}</span><select data-pick="stats-sec"><option value="">${esc(capz(V.tot))}</option>${SECTIONS.map(x => `<option value="${x.id}" ${ui.statsSec === x.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>`;
+  const filters = `<div class="filters"><span class="seg3" role="radiogroup" aria-label="Període">${[['prod', 'Producció'], ['term', 'Trimestre'], ['season', 'Temporada']].map(([k, l]) => `<button type="button" role="radio" aria-checked="${ui.statsScope === k}" data-act="stats-scope" data-k="${k}">${l}</button>`).join('')}</span>
+    ${ui.statsScope === 'prod' ? selProd : ui.statsScope === 'term' ? selTerm : ''}${selSec}</div>`;
+  const top = inBoard ? filters + head : head + scopeTabs + choice + secChips;
 
   if (!st.counted.length) {
     const first = st.all[0];
@@ -2484,8 +2596,8 @@ function viewStats(inBoard) {
     return (ra ?? 2) - (rb ?? 2) || byName(a.m, b.m);
   });
   const table = `<div class="section-title"><h2 class="h2">${V.Members}</h2>
-      <div class="sortbar">${Object.entries(sorters).map(([k, l]) => `<button class="chip" style="min-height:30px;font-size:12.5px" aria-pressed="${ui.statsSort === k}" data-act="stats-sort" data-k="${k}">${l}</button>`).join('')}</div></div>
-    <div id="stlist">${findBox('#stlist', `Cerca un ${V.member}`)}<div class="panel"><ul class="mtable">${rows.map(r => {
+      <span class="seg3" role="radiogroup" aria-label="Ordena per">${Object.entries(sorters).map(([k, l]) => `<button type="button" role="radio" aria-checked="${ui.statsSort === k}" data-act="stats-sort" data-k="${k}">${l}</button>`).join('')}</span></div>
+    <div id="stlist">${findBox('#stlist', `Cerca un ${V.member}`)}<div class="panel only-narrow"><ul class="mtable">${rows.map(r => {
       const counted = r.P + r.R + r.FJ + r.FNJ;
       const rs = ruleMap.get(r.m.id);
       return `<li class="mrow" data-find="${esc(normText(r.m.name))}"><button data-act="member-stats" data-mid="${r.m.id}">
@@ -2499,7 +2611,18 @@ function viewStats(inBoard) {
           <span><i class="i-FJ"></i><b>${r.FJ}</b></span>
           ${r.NP ? `<span><i class="i-NP"></i><b>${r.NP}</b></span>` : ''}
         </span></button></li>`;
-    }).join('')}</ul></div><div class="panel find-empty" hidden>Ningú amb aquest nom.</div></div>`;
+    }).join('')}</ul></div>
+    <div class="only-wide table-wrap"><table class="dtable"><thead><tr><th>${esc(V.Section)}</th><th>Nom</th><th class="n">Assistència</th><th class="n">Presents</th><th class="n">Retards</th><th class="n">Minuts</th><th class="n">Justif.</th><th class="n">No just.</th><th class="n">No fa</th><th>Norma</th></tr></thead><tbody>
+      ${rows.map(r => {
+        const counted = r.P + r.R + r.FJ + r.FNJ;
+        const rs = ruleMap.get(r.m.id);
+        return `<tr data-act="member-stats" data-mid="${r.m.id}" data-find="${esc(normText(r.m.name))}">
+          <td class="m">${esc(SEC[r.m.section].name)}</td><td><b>${esc(r.m.name)}</b></td>
+          <td class="n"><b>${counted ? pct(rate(r)) : (r.NP ? 'No fa' : '—')}</b></td><td class="n">${r.P}</td><td class="n">${r.R}</td><td class="n">${r.min ? `${r.min}′` : ''}</td>
+          <td class="n">${r.FJ}</td><td class="n" ${r.FNJ ? 'style="color:var(--fnj-text);font-weight:700"' : ''}>${r.FNJ}</td><td class="n">${r.NP || ''}</td>
+          <td>${rs && rs.status !== 'ok' ? `<span class="rule ${rs.status}">${rs.status === 'out' ? `&lt;${minAttendance()}%` : 'En risc'}</span>` : ''}</td></tr>`;
+      }).join('')}</tbody></table></div>
+    <div class="panel find-empty" hidden>Ningú amb aquest nom.</div></div>`;
 
   return top + kpis + rule + dist + secBars + trend + alerts + table;
 }
@@ -2800,12 +2923,27 @@ function manageMembers() {
       }).join('')}</ul>`
         : `<div class="panel" style="padding:14px;color:var(--muted);font-size:13.5px">Encara no hi ha ningú en aquesta ${V.section}.</div>`}</section>`;
   }).join('');
-  return `${onboardingPanel()}<div id="mlist">${findBox('#mlist', `Cerca un ${V.member}`)}${secs}<div class="panel find-empty" hidden>Ningú amb aquest nom.</div></div>`;
+  // A l'ordinador, la mateixa plantilla en una taula: nom, veu o part, estat, accés i telèfon.
+  const admin = isAdmin();
+  const table = `<div class="only-wide table-wrap"><table class="dtable"><thead><tr><th>Nom</th><th>${esc(V.Part)}</th><th>Estat</th>${admin ? '<th>Accés a l’app</th>' : ''}<th>Telèfon</th></tr></thead>
+    ${SECTIONS.map(x => {
+      const ms = membersOf(x.id, true);
+      return `<tbody data-group="${x.id}"><tr class="grp"><td colspan="${admin ? 5 : 4}"><em>${esc(x.short)}</em>${esc(x.name)} <span class="m" style="font-weight:500">· ${ms.filter(m => m.active !== false).length}</span><button class="btn btn-sm btn-ghost" data-act="member-bulk" data-sec="${x.id}">Afegeix</button></td></tr>
+        ${ms.map(m => {
+          const acc = admin ? accountFor(m.id) : null;
+          const state = m.active === false ? 'Inactiu' : leaveText(m) || 'Actiu';
+          const access = !admin ? '' : m.active === false ? '' : !acc ? '<span class="acc-tag">Sense accés</span>' : !acc.lastSeen ? '<span class="acc-tag">No ha entrat</span>' : `<span class="m">${esc(acc.email)}</span>`;
+          return `<tr data-act="member-edit" data-mid="${m.id}" data-find="${esc(normText(m.name))}" ${m.active === false ? 'style="opacity:.55"' : ''}>
+            <td><b>${esc(m.name)}</b>${m.leader ? ` <span class="tag">${V.Leader}</span>` : ''}</td><td>${m.part ? `<span class="part">${esc(partTag(m))}</span>` : ''}</td>
+            <td class="m">${esc(state)}</td>${admin ? `<td>${access}</td>` : ''}<td class="m mono">${esc(m.phone || '')}</td></tr>`;
+        }).join('') || `<tr><td colspan="${admin ? 5 : 4}" class="m">Encara no hi ha ningú en aquesta ${V.section}.</td></tr>`}</tbody>`;
+    }).join('')}</table></div>`;
+  return `${onboardingPanel()}<div id="mlist">${findBox('#mlist', `Cerca un ${V.member}`)}<div class="only-narrow">${secs}</div>${table}<div class="panel find-empty" hidden>Ningú amb aquest nom.</div></div>`;
 }
 function manageProductions() {
   const ps = productionsSorted();
   return `<div class="sec-h"><span class="muted" style="font-size:13.5px">${ps.length} produccions</span><button class="btn btn-sm btn-primary" data-act="prod-new">+ Producció</button></div>
-    ${ps.length ? `<div style="display:grid;gap:10px">${ps.map(p => {
+    ${ps.length ? `<div class="only-narrow" style="display:grid;gap:10px">${ps.map(p => {
       const ss = allSessions(p.id);
       const shared = ss.filter(s => s.prodId !== p.id).length;
       const past = ss.filter(s => s.date <= TODAY).length;
@@ -2814,7 +2952,16 @@ function manageProductions() {
         <div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><h2 class="h2"><i class="pdot"></i>${esc(p.name)}</h2><span class="badge ${status === 'En curs' ? '' : 'soft'}">${status}</span></div>
         <div class="prod-meta"><span>${p.start ? shortDate(p.start) : '?'} – ${p.end ? shortDate(p.end) : '?'}</span><span><b>${ss.length}</b> sessions${shared ? ` (${shared} compartides)` : ''} · <b>${past}</b> fetes</span><span><b>${(p.excluded || []).length}</b> no la fan</span></div>
       </button></div>`;
-    }).join('')}</div>` : `<div class="empty"><p>Crea la primera producció (p. ex. «Concert de Nadal») i genera’n les sessions d’assaig.</p></div>`}`;
+    }).join('')}</div>
+    <div class="only-wide table-wrap"><table class="dtable"><thead><tr><th>Producció</th><th>Dates</th><th class="n">Sessions</th><th class="n">Fetes</th><th class="n">No la fan</th><th>Estat</th></tr></thead><tbody>
+      ${ps.map(p => {
+        const ss = allSessions(p.id);
+        const shared = ss.filter(s => s.prodId !== p.id).length;
+        const status = p.end && p.end < TODAY ? 'Acabada' : p.start > TODAY ? 'Propera' : 'En curs';
+        return `<tr data-act="prod-edit" data-pid="${p.id}"><td class="prod-tone" style="--ph:${prodHue(p)}"><i class="pdot"></i> <b>${esc(p.name)}</b></td>
+          <td class="m">${p.start ? shortDate(p.start) : '?'} – ${p.end ? shortDate(p.end) : '?'}</td><td class="n">${ss.length}${shared ? ` <span class="m">(${shared} compartides)</span>` : ''}</td>
+          <td class="n">${ss.filter(s => s.date <= TODAY).length}</td><td class="n">${(p.excluded || []).length}</td><td><span class="badge ${status === 'En curs' ? '' : 'soft'}">${status}</span></td></tr>`;
+      }).join('')}</tbody></table></div>` : `<div class="empty"><p>Crea la primera producció (p. ex. «Concert de Nadal») i genera’n les sessions d’assaig.</p></div>`}`;
 }
 function absenceCard(a, opts = {}) {
   const m = S.members.get(a.memberId);
@@ -3150,7 +3297,7 @@ function boardMaterials() {
   const me = S.members.get(myMemberId());
   const onlyMine = !!me && !canEdit() && ui.matMine !== false;
   const items = (prod.materials || []).filter(x => !onlyMine || !me || ((!x.section || x.section === me.section) && (!x.part || !me.part || me.part.includes(x.part) || x.part.includes(me.part))));
-  const chips = `<div class="chips" role="group" aria-label="Producció">${prods.map(p => `<button class="chip" aria-pressed="${p.id === prod.id}" data-act="mat-prod" data-id="${p.id}"><i class="pdot prod-tone" style="--ph:${prodHue(p)}"></i>${esc(p.name)}${(p.materials || []).length ? ` · ${(p.materials || []).length}` : ''}</button>`).join('')}</div>`;
+  const chips = `<div class="filters"><label class="sel"><span class="sr">Producció</span><select data-pick="mat-prod">${prods.map(p => `<option value="${p.id}" ${p.id === prod.id ? 'selected' : ''}>${esc(p.name)}${(p.materials || []).length ? ` · ${(p.materials || []).length}` : ''}</option>`).join('')}</select></label></div>`;
   const tools = canEdit()
     ? `<div class="sec-h" style="margin-top:4px"><span class="muted" style="font-size:13px">Enllaços a Drive, Dropbox, YouTube…</span><button class="btn btn-sm btn-primary" data-act="mat-new">+ Material</button></div>`
     : me
@@ -4436,15 +4583,18 @@ function viewHome() {
   ].filter(Boolean);
   const mine = me ? [...S.absences.values()].filter(a => a.memberId === me.id).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')) : [];
   return `${head}
+    <div class="home-grid"><div class="home-a">
     ${todayBlock(me)}
     ${todoBlock(me)}
     ${manageBlock()}
+    </div><div class="home-b">
     ${soon.length ? `<div class="section-title"><h2 class="h2">Properament</h2></div><div class="soon">${soon.join('')}</div>` : ''}
     ${me ? `${myAttendanceCard(me)}
     <div class="section-title"><h2 class="h2">Els meus avisos</h2><button class="btn btn-sm btn-primary" data-act="absence-new">Avisa d’una absència</button></div>
     <p class="muted" style="margin:-2px 2px 10px;font-size:13px">Si no pots venir a un assaig, avisa amb temps: el teu ${V.leader} ho veurà i, si l’accepta, la falta quedarà justificada.</p>
     ${mine.length ? `<div class="panel">${mine.map(a => absenceCard(a, { mine: true })).join('')}</div>`
-      : '<div class="panel" style="padding:14px;font-size:13.5px;color:var(--muted)">Encara no has enviat cap avís.</div>'}` : ''}`;
+      : '<div class="panel" style="padding:14px;font-size:13.5px;color:var(--muted)">Encara no has enviat cap avís.</div>'}` : ''}
+    </div></div>`;
 }
 
 function afterRender() {
@@ -6776,6 +6926,8 @@ document.addEventListener('input', e => {
   }
 });
 document.addEventListener('change', e => {
+  const pick = e.target.closest('select[data-pick]');
+  if (pick && actions[pick.dataset.pick]) { const v = pick.value; actions[pick.dataset.pick]({ dataset: { id: v, i: v, sec: v, k: v } }); return; }
   const logo = e.target.closest('[data-bind="logo"]');
   if (logo && logo.files && logo.files[0]) { if (canManageGroup()) uploadLogo(logo.files[0]); logo.value = ''; }
   const color = e.target.closest('[data-bind="brand-color"]');
