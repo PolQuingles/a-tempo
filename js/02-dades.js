@@ -138,7 +138,8 @@ function syncCol(col) {
   SYNC.mode[col] = full ? 'full' : 'delta';
   if (full) {
     const startedAt = Date.now(), epoch = epochOf(col);
-    un = def.query().onSnapshot(snap => {
+    // includeMetadataChanges: si el que hi ha desat ja és igual que el servidor, només així se sap que la resposta ha arribat.
+    un = def.query().onSnapshot({ includeMetadataChanges: true }, snap => {
       const next = new Map();
       for (const d of snap.docs) take(col, next, d);
       for (const [id, v] of S[col]) if (!next.has(id) && isDirty(`${col}/${id}`) && queue.get(`${col}/${id}`)?.data !== null) next.set(id, v);
@@ -164,7 +165,7 @@ function syncCol(col) {
     for (const d of cached.docs) take(col, next, d);
     S[col] = next;
     const since = firebase.firestore.Timestamp.fromMillis(st.max);
-    un = db.collection(col).where('syncAt', '>', since).onSnapshot(snap => {
+    un = db.collection(col).where('syncAt', '>', since).onSnapshot({ includeMetadataChanges: true }, snap => {
       for (const ch of snap.docChanges()) {
         // Ja no hi surt: o s'ha esborrat o l'ha desat una app antiga sense syncAt. Es mira quin dels dos. Si l'acabem de desar
         // nosaltres, és només l'instant en què l'hora del servidor encara no hi és: torna a sortir quan el servidor respon.

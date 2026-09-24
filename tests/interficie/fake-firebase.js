@@ -62,7 +62,8 @@
       orderBy: () => colRef(col, filters), limit: () => colRef(col, filters),
       get: async () => snap(),
       add: async d => { const r = docRef(`${col}/${Math.random().toString(36).slice(2)}`); await r.set(d); return r; },
-      onSnapshot(ok, err) {
+      onSnapshot(a, b, c) {
+        const ok = typeof a === 'function' ? a : b;
         let last = null, prev = new Map();
         const l = () => {
           const docs = run(), now = new Map(docs.map(d => [d.id, JSON.stringify(DB[`${col}/${d.id}`])]));
