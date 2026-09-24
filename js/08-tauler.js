@@ -43,7 +43,7 @@ function boardAnnouncements() {
       <div class="ann-m">${a.pinned ? '<span class="pin">Fixat</span>' : ''}<span>${esc(a.author || '')}</span><span class="mono">${a.createdAt ? ddmm(a.createdAt.slice(0, 10)) : ''}</span>
         ${a.sections?.length ? `<span>Per a: ${esc(a.sections.map(x => SEC[x].name).join(', '))}</span>` : ''}${a.until ? `<span>Fins al ${ddmm(a.until)}</span>` : ''}</div>
     </article>`;
-  return `${canEdit() ? `<div class="sec-h" style="margin-top:6px"><span class="muted" style="font-size:13px">Els veuen tots els ${V.members} (o només les ${V.sections} triades).</span><button class="btn btn-sm btn-primary" data-act="ann-new">+ Anunci</button></div>` : ''}
+  return `${canEdit() ? `<div class="sec-h" style="margin-top:6px"><span class="muted" style="font-size:calc(13px*var(--ts))">Els veuen tots els ${V.members} (o només les ${V.sections} triades).</span><button class="btn btn-sm btn-primary" data-act="ann-new">+ Anunci</button></div>` : ''}
     ${active.length ? `<div class="panel">${active.map(card).join('')}</div>` : `<div class="empty"><p>No hi ha anuncis.</p></div>`}
     ${canEdit() && expired.length ? `<details class="np-group"><summary><span>Caducats (${expired.length})</span>${ICON.chev}</summary><div class="panel">${expired.map(card).join('')}</div></details>` : ''}`;
 }
@@ -112,7 +112,7 @@ function sheetOpenFile(f, title) {
           : kind === 'Imatge' ? `<img src="${url}" alt="" style="display:block;width:100%;border-radius:12px">` : '';
         const kept = offlineSaved().has(f.id);
         box.innerHTML = `${media}
-          <p class="muted" style="margin:${media ? '12px' : '0'} 0 14px;font-size:13px;overflow-wrap:anywhere">${esc(f.name)} · ${esc(kind)} · ${fmtSize(f.size)}${kept ? ' · desat al mòbil' : ''}</p>
+          <p class="muted" style="margin:${media ? '12px' : '0'} 0 14px;font-size:calc(13px*var(--ts));overflow-wrap:anywhere">${esc(f.name)} · ${esc(kind)} · ${fmtSize(f.size)}${kept ? ' · desat al mòbil' : ''}</p>
           <div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn btn-primary" href="${url}" target="_blank" rel="noopener">Obre</a><a class="btn" href="${url}" download="${esc(f.name)}">Desa al dispositiu</a>
             ${!f.where && 'caches' in window ? `<button class="btn" id="fo-keep">${kept ? 'Treu-lo del mòbil' : 'Tenir-lo sense cobertura'}</button>` : ''}</div>`;
         bindStudyPlayer(box);
@@ -206,7 +206,7 @@ const choirDocs = () => [...(S.config.documents || [])]
 function boardDocuments() {
   const docs = choirDocs();
   const tools = canEdit()
-    ? `<div class="sec-h" style="margin-top:6px"><span class="muted" style="font-size:13px">Normativa, calendari de la temporada, formularis…</span><button class="btn btn-sm btn-primary" data-act="doc-new">+ Document</button></div>`
+    ? `<div class="sec-h" style="margin-top:6px"><span class="muted" style="font-size:calc(13px*var(--ts))">Normativa, calendari de la temporada, formularis…</span><button class="btn btn-sm btn-primary" data-act="doc-new">+ Document</button></div>`
     : '';
   const row = d => `<div class="mat"><span class="mat-k doc-${esc(d.kind)}">${DOC_KINDS[d.kind]?.[1] || 'Doc'}</span>
       <span class="mat-i">${itemLink(d, `data-act="file-open" data-src="doc" data-id="${esc(d.id)}"`)}<small>${[DOC_KINDS[d.kind]?.[0], d.note, fileNote(d)].filter(Boolean).map(esc).join(' · ')}</small></span>
@@ -243,9 +243,10 @@ function sheetDocument(id) {
         closeSheet(); toast(got.file && got.file !== d.file ? 'Fitxer pujat i desat' : ex ? 'Document desat' : 'Document afegit'); render();
       };
       el.querySelector('#dc-del')?.addEventListener('click', async () => {
-        if (!await confirmSheet('Esborrar el document?', esc(d.title), 'Esborra')) return;
-        saveConfig({ documents: (S.config.documents || []).filter(x => x.id !== d.id) });
-        deleteFile(d.file); render();
+        const before = S.config.documents || [];
+        saveConfig({ documents: before.filter(x => x.id !== d.id) });
+        closeSheet(); render();
+        undoable('Document esborrat', () => saveConfig({ documents: before }), () => deleteFile(d.file));
       });
     },
   });
@@ -275,7 +276,7 @@ function boardPolls() {
       return `<div class="poll"><div class="ann-h"><h2 class="ann-t">${esc(p.title)}</h2><button class="icon-btn" data-act="poll-edit" data-id="${p.id}" aria-label="Edita">${ICON.more}</button></div>
         ${p.description ? `<div class="ann-b">${linkify(p.description)}</div>` : ''}${meta}
         ${(p.options || []).map(o => `<div class="opt-row ${r.counts[o.id] === max && max > 0 ? 'best' : ''}"><span></span><span>${esc(o.label)}</span><span class="n">${r.counts[o.id]}</span><span class="opt-bar"><span style="width:${(r.counts[o.id] / Math.max(1, r.voters)) * 100}%"></span></span></div>`).join('')}
-        <div class="c-a" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="muted" style="font-size:13px">${r.voters} de ${r.expected} han respost</span>
+        <div class="c-a" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="muted" style="font-size:calc(13px*var(--ts))">${r.voters} de ${r.expected} han respost</span>
           <button class="btn btn-sm" data-act="poll-results" data-id="${p.id}">Qui ha votat</button>${closed ? '' : `<button class="btn btn-sm" data-act="poll-remind" data-id="${p.id}">Recorda-ho</button>`}</div></div>`;
     }
     const canVote = !!myId() && !closed;
@@ -286,6 +287,6 @@ function boardPolls() {
       ${(p.options || []).map(o => `<label class="opt-row"><input type="${p.multi ? 'checkbox' : 'radio'}" name="poll-${p.id}" value="${o.id}" ${chosen.has(o.id) ? 'checked' : ''} ${canVote ? '' : 'disabled'}><span>${esc(o.label)}</span><span></span></label>`).join('')}
       ${canVote ? `<div class="c-a" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="btn btn-sm btn-primary" data-act="poll-vote" data-id="${p.id}">${mine ? 'Actualitza la resposta' : 'Envia la resposta'}</button>${mine ? '<span class="rsvp yes">Resposta desada</span>' : ''}</div>` : ''}</div>`;
   };
-  return `${canEdit() ? '<div class="sec-h" style="margin-top:6px"><span class="muted" style="font-size:13px">Per saber quan pot venir la gent.</span><button class="btn btn-sm btn-primary" data-act="poll-new">+ Enquesta</button></div>' : ''}
+  return `${canEdit() ? '<div class="sec-h" style="margin-top:6px"><span class="muted" style="font-size:calc(13px*var(--ts))">Per saber quan pot venir la gent.</span><button class="btn btn-sm btn-primary" data-act="poll-new">+ Enquesta</button></div>' : ''}
     ${all.length ? `<div class="panel">${all.map(card).join('')}</div>` : '<div class="empty"><p>No hi ha enquestes.</p></div>'}`;
 }

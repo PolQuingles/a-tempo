@@ -25,7 +25,7 @@ function maybeWelcome() {
        <li><b>Tauler</b> · anuncis, partitures i àudios de la teva ${V.part}, i enquestes.</li></ul>`;
   openSheet({
     title: 'Com funciona',
-    body: body + `<p class="muted" style="font-size:13px">Consell: al navegador del mòbil, tria <b>Afegeix a la pantalla d’inici</b> i la tindràs com una app.</p>`,
+    body: body + `<p class="muted" style="font-size:calc(13px*var(--ts))">Consell: al navegador del mòbil, tria <b>Afegeix a la pantalla d’inici</b> i la tindràs com una app.</p>`,
     foot: `${pushSupported() ? '<button class="btn" id="wc-push">Avisos al mòbil</button>' : ''}<span class="spacer"></span><button class="btn btn-primary" data-act="sheet-close">Entesos</button>`,
     onMount: el => { el.querySelector('#wc-push')?.addEventListener('click', () => { closeSheet(); sheetPush(); }); },
   });
@@ -83,7 +83,7 @@ function sheetWhoIn() {
         <ul class="mini-list" style="max-height:220px">${noAccount.map(m => `<li><span>${esc(m.name)}<br><span class="m">${SEC[m.section].name}</span></span><button class="btn btn-sm" data-act="staff-new">Dona-li accés</button></li>`).join('')}</ul>` : ''}
       ${inApp.length ? `<div class="section-title" style="margin-top:16px"><h2 class="h2">Ja hi entren</h2></div>
         <ul class="mini-list" style="max-height:260px">${inApp.sort((a, b) => (b.lastSeen || '').localeCompare(a.lastSeen || '')).map(p => `<li><span>${esc(p.name || p.email)}<br><span class="m">${esc(rolesText(p))}${pushBy.get(p.email) ? ' · avisos actius' : ''}</span></span><span class="m">${agoText(p.lastSeen)}</span></li>`).join('')}</ul>` : ''}
-      <p class="muted" style="font-size:12.5px">De ${roster.length} ${V.members} de la plantilla, ${roster.length - noAccount.length} tenen el correu donat d’alta. «Han entrat» vol dir que han obert l’app almenys un cop.</p>`,
+      <p class="muted" style="font-size:calc(13px*var(--ts))">De ${roster.length} ${V.members} de la plantilla, ${roster.length - noAccount.length} tenen el correu donat d’alta. «Han entrat» vol dir que han obert l’app almenys un cop.</p>`,
     foot: never.length ? '<button class="btn" id="wi-all">Copia el missatge per al grup</button><button class="btn btn-primary" id="wi-mail">Convida’ls per correu</button>' : '',
     onMount: el => {
       el.querySelectorAll('[data-invite]').forEach(b => b.onclick = () => sheetInvite(S.staff.get(b.dataset.invite)));
@@ -318,6 +318,8 @@ function sheetHelp() {
     <h3>Tauler</h3>
     <p><b>Anuncis</b> per a tothom o per ${w.sections}, <b>materials</b> de cada producció (partitures, àudios, vídeos), <b>documents</b> de tota la temporada i <b>enquestes</b> de disponibilitat. A les convocatòries i enquestes, <b>Recorda-ho</b> prepara missatges de WhatsApp per als que no han respost.</p>
     <p>Els fitxers (PDF, àudio, imatges, fins a 20 MB) es poden pujar directament des de l’ordinador o el mòbil, o bé posar-hi un enllaç.</p>
+    <h3>Cerca, text gran i desfer</h3>
+    <p>La <b>lupa</b> de dalt (o «/» i Cmd+K a l’ordinador) busca persones, sessions (també per data, com ara «12/10»), obres, materials, documents, anuncis, sortides i produccions. A <b>Aparença</b> hi ha la <b>mida del text</b> (normal, gran o molt gran). Esborrar un anunci, una enquesta, un material, una obra, una sortida, un missatge o un avís ja no demana confirmació: surt <b>Desfés</b> uns segons. Els cartells de cada producció es pugen a la seva fitxa (Gestió › Produccions) i surten a Inici, al calendari i a la fitxa ${w.sh.del}.</p>
     <h3>Missatges</h3>
     <p>A Inici, <b>Escriu</b> (administració, direcció, gerència i secretaria) envia un missatge a tothom o a les ${w.sections} que triïs, un anunci al tauler o una enquesta. Cada ${w.leader} hi té <b>Missatge a la ${w.section}</b>, que només arriba a la seva. Arriben a l’app i, a qui té els avisos activats, al mòbil: sense correus ni WhatsApp.</p>
     <h3>Notes de seguiment</h3>
@@ -365,6 +367,8 @@ function sheetHelp() {
     <h3>Tauler</h3>
     <p>Anuncis, el <b>repertori</b> (cada obra amb les partitures i els àudios de la teva ${w.part}, i els solos i petits grups on surts), documents de la temporada, enquestes i <b>sortides</b>, on t’hi pots apuntar.</p>
     <p>Els àudios d’estudi es poden escoltar <b>més lents</b> i <b>repetir un fragment</b>. I amb «Desa’ls al mòbil» tens les partitures i els àudios sense cobertura.</p>
+    <h3>Cerca i text gran</h3>
+    <p>La <b>lupa</b> de dalt busca persones, sessions (també per data, com ara «12/10»), obres i materials. A les teves inicials › <b>Aparença</b> pots fer el text més gran.</p>
     <h3>Missatges</h3>
     <p>Els missatges del teu ${w.leader} i de l’equip surten a Inici i t’arriben al mòbil si tens els avisos activats.</p>
     <h3>Pla d’assaig i la meva fitxa</h3>
@@ -412,8 +416,9 @@ function sheetAnnouncement(id) {
         closeSheet(); toast(ex ? 'Anunci desat' : 'Anunci publicat'); render();
       };
       el.querySelector('#an-del')?.addEventListener('click', async () => {
-        if (!await confirmSheet('Esborrar l’anunci?', esc(a.title), 'Esborra')) return;
-        S.announcements.delete(a.id); persist('announcements', a.id, null, 10); render();
+        const before = clone(a);
+        S.announcements.delete(a.id); persist('announcements', a.id, null, 10); closeSheet(); render();
+        undoable('Anunci esborrat', () => { S.announcements.set(before.id, before); persist('announcements', before.id, before, 10); });
       });
     },
   });
@@ -460,9 +465,9 @@ function sheetMaterial(pid, id) {
         ui.matProd = p.id; closeSheet(); toast(got.file && got.file !== m.file ? 'Fitxer pujat i desat' : 'Material desat'); render();
       };
       el.querySelector('#mt-del')?.addEventListener('click', async () => {
-        if (!await confirmSheet('Esborrar el material?', esc(m.title), 'Esborra')) return;
-        const p = S.productions.get(prodId); saveTo(p, (p.materials || []).filter(x => x.id !== m.id));
-        deleteFile(m.file); render();
+        const p = S.productions.get(prodId), before = p.materials || [];
+        saveTo(p, before.filter(x => x.id !== m.id)); closeSheet(); render();
+        undoable('Material esborrat', () => saveTo(S.productions.get(prodId), before), () => deleteFile(m.file));
       });
     },
   });
@@ -481,7 +486,7 @@ function sheetPoll(id) {
       <div class="toggle-row"><span><b>Es poden triar diverses opcions</b></span><label class="switch"><input type="checkbox" id="pl-multi" ${p.multi ? 'checked' : ''}><span></span></label></div>
       <div class="field"><span>Per a (si no en tries cap, per a tothom)</span>${sectionPickers('pl-secs', p.sections)}</div>
       <label class="field"><span>Respondre fins al (opcional)</span><input class="inp" id="pl-close" type="date" value="${esc(p.closesAt || '')}"></label>
-      ${ex ? `<div class="toggle-row"><span><b>Tancada</b><br><span class="muted" style="font-size:12.5px">Ja no s’hi pot respondre</span></span><label class="switch"><input type="checkbox" id="pl-closed" ${p.closed ? 'checked' : ''}><span></span></label></div>` : ''}
+      ${ex ? `<div class="toggle-row"><span><b>Tancada</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Ja no s’hi pot respondre</span></span><label class="switch"><input type="checkbox" id="pl-closed" ${p.closed ? 'checked' : ''}><span></span></label></div>` : ''}
     </div>`,
     foot: `${ex ? '<button class="btn btn-danger-ghost" id="pl-del">Esborra</button>' : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="pl-save">${ex ? 'Desa' : 'Publica'}</button>`,
     onMount: el => {
@@ -500,10 +505,11 @@ function sheetPoll(id) {
         closeSheet(); toast(ex ? 'Enquesta desada' : 'Enquesta publicada'); render();
       };
       el.querySelector('#pl-del')?.addEventListener('click', async () => {
-        if (!await confirmSheet('Esborrar l’enquesta?', 'També se n’esborraran les respostes.', 'Esborra')) return;
+        const before = clone(p), votes = [...S.pollVotes].filter(([, v]) => v.pollId === p.id).map(([k, v]) => [k, clone(v)]);
         S.polls.delete(p.id); persist('polls', p.id, null, 10);
-        for (const [k, v] of S.pollVotes) if (v.pollId === p.id) { S.pollVotes.delete(k); persist('pollVotes', k, null, 30); }
-        render();
+        for (const [k] of votes) { S.pollVotes.delete(k); persist('pollVotes', k, null, 30); }
+        closeSheet(); render();
+        undoable('Enquesta esborrada', () => { S.polls.set(before.id, before); persist('polls', before.id, before, 10); for (const [k, v] of votes) { S.pollVotes.set(k, v); persist('pollVotes', k, v, 30); } });
       });
     },
   });
@@ -545,7 +551,7 @@ function sheetReminder(title, pending, messageFor) {
         return `<li><span>${esc(m.name)}${accountFor(m.id) ? '' : '<br><span class="m">Encara no té accés a l’app</span>'}</span>
           <span style="display:flex;gap:4px">${phone(m) ? `<a class="btn btn-sm" href="https://wa.me/${phone(m)}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">WhatsApp</a>` : ''}<button class="btn btn-sm" data-copy="${esc(msg)}">Copia</button></span></li>`;
       }).join('')}</ul>`).join('')}
-      <p class="muted" style="font-size:12.5px">Per enviar WhatsApp directament, cal tenir el telèfon a la fitxa de cadascú.</p>`
+      <p class="muted" style="font-size:calc(13px*var(--ts))">Per enviar WhatsApp directament, cal tenir el telèfon a la fitxa de cadascú.</p>`
       : '<p style="margin:0">Tothom ha respost.</p>',
     foot: pending.length ? '<button class="btn btn-primary" id="rm-group">Copia el missatge per al grup</button>' : '',
     onMount: el => {
@@ -568,4 +574,67 @@ function remindPoll(id) {
   const pending = pollExpected(p).filter(m => !S.pollVotes.get(`${id}_${m.id}`));
   sheetReminder(`Recordatori: responeu l’enquesta «${p.title}»${p.closesAt ? ` abans del ${ddmm(p.closesAt)}` : ''}.`, pending,
     m => `Hola ${m.name.split(',').pop().trim()}! Tens pendent l’enquesta «${p.title}»${p.closesAt ? ` (fins al ${ddmm(p.closesAt)})` : ''}. Respon-la aquí, a Tauler › Enquestes: ${appUrl()}`);
+}
+
+/* ---------- Cerca ---------- */
+// Una sola cerca per a tot: persones, sessions, obres del repertori, materials i documents, anuncis, sortides i
+// produccions. Sense accents ni majúscules; «12/10» troba les sessions d'aquell dia. S'obre amb la lupa de dalt, amb
+// «/» o amb Cmd/Ctrl+K a l'ordinador.
+const SR_MAX = 6;
+function searchAll(q) {
+  const n = normText(q);
+  if (n.length < 2) return [];
+  const has = (...xs) => xs.some(x => x && normText(x).includes(n));
+  const out = [];
+  const add = (group, items) => { if (items.length) out.push({ group, items: items.slice(0, SR_MAX), more: Math.max(0, items.length - SR_MAX) }); };
+  add('Persones', membersOf(null, true).filter(m => has(m.name, fullName(m.name))).sort((a, b) => (a.active === false) - (b.active === false) || byName(a, b))
+    .map(m => ({ t: m.name, s: `${SEC[m.section].name}${m.part ? ` ${m.part}` : ''}${m.active === false ? ' · inactiu' : ''}`, act: `data-act="member-stats" data-mid="${esc(m.id)}"` })));
+  const ss = allSessions().filter(s => has(s.type, s.place, s.note, prodNames(s), longDate(s.date), ddmm(s.date), `${ddmm(s.date)}/${s.date.slice(0, 4)}`));
+  add('Sessions', [...ss.filter(s => s.date >= TODAY), ...ss.filter(s => s.date < TODAY).reverse()]
+    .map(s => ({ t: `${capz(longDate(s.date))}${s.time ? ` · ${s.time}` : ''}`, s: `${s.type || 'Assaig'} · ${prodNames(s)}${s.place ? ` · ${s.place}` : ''}`, act: `data-act="session-info" data-sid="${esc(s.id)}"` })));
+  add('Repertori', worksSorted().filter(w => has(w.title, w.composer, w.arranger, ...(w.roles || []).map(r => r.name)))
+    .map(w => ({ t: w.title, s: [w.composer, fmtDur(durSecs(w.duration)), w.voicing].filter(Boolean).join(' · '), act: `data-act="work-open" data-id="${esc(w.id)}"` })));
+  const mats = [
+    ...worksSorted().flatMap(w => (w.materials || []).map(x => ({ x, where: w.title, act: `data-act="file-open" data-src="work" data-pid="${esc(w.id)}" data-id="${esc(x.id)}"` }))),
+    ...productionsSorted().flatMap(p => (p.materials || []).map(x => ({ x, where: p.name, act: `data-act="file-open" data-src="mat" data-pid="${esc(p.id)}" data-id="${esc(x.id)}"` }))),
+    ...(S.config.documents || []).map(x => ({ x, where: 'Documents', act: `data-act="file-open" data-src="doc" data-id="${esc(x.id)}"` })),
+  ].filter(({ x, where }) => has(x.title, where));
+  add('Materials i documents', mats.map(({ x, where, act }) => ({ t: x.title, s: `${MAT_KINDS[x.kind] || DOC_KINDS[x.kind]?.[0] || 'Document'} · ${where}`,
+    act: x.file ? act : `data-act="search-link" data-url="${esc(x.url || '')}"` })));
+  add('Anuncis', visibleAnnouncements().filter(a => has(a.title, a.body)).map(a => ({ t: a.title, s: `${a.author || ''}${a.createdAt ? ` · ${ddmm(a.createdAt.slice(0, 10))}` : ''}`, act: 'data-act="search-go" data-tab="tauler" data-board="anuncis"' })));
+  add('Sortides', tripsSorted().filter(t => has(t.title, t.place)).map(t => ({ t: t.title, s: `${capz(tripDates(t))}${t.place ? ` · ${t.place}` : ''}`, act: 'data-act="search-go" data-tab="tauler" data-board="sortides"' })));
+  add('Produccions', productionsSorted().filter(p => has(p.name)).map(p => ({ t: p.name, s: `${allSessions(p.id).length} sessions`, act: `data-act="search-go" data-tab="calendari" data-prod="${esc(p.id)}"` })));
+  return out;
+}
+/** Marca el tros que coincideix (sense tenir en compte els accents). */
+function searchMark(text, q) {
+  const n = normText(q), src = String(text || '');
+  const norm = [...src].map(ch => normText(ch) || ' ');
+  const flat = norm.join('');
+  const i = flat.indexOf(n);
+  if (!n || i < 0 || norm.some(c => c.length !== 1)) return esc(src);
+  return `${esc(src.slice(0, i))}<mark>${esc(src.slice(i, i + n.length))}</mark>${esc(src.slice(i + n.length))}`;
+}
+function sheetSearch() {
+  openSheet({
+    title: 'Cerca',
+    wide: true,
+    body: `<label class="sr-in"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+        <input class="inp" id="sr-q" type="search" inputmode="search" autocomplete="off" placeholder="Persones, sessions, obres, materials…" aria-label="Cerca"></label>
+      <div id="sr-res"><p class="sr-hint">Escriu com a mínim dues lletres. També pots buscar una data, com ara «12/10».</p></div>`,
+    onMount: el => {
+      const inp = el.querySelector('#sr-q'), box = el.querySelector('#sr-res');
+      let timer = null;
+      const draw = () => {
+        const q = inp.value.trim();
+        const res = searchAll(q);
+        box.innerHTML = q.length < 2 ? '<p class="sr-hint">Escriu com a mínim dues lletres. També pots buscar una data, com ara «12/10».</p>'
+          : res.length ? res.map(g => `<div class="sr-g"><h3>${esc(g.group)}</h3><div class="sr-list">${g.items.map(x => `<button class="sr-i" ${x.act}><b>${searchMark(x.t, q)}</b>${x.s ? `<small>${esc(x.s)}</small>` : ''}</button>`).join('')}</div>${g.more ? `<p class="sr-hint" style="margin-top:4px">I ${g.more} més: afina la cerca.</p>` : ''}</div>`).join('')
+          : `<p class="sr-hint">No s’ha trobat res amb «${esc(q)}».</p>`;
+      };
+      inp.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(draw, 120); });
+      inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); box.querySelector('.sr-i')?.click(); } });
+      setTimeout(() => inp.focus(), 50);
+    },
+  });
 }

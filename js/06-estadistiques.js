@@ -25,7 +25,7 @@ function viewStats(inBoard) {
   const secChips = `<div class="chips" role="group" aria-label="${V.Section}" style="padding-bottom:4px">
     <button class="chip" aria-pressed="${!ui.statsSec}" data-act="stats-sec" data-sec="">${capz(V.tot)}</button>
     ${SECTIONS.map(x => `<button class="chip" aria-pressed="${ui.statsSec === x.id}" data-act="stats-sec" data-sec="${x.id}">${esc(x.name)}</button>`).join('')}</div>`;
-  const sub = scope.kind === 'range' ? `<p class="muted mono" style="margin:4px 0 0;font-size:12.5px">${ddmm(scope.from)}/${scope.from.slice(0, 4)} – ${ddmm(scope.to)}/${scope.to.slice(0, 4)}</p>` : '';
+  const sub = scope.kind === 'range' ? `<p class="muted mono" style="margin:4px 0 0;font-size:calc(13px*var(--ts))">${ddmm(scope.from)}/${scope.from.slice(0, 4)} – ${ddmm(scope.to)}/${scope.to.slice(0, 4)}</p>` : '';
   const tone = scope.kind === 'prod' ? ` prod-tone tinted" style="--ph:${prodHue(S.productions.get(scope.id))}` : '';
   const head = `<div class="page-head${inBoard ? ' in-board' : ''}${tone}"><div><div class="eyebrow">${scope.kind === 'prod' ? '<i class="pdot"></i>Producció' : 'Estadístiques'}</div>${title(esc(scope.name))}${sub}</div>
     <button class="btn btn-sm" data-act="export-csv">Exporta CSV</button></div>`;
@@ -48,7 +48,7 @@ function viewStats(inBoard) {
     <div class="kpi"><div class="kpi-v">${t.min}<small>min</small></div><div class="kpi-l">Retard acumulat · ${t.R} retards</div></div>
     <div class="kpi ${t.FNJ ? 'alert' : ''}"><div class="kpi-v">${t.FNJ}</div><div class="kpi-l">Faltes no justificades · ${t.FJ} just.</div></div>
   </div>
-  <p class="muted" style="font-size:12.5px;margin:10px 2px 0">${st.counted.length} de ${st.all.length} sessions amb llista · Assistència = presents i retards sobre convocats (sense comptar «no fa» ni baixes).</p>`;
+  <p class="muted" style="font-size:calc(13px*var(--ts));margin:10px 2px 0">${st.counted.length} de ${st.all.length} sessions amb llista · Assistència = presents i retards sobre convocats (sense comptar «no fa» ni baixes).</p>`;
 
   const dist = `<div class="panel" style="padding:14px;margin-top:14px">${stackBar(t)}<div class="legend">${ORDER.map(k => `<span><i class="i-${k}"></i>${STATUS[k].label} <b>${t[k]}</b></span>`).join('')}</div></div>`;
 
@@ -64,8 +64,8 @@ function viewStats(inBoard) {
     rule = `<div class="section-title"><h2 class="h2">Norma del ${minAttendance()}%</h2>${hasConcert ? `<button class="btn btn-sm" data-act="concert-list" data-pid="${scope.id}">${V.sh.list}</button>` : '<span class="eyebrow">assistència mínima</span>'}</div>
       <div class="panel">
         ${outL.length || riskL.length ? `<ul class="alerts">${outL.map(r => item(r, ruleMap.get(r.m.id))).join('')}${riskL.map(r => item(r, ruleMap.get(r.m.id))).join('')}</ul>`
-          : `<p style="margin:0;padding:14px;font-size:13.5px">Ara mateix tothom compleix la norma.</p>`}
-        <p class="muted" style="margin:0;padding:10px 14px 12px;font-size:12px;border-top:1px solid var(--line)">Compten tots els assajos de la producció (no ${V.sh.els} ni les sessions «Altres»). «En risc» vol dir que ara està per sota però encara hi pot arribar amb els assajos que queden.</p>
+          : `<p style="margin:0;padding:14px;font-size:calc(13.5px*var(--ts))">Ara mateix tothom compleix la norma.</p>`}
+        <p class="muted" style="margin:0;padding:10px 14px 12px;font-size:calc(13px*var(--ts));border-top:1px solid var(--line)">Compten tots els assajos de la producció (no ${V.sh.els} ni les sessions «Altres»). «En risc» vol dir que ara està per sota però encara hi pot arribar amb els assajos que queden.</p>
       </div>`;
   }
 
@@ -169,7 +169,7 @@ function riskView() {
       <div class="panel prod-tone tinted" style="--ph:${prodHue(pr)}">${rows.length ? rows.map(({ m, rs }) => `<button class="risk-row" data-act="member-stats" data-mid="${m.id}">
           <span class="rn">${esc(m.name)}</span><span class="rule ${rs.status}">${rs.status === 'out' ? `${pct(rs.cur)} · no hi arriba` : `${pct(rs.cur)} · en risc`}</span>
           <span class="rm">${esc(SEC[m.section].name)} · ${rs.att} de ${rs.att + rs.abs} assajos · ${riskLine(rs)}</span></button>`).join('')
-        : '<p style="margin:0;padding:14px;font-size:13.5px">Tothom compleix la norma.</p>'}</div>`;
+        : '<p style="margin:0;padding:14px;font-size:calc(13.5px*var(--ts))">Tothom compleix la norma.</p>'}</div>`;
   }).join('');
   const text = () => {
     const out = [`Seguiment de la norma del ${minAttendance()}%`];
@@ -188,10 +188,10 @@ function riskView() {
       <div class="kpi ${nOut ? 'alert' : ''}"><div class="kpi-v">${nOut}</div><div class="kpi-l">No poden fer ${V.sh.el}</div></div>
       <div class="kpi"><div class="kpi-v">${nRisk}</div><div class="kpi-l">Hi són a temps</div></div>
     </div>
-    <p class="muted" style="font-size:12.5px;margin:10px 2px 0">Produccions en curs i properes. Compten els assajos (no ${V.sh.els} ni les sessions «Altres») i no compten les baixes.</p>
+    <p class="muted" style="font-size:calc(13px*var(--ts));margin:10px 2px 0">Produccions en curs i properes. Compten els assajos (no ${V.sh.els} ni les sessions «Altres») i no compten les baixes.</p>
     ${blocks}
     <div class="panel" style="padding:14px;margin-top:14px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
-      <span style="font-size:13.5px">Passa-ho a direcció o guarda-ho.</span>
+      <span style="font-size:calc(13.5px*var(--ts))">Passa-ho a direcció o guarda-ho.</span>
       <button class="btn btn-sm" data-act="risk-copy">Copia el resum</button></div>`;
 }
 
@@ -241,8 +241,8 @@ function sheetConcertDecide(pid, mid) {
   };
   openSheet({
     title: r.m.name,
-    body: `<p style="margin-top:0"><b>${stateLabel(r.state)}</b><br><span class="muted" style="font-size:13.5px">${esc(r.note)}</span></p>
-      ${r.forced ? `<p class="muted" style="font-size:13px">Ara està decidit a mà${r.why ? `: ${esc(r.why)}` : ''}.</p>` : ''}
+    body: `<p style="margin-top:0"><b>${stateLabel(r.state)}</b><br><span class="muted" style="font-size:calc(13.5px*var(--ts))">${esc(r.note)}</span></p>
+      ${r.forced ? `<p class="muted" style="font-size:calc(13px*var(--ts))">Ara està decidit a mà${r.why ? `: ${esc(r.why)}` : ''}.</p>` : ''}
       <label class="field"><span>Motiu (surt a la llista)</span><input class="inp" id="cd-why" type="text" maxlength="90" value="${esc(r.forced ? r.why : '')}" placeholder="p. ex. es va incorporar tard"></label>`,
     foot: `${r.forced ? '<button class="btn" id="cd-auto">Torna a l’automàtic</button>' : ''}<span class="spacer"></span>
       <button class="btn btn-danger-ghost" id="cd-no">No hi ${V.plays}</button><button class="btn btn-primary" id="cd-yes">Hi ${V.plays}</button>`,
@@ -278,7 +278,7 @@ function balanceHtml(bal) {
       <ul class="bal-parts">${b.parts.map(pt => `<li><span>${pt.label}</span><b>${pt.n}${pt.w ? `<i>+${pt.w}</i>` : ''}</b></li>`).join('')}</ul>
       ${b.gap ? `<span class="bal-note" title="Diferència entre primeres i segones">${b.gap}</span>` : ''}
     </div>`).join('')}</div>
-    <p class="muted" style="font-size:12px;margin:8px 2px 0">«+» són els que encara hi són a temps. «1/2» ${V.plays} tant de primera com de segona. Si entre primeres i segones hi ha 3 o més de diferència, s’indica a sota.</p>`;
+    <p class="muted" style="font-size:calc(13px*var(--ts));margin:8px 2px 0">«+» són els que encara hi són a temps. «1/2» ${V.plays} tant de primera com de segona. Si entre primeres i segones hi ha 3 o més de diferència, s’indica a sota.</p>`;
 }
 function sheetConcertList(pid) {
   const { prod, dates, rows } = concertRows(pid);
@@ -320,9 +320,9 @@ function sheetConcertList(pid) {
         <div class="kpi"><div class="kpi-v">${waiting.length}</div><div class="kpi-l">Hi són a temps</div></div>
         <div class="kpi ${outList.length ? 'alert' : ''}"><div class="kpi-v">${outList.length}</div><div class="kpi-l">Fora</div></div>
       </div>
-      <p class="muted" style="font-size:12.5px;margin:10px 0 0">Feta amb la norma del ${minAttendance()}% sobre els assajos de la producció.${canEdit() ? ' Toca una persona per afegir-la o treure-la a mà, amb el motiu.' : ''}</p>
+      <p class="muted" style="font-size:calc(13px*var(--ts));margin:10px 0 0">Feta amb la norma del ${minAttendance()}% sobre els assajos de la producció.${canEdit() ? ' Toca una persona per afegir-la o treure-la a mà, amb el motiu.' : ''}</p>
       ${balanceHtml(voiceBalance(rows))}
-      ${stamp ? `<p class="muted" style="font-size:12.5px;margin:6px 0 0">Desada com a definitiva el ${(d => `${pad(d.getDate())}/${pad(d.getMonth() + 1)} a les ${pad(d.getHours())}:${pad(d.getMinutes())}`)(new Date(stamp))}${prod.concert.by ? ` per ${esc(prod.concert.by)}` : ''}.</p>` : ''}
+      ${stamp ? `<p class="muted" style="font-size:calc(13px*var(--ts));margin:6px 0 0">Desada com a definitiva el ${(d => `${pad(d.getDate())}/${pad(d.getMonth() + 1)} a les ${pad(d.getHours())}:${pad(d.getMinutes())}`)(new Date(stamp))}${prod.concert.by ? ` per ${esc(prod.concert.by)}` : ''}.</p>` : ''}
       ${SECTIONS.map(block).join('')}`,
     foot: `${canEdit() ? '<button class="btn" id="cl-final">Marca com a definitiva</button>' : ''}<span class="spacer"></span><button class="btn btn-primary" id="cl-copy">Copia la llista</button>`,
     onMount: el => {

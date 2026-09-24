@@ -132,7 +132,7 @@ function sheetPush() {
   const prefs = { ...DEFAULT_PREFS, ...(S.pushPrefs || {}) };
   const kinds = Object.entries(pushKinds()).filter(([k]) => k !== 'absencies' || myId());
   const cordes = new Set(S.pushCordes || defaultCordes());
-  const row = ([k, [l, d]]) => `<div class="toggle-row"><span><b>${l}</b><br><span class="muted" style="font-size:12.5px">${d}</span></span>
+  const row = ([k, [l, d]]) => `<div class="toggle-row"><span><b>${l}</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">${d}</span></span>
         <label class="switch"><input type="checkbox" id="pf-${k}" ${prefs[k] ? 'checked' : ''}><span></span></label></div>`;
   openSheet({
     title: 'Avisos al mòbil',
@@ -144,7 +144,7 @@ function sheetPush() {
         <div class="kv">${Object.entries(leaderKinds()).map(row).join('')}
           <div class="field"><span>De quines ${V.sections}?</span><div class="pickers" id="pf-cordes">${SECTIONS.map(x => secPick(x, cordes.has(x.id))).join('')}</div>
             <small>Si no en tries cap, no rebràs aquests dos avisos.</small></div></div>` : ''}
-      <p class="muted" style="font-size:12.5px">Els avisos surten d’aquest aparell. Si entres des d’un altre, actíva’ls també allà.</p>`,
+      <p class="muted" style="font-size:calc(13px*var(--ts))">Els avisos surten d’aquest aparell. Si entres des d’un altre, actíva’ls també allà.</p>`,
     foot: `${S.pushOn ? '<button class="btn btn-danger-ghost" id="pu-off">Desactiva’ls</button>' : ''}<span class="spacer"></span>
       <button class="btn" data-act="sheet-close">Cancel·la</button>
       <button class="btn btn-primary" id="pu-on" ${blocked ? 'disabled' : ''}>${S.pushOn ? 'Desa' : 'Activa’ls'}</button>`,

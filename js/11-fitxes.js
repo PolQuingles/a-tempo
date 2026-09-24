@@ -59,6 +59,18 @@ function toast(msg, action) {
   toastTimer = setTimeout(() => { root.innerHTML = ''; }, action ? 6000 : 2600);
 }
 
+/** Es fa ara i es pot desfer durant uns segons, en lloc de demanar confirmació. commit: el que ja no es pot desfer (esborrar
+ *  els fitxers pujats) es fa quan passa l'estona sense tocar «Desfés», o en tancar l'app. */
+const PENDING_COMMITS = new Set();
+function undoable(msg, undo, commit) {
+  let settled = false;
+  const run = () => { if (settled) return; settled = true; PENDING_COMMITS.delete(run); commit?.(); };
+  if (commit) PENDING_COMMITS.add(run);
+  setTimeout(run, 6500);
+  toast(msg, { label: 'Desfés', run: () => { if (settled) return; settled = true; PENDING_COMMITS.delete(run); undo(); render(); toast('Desfet'); } });
+}
+window.addEventListener('pagehide', () => { for (const f of [...PENDING_COMMITS]) f(); });
+
 /* ---------- Sheet: session picker ---------- */
 function sheetSessionPicker() {
   const list = allSessions();
@@ -110,7 +122,7 @@ function sheetSummary(initial) {
         <button class="pick" aria-pressed="${scope === 'sec'}" data-scope="sec">${SEC[ui.section].name}</button>
         <button class="pick" aria-pressed="${scope === 'all'}" data-scope="all">${capz(V.tot)}</button></div>
       <textarea class="summary-pre" id="summary-text" readonly>${esc(text())}</textarea>
-      <p class="muted" style="font-size:12.5px;margin:8px 0 0">Copia’l i envia’l al grup de WhatsApp o a la direcció.</p>`,
+      <p class="muted" style="font-size:calc(13px*var(--ts));margin:8px 0 0">Copia’l i envia’l al grup de WhatsApp o a la direcció.</p>`,
     foot: `<button class="btn btn-primary" id="copy-summary">Copia el resum</button>`,
     onMount: el => {
       el.querySelectorAll('[data-scope]').forEach(b => b.onclick = () => {
@@ -148,12 +160,12 @@ function sheetSessionInfo(sid) {
     ...INFO_FIELDS.filter(([k]) => s.info?.[k]).map(([k, l]) => `${l}: ${s.info[k]}`), s.note || ''].filter(Boolean).join('\n');
   openSheet({
     title: isShow(s) ? `Fitxa ${V.sh.del}` : `Fitxa · ${s.type || 'Sessió'}`,
-    body: `<div class="prod-band prod-tone" style="--ph:${prodHue(prod)}"><h2 class="h2"><i class="pdot"></i>${esc(prodNames(s))}</h2><span class="eyebrow">${esc(s.type || 'Assaig')}</span></div>
+    body: `${prod && prod.poster && isShow(s) ? `<button class="poster-banner" data-act="poster" data-pid="${esc(prod.id)}" aria-label="Cartell de ${esc(prod.name)}"><img src="${esc(prod.poster)}" alt=""></button>` : ''}<div class="prod-band prod-tone" style="--ph:${prodHue(prod)}"><h2 class="h2"><i class="pdot"></i>${esc(prodNames(s))}</h2><span class="eyebrow">${esc(s.type || 'Assaig')}</span></div>
       ${fitxaHtml(s)}
       ${s.note ? `<p class="fitxa-note">${esc(s.note)}</p>` : ''}
-      ${hasInfo(s) ? '' : `<p class="muted" style="font-size:13px">Encara no hi ha indicacions de convocatòria, vestuari ni punt de trobada.</p>`}
+      ${hasInfo(s) ? '' : `<p class="muted" style="font-size:calc(13px*var(--ts))">Encara no hi ha indicacions de convocatòria, vestuari ni punt de trobada.</p>`}
       ${planOf(s) || canEdit() ? `<div class="section-title" style="margin-top:16px"><h2 class="h2">${isShow(s) ? 'Programa' : s.date < TODAY ? 'Què s’hi va treballar' : 'Pla d’assaig'}</h2>${canEdit() ? `<button class="btn btn-sm" data-act="plan-edit" data-sid="${s.id}">${planOf(s) ? 'Edita’l' : 'Fes-lo'}</button>` : ''}</div>
-        ${planHtml(s) || `<p class="muted" style="font-size:13px;margin:0">${isShow(s) ? 'Encara no hi ha programa: quines obres es cantaran i en quin ordre.' : 'Encara no hi ha pla: quines obres i quins compassos s’assajaran.'}</p>`}` : ''}
+        ${planHtml(s) || `<p class="muted" style="font-size:calc(13px*var(--ts));margin:0">${isShow(s) ? 'Encara no hi ha programa: quines obres es cantaran i en quin ordre.' : 'Encara no hi ha pla: quines obres i quins compassos s’assajaran.'}</p>`}` : ''}
       ${isShow(s) ? balanceBlock(s) + seatingBlock(s) : ''}`,
     foot: `${canEdit() ? `<button class="btn" data-act="session-edit" data-sid="${s.id}">Edita</button>` : ''}${canEdit() && isShow(s) ? `<button class="btn" data-act="participants" data-sid="${s.id}">Llista de participants</button>` : ''}<span class="spacer"></span><button class="btn btn-primary" id="fx-copy">Copia per al grup</button>`,
     onMount: el => { el.querySelector('#fx-copy').onclick = () => copyText(text + (planOf(s) && (s.plan.items || []).length ? `\n\nPla d’assaig:\n${s.plan.items.map(it => `· ${planTitle(it)}${it.bars ? ` (c. ${it.bars})` : ''}${planItemWho(it) ? ` · ${planItemWho(it)}` : ''}`).join('\n')}` : ''), 'Fitxa copiada'); },
@@ -180,13 +192,13 @@ function sheetSession(sid, presetProd, presetDate) {
       <label class="field"><span>Hora de final</span><input class="inp" id="se-end" type="time" value="${esc(cur.end || '')}"></label></div>
       <label class="field"><span>Lloc</span><input class="inp" id="se-place" type="text" maxlength="60" value="${esc(cur.place || '')}" placeholder="Sala d’assaig"></label>
       <div class="field"><span>${V.Sections} convocades</span><div class="pickers" id="se-secs">${SECTIONS.map(x => secPick(x, secs.has(x.id))).join('')}</div></div>
-      <div class="toggle-row"><span><b>Demana confirmació</b><br><span class="muted" style="font-size:12.5px">Els ${V.members} convocats responen si hi seran</span></span><label class="switch"><input type="checkbox" id="se-rsvp" ${cur.rsvp ? 'checked' : ''}><span></span></label></div>
+      <div class="toggle-row"><span><b>Demana confirmació</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Els ${V.members} convocats responen si hi seran</span></span><label class="switch"><input type="checkbox" id="se-rsvp" ${cur.rsvp ? 'checked' : ''}><span></span></label></div>
       <label class="field" id="se-rsvpby-f" ${cur.rsvp ? '' : 'hidden'}><span>Respondre abans del (opcional)</span><input class="inp" id="se-rsvpby" type="date" value="${esc(cur.rsvpBy || '')}"></label>
       <div class="field"><span>També compta per a</span><div class="pickers" id="se-also">${prods.map(p => `<button type="button" class="pick" data-also="${p.id}" aria-pressed="${(cur.alsoIn || []).includes(p.id)}">${esc(p.name)}</button>`).join('')}</div>
         <small>Per a assajos compartits entre produccions: comptaran a les estadístiques i a la norma de totes les marcades.</small></div>
       <label class="field"><span>Nota</span><input class="inp" id="se-note" type="text" maxlength="80" value="${esc(cur.note || '')}" placeholder="p. ex. Portar partitures del Gloria"></label>
       <details class="fitxa-edit" id="se-fitxa" ${isShow(cur) || hasInfo(cur) ? 'open' : ''}>
-        <summary><span><b>Fitxa ${V.sh.del}</b><br><span class="muted" style="font-size:12.5px">Convocatòria, vestuari, punt de trobada… La veuen tots els convocats.</span></span>${ICON.chev}</summary>
+        <summary><span><b>Fitxa ${V.sh.del}</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Convocatòria, vestuari, punt de trobada… La veuen tots els convocats.</span></span>${ICON.chev}</summary>
         <div class="kv" style="margin-top:12px">
           <label class="field"><span>Hora de convocatòria</span><input class="inp" id="se-call" type="time" style="max-width:170px" value="${esc(cur.info?.call || '')}"><small>A quina hora han de ser-hi els ${V.members}.</small></label>
           <label class="field"><span>Vestuari</span><input class="inp" id="se-dress" type="text" maxlength="100" value="${esc(cur.info?.dress || '')}" placeholder="p. ex. Uniforme negre i fulard lila"></label>
@@ -237,14 +249,16 @@ function sheetSession(sid, presetProd, presetDate) {
       const del = el.querySelector('#se-del');
       if (del) del.onclick = async () => {
         const marked = SECTIONS.some(x => hasData(existing, x.id));
-        const ok = await confirmSheet('Esborrar la sessió?', `${longDate(existing.date)}${marked ? ' ja té llista passada; també se n’esborrarà l’assistència.' : ''}`, 'Esborra la sessió');
-        if (!ok) return;
+        if (marked && !await confirmSheet('Esborrar la sessió?', `${longDate(existing.date)} ja té llista passada; també se n’esborrarà l’assistència.`, 'Esborra la sessió')) return;
+        const before = clone(S.productions.get(existing.prodId));
         const p = clone(S.productions.get(existing.prodId));
         p.sessions = (p.sessions || []).filter(s => s.id !== existing.id);
         saveProduction(p);
         removeMany(SECTIONS.map(x => ['attendance', attKey(existing.id, x.id)]).filter(([, k]) => S.attendance.has(k)));
         if (ui.sessionId === existing.id) ui.sessionId = null;
-        toast('Sessió esborrada');
+        closeSheet();
+        if (marked) toast('Sessió esborrada');
+        else undoable('Sessió esborrada', () => saveProduction(before));
         render();
       };
     },
@@ -261,7 +275,7 @@ function sheetMember(mid) {
       <label class="field"><span>Nom i cognoms</span><input class="inp" id="me-name" type="text" maxlength="60" value="${esc(m.name)}" autocomplete="off"></label>
       <div class="field"><span>${V.Section}</span><div class="pickers" id="me-sec">${SECTIONS.map(x => secPick(x, m.section === x.id)).join('')}</div></div>
       <div class="field"><span>${V.Part} dins la ${V.section}</span><div class="pickers" id="me-part"><button type="button" class="pick" data-part="" aria-pressed="${!m.part}">Sense</button>${PARTS.map(v => `<button type="button" class="pick" data-part="${v}" aria-pressed="${m.part === v}">${v}</button>`).join('')}</div></div>
-      <div class="toggle-row"><span><b>${V.Leader}</b><br><span class="muted" style="font-size:12.5px">Passa llista de la seva ${V.section}</span></span><label class="switch"><input type="checkbox" id="me-leader" ${m.leader ? 'checked' : ''}><span></span></label></div>
+      <div class="toggle-row"><span><b>${V.Leader}</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Passa llista de la seva ${V.section}</span></span><label class="switch"><input type="checkbox" id="me-leader" ${m.leader ? 'checked' : ''}><span></span></label></div>
       <fieldset class="fieldset"><legend>Baixes temporals</legend>
         <div id="me-leaves" style="display:grid;gap:6px"></div>
         <div class="row3"><label class="field"><span>Des del</span><input class="inp" id="lv-from" type="date"></label><label class="field"><span>Fins al</span><input class="inp" id="lv-to" type="date"></label></div>
@@ -270,15 +284,15 @@ function sheetMember(mid) {
         <small class="muted">Durant la baixa surt en gris («No fa») i no compta a les estadístiques ni a la norma.</small>
       </fieldset>
       <label class="field"><span>Data d’alta</span><input class="inp" id="me-joined" type="date" value="${esc(m.joined || '')}" style="max-width:190px"><small>${m.joined ? `Antiguitat: ${esc(seniority(m) || '')}` : 'Quan va entrar: serveix per a l’antiguitat.'}</small></label>
-      <div class="toggle-row"><span><b>Actiu</b><br><span class="muted" style="font-size:12.5px">Desactiva’l si deixa ${V.el}; conserva l’historial</span></span><label class="switch"><input type="checkbox" id="me-active" ${m.active !== false ? 'checked' : ''}><span></span></label></div>
+      <div class="toggle-row"><span><b>Actiu</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Desactiva’l si deixa ${V.el}; conserva l’historial</span></span><label class="switch"><input type="checkbox" id="me-active" ${m.active !== false ? 'checked' : ''}><span></span></label></div>
       <div class="row2" id="me-move" hidden><label class="field"><span id="me-move-l">Data de la baixa</span><input class="inp" id="me-move-date" type="date" value="${TODAY}"></label>
         <label class="field"><span>Motiu (opcional)</span><input class="inp" id="me-move-note" maxlength="80" placeholder="p. ex. Estudis a fora, trasllat…"></label></div>
       ${(m.history || []).length ? `<div class="field"><span>Historial</span><ul class="mini-list" style="max-height:none">${m.history.slice().sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(h => `<li><span><span class="hist-k ${h.kind}">${HIST_WORD[h.kind] || h.kind}</span> ${esc(ddmm(h.date))}/${h.date.slice(2, 4)}${h.note ? ` · ${esc(h.note)}` : ''}</span></li>`).join('')}</ul></div>` : ''}
-      ${existing && canDocs() ? `<div class="toggle-row"><span><b>Documents i quota</b><br><span class="muted" style="font-size:12.5px">Drets d’imatge, protecció de dades, autoritzacions i quota</span></span><span style="display:flex;gap:6px"><button type="button" class="btn btn-sm" data-act="member-docs" data-mid="${m.id}">Documents</button><button type="button" class="btn btn-sm" data-act="fee-edit" data-mid="${m.id}">Quota</button></span></div>` : ''}
-      ${existing ? (x => `<div class="toggle-row"><span><b>Accés a l’app</b><br><span class="muted" style="font-size:12.5px">${x ? esc(x.email) : 'Encara no en té'}</span></span><button type="button" class="btn btn-sm" data-act="${x ? 'staff-edit' : 'staff-new'}" ${x ? `data-email="${esc(x.email)}"` : ''}>${x ? 'Canvia' : 'Dona-li accés'}</button></div>`)(accountFor(m.id)) : ''}
+      ${existing && canDocs() ? `<div class="toggle-row"><span><b>Documents i quota</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Drets d’imatge, protecció de dades, autoritzacions i quota</span></span><span style="display:flex;gap:6px"><button type="button" class="btn btn-sm" data-act="member-docs" data-mid="${m.id}">Documents</button><button type="button" class="btn btn-sm" data-act="fee-edit" data-mid="${m.id}">Quota</button></span></div>` : ''}
+      ${existing ? (x => `<div class="toggle-row"><span><b>Accés a l’app</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">${x ? esc(x.email) : 'Encara no en té'}</span></span><button type="button" class="btn btn-sm" data-act="${x ? 'staff-edit' : 'staff-new'}" ${x ? `data-email="${esc(x.email)}"` : ''}>${x ? 'Canvia' : 'Dona-li accés'}</button></div>`)(accountFor(m.id)) : ''}
       <label class="field"><span>Telèfon</span><input class="inp" id="me-phone" type="tel" maxlength="20" value="${esc(m.phone || '')}"></label>
       <label class="field"><span>Notes</span><input class="inp" id="me-notes" type="text" maxlength="120" value="${esc(m.notes || '')}"></label>
-      ${existing ? `<div class="field"><span>La seva fitxa</span><div id="me-profile"><span class="muted" style="font-size:13px">Carregant…</span></div></div>` : ''}
+      ${existing ? `<div class="field"><span>La seva fitxa</span><div id="me-profile"><span class="muted" style="font-size:calc(13px*var(--ts))">Carregant…</span></div></div>` : ''}
     </div>`,
     foot: `${existing ? '<button class="btn btn-danger-ghost" id="me-del">Esborra</button>' : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="me-save">Desa</button>`,
     onMount: el => {
@@ -293,7 +307,7 @@ function sheetMember(mid) {
       });
       m.leaves = [...(m.leaves || [])];
       const drawLeaves = () => {
-        el.querySelector('#me-leaves').innerHTML = m.leaves.length ? m.leaves.map((l, i) => `<div class="leave-row"><span><span class="mono">${ddmm(l.from)}/${l.from.slice(2, 4)} – ${l.to ? `${ddmm(l.to)}/${l.to.slice(2, 4)}` : 'sense data'}</span>${l.note ? ` · ${esc(l.note)}` : ''}</span><button type="button" class="icon-btn" data-lv="${i}" aria-label="Treu la baixa">${ICON.close}</button></div>`).join('') : '<span class="muted" style="font-size:13px">Cap baixa.</span>';
+        el.querySelector('#me-leaves').innerHTML = m.leaves.length ? m.leaves.map((l, i) => `<div class="leave-row"><span><span class="mono">${ddmm(l.from)}/${l.from.slice(2, 4)} – ${l.to ? `${ddmm(l.to)}/${l.to.slice(2, 4)}` : 'sense data'}</span>${l.note ? ` · ${esc(l.note)}` : ''}</span><button type="button" class="icon-btn" data-lv="${i}" aria-label="Treu la baixa">${ICON.close}</button></div>`).join('') : '<span class="muted" style="font-size:calc(13px*var(--ts))">Cap baixa.</span>';
         el.querySelectorAll('[data-lv]').forEach(b => b.onclick = () => { m.leaves.splice(+b.dataset.lv, 1); drawLeaves(); });
       };
       drawLeaves();
@@ -376,7 +390,7 @@ function sheetMemberStats(mid) {
       ${rs ? `<div class="notice" style="margin:0 0 12px;background:${rs.status === 'ok' ? 'var(--p-soft)' : rs.status === 'risk' ? 'var(--fj-soft)' : 'var(--fnj-soft)'};border:0">
         <b>${rs.status === 'ok' ? `Compleix la norma del ${minAttendance()}%` : rs.status === 'risk' ? 'En risc de no poder fer el concert' : 'No pot fer el concert'}</b>
         <span>Assistència als assajos: ${pct(rs.cur)} (${rs.att} de ${rs.att + rs.abs})${rs.remaining ? ` · queden ${rs.remaining} assajos, màxim possible ${pct(rs.best)}` : ''}.</span></div>` : ''}
-      ${leaveText(m) ? `<p class="muted" style="margin:0 0 10px;font-size:13px">${leaveText(m)}</p>` : ''}
+      ${leaveText(m) ? `<p class="muted" style="margin:0 0 10px;font-size:calc(13px*var(--ts))">${leaveText(m)}</p>` : ''}
       <div class="kpis" style="grid-template-columns:repeat(2,1fr)">
         <div class="kpi"><div class="kpi-v">${pct(rate(r))}</div><div class="kpi-l">Assistència</div></div>
         <div class="kpi"><div class="kpi-v">${r.min}<small>min</small></div><div class="kpi-l">${r.R} retards</div></div>
@@ -405,13 +419,17 @@ function sheetProduction(pid) {
 
   const sessionsList = () => d.sessions.length
     ? `<ul class="mini-list" id="pe-sessions">${[...d.sessions].sort((a, b) => a.date.localeCompare(b.date)).map(s => `<li><span><span class="mono">${ddmm(s.date)} ${wdShort(s.date)}</span> · ${esc(s.type)} <span class="mono">${esc(timeRange(s))}</span></span><button class="icon-btn" data-rm="${s.id}" aria-label="Treu la sessió">${ICON.close}</button></li>`).join('')}</ul>`
-    : '<p class="muted" style="margin:0;font-size:13.5px">Encara no hi ha sessions.</p>';
+    : '<p class="muted" style="margin:0;font-size:calc(13.5px*var(--ts))">Encara no hi ha sessions.</p>';
 
   openSheet({
     title: existing ? 'Edita la producció' : 'Nova producció', wide: true,
     body: `<div class="kv">
       <label class="field"><span>Nom</span><input class="inp" id="pe-name" type="text" maxlength="60" value="${esc(d.name)}" placeholder="p. ex. Concert de Nadal 2026"></label>
       <div class="field"><span>Color al calendari</span><div class="pickers" id="pe-hue">${PROD_HUES.map(h => `<button type="button" class="hue-pick prod-tone" style="--ph:${h}" data-hue="${h}" aria-pressed="${prodHue(d) === h}" aria-label="Color ${h}"></button>`).join('')}</div></div>
+      <div class="field"><span>Cartell</span><div class="poster-edit"><span id="pe-poster">${d.poster ? `<span class="poster-th"><img src="${esc(d.poster)}" alt=""></span>` : '<span class="poster-th empty">Cap</span>'}</span>
+        <span style="display:flex;gap:6px;flex-wrap:wrap"><label class="btn btn-sm" for="pe-poster-f">${d.poster ? 'Canvia’l' : 'Tria una imatge'}</label><input id="pe-poster-f" type="file" accept="image/*" class="sr">
+        <button type="button" class="btn btn-sm btn-ghost" id="pe-poster-rm" ${d.poster ? '' : 'hidden'}>Treu-lo</button></span></div>
+        <small>Surt a Inici, al calendari i a la fitxa ${V.sh.del}. Una foto o el PDF del cartell convertit en imatge.</small></div>
       <div class="row2"><label class="field"><span>Inici</span><input class="inp" id="pe-start" type="date" value="${d.start || ''}"></label>
       <label class="field"><span>Final</span><input class="inp" id="pe-end" type="date" value="${d.end || ''}"></label></div>
 
@@ -431,12 +449,24 @@ function sheetProduction(pid) {
       </fieldset>
 
       <fieldset class="fieldset"><legend>Qui no fa aquesta producció</legend>
-        <p class="muted" style="margin:0;font-size:12.5px">Els marcats sortiran en gris («No fa») a totes les sessions i no comptaran a les estadístiques.</p>
+        <p class="muted" style="margin:0;font-size:calc(13px*var(--ts))">Els marcats sortiran en gris («No fa») a totes les sessions i no comptaran a les estadístiques.</p>
         ${SECTIONS.map(x => { const ms = membersOf(x.id); return ms.length ? `<div class="field"><span>${x.name}</span><div class="pickers">${ms.map(mm => `<button type="button" class="pick" data-ex="${mm.id}" aria-pressed="${excluded.has(mm.id)}">${esc(mm.name)}</button>`).join('')}</div></div>` : ''; }).join('')}
       </fieldset>
     </div>`,
     foot: `${existing ? '<button class="btn btn-danger-ghost" id="pe-del">Esborra</button>' : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="pe-save">Desa</button>`,
     onMount: el => {
+      const pf = el.querySelector('#pe-poster-f');
+      pf.onchange = async () => {
+        const f = pf.files && pf.files[0];
+        if (!f) return;
+        try {
+          d.poster = await compressImage(f);
+          el.querySelector('#pe-poster').innerHTML = `<span class="poster-th"><img src="${d.poster}" alt=""></span>`;
+          el.querySelector('#pe-poster-rm').hidden = false;
+        } catch { toast('No s’ha pogut llegir la imatge. Prova amb una foto (JPG o PNG).'); }
+        pf.value = '';
+      };
+      el.querySelector('#pe-poster-rm').onclick = () => { delete d.poster; el.querySelector('#pe-poster').innerHTML = '<span class="poster-th empty">Cap</span>'; el.querySelector('#pe-poster-rm').hidden = true; };
       const bindRm = () => el.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { d.sessions = d.sessions.filter(s => s.id !== b.dataset.rm); el.querySelector('#pe-slist').innerHTML = sessionsList(); bindRm(); });
       bindRm();
       el.querySelectorAll('#g-days .pick').forEach(b => b.onclick = () => b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') !== 'true'));
@@ -541,9 +571,9 @@ function sheetAbsence(presetSid) {
     onMount: el => {
       const drawSessions = () => {
         const box = el.querySelector('#ab-sessions');
-        if (!memberId) { box.innerHTML = '<span class="muted" style="font-size:13px">Tria primer qui és.</span>'; return; }
+        if (!memberId) { box.innerHTML = '<span class="muted" style="font-size:calc(13px*var(--ts))">Tria primer qui és.</span>'; return; }
         const list = sessionsFor(memberId);
-        if (!list.length) { box.innerHTML = '<span class="muted" style="font-size:13px">No hi ha sessions properes.</span>'; return; }
+        if (!list.length) { box.innerHTML = '<span class="muted" style="font-size:calc(13px*var(--ts))">No hi ha sessions properes.</span>'; return; }
         let month = '', html = '<ul class="checklist">';
         for (const s of list) {
           const mo = s.date.slice(0, 7);

@@ -154,7 +154,7 @@ function mailCard() {
     <p>T’hem enviat un correu a <b>${e}</b>. Obre l’enllaç que hi ha per confirmar que és teu i torna aquí.</p>
     ${note}
     <div class="ml-form"><button class="btn btn-primary" data-act="mail-verified" ${m.busy ? 'disabled' : ''}>Ja l’he confirmat</button></div>
-    <p class="muted" style="font-size:12.5px">No el trobes? Mira la carpeta de correu brossa o de promocions. Arriba des de noreply@cor-present.firebaseapp.com.</p>
+    <p class="muted" style="font-size:calc(13px*var(--ts))">No el trobes? Mira la carpeta de correu brossa o de promocions. Arriba des de noreply@cor-present.firebaseapp.com.</p>
     <div class="ml-links"><button class="btn btn-sm btn-ghost" data-act="mail-resend">Torna a enviar el correu</button><button class="btn btn-sm btn-ghost" data-act="mail-out">Entra amb un altre compte</button></div>`;
   if (m.step === 'reset') return `<h2 class="h2">Recupera la contrasenya</h2>
     <p>T’enviarem un correu amb un enllaç per posar-ne una de nova.</p>

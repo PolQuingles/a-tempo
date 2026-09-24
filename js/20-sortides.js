@@ -45,7 +45,7 @@ function boardTrips() {
       ${canEdit() ? `<div class="trip-acts"><button class="btn btn-sm" data-act="trip-admin" data-id="${esc(t.id)}">Inscrits, transport i habitacions</button></div>` : ''}
     </article>`;
   };
-  return `${canEdit() ? `<div class="sec-h" style="margin-top:6px"><span class="muted" style="font-size:13px">Sortides, gires i caps de setmana: cadascú s’hi apunta, i l’equip reparteix el transport i les habitacions.</span><button class="btn btn-sm btn-primary" data-act="trip-new">+ Sortida</button></div>` : ''}
+  return `${canEdit() ? `<div class="sec-h" style="margin-top:6px"><span class="muted" style="font-size:calc(13px*var(--ts))">Sortides, gires i caps de setmana: cadascú s’hi apunta, i l’equip reparteix el transport i les habitacions.</span><button class="btn btn-sm btn-primary" data-act="trip-new">+ Sortida</button></div>` : ''}
     ${next.length ? `<div class="panel">${next.map(card).join('')}</div>` : `<div class="empty"><p>No hi ha cap sortida prevista.</p></div>`}
     ${past.length ? `<details class="np-group"><summary><span>Fetes (${past.length})</span>${ICON.chev}</summary><div class="panel">${past.map(card).join('')}</div></details>` : ''}`;
 }
@@ -92,8 +92,8 @@ function sheetTrip(id) {
     t.closed = el.querySelector('#tr-closed').checked;
   };
   const paint = el => {
-    el.querySelector('#tr-tr').innerHTML = listRows('transports', 'p. ex. Autocar 1', 'seats') || '<p class="muted" style="margin:0;font-size:13px">Cap. Si hi aneu en autocar o en tren, posa-hi cada vehicle i quantes places té.</p>';
-    el.querySelector('#tr-rm').innerHTML = listRows('rooms', 'p. ex. 204', 'beds') || '<p class="muted" style="margin:0;font-size:13px">Cap. Si hi ha allotjament, posa-hi cada habitació i quants llits té.</p>';
+    el.querySelector('#tr-tr').innerHTML = listRows('transports', 'p. ex. Autocar 1', 'seats') || '<p class="muted" style="margin:0;font-size:calc(13px*var(--ts))">Cap. Si hi aneu en autocar o en tren, posa-hi cada vehicle i quantes places té.</p>';
+    el.querySelector('#tr-rm').innerHTML = listRows('rooms', 'p. ex. 204', 'beds') || '<p class="muted" style="margin:0;font-size:calc(13px*var(--ts))">Cap. Si hi ha allotjament, posa-hi cada habitació i quants llits té.</p>';
     el.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { read(el); t.transports = t.transports.filter(x => x.id !== b.dataset.rm); t.rooms = t.rooms.filter(x => x.id !== b.dataset.rm); paint(el); });
   };
   const secs = new Set((t.sections || []).length ? t.sections : SECTIONS.map(x => x.id));
@@ -108,7 +108,7 @@ function sheetTrip(id) {
       <div class="field"><span>Per a</span><div class="pickers" id="tr-secs">${SECTIONS.map(x => secPick(x, secs.has(x.id))).join('')}</div></div>
       <div class="field"><span>Transport</span><div id="tr-tr" style="display:grid;gap:6px"></div><button type="button" class="btn btn-sm" id="tr-tr-add" style="width:max-content;margin-top:6px">+ Vehicle</button></div>
       <div class="field"><span>Habitacions</span><div id="tr-rm" style="display:grid;gap:6px"></div><button type="button" class="btn btn-sm" id="tr-rm-add" style="width:max-content;margin-top:6px">+ Habitació</button></div>
-      <div class="toggle-row"><span><b>Inscripcions tancades</b><br><span class="muted" style="font-size:12.5px">Ningú més s’hi pot apuntar ni desapuntar</span></span><label class="switch"><input type="checkbox" id="tr-closed" ${t.closed ? 'checked' : ''}><span></span></label></div>
+      <div class="toggle-row"><span><b>Inscripcions tancades</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Ningú més s’hi pot apuntar ni desapuntar</span></span><label class="switch"><input type="checkbox" id="tr-closed" ${t.closed ? 'checked' : ''}><span></span></label></div>
     </div>`,
     foot: `${ex ? '<button class="btn btn-danger-ghost" id="tr-del">Esborra</button>' : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="tr-save">Desa</button>`,
     onMount: el => {
@@ -124,10 +124,11 @@ function sheetTrip(id) {
         saveTrip(t); closeSheet(); toast(ex ? 'Sortida desada' : 'Sortida creada'); render();
       };
       el.querySelector('#tr-del')?.addEventListener('click', async () => {
-        if (!await confirmSheet('Esborrar la sortida?', `S’esborrarà <b>${esc(ex.title)}</b> amb totes les inscripcions.`, 'Esborra')) return;
+        const before = clone(ex), signups = [...S.tripSignups].filter(([, v]) => v.tripId === ex.id).map(([k, v]) => [k, clone(v)]);
         S.trips.delete(ex.id); persist('trips', ex.id, null, 20);
-        for (const [k, v] of [...S.tripSignups]) if (v.tripId === ex.id) { S.tripSignups.delete(k); persist('tripSignups', k, null, 20); }
-        toast('Sortida esborrada'); render();
+        for (const [k] of signups) { S.tripSignups.delete(k); persist('tripSignups', k, null, 20); }
+        closeSheet(); render();
+        undoable('Sortida esborrada', () => { saveTrip(before); for (const [k, v] of signups) { S.tripSignups.set(k, v); persist('tripSignups', k, v, 20); } });
       });
     },
   });
@@ -164,7 +165,7 @@ function sheetTripAdmin(id) {
   openSheet({
     title: t.title,
     wide: true,
-    body: `<p style="margin-top:0"><b>${esc(capz(tripDates(t)))}</b>${t.place ? ` · ${esc(t.place)}` : ''}<br><span class="muted" id="ta-sum" style="font-size:13.5px"></span></p><div id="ta-list"></div>`,
+    body: `<p style="margin-top:0"><b>${esc(capz(tripDates(t)))}</b>${t.place ? ` · ${esc(t.place)}` : ''}<br><span class="muted" id="ta-sum" style="font-size:calc(13.5px*var(--ts))"></span></p><div id="ta-list"></div>`,
     foot: `<span class="spacer"></span><button class="btn" id="ta-xls">Excel</button><button class="btn btn-primary" id="ta-pdf">PDF</button>`,
     onMount: el => {
       draw(el);
@@ -208,10 +209,10 @@ async function sheetMyProfile() {
       <div class="field"><span>Talla de vestuari</span><div class="pickers" id="pf-size">${SIZES.map(z => `<button type="button" class="pick" data-k="${z}" aria-pressed="${p.size === z}">${z}</button>`).join('')}</div></div>
       <div class="row2"><label class="field"><span>Contacte d’emergència</span><input class="inp" id="pf-en" maxlength="60" value="${esc(p.emergencyName || '')}" placeholder="Nom (i qui és: mare, parella…)"></label>
         <label class="field"><span>El seu telèfon</span><input class="inp" id="pf-ep" type="tel" maxlength="20" value="${esc(p.emergencyPhone || '')}"></label></div>
-      <p class="muted" style="font-size:12.5px;margin:0">Només ho veu l’equip ${esc(V.del)} (administració, direcció, gerència, secretaria i ${esc(V.leaders)}), per a les llistes dels concerts i de les sortides. La resta, no.</p>
+      <p class="muted" style="font-size:calc(13px*var(--ts));margin:0">Només ho veu l’equip ${esc(V.del)} (administració, direcció, gerència, secretaria i ${esc(V.leaders)}), per a les llistes dels concerts i de les sortides. La resta, no.</p>
       <fieldset class="fieldset"><legend>Consentiments</legend>
         <div class="field"><span>Drets d’imatge: puc sortir a les fotos i els vídeos ${esc(V.del)}</span><div class="pickers" id="pf-img">${[['yes', 'Sí'], ['no', 'No']].map(([v, t]) => `<button type="button" class="pick" data-k="${v}" aria-pressed="${p.imageOk === v}">${t}</button>`).join('')}</div></div>
-        <div class="toggle-row"><span><b>Protecció de dades</b><br><span class="muted" style="font-size:12.5px">Accepto que ${esc(ofName())} tracti les meves dades per organitzar l’activitat.</span></span><label class="switch"><input type="checkbox" id="pf-data" ${p.dataOk === 'yes' ? 'checked' : ''}><span></span></label></div>
+        <div class="toggle-row"><span><b>Protecció de dades</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Accepto que ${esc(ofName())} tracti les meves dades per organitzar l’activitat.</span></span><label class="switch"><input type="checkbox" id="pf-data" ${p.dataOk === 'yes' ? 'checked' : ''}><span></span></label></div>
         ${p.consentAt ? `<small class="muted">Respost el ${esc(ddmm(p.consentAt.slice(0, 10)))}.</small>` : ''}
       </fieldset>
       <div id="pf-mine"></div>
@@ -248,5 +249,5 @@ async function profileBox(el, mid) {
   if (!box.isConnected) return;
   box.innerHTML = p && (p.phone || p.size || p.emergencyName || p.emergencyPhone)
     ? `<dl class="fitxa">${[['Telèfon', p.phone], ['Talla', p.size], ['Emergència', [p.emergencyName, p.emergencyPhone].filter(Boolean).join(' · ')]].filter(([, v]) => v).map(([l, v]) => `<div><dt>${l}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>`
-    : '<span class="muted" style="font-size:13px">Encara no ha omplert la seva fitxa (telèfon, talla i contacte d’emergència).</span>';
+    : '<span class="muted" style="font-size:calc(13px*var(--ts))">Encara no ha omplert la seva fitxa (telèfon, talla i contacte d’emergència).</span>';
 }

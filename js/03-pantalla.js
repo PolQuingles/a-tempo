@@ -53,8 +53,12 @@ function renderTabs() {
   const logo = S.config.brand?.logo || MARCA?.logo;
   const gname = S.config.shortName || S.config.name || MARCA?.short || '';
   const side = `<div class="side-brand" aria-hidden="true">${logo ? `<img src="${esc(logo)}" alt="">` : `<span class="sb-ini">${esc(personInitials(gname))}</span>`}<span><b>${esc(gname)}</b><small>A Tempo</small></span></div>`;
+  // A l'ordinador, Gestió també és al menú lateral (al mòbil s'obre des del menú del compte).
+  const pend = canEdit() && !PREVIEW ? pendingAbsences().length : 0;
+  const gestio = canEdit() && !PREVIEW ? `<button class="tab tab-extra" data-act="manage" data-k="${pend ? 'avisos' : ROUTE_MANAGE[ui.manage] ? ui.manage : 'personal'}" aria-current="${ui.tab === 'gestio' ? 'page' : 'false'}">
+    <span class="tab-ico"><svg viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>${pend ? `<span class="tab-badge">${pend}</span>` : ''}</span>Gestió</button>` : '';
   $('.tabs-in').innerHTML = side + tabs.map(t => `<button class="tab" data-act="tab" data-tab="${t}" aria-current="${t === navTab() ? 'page' : 'false'}"${shortName(t) ? ` aria-label="${TAB_LABEL[t]}"` : ''}>
-    <span class="tab-ico"><svg viewBox="0 0 24 24">${TAB_ICONS[t]}</svg>${t === 'avisos' && badge ? `<span class="tab-badge">${badge > 99 ? '99+' : badge}</span>` : ''}</span>${shortName(t) || TAB_LABEL[t]}</button>`).join('');
+    <span class="tab-ico"><svg viewBox="0 0 24 24">${TAB_ICONS[t]}</svg>${t === 'avisos' && badge ? `<span class="tab-badge">${badge > 99 ? '99+' : badge}</span>` : ''}</span>${shortName(t) || TAB_LABEL[t]}</button>`).join('') + gestio;
 }
 /* ---------- Brand: logo and accent colour ---------- */
 function hexToHsl(hex) {
@@ -111,9 +115,22 @@ function themeRow() {
   return `<div class="setting"><div><div class="t">Aparença</div><div class="s">L’automàtica segueix el mode clar o fosc del mòbil.</div></div>
     ${themePicker()}</div>`;
 }
-/** Aparença, des del menú del compte. */
+/* ---------- Mida del text ---------- */
+// Totes les mides de lletra van amb var(--ts) (vegeu app.css): «Gran» i «Molt gran» les fan un 15 % i un 30 % més grans.
+const LS_TEXT = 'atempo:text';
+function currentText() { try { return localStorage.getItem(LS_TEXT) || ''; } catch { return ''; } }
+function setTextSize(k) {
+  try { k ? localStorage.setItem(LS_TEXT, k) : localStorage.removeItem(LS_TEXT); } catch {}
+  if (k) document.documentElement.setAttribute('data-text', k); else document.documentElement.removeAttribute('data-text');
+  $$('[data-act="text-size"]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.k === k)));
+}
+const textPicker = () => `<div class="seg3" role="radiogroup" aria-label="Mida del text">${[['', 'Normal'], ['gran', 'Gran'], ['molt', 'Molt gran']].map(([k, l]) => `<button type="button" role="radio" aria-checked="${currentText() === k}" data-act="text-size" data-k="${k}">${l}</button>`).join('')}</div>`;
+/** Aparença, des del menú del compte: el tema i la mida del text. */
 function sheetTheme() {
-  openSheet({ title: 'Aparença', body: `<p style="margin-top:0">Tria com vols veure l’app en aquest aparell. L’automàtica segueix el mode clar o fosc del mòbil.</p>${themePicker()}` });
+  openSheet({ title: 'Aparença', body: `<p style="margin-top:0">Tria com vols veure l’app en aquest aparell. L’automàtica segueix el mode clar o fosc del mòbil.</p>${themePicker()}
+    <div class="section-title" style="margin-top:18px"><h2 class="h2">Mida del text</h2></div>
+    ${textPicker()}
+    <p class="text-demo">Assaig general dijous a les 20:30. Porteu la partitura i el llapis.</p>` });
 }
 
 /* ---------- Identitat abans d'entrar ---------- */
@@ -192,7 +209,7 @@ function render() {
         ${GBTN}
         <div class="or">o bé</div>
         ${MBTN}
-        <p class="muted" style="font-size:13px;margin:0">Músics, cantaires, direcció i equip entreu pel mateix lloc.</p>
+        <p class="muted" style="font-size:calc(13px*var(--ts));margin:0">Músics, cantaires, direcció i equip entreu pel mateix lloc.</p>
       </div>
       <p class="entry-foot">Si l’has obert des del WhatsApp i no et deixa entrar, obre l’enllaç amb el <b>Safari</b> o el <b>Chrome</b> (menú «···» › Obre al navegador).</p>
     </section>`;

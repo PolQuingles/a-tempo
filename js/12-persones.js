@@ -134,7 +134,7 @@ function sheetInvite(p, fresh) {
     title: fresh ? `${firstName(p.name) || p.email} ja pot entrar` : `Convida ${p.name || p.email}`,
     body: `<p style="margin-top:0">${fresh ? 'Envia-li ara la invitació' : 'Envia-li la invitació'} des del teu correu${tel ? ' o pel WhatsApp' : ''}. Li explica com entrar${isGoogleMail(p.email) ? ' amb el seu compte de Google' : ', també si el seu correu no és de Google'}. Abans d’enviar-lo, el pots retocar al teu programa de correu.</p>
       <textarea class="summary-pre" readonly style="min-height:230px">${esc(text)}</textarea>
-      ${p.invitedAt ? `<p class="muted" style="font-size:12.5px;margin:8px 0 0">Última invitació: ${esc(agoText(p.invitedAt).toLowerCase())}.${p.lastSeen ? '' : ' Encara no ha entrat.'}</p>` : ''}`,
+      ${p.invitedAt ? `<p class="muted" style="font-size:calc(13px*var(--ts));margin:8px 0 0">Última invitació: ${esc(agoText(p.invitedAt).toLowerCase())}.${p.lastSeen ? '' : ' Encara no ha entrat.'}</p>` : ''}`,
     foot: `<button class="btn" id="inv-copy">Copia</button>${tel ? `<a class="btn" id="inv-wa" href="https://wa.me/${tel}?text=${encodeURIComponent(text)}" target="_blank" rel="noopener">WhatsApp</a>` : ''}<span class="spacer"></span><a class="btn btn-primary" id="inv-mail" href="${esc(mailtoUrl({ to: p.email, subject: inviteSubject(), body: text }))}">Envia per correu</a>`,
     onMount: el => {
       const sent = () => { markInvited([p.email]).then(() => { if (S.mode === 'shared') scheduleRender(); }); };
@@ -156,7 +156,7 @@ function sheetInviteMany(people, added) {
     body: `<p style="margin-top:0">Envia’ls la invitació en un sol correu, amb tothom en <b>còpia oculta</b>: ningú no veurà els correus dels altres. ${chunks.length > 1 ? `Són ${list.length} persones: s’envia en ${chunks.length} correus de ${size} en ${size}.` : `${list.length === 1 ? 'És 1 persona.' : `Són ${list.length} persones.`}`}</p>
       <textarea class="summary-pre" readonly style="min-height:210px">${esc(text)}</textarea>
       <div class="pickers" style="margin-top:12px">${chunks.map((c, i) => `<a class="btn ${i === 0 ? 'btn-primary' : ''}" data-chunk="${i}" href="${esc(mailtoUrl({ bcc: c.map(p => p.email), subject: inviteSubject(), body: text }))}">${chunks.length > 1 ? `Correu ${i + 1} (${i * size + 1}–${i * size + c.length})` : 'Obre el correu'}</a>`).join('')}</div>
-      <p class="muted" style="font-size:12.5px;margin:10px 0 0">Si el correu no s’obre, copia els correus i el missatge i enganxa’ls al teu programa de correu (els correus, a «Cco»).</p>`,
+      <p class="muted" style="font-size:calc(13px*var(--ts));margin:10px 0 0">Si el correu no s’obre, copia els correus i el missatge i enganxa’ls al teu programa de correu (els correus, a «Cco»).</p>`,
     foot: `<button class="btn" id="im-mails">Copia els correus</button><button class="btn" id="im-text">Copia el missatge</button><span class="spacer"></span><button class="btn" data-act="sheet-close">Fet</button>`,
     onMount: el => {
       el.querySelectorAll('[data-chunk]').forEach(a => a.addEventListener('click', () => markInvited(chunks[+a.dataset.chunk].map(p => p.email))));
@@ -191,9 +191,9 @@ function sheetStaffBulk() {
   let rows = [];
   const draw = el => {
     const box = el.querySelector('#bk-prev');
-    if (!rows.length) { box.innerHTML = '<span class="muted" style="font-size:13px">Enganxa les línies i prem «Comprova».</span>'; return; }
+    if (!rows.length) { box.innerHTML = '<span class="muted" style="font-size:calc(13px*var(--ts))">Enganxa les línies i prem «Comprova».</span>'; return; }
     const ok = rows.filter(r => r.member).length;
-    box.innerHTML = `<p style="margin:0 0 8px;font-size:13.5px"><b>${rows.length}</b> correus · <b>${ok}</b> vinculats a la plantilla${ok < rows.length ? ` · <b>${rows.length - ok}</b> sense vincular` : ''}</p>
+    box.innerHTML = `<p style="margin:0 0 8px;font-size:calc(13.5px*var(--ts))"><b>${rows.length}</b> correus · <b>${ok}</b> vinculats a la plantilla${ok < rows.length ? ` · <b>${rows.length - ok}</b> sense vincular` : ''}</p>
       <ul class="mini-list" style="max-height:260px">${rows.map((r, i) => `<li><span>${esc(r.mail)}<br><span class="m">${r.member ? esc(r.member.name) + ' · ' + esc(SEC[r.member.section].name) : 'sense fitxa — es desarà com a ' + (r.name ? esc(r.name) : 'només correu')}</span></span>
         <span class="rsvp ${r.member ? 'yes' : 'none'}">${r.member ? 'Vinculat' : 'Sense vincle'}</span></li>`).join('')}</ul>`;
   };
