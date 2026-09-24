@@ -59,6 +59,8 @@ const actions = {
   'doc-edit': el => sheetDocument(el.dataset.id),
   'theme': el => setTheme(el.dataset.k),
   'account': () => sheetAccount(),
+  'install-hide': () => { lsSet(LS_INSTALL, String(Date.now())); render(); },
+  'install-go': async () => { const p = installPrompt; if (!p) return; installPrompt = null; try { await p.prompt(); await p.userChoice; } catch {} render(); },
   'acct-open': el => { const f = ACCT_SHEETS[el.dataset.k]; if (f) { SHEET_BACK.at = Date.now(); f(); } },
   'concert-list': el => { closeSheet(); sheetConcertList(el.dataset.pid); },
   'concert-toggle': el => sheetConcertDecide(el.dataset.pid, el.dataset.mid),

@@ -209,6 +209,18 @@ def main():
         check(page.evaluate("window.__marca === undefined"), "si en tornar-hi ja és un altre dia, l'app es recarrega sola")
         ctx.close()
 
+        print("Instal·lar l'app")
+        IPHONE = dict(MOBILE, user_agent="Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1")
+        ctx, page, errors = open_app(browser, base, "singer", IPHONE)
+        check(page.locator(".install-card").count() == 1 and "Comparteix" in page.inner_text(".install-card"), "a l'iPhone, Inici explica com posar l'app a la pantalla d'inici")
+        page.click('[data-act="install-hide"]'); page.wait_for_timeout(300)
+        check(page.locator(".install-card").count() == 0, "«Ara no» l'amaga")
+        check(not errors, "sense errors a la guia d'instal·lació", "; ".join(errors[:3]))
+        ctx.close()
+        ctx, page, errors = open_app(browser, base, "pol", DESKTOP)
+        check(page.locator(".install-card").count() == 0, "a l'ordinador no surt")
+        ctx.close()
+
         print("Importador d'horaris i aula")
         ctx, page, errors = open_app(browser, base, "pol", MOBILE)
         r = page.evaluate("""() => { const p = parseSchedule(['Dilluns — Matí Aula 2 Petit Palau', '', '10:40 –11:20 Anna Puig',
