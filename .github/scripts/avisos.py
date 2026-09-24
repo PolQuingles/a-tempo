@@ -46,7 +46,7 @@ EVENING = 18 <= NOW.hour < 21                   # finestra dels recordatoris del
 # La norma d'assistència només canvia quan es passa llista: es revisa dos cops al dia.
 RISK_TIME = os.environ.get("AVISOS_RISK") == "1" or (NOW.hour in (10, 19) and NOW.minute < 30)
 
-DEFAULT_PREFS = {"anuncis": True, "convocatories": True, "enquestes": True, "assajos": False,
+DEFAULT_PREFS = {"missatges": True, "anuncis": True, "convocatories": True, "enquestes": True, "assajos": False,
                  "materials": True, "absencies": True, "llistes": True, "risc": True, "classes": True}
 EDIT_ROLES = {"admin", "director", "gerencia", "secretaria", "leader", "palau"}
 
@@ -222,6 +222,47 @@ class Group:
                 if secs and d.get("section") and d["section"] not in secs:
                     continue
                 self.deliver(f"ann:{aid}:{did}", d, a.get("title", "Nou anunci al tauler"), f"ann-{aid}")
+
+    # ---------- 1b. Missatges (dins l'app) i enquestes noves ----------
+    def messages(self):
+        """Un missatge arriba als aparells de la seva corda (o a tots si és per a tothom), menys al de qui l'ha escrit."""
+        fresh = r.query(self.base, "messages", [("createdAt", ">=", FRESH)])
+        if "messages" not in self.state:
+            # Primer cop amb missatges: el que ja hi ha no s'avisa.
+            self.state["messages"] = list(fresh.keys())
+            return
+        if QUIET:
+            return
+        for mid_, m in sorted(fresh.items(), key=lambda kv: kv[1].get("createdAt") or ""):
+            if mid_ in self.state["messages"]:
+                continue
+            to = m.get("to") or ["*"]
+            head = m.get("byName") or "Missatge"
+            text = m.get("title") or m.get("body") or ""
+            for did, d in self.targets("missatges"):
+                if d.get("email") and d.get("email") == m.get("by"):
+                    continue
+                if "*" not in to and d.get("section") not in to:
+                    continue
+                self.deliver(f"msg:{mid_}:{did}", d, f"{head}: {text[:140]}", f"msg-{mid_}")
+            self.state["messages"].append(mid_)
+
+    def new_polls(self):
+        fresh = r.query(self.base, "polls", [("createdAt", ">=", FRESH)])
+        if "polls_new" not in self.state:
+            self.state["polls_new"] = list(fresh.keys())
+            return
+        if QUIET:
+            return
+        for pid, p in fresh.items():
+            if pid in self.state["polls_new"] or p.get("closed"):
+                continue
+            secs = p.get("sections") or []
+            for did, d in self.targets("enquestes"):
+                if secs and d.get("section") and d["section"] not in secs:
+                    continue
+                self.deliver(f"pollnew:{pid}:{did}", d, f"Nova enquesta: {p.get('title', '')}", f"poll-{pid}")
+            self.state["polls_new"].append(pid)
 
     # ---------- 2. Convocatòries per confirmar ----------
     def convocations(self):
@@ -567,6 +608,8 @@ class Group:
 
     def run(self):
         self.announcements()
+        self.messages()
+        self.new_polls()
         if not self.first_run and EVENING and not QUIET:
             self.convocations()
             self.polls()
@@ -583,6 +626,9 @@ class Group:
         cut = (NOW - datetime.timedelta(days=35)).isoformat(timespec="seconds")
         self.state["sent"] = {k: v for k, v in self.sent.items() if v >= cut}
         self.state["announcements"] = self.state["announcements"][-400:]
+        for k in ("messages", "polls_new"):
+            if k in self.state:
+                self.state[k] = self.state[k][-400:]
         self.state["dead"] = sorted(self.dead)
         self.state["fails"] = {k: v for k, v in self.fails.items() if k not in self.dead}
         os.makedirs(os.path.dirname(self.state_path) or ".", exist_ok=True)

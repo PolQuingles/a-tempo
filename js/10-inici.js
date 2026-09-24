@@ -51,6 +51,7 @@ const TODO_ICONS = {
   cls: TAB_ICONS.classes,
   trip: '<path d="M4 16.5V8a2 2 0 012-2h12a2 2 0 012 2v8.5"/><path d="M3 16.5h18M7 19.5v-3M17 19.5v-3M4 11h16"/>',
   voices: '<path d="M4 20V11M9 20V6M14 20v-9M19 20V9"/><path d="M3 20h18"/>',
+  msg: '<path d="M4 5.5h16v10.5H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/>',
 };
 const unreadAnnouncements = () => { const seen = lsGet(LS_SEEN) || ''; return visibleAnnouncements().filter(a => (a.createdAt || '') > seen && (!a.until || a.until >= TODAY)); };
 /** Les seccions on em toca passar llista: la dels caps de corda o de secció. */
@@ -86,6 +87,8 @@ function todoItems() {
     const polls = openPolls().filter(p => !S.pollVotes.get(`${p.id}_${me.id}`));
     if (polls.length) out.push({ icon: 'poll', t: `${polls.length === 1 ? '1 enquesta' : `${polls.length} enquestes`} per respondre`, s: esc(polls[0].title || ''), btn: 'Respon', act: 'data-act="board-polls"', n: polls.length });
   }
+  const msgs = unreadMessages();
+  if (msgs.length) out.push({ icon: 'msg', t: `${msgs.length === 1 ? '1 missatge nou' : `${msgs.length} missatges nous`}`, s: esc(`${msgs[0].byName || ''}: ${msgs[0].title || msgs[0].body || ''}`.slice(0, 90)), btn: 'Llegeix', act: 'data-act="msg-list"', n: msgs.length });
   for (const t of tripsToAnswer()) out.push({ icon: 'trip', t: `${esc(t.title)}: t’hi apuntes?`, s: `${esc(capz(tripDates(t)))}${t.deadline ? ` · fins al ${ddmm(t.deadline)}` : ''}`, btn: 'Respon', act: 'data-act="board-trips"', n: 1 });
   for (const { s, short } of shortConcerts()) out.push({ icon: 'voices', t: `${esc(capz(V.sh.show))} del ${esc(shortDate(s.date))}: ${short.map(b => `${b.min - b.yes === 1 ? 'falta' : 'falten'} ${b.min - b.yes} ${esc(b.x.name.toLowerCase())}`).join(' i ')}`, s: `${esc(short.map(b => `${b.x.name}: ${b.yes} de ${b.min}`).join(' · '))}`, btn: 'Mira-ho', act: `data-act="session-info" data-sid="${esc(s.id)}"`, n: 0 });
   const news = unreadAnnouncements();
@@ -185,6 +188,7 @@ function viewHome() {
     <div class="home-grid"><div class="home-a">
     ${todayBlock(me)}
     ${todoBlock(me)}
+    ${messagesBlock()}
     </div><div class="home-b">
     ${soon.length ? `<div class="section-title"><h2 class="h2">Properament</h2></div><div class="soon">${soon.join('')}</div>` : ''}
     ${me ? `${myAttendanceCard(me)}

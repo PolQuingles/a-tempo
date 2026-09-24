@@ -9,14 +9,15 @@ def put(p, v): DB[p] = v
 put(f"agrupacions/{F}", {"name": "Cor Jove de proves", "kind": "cor", "status": "active"})
 put(f"cors/{F}/config/main", {"name": "Cor Jove de proves", "shortName": "Cor Jove", "alertFNJ": 3, "minAttendance": 80,
     "brand": {"accent": "#5A3577"}, "classesOn": True, "teachers": [{"id": "pfanais", "name": "Anaïs Oliveras"}],
-    "season": {"from": d(-20), "to": d(260), "name": "Temporada"}, "voiceMin": {"T": 5}, "terms": [{"name": "1r trimestre", "from": d(-20), "to": d(90)}]})
+    "season": {"from": d(-20), "to": d(260), "name": "Temporada"}, "voiceMin": {"T": 5}, "feeAmount": 120, "terms": [{"name": "1r trimestre", "from": d(-20), "to": d(90)}]})
 names = {"S": ["Anna Puig", "Laia Ferrer", "Marta Soler", "Clara Vila"], "C": ["Júlia Mas", "Neus Roca", "Ona Serra", "Pau Riera"],
          "T": ["Lluc Tenor", "Marc Bosch", "Oriol Camps", "Jan Pons"], "B": ["Pere Font", "Joan Sala", "Biel Costa", "Arnau Prat"]}
 mid = {}
 for sec, ns in names.items():
     for i, n in enumerate(ns):
         m = f"m{sec}{i}"; mid[n] = m
-        put(f"cors/{F}/members/{m}", {"id": m, "name": n, "section": sec, "active": True, "leader": n == "Lluc Tenor", "part": "1" if i % 2 == 0 else "2"})
+        put(f"cors/{F}/members/{m}", {"id": m, "name": n, "section": sec, "active": True, "leader": n == "Lluc Tenor", "part": "1" if i % 2 == 0 else "2",
+                                      "joined": f"{2019 + i}-09-15", "history": [{"date": f"{2019 + i}-09-15", "kind": "alta", "note": ""}]})
 sessions = [{"id": f"s{i}", "date": d(k), "time": "20:30", "end": "22:30", "type": t, "place": "Sala d'assaig", "note": ""}
             for i, (k, t) in enumerate([(-9, "Assaig"), (-6, "Assaig"), (-2, "Assaig"), (0, "Assaig"), (3, "Assaig"), (7, "Assaig general"), (10, "Concert")])]
 sessions[4]["plan"] = {"items": [{"id": "pi1", "work": "w1", "title": "", "bars": "1-40", "who": "", "note": "De memòria"}, {"id": "pi2", "work": "", "title": "Escalfament", "bars": "", "who": "T", "note": ""}], "text": "Porteu llapis."}
@@ -49,6 +50,9 @@ put(f"cors/{F}/tripSignups/t1_{mid['Marc Bosch']}", {"tripId": "t1", "memberId":
 for n in ["Anna Puig", "Laia Ferrer", "Marc Bosch", "Lluc Tenor"]:
     put(f"cors/{F}/rsvp/s6_{mid[n]}", {"sessionId": "s6", "memberId": mid[n], "answer": "yes"})
 put(f"cors/{F}/profiles/{mid['Marc Bosch']}", {"memberId": mid["Marc Bosch"], "phone": "600000001", "size": "L", "emergencyName": "Mare", "emergencyPhone": "600000002"})
+put(f"cors/{F}/messages/g1", {"id": "g1", "to": ["*"], "title": "Benvinguda", "body": "Comencem el curs dilluns.", "by": "ger@exemple.cat", "byName": "Gemma Gerent", "byRole": "Gerència", "createdAt": now})
+put(f"cors/{F}/messages/g2", {"id": "g2", "to": ["T"], "title": "", "body": "Tenors: porteu la partitura del Gloria.", "by": "leader@exemple.cat", "byName": "Lluc Tenor", "byRole": "Cap de corda de tenors", "createdAt": now})
+put(f"cors/{F}/memberDocs/{mid['Anna Puig']}", {"memberId": mid["Anna Puig"], "docs": {"imatge": {"v": "no", "at": d(-3)}}, "fees": {}})
 put(f"cors/{F}/announcements/n1", {"id": "n1", "title": "Benvinguts al curs", "body": "Recordeu portar les partitures.", "author": "Pol Proves", "createdAt": now})
 for k, wd in [(1, 0), (3, 0), (8, 0)]:
     cid = f"c{k}"

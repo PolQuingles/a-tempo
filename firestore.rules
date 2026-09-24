@@ -70,6 +70,14 @@ service cloud.firestore {
 
     function canEdit(c) { return isStaff(c) && rolesOf(staffData(c)).hasAny(['admin', 'director', 'gerencia', 'secretaria', 'leader', 'palau']); }
     function isAdmin(c) { return isStaff(c) && rolesOf(staffData(c)).hasAny(['admin']); }
+    // Rols de la fitxa del personal (hasRole és el dels enllaços antics): per als missatges, les notes i la secretaria.
+    function staffHas(c, roles) { return isStaff(c) && rolesOf(staffData(c)).hasAny(roles); }
+    function staffSection(c) { return staffData(c).get('section', '-'); }
+    // La corda de qui llegeix, segons la seva fitxa de la plantilla.
+    function memberSection(c) {
+      let p = /databases/$(database)/documents/cors/$(c)/members/$(myMember(c));
+      return exists(p) ? get(p).data.get('section', '-') : '-';
+    }
     // El membre de la plantilla de qui som (si la fitxa en porta).
     function myMember(c) { return staffData(c).get('memberId', '-'); }
     // Té espai personal: pot avisar, confirmar, votar i fer de substitut.
@@ -237,7 +245,9 @@ service cloud.firestore {
         allow read: if canEdit(c) || (hasSpace(c) && mine(c, mid));
         allow create, update: if canEdit(c) || (hasSpace(c) && mine(c, mid)
           && request.resource.data.memberId == mid
-          && request.resource.data.keys().hasOnly(['memberId', 'phone', 'size', 'emergencyName', 'emergencyPhone', 'at'])
+          && request.resource.data.keys().hasOnly(['memberId', 'phone', 'size', 'emergencyName', 'emergencyPhone', 'at', 'imageOk', 'dataOk', 'consentAt'])
+          && (!('imageOk' in request.resource.data) || request.resource.data.imageOk in ['yes', 'no', ''])
+          && (!('dataOk' in request.resource.data) || request.resource.data.dataOk in ['yes', ''])
           && shortText(request.resource.data, 'phone', 20) && shortText(request.resource.data, 'size', 10)
           && shortText(request.resource.data, 'emergencyName', 60) && shortText(request.resource.data, 'emergencyPhone', 20));
         allow delete: if canEdit(c);
@@ -280,6 +290,36 @@ service cloud.firestore {
           && request.resource.data.token is string
           && request.resource.data.token.size() >= 24 && request.resource.data.token.size() <= 64;
         allow delete: if teaches(c) || (hasSpace(c) && mine(c, mid));
+      }
+      // Missatges dins l'app: el cap de corda escriu només a la seva corda; administració, direcció, gerència i
+      // secretaria, a tothom ('*') o a les cordes que triïn. Cadascú llegeix els de la seva corda i els de tothom.
+      match /messages/{id} {
+        allow read: if canEdit(c) || hasRole(c, ['backup']) || isService()
+          || (isStaff(c) && ('*' in resource.data.to || memberSection(c) in resource.data.to));
+        allow create: if canEdit(c)
+          && request.resource.data.by == email()
+          && request.resource.data.to is list && request.resource.data.to.size() > 0 && request.resource.data.to.size() <= 20
+          && request.resource.data.body is string && request.resource.data.body.size() <= 2000
+          && (staffHas(c, ['admin', 'director', 'gerencia', 'secretaria']) || request.resource.data.to == [staffSection(c)]);
+        allow delete: if isAdmin(c) || (canEdit(c) && resource.data.by == email());
+      }
+      // Notes de seguiment de cada persona: només la direcció, l'administració i els caps de corda (de la seva corda).
+      match /memberNotes/{id} {
+        allow read: if staffHas(c, ['admin', 'director']) || hasRole(c, ['backup']) || isService()
+          || (staffHas(c, ['leader']) && resource.data.section == staffSection(c));
+        allow create: if (staffHas(c, ['admin', 'director']) || (staffHas(c, ['leader']) && request.resource.data.section == staffSection(c)))
+          && request.resource.data.by == email()
+          && request.resource.data.text is string && request.resource.data.text.size() <= 1000;
+        allow delete: if staffHas(c, ['admin', 'director']) || (staffHas(c, ['leader']) && resource.data.by == email());
+      }
+      // Secretaria: documents (drets d'imatge, dades, autoritzacions) i quotes de cada persona, i els documents signats.
+      match /memberDocs/{mid} {
+        allow read: if staffHas(c, ['admin', 'secretaria', 'gerencia', 'director']) || (hasSpace(c) && mine(c, mid)) || hasRole(c, ['backup']) || isService();
+        allow create, update, delete: if staffHas(c, ['admin', 'secretaria', 'gerencia']);
+      }
+      match /memberFiles/{id} {
+        allow read: if staffHas(c, ['admin', 'secretaria', 'gerencia', 'director']) || (hasSpace(c) && mine(c, resource.data.memberId)) || hasRole(c, ['backup']) || isService();
+        allow create, update, delete: if staffHas(c, ['admin', 'secretaria', 'gerencia']);
       }
       // La fitxa de cant de cada alumne (objectius i repertori): la fa el professorat i la veu l'alumne.
       match /students/{mid} {

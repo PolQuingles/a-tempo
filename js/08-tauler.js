@@ -55,7 +55,8 @@ function boardAnnouncements() {
 const FILE_CHUNK = 700 * 1024;
 const FILE_MAX = 20 * 1024 * 1024;
 // Els enregistraments de classe (where: 'classFiles') van a part: només els llegeixen el professorat i l'alumne.
-const chunkPath = (fid, i, where) => where === 'classFiles' ? `classFiles/${fid}_${i}` : `config/fitxer_${fid}_${i}`;
+// Igual els documents signats de cada persona (where: 'memberFiles'): només l'equip de secretaria i la persona.
+const chunkPath = (fid, i, where) => ['classFiles', 'memberFiles'].includes(where) ? `${where}/${fid}_${i}` : `config/fitxer_${fid}_${i}`;
 const fmtSize = n => !n ? '0 MB' : n < 1024 ? `${n} B` : n < 1048576 ? `${Math.max(1, Math.round(n / 1024))} KB` : `${(n / 1048576).toFixed(1).replace('.', ',')} MB`;
 function fileKind(f) {
   const t = f.type || '', ext = (f.name.split('.').pop() || '').toLowerCase();
@@ -113,7 +114,7 @@ function sheetOpenFile(f, title) {
         box.innerHTML = `${media}
           <p class="muted" style="margin:${media ? '12px' : '0'} 0 14px;font-size:13px;overflow-wrap:anywhere">${esc(f.name)} · ${esc(kind)} · ${fmtSize(f.size)}${kept ? ' · desat al mòbil' : ''}</p>
           <div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn btn-primary" href="${url}" target="_blank" rel="noopener">Obre</a><a class="btn" href="${url}" download="${esc(f.name)}">Desa al dispositiu</a>
-            ${f.where !== 'classFiles' && 'caches' in window ? `<button class="btn" id="fo-keep">${kept ? 'Treu-lo del mòbil' : 'Tenir-lo sense cobertura'}</button>` : ''}</div>`;
+            ${!f.where && 'caches' in window ? `<button class="btn" id="fo-keep">${kept ? 'Treu-lo del mòbil' : 'Tenir-lo sense cobertura'}</button>` : ''}</div>`;
         bindStudyPlayer(box);
         box.querySelector('#fo-keep')?.addEventListener('click', async e => {
           try {

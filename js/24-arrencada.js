@@ -1,4 +1,4 @@
-// A Tempo · 22-arrencada.js — Arrencada de l'app, entrada amb correu i contrasenya, i init().
+// A Tempo · 24-arrencada.js — Arrencada de l'app, entrada amb correu i contrasenya, i init().
 // Els fitxers de js/ són scripts clàssics que comparteixen l'àmbit global i es carreguen en ordre (vegeu index.html).
 'use strict';
 
@@ -28,6 +28,7 @@ function afterReady() {
   const g = S.groups.find(x => x.id === GID);
   if (g && S.config.name && g.name !== S.config.name) { g.name = S.config.name; saveGroupsCache(); }
   touchLastSeen();
+  watchMessages();
   checkPush();
   syncDirectory();
   // Si s'obre des d'un botó d'una notificació, primer es fa el que s'hi ha triat (i no surt la benvinguda).

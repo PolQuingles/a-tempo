@@ -209,13 +209,30 @@ async function sheetMyProfile() {
       <div class="row2"><label class="field"><span>Contacte d’emergència</span><input class="inp" id="pf-en" maxlength="60" value="${esc(p.emergencyName || '')}" placeholder="Nom (i qui és: mare, parella…)"></label>
         <label class="field"><span>El seu telèfon</span><input class="inp" id="pf-ep" type="tel" maxlength="20" value="${esc(p.emergencyPhone || '')}"></label></div>
       <p class="muted" style="font-size:12.5px;margin:0">Només ho veu l’equip ${esc(V.del)} (administració, direcció, gerència, secretaria i ${esc(V.leaders)}), per a les llistes dels concerts i de les sortides. La resta, no.</p>
+      <fieldset class="fieldset"><legend>Consentiments</legend>
+        <div class="field"><span>Drets d’imatge: puc sortir a les fotos i els vídeos ${esc(V.del)}</span><div class="pickers" id="pf-img">${[['yes', 'Sí'], ['no', 'No']].map(([v, t]) => `<button type="button" class="pick" data-k="${v}" aria-pressed="${p.imageOk === v}">${t}</button>`).join('')}</div></div>
+        <div class="toggle-row"><span><b>Protecció de dades</b><br><span class="muted" style="font-size:12.5px">Accepto que ${esc(ofName())} tracti les meves dades per organitzar l’activitat.</span></span><label class="switch"><input type="checkbox" id="pf-data" ${p.dataOk === 'yes' ? 'checked' : ''}><span></span></label></div>
+        ${p.consentAt ? `<small class="muted">Respost el ${esc(ddmm(p.consentAt.slice(0, 10)))}.</small>` : ''}
+      </fieldset>
+      <div id="pf-mine"></div>
     </div>`,
     foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="pf-save">Desa</button>`,
     onMount: el => {
       el.querySelectorAll('#pf-size .pick').forEach(b => b.onclick = () => { const on = b.getAttribute('aria-pressed') !== 'true'; el.querySelectorAll('#pf-size .pick').forEach(x => x.setAttribute('aria-pressed', on && x === b)); });
+      el.querySelectorAll('#pf-img .pick').forEach(b => b.onclick = () => el.querySelectorAll('#pf-img .pick').forEach(x => x.setAttribute('aria-pressed', x === b)));
+      // La quota i els documents que té posats la secretaria (només es poden mirar).
+      db.doc(`memberDocs/${mid}`).get().then(d => {
+        const box = el.querySelector('#pf-mine');
+        if (!box || !d.exists) return;
+        const x = d.data(), f = (x.fees || {})[feeKey()];
+        box.innerHTML = `<dl class="fitxa"><div><dt>Quota ${esc(feeKey())}</dt><dd>${f?.paid ? `Pagada${f.date ? ` el ${esc(ddmm(f.date))}` : ''}` : 'Pendent'}</dd></div>
+          ${DOC_ITEMS.filter(([k]) => x.docs?.[k]?.v).map(([k, l]) => `<div><dt>${esc(l)}</dt><dd>${x.docs[k].v === 'yes' ? 'Sí' : 'No'}${x.docs[k].file ? ' · document signat' : ''}</dd></div>`).join('')}</dl>`;
+      }).catch(() => {});
       el.querySelector('#pf-save').onclick = async () => {
         const rec = { memberId: mid, phone: el.querySelector('#pf-phone').value.trim(), size: el.querySelector('#pf-size .pick[aria-pressed="true"]')?.dataset.k || '',
-          emergencyName: el.querySelector('#pf-en').value.trim(), emergencyPhone: el.querySelector('#pf-ep').value.trim(), at: new Date().toISOString() };
+          emergencyName: el.querySelector('#pf-en').value.trim(), emergencyPhone: el.querySelector('#pf-ep').value.trim(), at: new Date().toISOString(),
+          imageOk: el.querySelector('#pf-img .pick[aria-pressed="true"]')?.dataset.k || '', dataOk: el.querySelector('#pf-data').checked ? 'yes' : '' };
+        rec.consentAt = rec.imageOk !== (p.imageOk || '') || rec.dataOk !== (p.dataOk || '') ? rec.at : (p.consentAt || '');
         try { await db.doc(`profiles/${mid}`).set(rec); if (S.profiles) S.profiles.set(mid, rec); closeSheet(); toast('Fitxa desada'); }
         catch { toast('No s’ha pogut desar. Comprova la connexió.'); }
       };

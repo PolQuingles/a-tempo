@@ -295,6 +295,65 @@ def main():
         check(not errors, "sense errors a les sortides i a la fitxa", "; ".join(errors[:3]))
         ctx.close()
 
+        print("Missatges, notes de seguiment i secretaria")
+        ctx, page, errors = open_app(browser, base, "leader", MOBILE)
+        r = page.evaluate("""async () => {
+          const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          out.button = !!document.querySelector('#view [data-act="msg-new"]');
+          sheetMessage(); await s(200);
+          document.querySelector('#mg-body').value = 'Tenors, assaig parcial dijous a les 19 h.';
+          document.querySelector('#mg-send').click(); await s(200); flushAll(); await s(300);
+          out.sent = [...S.messages.values()].some(m => m.body.startsWith('Tenors, assaig') && m.to.length === 1 && m.to[0] === 'T');
+          const tenor = membersOf('T').find(m => m.id !== myMemberId());
+          sheetMemberStats(tenor.id); await s(600);
+          out.track = !!document.querySelector('#ms-track #tn-text');
+          document.querySelector('#tn-text').value = 'Bona evolució als aguts'; document.querySelector('#tn-save').click(); await s(400);
+          out.note = (await firebase.firestore().collection(`cors/${GID}/memberNotes`).where('memberId', '==', tenor.id).get()).docs.some(d => d.data().section === 'T');
+          return out;
+        }""")
+        check(r["button"], "el cap de corda té «Missatge a la corda» a Inici", str(r))
+        check(r["sent"], "el missatge del cap de corda va només a la seva corda", str(r))
+        check(r["track"] and r["note"], "el cap de corda escriu notes de seguiment dels de la seva corda", str(r))
+        check(not errors, "sense errors als missatges del cap de corda", "; ".join(errors[:3]))
+        ctx.close()
+        ctx, page, errors = open_app(browser, base, "singer", MOBILE)
+        r = page.evaluate("""() => ({ mine: messagesForMe().map(m => m.id).sort().join(','), todo: todoItems().some(x => x.icon === 'msg'), write: canMessage(),
+          track: canTrack(S.members.get(myMemberId())), block: !!document.querySelector('#view .msgs') })""")
+        check(r["mine"] == "g1", "una soprano rep el missatge a tothom i no el dels tenors", str(r))
+        check(r["todo"] and r["block"], "els missatges nous surten a Inici i a «Per fer»", str(r))
+        check(not r["write"] and not r["track"], "un cantaire no escriu missatges ni veu notes de seguiment", str(r))
+        ctx.close()
+        ctx, page, errors = open_app(browser, base, "ger", MOBILE)
+        r = page.evaluate("""async () => {
+          const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          let csv = ''; window.offerFile = (name, text) => { csv = text; };
+          ui.tab = 'gestio'; ui.manage = 'personal'; ui.people = 'docs'; render(); await s(700);
+          out.docs = document.querySelector('#view').innerText.includes('No poden sortir a fotos');
+          out.noImg = document.querySelector('#view').innerText.includes('Anna Puig');
+          const m = membersOf('B')[0];
+          await markFeePaid(m.id); await s(200);
+          out.fee = docsOf(m.id).fees[feeKey()].paid === true && docsOf(m.id).fees[feeKey()].amount === 120;
+          sheetMember(m.id); await s(300);
+          const act = document.querySelector('#me-active'); act.checked = false; act.dispatchEvent(new Event('change'));
+          out.moveShown = !document.querySelector('#me-move').hidden;
+          document.querySelector('#me-move-note').value = 'Estudis a fora';
+          document.querySelector('#me-save').click(); await s(300);
+          const h = S.members.get(m.id).history || [];
+          out.history = h.some(x => x.kind === 'baixa' && x.note === 'Estudis a fora');
+          await exportRoster(); await s(200);
+          out.csv = csv.includes('Data d’alta') && csv.includes('Antiguitat') && csv.includes('Drets d’imatge');
+          ui.people = 'altes'; render(); await s(200);
+          out.altes = document.querySelector('#view').innerText.includes('Baixes aquesta temporada');
+          return out;
+        }""")
+        for k, label in [("docs", "Personal › Documents mostra qui no pot sortir a fotos"), ("noImg", "hi surt qui ha dit que no a les fotos"),
+                         ("fee", "es marca una quota com a pagada"), ("moveShown", "en desactivar algú, es demana la data i el motiu de la baixa"),
+                         ("history", "la baixa queda a l'historial"), ("csv", "la plantilla s'exporta a Excel amb l'antiguitat i els documents"),
+                         ("altes", "Personal › Altes i baixes té les xifres de la temporada")]:
+            check(r.get(k), label, str(r))
+        check(not errors, "sense errors a secretaria", "; ".join(errors[:3]))
+        ctx.close()
+
         print("Registre d'errors")
         ctx, page, errors = open_app(browser, base, "pol", MOBILE)
         page.evaluate("setTimeout(() => { funcioQueNoExisteix(); }, 0)")

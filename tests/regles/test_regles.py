@@ -79,6 +79,17 @@ def lst(path, tok):
     return req("GET", f"{BASE}/{path}?pageSize=50", tok=tok)[0]
 
 
+def qry(parent, col, filters, tok):
+    """Una consulta amb filtres (com les de l'app): [(camp, op, valor)], op de l'API REST (EQUAL, ARRAY_CONTAINS…)."""
+    where = [{"fieldFilter": {"field": {"fieldPath": f}, "op": op, "value": enc(v)}} for f, op, v in filters]
+    sq = {"from": [{"collectionId": col}]}
+    if len(where) == 1:
+        sq["where"] = where[0]
+    elif where:
+        sq["where"] = {"compositeFilter": {"op": "AND", "filters": where}}
+    return req("POST", f"{BASE}/{parent}:runQuery", {"structuredQuery": sq}, tok)[0]
+
+
 OWNER = "owner"
 
 
@@ -449,6 +460,50 @@ expect("N26 un altre cantaire l'escolta", get(f"cors/{F}/classFiles/f1_0", T["pa
 expect("N27 l'alumne en puja un", commit([upd(f"cors/{F}/classFiles/f2_0", {"i": 0, "of": 1, "memberId": "m1"})], T["singer"]), False)
 for col in ["works", "trips", "tripSignups", "profiles", "students", "classFiles"]:
     expect(f"N28 el compte de servei llegeix {col}", lst(f"cors/{F}/{col}", T["service"]), True)
+
+print("O. Missatges, notes de seguiment i secretaria")
+MSG = {"id": "x", "title": "", "body": "Hola", "createdAt": now}
+expect("O1 cap de corda escriu a la seva corda", commit([upd(f"cors/{F}/messages/o1", {**MSG, "id": "o1", "to": ["T"], "by": "leader@exemple.cat"})], T["leader"]), True)
+expect("O2 cap de corda escriu a una altra corda", commit([upd(f"cors/{F}/messages/o2", {**MSG, "id": "o2", "to": ["S"], "by": "leader@exemple.cat"})], T["leader"]), False)
+expect("O3 cap de corda escriu a tothom", commit([upd(f"cors/{F}/messages/o3", {**MSG, "id": "o3", "to": ["*"], "by": "leader@exemple.cat"})], T["leader"]), False)
+expect("O4 secretaria escriu a tothom", commit([upd(f"cors/{F}/messages/o4", {**MSG, "id": "o4", "to": ["*"], "by": "sec@exemple.cat"})], T["sec"]), True)
+expect("O4b secretaria escriu a les sopranos", commit([upd(f"cors/{F}/messages/o5", {**MSG, "id": "o5", "to": ["S"], "by": "sec@exemple.cat"})], T["sec"]), True)
+expect("O5 secretaria signa amb un altre nom", commit([upd(f"cors/{F}/messages/o6", {**MSG, "id": "o6", "to": ["*"], "by": "pol@exemple.cat"})], T["sec"]), False)
+expect("O6 cantaire escriu un missatge", commit([upd(f"cors/{F}/messages/o7", {**MSG, "id": "o7", "to": ["S"], "by": "singer@exemple.cat"})], T["singer"]), False)
+expect("O7 una soprano llegeix el missatge a tothom", get(f"cors/{F}/messages/o4", T["singer"]), True)
+expect("O7b una soprano llegeix el de les sopranos", get(f"cors/{F}/messages/o5", T["singer"]), True)
+expect("O8 una soprano llegeix el dels tenors", get(f"cors/{F}/messages/o1", T["singer"]), False)
+expect("O9 una soprano consulta els de tothom", qry(f"cors/{F}", "messages", [("to", "ARRAY_CONTAINS", "*")], T["singer"]), True)
+expect("O9b una soprano consulta els de la seva corda", qry(f"cors/{F}", "messages", [("to", "ARRAY_CONTAINS", "S")], T["singer"]), True)
+expect("O10 una soprano consulta els dels tenors", qry(f"cors/{F}", "messages", [("to", "ARRAY_CONTAINS", "T")], T["singer"]), False)
+expect("O10b una soprano els llista tots", lst(f"cors/{F}/messages", T["singer"]), False)
+expect("O11 l'equip els llista tots", lst(f"cors/{F}/messages", T["dir"]), True)
+expect("O12 un altre esborra el missatge del cap de corda", commit([dele(f"cors/{F}/messages/o1")], T["pau"]), False)
+NOTE = {"memberId": "m2", "section": "T", "text": "Afina millor", "by": "leader@exemple.cat", "at": now}
+expect("O13 cap de corda escriu una nota de la seva corda", commit([upd(f"cors/{F}/memberNotes/n1", NOTE)], T["leader"]), True)
+expect("O14 cap de corda escriu una nota d'una altra corda", commit([upd(f"cors/{F}/memberNotes/n2", {**NOTE, "memberId": "m1", "section": "S"})], T["leader"]), False)
+expect("O15 direcció llegeix les notes", qry(f"cors/{F}", "memberNotes", [("memberId", "EQUAL", "m2")], T["dir"]), True)
+expect("O16 cap de corda llegeix les de la seva corda", qry(f"cors/{F}", "memberNotes", [("memberId", "EQUAL", "m2"), ("section", "EQUAL", "T")], T["leader"]), True)
+expect("O16b cap de corda les consulta sense dir la corda", qry(f"cors/{F}", "memberNotes", [("memberId", "EQUAL", "m2")], T["leader"]), False)
+expect("O17 un altre cap de corda llegeix la nota", get(f"cors/{F}/memberNotes/n1", T["pau"]), False)
+expect("O18 secretaria llegeix la nota", get(f"cors/{F}/memberNotes/n1", T["sec"]), False)
+expect("O19 el cantaire llegeix la seva nota", get(f"cors/{F}/memberNotes/n1", T["singer"]), False)
+DOCS = {"memberId": "m1", "docs": {"imatge": {"v": "no", "at": "2026-09-20"}}, "fees": {"2026-27": {"paid": True, "amount": 120}}}
+expect("O20 secretaria desa documents i quota", commit([upd(f"cors/{F}/memberDocs/m1", DOCS)], T["sec"]), True)
+expect("O20b gerència també", commit([upd(f"cors/{F}/memberDocs/m1", DOCS)], T["ger"]), True)
+expect("O21 cap de corda els desa", commit([upd(f"cors/{F}/memberDocs/m1", DOCS)], T["pau"]), False)
+expect("O22 cap de corda els llegeix", get(f"cors/{F}/memberDocs/m1", T["pau"]), False)
+expect("O23 direcció els llegeix", get(f"cors/{F}/memberDocs/m1", T["dir"]), True)
+expect("O24 el cantaire llegeix els seus", get(f"cors/{F}/memberDocs/m1", T["singer"]), True)
+expect("O24b el cantaire se'ls canvia", commit([upd(f"cors/{F}/memberDocs/m1", {**DOCS, "fees": {"2026-27": {"paid": True}}})], T["singer"]), False)
+expect("O25 un altre cantaire els llegeix", get(f"cors/{F}/memberDocs/m1", T["trampa"]), False)
+expect("O26 secretaria puja un document signat", commit([upd(f"cors/{F}/memberFiles/d1_0", {"i": 0, "of": 1, "memberId": "m1"})], T["sec"]), True)
+expect("O27 el cantaire el llegeix", get(f"cors/{F}/memberFiles/d1_0", T["singer"]), True)
+expect("O28 un cap de corda el llegeix", get(f"cors/{F}/memberFiles/d1_0", T["pau"]), False)
+expect("O29 el cantaire respon els consentiments", commit([upd(f"cors/{F}/profiles/m1", {**PROF, "imageOk": "no", "dataOk": "yes", "consentAt": now})], T["singer"]), True)
+expect("O30 un consentiment amb un valor estrany", commit([upd(f"cors/{F}/profiles/m1", {**PROF, "imageOk": "potser"})], T["singer"]), False)
+for col in ["messages", "memberNotes", "memberDocs", "memberFiles"]:
+    expect(f"O31 el compte de servei llegeix {col}", lst(f"cors/{F}/{col}", T["service"]), True)
 
 print("M. Registre d'errors")
 ERR = {"kind": "error", "msg": "TypeError: x is undefined", "where": "04-llista.js:10:5", "at": now, "app": "abc123", "gid": F, "route": "inici", "ua": "Mozilla/5.0", "online": True}

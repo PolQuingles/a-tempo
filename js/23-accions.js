@@ -1,4 +1,4 @@
-// A Tempo · 21-accions.js — Accions de la interfície i escolta d'esdeveniments (clics, formularis).
+// A Tempo · 23-accions.js — Accions de la interfície i escolta d'esdeveniments (clics, formularis).
 // Els fitxers de js/ són scripts clàssics que comparteixen l'àmbit global i es carreguen en ordre (vegeu index.html).
 'use strict';
 
@@ -11,6 +11,7 @@ const PRO_ONLY = new Set(['brand-color', 'logo-remove', 'kind-set', 'group-delet
 const CLASS_ONLY = new Set(['cl-new', 'cl-edit', 'cl-review', 'cl-paste', 'cl-plan', 'cl-note', 'cl-mark', 'cl-stats', 'cl-cancel-day']);
 const EDIT_ONLY = new Set(['mark', 'min', 'mark-rest', 'session-new', 'sub-set', 'ann-new', 'ann-edit', 'mat-new', 'mat-edit', 'poll-new', 'poll-edit', 'poll-results', 'poll-remind', 'rsvp-remind', 'doc-new', 'doc-edit', 'share-app', 'staff-bulk', 'preview-on', 'who-in', 'mail-check', 'concert-list', 'concert-toggle', 'session-edit', 'member-edit', 'member-bulk', 'prod-new', 'prod-edit',
   'wipe-demo', 'wipe-all', 'load-demo', 'export-json', 'abs-accept', 'abs-reject', 'abs-delete', 'manage',
+  'write', 'msg-new', 'roster-export', 'docs-export', 'docs-copy-noimg',
   'work-new', 'work-edit', 'work-link', 'plan-edit', 'seating-edit', 'participants', 'certificate', 'season-report', 'trip-new', 'trip-edit', 'trip-admin']);
 const actions = {
   'tab': el => { if (el.dataset.tab === 'gestio' && ui.tab !== 'gestio') ui.gestioFrom = ui.tab; ui.tab = el.dataset.tab; ui.rollSec = null; ui._calScrolled = false; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
@@ -60,6 +61,21 @@ const actions = {
   'doc-edit': el => sheetDocument(el.dataset.id),
   'theme': el => setTheme(el.dataset.k),
   'account': () => sheetAccount(),
+  // Missatges (21).
+  'write': () => sheetWrite(),
+  'msg-new': () => sheetMessage(),
+  'msg-list': () => sheetMessages(),
+  'msg-del': el => deleteMessage(el.dataset.id),
+  // Secretaria (22).
+  'roster-export': () => exportRoster(),
+  'member-docs': el => { if (canDocsWrite()) sheetMemberDocs(el.dataset.mid); },
+  'fee-edit': el => { if (!canDocsWrite()) return; if (!S.memberDocs) { ensureSecData().then(() => sheetFee(el.dataset.mid)); return; } sheetFee(el.dataset.mid); },
+  'fee-paid': el => { if (canDocsWrite()) markFeePaid(el.dataset.mid); },
+  'fees-export': () => { const key = feeKey(); offerCSV(`quotes-${key}`, [['Nom i cognoms', capz(V.section), 'Pagada', 'Import', 'Data', 'Com', 'Nota'],
+    ...membersOf(null).map(m => { const f = docsOf(m.id).fees?.[key] || {}; return [fullName(m.name), SEC[m.section].name, f.paid ? 'Sí' : 'No', f.amount || '', f.date || '', f.method || '', f.note || '']; })]); },
+  'docs-export': () => offerCSV(`documents-${TODAY}`, [['Nom i cognoms', capz(V.section), ...DOC_ITEMS.map(([, l]) => l)],
+    ...membersOf(null).map(m => [fullName(m.name), SEC[m.section].name, ...DOC_ITEMS.map(([k]) => { const st = docState(m.id, k); return st.v === 'yes' ? 'Sí' : st.v === 'no' ? 'No' : 'Pendent'; })])]),
+  'docs-copy-noimg': () => copyText(`No poden sortir a fotos ni vídeos:\n${membersOf(null).filter(m => docState(m.id, 'imatge').v === 'no').map(m => `· ${fullName(m.name)} (${SEC[m.section].name})`).join('\n')}`, 'Llista copiada'),
   // Repertori, pla d'assaig i concerts (18 i 19).
   'work-new': () => sheetWorkEdit(null, ui.matProd),
   'work-edit': el => sheetWorkEdit(el.dataset.id),
@@ -336,6 +352,8 @@ document.addEventListener('change', e => {
   if (e.target.closest('[data-bind="cfg-classes"]') && isAdmin()) { saveConfig({ classesOn: e.target.checked }); toast(e.target.checked ? `${V.classes} activades` : `${V.classes} desactivades`); render(); }
   if (e.target.closest('[data-bind="cfg-ics"]') && isAdmin()) { saveConfig({ icsOn: e.target.checked }); toast(e.target.checked ? 'Calendari subscrit activat: funcionarà d’aquí a unes hores' : 'Calendari subscrit desactivat'); render(); }
   if (e.target.closest('[data-bind="min"]')) refreshRow(e.target.closest('.row').dataset.mid);
+  const fa = e.target.closest('[data-bind="fee-amount"]');
+  if (fa && canDocsWrite()) { saveConfig({ feeAmount: Math.max(0, +fa.value || 0) }); toast('Quota desada'); render(); }
   const vm = e.target.closest('[data-bind="cfg-vmin"]');
   if (vm && canEdit()) { const v = Math.max(0, parseInt(vm.value, 10) || 0); saveConfig({ voiceMin: { ...voiceMin(), [vm.dataset.sec]: v } }); toast('Mínim desat'); }
 });

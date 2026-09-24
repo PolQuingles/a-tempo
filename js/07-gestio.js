@@ -46,13 +46,17 @@ function accessPanel() {
   </div>`;
 }
 function managePeople() {
-  if (!ROLE_KEYS.includes(ui.people) && ui.people !== 'access') ui.people = 'singer';
+  const extra = [['altes', 'Altes i baixes', 0], ...(canDocs() ? [['docs', 'Documents', 0], ['quotes', 'Quotes', 0]] : [])];
+  if (!ROLE_KEYS.includes(ui.people) && ui.people !== 'access' && !extra.some(([k]) => k === ui.people)) ui.people = 'singer';
   const role = ui.people;
-  const chips = [['singer', rolePlural('singer'), roleCount('singer')], ...(isAdmin() ? [['access', 'Amb accés', S.staff.size]] : []),
+  const chips = [['singer', rolePlural('singer'), roleCount('singer')], ...extra, ...(isAdmin() ? [['access', 'Amb accés', S.staff.size]] : []),
     ...PEOPLE_MENU.filter(k => k !== 'singer').map(k => [k, rolePlural(k), roleCount(k)])];
   const menu = `<div class="chips" id="people-menu" role="tablist" aria-label="Rols">${chips.map(([k, l, n]) =>
     `<button class="chip" role="tab" aria-pressed="${role === k}" data-act="people-role" data-k="${k}">${esc(l)}${n ? ` · ${n}` : ''}</button>`).join('')}</div>`;
-  if (role === 'singer') return accessPanel() + menu + manageMembers();
+  if (role === 'singer') return accessPanel() + menu + `<div class="sec-h" style="margin:4px 0 0"><span class="muted" style="font-size:13px">Tota la plantilla, amb l’antiguitat, la fitxa de cadascú${canDocs() ? ', els documents i la quota' : ''}.</span><button class="btn btn-sm" data-act="roster-export">Exporta a Excel</button></div>` + manageMembers();
+  if (role === 'altes') return accessPanel() + menu + manageHistory();
+  if (role === 'docs') return accessPanel() + menu + manageDocs();
+  if (role === 'quotes') return accessPanel() + menu + manageFees();
   if (role === 'access') {
     const people = peopleSorted();
     return `${accessPanel()}${menu}<p class="muted" style="margin:4px 2px 10px;font-size:13px">Tothom qui pot entrar a l’app, amb els seus rols. Toca una persona per canviar-li els rols, convidar-la o treure-li l’accés.</p>
@@ -257,7 +261,7 @@ async function deleteGroup(el) {
   const at = new Date().toISOString();
   try {
     const refs = [];
-    for (const col of ['members', 'productions', 'attendance', 'absences', 'subs', 'rsvp', 'announcements', 'polls', 'pollVotes', 'memberMarks', 'push', 'classes', 'classReq', 'classPlan', 'classNotes', 'classFiles', 'students', 'works', 'trips', 'tripSignups', 'profiles', 'config']) {
+    for (const col of ['members', 'productions', 'attendance', 'absences', 'subs', 'rsvp', 'announcements', 'polls', 'pollVotes', 'memberMarks', 'push', 'classes', 'classReq', 'classPlan', 'classNotes', 'classFiles', 'students', 'works', 'trips', 'tripSignups', 'profiles', 'messages', 'memberNotes', 'memberDocs', 'memberFiles', 'config']) {
       say('Preparant…');
       const snap = await db.collection(col).get();
       for (const d of snap.docs) if (!(col === 'config' && d.id === 'main')) refs.push(d.ref);

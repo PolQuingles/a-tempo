@@ -173,6 +173,8 @@ const S = {
   classPlan: new Map(),   // <teacher email> -> their fixed weekly timetable
   classNotes: new Map(),  // <classId>_<slotId> -> what was worked on (teacher and that singer only)
   works: new Map(),       // <id> -> una obra del repertori: partitures, àudios, durada, solistes i petits grups
+  messages: new Map(),    // <id> -> un missatge dins l'app, a tothom o a unes cordes (21-missatges)
+  memberDocs: null,       // secretaria: documents i quotes de cada persona (es llegeixen quan cal)
   trips: new Map(),       // <id> -> una sortida o gira: dates, transport i habitacions
   tripSignups: new Map(), // <tripId>_<memberId> -> qui hi va, amb quin transport i a quina habitació
   myMarks: null,          // singer: my own marks
