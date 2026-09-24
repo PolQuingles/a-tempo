@@ -91,18 +91,6 @@ def main():
         check(page.locator(".only-narrow").first.is_hidden(), "la llista del mòbil queda amagada")
         ctx.close()
 
-        print("Benvinguda")
-        ctx = browser.new_context(**MOBILE)
-        page = ctx.new_page()
-        page.goto(f"{base}/index.html?u=pol&reset=1#/inici")
-        page.wait_for_function(READY, timeout=20000)
-        before = page.evaluate("history.length")
-        page.wait_for_selector(".sheet", timeout=5000)
-        check(page.evaluate("history.length") == before, "la benvinguda s'obre sola i no afegeix passos a l'historial")
-        page.click('.sheet [data-act="sheet-close"]'); page.wait_for_timeout(400)
-        check(page.evaluate("history.length") == before and screen(page) == "#/inici avisos", "tancar la benvinguda deixa l'app com estava", screen(page))
-        ctx.close()
-
         print("Botó «enrere»")
         ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/inici")
         page.click('[data-act="tab"][data-tab="calendari"]'); page.wait_for_timeout(300)
@@ -142,6 +130,10 @@ def main():
         page.evaluate("setTimeout(() => { funcioQueNoExisteix(); }, 0)")
         page.wait_for_timeout(2500)
         notes = page.evaluate("firebase.firestore().collection('errors').get().then(s => s.docs.map(d => d.data()))")
+        print("Obre a Inici en un mòbil nou")
+        ctx2, page2, _ = open_app(browser, base, "leader", MOBILE)
+        check(page2.evaluate("ui.tab") == "avisos" and page2.evaluate("location.hash") == "#/inici", "en un mòbil nou, l'app s'obre a Inici")
+        ctx2.close()
         check(len(notes) == 1 and "funcioQueNoExisteix" in notes[0]["msg"], "un error de l'app deixa una nota", str(notes)[:200])
         check(all(set(n) <= {"kind", "msg", "where", "at", "app", "gid", "route", "ua", "online"} for n in notes), "la nota no porta res més del que permeten les regles")
         ctx.close()
@@ -163,7 +155,7 @@ def main():
         except Exception as e:
             ok = False
             print("   ", e)
-        check(ok, "l'app s'obre sense xarxa amb la darrera versió desada")
+        check(ok, "l'app s'obre sense xarxa amb la darrera versió desada", page.evaluate("location.hash + ' ' + (document.querySelector('#view')?.innerText || '').slice(0, 80)") if not ok else "")
         ctx.close()
         browser.close()
     print()

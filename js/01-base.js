@@ -190,7 +190,7 @@ const S = {
   pro: false,             // Usuari Pro (plataforma/pro, or the platform team): may create groups and change or delete the ones they run
 };
 const ui = {
-  tab: 'llista', section: '', sessionId: null, rollSec: null,
+  tab: 'avisos', section: '', sessionId: null, rollSec: null,
   calProd: 'all', calPast: false,
   statsScope: 'prod', statsProd: null, statsTerm: null, statsSec: '', statsSort: 'pct',
   manage: 'personal', people: 'singer', absFilter: 'pending',
