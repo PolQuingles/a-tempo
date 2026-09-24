@@ -64,7 +64,7 @@ function cachedGroups() {
 }
 function cachedLink(gid) {
   try {
-    const c = JSON.parse(localStorage.getItem(`${LS_LINK}:${gid}`) || (gid === FOUNDER && localStorage.getItem(LS_LINK)) || 'null');
+    const c = JSON.parse(localStorage.getItem(`${LS_LINK}:${gid}`) || 'null');
     return c && c.via === 'google' && c.email === S.email && c.choirId === gid ? c : null;
   } catch { return null; }
 }
@@ -357,13 +357,14 @@ function groupFileBytes() {
   let n = 0;
   for (const p of S.productions.values()) for (const x of p.materials || []) if (x.file) n += +x.file.size || 0;
   for (const d of S.config.documents || []) if (d.file) n += +d.file.size || 0;
+  for (const a of S.announcements.values()) for (const f of a.files || []) if (f.file) n += +f.file.size || 0;
   return n;
 }
 /** Keep the group's directory record up to date (name, type, a few numbers for the platform). */
 async function syncDirectory(force) {
   if (!db || !S.me || PREVIEW || !canEdit() || !S.ready) return;
   const ref = fs.doc(`agrupacions/${GID}`);
-  const stats = { members: membersOf(null).length, people: S.staff.size, productions: S.productions.size, files: groupFileBytes(), at: new Date().toISOString() };
+  const stats = { members: membersOf(null).length, ...(S.staffReady ? { people: S.staff.size } : S.group?.stats?.people != null ? { people: S.group.stats.people } : {}), productions: S.productions.size, files: groupFileBytes(), at: new Date().toISOString() };
   try {
     if (!S.group || !S.group.status) {
       // Agrupació d'abans del directori: se n'hi fa la fitxa el primer cop que entra l'administració.

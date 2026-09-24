@@ -6,6 +6,39 @@
 const LS_SEEN = 'atempo:tauler-vist';
 const MAT_KINDS = { partitura: 'Partitura', audio: 'Àudio', video: 'Vídeo', altres: 'Altres' };
 const linkify = t => esc(t).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
+/** Un text llarg (anuncis, converses) amb una mica de format, sense haver d'aprendre res: els paràgrafs se separen amb una
+ *  línia en blanc; les línies que comencen amb «-», «*» o «•» fan una llista; una línia en MAJÚSCULES és un títol; el que
+ *  va entre dos asteriscs (**així**) surt en negreta, i els enllaços es poden clicar. Tot s'escapa abans. */
+function richText(t) {
+  const inline = x => linkify(x).replace(/\*\*([^*\n]+?)\*\*/g, '<b>$1</b>');
+  const out = [];
+  for (const block of String(t || '').replace(/\r/g, '').split(/\n\s*\n/)) {
+    let para = [], list = [];
+    const flush = () => {
+      if (para.length) { out.push(`<p>${para.join('<br>')}</p>`); para = []; }
+      if (list.length) { out.push(`<ul>${list.join('')}</ul>`); list = []; }
+    };
+    for (const raw of block.split('\n')) {
+      const line = raw.trim();
+      if (!line) continue;
+      const li = line.match(/^[-*•·]\s+(.+)$/);
+      if (li) { if (para.length) { out.push(`<p>${para.join('<br>')}</p>`); para = []; } list.push(`<li>${inline(li[1])}</li>`); continue; }
+      if (list.length) { out.push(`<ul>${list.join('')}</ul>`); list = []; }
+      const letters = line.replace(/[^\p{L}]/gu, '');
+      if (letters.length >= 4 && letters === letters.toUpperCase() && line.length <= 60) { flush(); out.push(`<h4>${inline(line.replace(/:$/, ''))}</h4>`); continue; }
+      para.push(inline(line));
+    }
+    flush();
+  }
+  return out.join('');
+}
+/** Un tros d'un text llarg, tallat en acabar una línia o una paraula. */
+const cutText = (t, n) => { const s = String(t || ''); if (s.length <= n) return s; const cut = s.slice(0, n); const at = Math.max(cut.lastIndexOf('\n'), cut.lastIndexOf(' ')); return `${cut.slice(0, at > n * .6 ? at : n).trimEnd()}…`; };
+/** Els fitxers i enllaços adjunts d'un anunci. */
+const attachList = (files, act, id) => (files || []).length ? `<div class="attach">${files.map(f => f.file
+  ? `<button class="att" data-act="${act}" data-id="${esc(id)}" data-f="${esc(f.id)}">${ICON.clip}<span>${esc(f.title || f.file.name)}<small>${esc(fileKind(f.file))} · ${fmtSize(f.file.size)}</small></span></button>`
+  : `<a class="att" href="${esc(f.url)}" target="_blank" rel="noopener">${ICON.link}<span>${esc(f.title || f.url)}<small>Enllaç</small></span></a>`).join('')}</div>` : '';
+const ANN_LONG = 700;
 const mySection = () => S.members.get(myMemberId())?.section || null;
 const forMe = x => canEdit() || !myId() || !x.sections?.length || x.sections.includes(mySection());
 function visibleAnnouncements() {
@@ -33,16 +66,28 @@ function viewBoard() {
   if (ui.board === 'enquestes') return head + boardPolls();
   return head + boardAnnouncements();
 }
+/** Un anunci: el text amb format (els llargs, retallats), els adjunts i el botó per respondre a qui l'ha escrit. */
+function annCard(a, board) {
+  const long = board && (a.body || '').length > ANN_LONG;
+  return `<article class="ann ${a.pinned ? 'pinned' : ''}" data-ann="${esc(a.id)}">
+      <div class="ann-h"><h2 class="ann-t">${esc(a.title)}</h2>${board && canEdit() ? `<button class="icon-btn" data-act="ann-edit" data-id="${a.id}" aria-label="Edita l’anunci">${ICON.more}</button>` : ''}</div>
+      ${a.body ? `<div class="ann-b rich">${richText(long ? cutText(a.body, ANN_LONG) : a.body)}</div>` : ''}
+      ${long ? `<button class="btn btn-sm btn-ghost ann-more" data-act="ann-read" data-id="${esc(a.id)}">Llegeix-lo sencer</button>` : ''}
+      ${attachList(a.files, 'ann-file', a.id)}
+      <div class="ann-m">${a.pinned ? '<span class="pin">Fixat</span>' : ''}<span>${esc(a.author || '')}</span><span class="mono">${a.createdAt ? ddmm(a.createdAt.slice(0, 10)) : ''}</span>
+        ${a.sections?.length ? `<span>Per a: ${esc(a.sections.map(x => SEC[x].name).join(', '))}</span>` : ''}${a.until ? `<span>Fins al ${ddmm(a.until)}</span>` : ''}</div>
+      ${canReply(a.by) ? `<div class="ann-acts"><button class="btn btn-sm" data-act="reply" data-ref="ann:${esc(a.id)}">Respon a ${esc(firstName(a.author || '') || 'l’equip')}</button></div>` : ''}
+    </article>`;
+}
+function sheetAnnouncementRead(id) {
+  const a = S.announcements.get(id);
+  if (a) openSheet({ title: 'Anunci', wide: true, body: annCard(a, false) });
+}
 function boardAnnouncements() {
   const list = visibleAnnouncements();
   const active = list.filter(a => !a.until || a.until >= TODAY);
   const expired = list.filter(a => a.until && a.until < TODAY);
-  const card = a => `<article class="ann ${a.pinned ? 'pinned' : ''}">
-      <div class="ann-h"><h2 class="ann-t">${esc(a.title)}</h2>${canEdit() ? `<button class="icon-btn" data-act="ann-edit" data-id="${a.id}" aria-label="Edita l’anunci">${ICON.more}</button>` : ''}</div>
-      ${a.body ? `<div class="ann-b">${linkify(a.body)}</div>` : ''}
-      <div class="ann-m">${a.pinned ? '<span class="pin">Fixat</span>' : ''}<span>${esc(a.author || '')}</span><span class="mono">${a.createdAt ? ddmm(a.createdAt.slice(0, 10)) : ''}</span>
-        ${a.sections?.length ? `<span>Per a: ${esc(a.sections.map(x => SEC[x].name).join(', '))}</span>` : ''}${a.until ? `<span>Fins al ${ddmm(a.until)}</span>` : ''}</div>
-    </article>`;
+  const card = a => annCard(a, true);
   return `${canEdit() ? `<div class="sec-h" style="margin-top:6px"><span class="muted" style="font-size:calc(13px*var(--ts))">Els veuen tots els ${V.members} (o només les ${V.sections} triades).</span><button class="btn btn-sm btn-primary" data-act="ann-new">+ Anunci</button></div>` : ''}
     ${active.length ? `<div class="panel">${active.map(card).join('')}</div>` : `<div class="empty"><p>No hi ha anuncis.</p></div>`}
     ${canEdit() && expired.length ? `<details class="np-group"><summary><span>Caducats (${expired.length})</span>${ICON.chev}</summary><div class="panel">${expired.map(card).join('')}</div></details>` : ''}`;
@@ -285,6 +330,7 @@ function boardPolls() {
     return `<div class="poll" data-poll="${p.id}"><h2 class="ann-t">${esc(p.title)}</h2>
       ${p.description ? `<div class="ann-b">${linkify(p.description)}</div>` : ''}${meta}
       ${(p.options || []).map(o => `<label class="opt-row"><input type="${p.multi ? 'checkbox' : 'radio'}" name="poll-${p.id}" value="${o.id}" ${chosen.has(o.id) ? 'checked' : ''} ${canVote ? '' : 'disabled'}><span>${esc(o.label)}</span><span></span></label>`).join('')}
+      ${canVote && p.allowNote ? `<label class="field" style="margin-top:8px"><span>Comentari (opcional)</span><textarea class="inp" data-poll-note maxlength="300" style="min-height:60px">${esc(mine?.note || '')}</textarea></label>` : !canVote && mine?.note ? `<p class="m" style="margin:6px 0 0">«${esc(mine.note)}»</p>` : ''}
       ${canVote ? `<div class="c-a" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="btn btn-sm btn-primary" data-act="poll-vote" data-id="${p.id}">${mine ? 'Actualitza la resposta' : 'Envia la resposta'}</button>${mine ? '<span class="rsvp yes">Resposta desada</span>' : ''}</div>` : ''}</div>`;
   };
   return `${canEdit() ? '<div class="sec-h" style="margin-top:6px"><span class="muted" style="font-size:calc(13px*var(--ts))">Per saber quan pot venir la gent.</span><button class="btn btn-sm btn-primary" data-act="poll-new">+ Enquesta</button></div>' : ''}

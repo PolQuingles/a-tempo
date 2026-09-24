@@ -4,7 +4,7 @@
 
 /* ================= Events ================= */
 const SUB_OK = new Set(['mark', 'min', 'mark-rest']);
-const ADMIN_ONLY = new Set(['staff-new', 'staff-edit', 'staff-bulk', 'preview-on', 'who-in', 'mail-check', 'wipe-all', 'share-app', 'onboard-hide', 'cl-seats']);
+const ADMIN_ONLY = new Set(['staff-new', 'staff-edit', 'staff-bulk', 'preview-on', 'who-in', 'mail-check', 'wipe-all', 'share-app', 'onboard-hide', 'cl-seats', 'legacy-clean']);
 // La identitat de l'agrupació i esborrar-la: només un Usuari Pro que l'administri.
 const PRO_ONLY = new Set(['brand-color', 'logo-remove', 'kind-set', 'group-delete', 'sections-save', 'sections-undo']);
 // El calendari de les classes: només el professorat de cant i l'administració.
@@ -12,7 +12,7 @@ const CLASS_ONLY = new Set(['cl-new', 'cl-edit', 'cl-review', 'cl-paste', 'cl-pl
 const EDIT_ONLY = new Set(['mark', 'min', 'mark-rest', 'session-new', 'sub-set', 'ann-new', 'ann-edit', 'mat-new', 'mat-edit', 'poll-new', 'poll-edit', 'poll-results', 'poll-remind', 'rsvp-remind', 'doc-new', 'doc-edit', 'share-app', 'staff-bulk', 'preview-on', 'who-in', 'mail-check', 'concert-list', 'concert-toggle', 'session-edit', 'member-edit', 'member-bulk', 'prod-new', 'prod-edit',
   'wipe-demo', 'wipe-all', 'load-demo', 'export-json', 'abs-accept', 'abs-reject', 'abs-delete', 'manage',
   'write', 'msg-new', 'roster-export', 'docs-export', 'docs-copy-noimg',
-  'work-new', 'work-edit', 'work-link', 'plan-edit', 'seating-edit', 'participants', 'certificate', 'season-report', 'trip-new', 'trip-edit', 'trip-admin']);
+  'work-new', 'work-edit', 'work-link', 'plan-edit', 'seating-edit', 'participants', 'certificate', 'season-report', 'trip-new', 'trip-edit', 'trip-admin', 'trip-remind']);
 const actions = {
   'tab': el => { if (el.dataset.tab === 'gestio' && ui.tab !== 'gestio') ui.gestioFrom = ui.tab; ui.tab = el.dataset.tab; ui.rollSec = null; ui._calScrolled = false; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
   'reload': () => location.reload(),
@@ -116,13 +116,25 @@ const actions = {
   'risk-copy': () => copyText(window.__riskText ? window.__riskText() : '', 'Resum copiat'),
   'who-in': async () => { await loadPushDevices(); sheetWhoIn(); },
   'mail-check': () => sheetMailCheck(),
-  'preview-off': () => { PREVIEW = null; ui.tab = 'gestio'; ui.manage = 'config'; ui.rollSec = null; render(); window.scrollTo({ top: 0 }); },
+  'preview-off': () => stopPreview(),
+  'legacy-clean': () => sheetLegacyClean(),
+  'threads': () => sheetThreads(),
+  'week': () => sheetWeek(),
+  'thread': el => sheetThread(el.dataset.id),
+  'thread-new': () => sheetThreadNew(),
+  'reply': el => replyTo(el.dataset.ref),
+  'ann-read': el => sheetAnnouncementRead(el.dataset.id),
+  'ann-file': el => { const f = (S.announcements.get(el.dataset.id)?.files || []).find(x => x.id === el.dataset.f); if (f && f.file) sheetOpenFile(f.file, f.title); },
   'share-app': () => sheetShareApp(),
   'staff-edit': el => sheetStaff(el.dataset.email),
   'sub-set': el => sheetSub(el.dataset.sid, el.dataset.sec),
   'rsvp-list': el => sheetRsvpList(el.dataset.sid),
   'rsvp-yes': el => rsvpAnswer(el.dataset.sid, 'yes'),
   'rsvp-no': el => sheetRsvpNo(el.dataset.sid),
+  'rsvp-bus': el => rsvpTransport(el.dataset.sid, el.dataset.k),
+  'plan-all': el => { const s = sessionById(el.dataset.sid), box = el.closest('.plan'); if (s && box) box.outerHTML = planHtml(s); },
+  'rsvp-task': el => rsvpTask(el.dataset.sid, el.dataset.k),
+  'trip-remind': el => remindTrip(el.dataset.id),
   'cal-subscribe': () => sheetCalendar(),
   'board': el => { ui.board = el.dataset.k; saveUI(); render(); },
   'board-polls': () => { ui.tab = 'tauler'; ui.board = 'enquestes'; render(); window.scrollTo({ top: 0 }); },
@@ -190,7 +202,7 @@ const actions = {
   'sync-info': () => openSheet({
     title: 'Estat de les dades',
     body: S.mode === 'shared'
-      ? `<p style="margin-top:0">${canEdit() ? 'Les llistes es desen automàticament i es comparteixen en temps real amb la resta de l’equip.' : isLinkOnly() ? 'Tens un enllaç personal: pots veure el calendari i avisar de les teves absències.' : 'Tens accés de <b>només lectura</b>: veus les llistes, el calendari i les estadístiques al moment, però no pots canviar res. Al teu espai sí que pots avisar d’absències i confirmar convocatòries.'}</p>
+      ? `<p style="margin-top:0">${canEdit() ? 'Les llistes es desen automàticament i es comparteixen en temps real amb la resta de l’equip.' : 'Tens accés de <b>només lectura</b>: veus les llistes, el calendari i les estadístiques al moment, però no pots canviar res. Al teu espai sí que pots avisar d’absències i confirmar convocatòries.'}</p>
          <p style="margin-top:0">Si et quedes sense cobertura, pots continuar passant llista: els canvis s’envien sols quan torni la connexió.</p>
          <p class="muted" style="margin-bottom:0">${!navigator.onLine ? 'Ara mateix no hi ha connexió.' : pendingWrites() ? `Desant ${pendingWrites()} canvis…` : 'Tots els canvis estan desats.'}</p>`
       : `<p style="margin:0">Encara no hi ha cap cor connectat en aquest dispositiu.</p>`,
@@ -238,16 +250,16 @@ const actions = {
     const pending = membersOf(ui.section).filter(m => !isOut(cur, m) && !effMark(cur, m));
     if (!pending.length) return;
     const key = attKey(cur.id, ui.section);
-    const before = S.attendance.has(key) ? clone(S.attendance.get(key)) : null;
+    const before = attDoc(cur.id, ui.section) ? clone(attDoc(cur.id, ui.section)) : null;
     const doc = clone(before || { sessionId: cur.id, section: ui.section, marks: {} });
     for (const m of pending) doc.marks[m.id] = { s: 'P' };
-    doc.updatedAt = new Date().toISOString();
-    S.attendance.set(key, doc); persist('attendance', key, doc);
+    doc.date = cur.date; doc.updatedAt = new Date().toISOString();
+    saveAttendance(key, doc);
     render();
     celebrateRoll(cur, ui.section, true);
     toast(`${pending.length} marcats com a presents · llista completa`, { label: 'Desfés', run: () => {
-      if (before) { S.attendance.set(key, before); persist('attendance', key, before); }
-      else { const d = clone(S.attendance.get(key)); for (const m of pending) delete d.marks[m.id]; S.attendance.set(key, d); persist('attendance', key, d); }
+      if (before) saveAttendance(key, before);
+      else { const d = clone(attDoc(cur.id, ui.section)); for (const m of pending) delete d.marks[m.id]; saveAttendance(key, d); }
       render();
     } });
   },
@@ -286,6 +298,7 @@ const actions = {
     if (panel && panel.classList.contains('cfg-p')) panel.hidden = !open;
   },
   'people-role': el => { ui.people = el.dataset.k; saveUI(); render(); },
+  'cant-tab': el => { ui.cantTab = el.dataset.k; saveUI(); render(); },
   'member-edit': el => sheetMember(el.dataset.mid),
   'member-bulk': el => sheetBulk(el.dataset.sec || ui.section),
   'prod-new': () => sheetProduction(null),

@@ -9,8 +9,8 @@
 // Els documents signats es pugen a memberFiles (a trossos, amb memberId), igual de privats.
 const DOCS_READ = ['admin', 'secretaria', 'gerencia', 'director'];
 const DOCS_WRITE = ['admin', 'secretaria', 'gerencia'];
-const canDocs = () => !PREVIEW && DOCS_READ.some(r => hasRole(S.me, r));
-const canDocsWrite = () => !PREVIEW && DOCS_WRITE.some(r => hasRole(S.me, r));
+const canDocs = () => DOCS_READ.some(iHave);
+const canDocsWrite = () => DOCS_WRITE.some(iHave);
 const DOC_ITEMS = [['imatge', 'Drets d’imatge', 'Fotos i vídeos dels concerts i les activitats'], ['dades', 'Protecció de dades', 'Consentiment per tractar les dades personals'], ['autoritzacio', 'Autoritzacions', 'Menors d’edat, sortides i altres permisos']];
 const FEE_METHODS = ['Transferència', 'Bizum', 'Efectiu', 'Rebut domiciliat'];
 const feeKey = () => { const s = seasonCfg().season; return `${s.from.slice(0, 4)}-${s.to.slice(2, 4)}`; };

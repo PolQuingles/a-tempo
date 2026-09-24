@@ -12,7 +12,7 @@ service cloud.firestore {
     // a cors/<agrupació>/staff/<correu> amb un o més rols (roles; les fitxes antigues, un sol role):
     //   admin                     → ho pot fer tot: persones, identitat, dades
     //   director | gerencia | secretaria | leader → passen llista, publiquen avisos, pugen documents…
-    //                             (leader = cap de corda o de secció; «palau» és l'antic rol únic de l'equip, que encara val)
+    //                             (leader = cap de corda o de secció)
     //   voice                     → professor de cant: porta les classes (classes i classReq), la resta només lectura
     //   singer                    → només lectura de tota l'app
     // La fitxa pot portar memberId: llavors la persona té el seu espai personal, sigui quin sigui el rol.
@@ -68,7 +68,7 @@ service cloud.firestore {
     // Els rols d'una fitxa: la llista roles o, a les fitxes d'abans, el rol únic.
     function rolesOf(d) { return d.get('roles', [d.get('role', '')]); }
 
-    function canEdit(c) { return isStaff(c) && rolesOf(staffData(c)).hasAny(['admin', 'director', 'gerencia', 'secretaria', 'leader', 'palau']); }
+    function canEdit(c) { return isStaff(c) && rolesOf(staffData(c)).hasAny(['admin', 'director', 'gerencia', 'secretaria', 'leader']); }
     function isAdmin(c) { return isStaff(c) && rolesOf(staffData(c)).hasAny(['admin']); }
     // Rols de la fitxa del personal (hasRole és el dels enllaços antics): per als missatges, les notes i la secretaria.
     function staffHas(c, roles) { return isStaff(c) && rolesOf(staffData(c)).hasAny(roles); }
@@ -89,12 +89,26 @@ service cloud.firestore {
     // Camps de config/main que fan d'identitat de l'agrupació.
     function identityKeys() { return ['name', 'shortName', 'kind', 'sections', 'brand', 'labels', 'deleted', 'deletedAt']; }
     function mine(c, mid) { return mid == myMember(c) && mid != '-'; }
+    // Una conversa privada: la persona de la plantilla i qui té el rol (els caps de corda, només de la seva corda) o el correu a qui ha escrit.
+    function inThread(c, d) {
+      return (hasSpace(c) && mine(c, d.memberId))
+        || (d.toEmail != '' && d.toEmail == email() && isStaff(c))
+        || (d.toRole in ['admin', 'director', 'gerencia', 'secretaria'] && staffHas(c, [d.toRole]))
+        || (d.toRole == 'leader' && staffHas(c, ['leader']) && staffSection(c) == d.section);
+    }
 
     // Es crea una agrupació nova en aquest mateix lot d'escriptures: abans no hi havia res i després sí.
     function creating(c) {
       return !exists(dirDoc(c)) && existsAfter(dirDoc(c))
         && !exists(/databases/$(database)/documents/cors/$(c)/config/main)
         && existsAfter(/databases/$(database)/documents/cors/$(c)/config/main);
+    }
+
+    // ---- Versió de les regles ----
+    // tools/stamp.py hi escriu l'empremta d'aquest fitxer. La vigilància comprova que les regles publicades són les del
+    // repositori demanant reglesVersio/<empremta>: si les publicades són unes altres, la lectura es denega.
+    match /reglesVersio/{v} {
+      allow get: if v == '60d61daa37b2';
     }
 
     match /plataforma/equip {
@@ -209,7 +223,7 @@ service cloud.firestore {
       }
       match /{col}/{doc} {
         allow read: if (col in ['members', 'productions', 'attendance', 'config', 'staff', 'subs', 'rsvp', 'absences',
-                                'announcements', 'polls', 'pollVotes', 'memberMarks', 'push', 'classes', 'classReq', 'classPlan',
+                                'announcements', 'polls', 'pollVotes', 'push', 'classes', 'classReq', 'classPlan',
                                 'works', 'trips'] && canEdit(c))
                     // Cantaires i músics: veuen tota l'app (també el repertori i les sortides), però no poden canviar res.
                     || (col in ['members', 'productions', 'attendance', 'config', 'subs',
@@ -219,11 +233,44 @@ service cloud.firestore {
                                 'announcements', 'polls', 'pollVotes', 'push', 'classes', 'classReq', 'classPlan', 'classNotes', 'classIcs',
                                 'works', 'trips', 'tripSignups', 'profiles', 'students', 'classFiles'] && (hasRole(c, ['backup']) || isService()));
         allow create, update: if col in ['members', 'productions', 'attendance', 'config', 'subs', 'rsvp',
-                                         'announcements', 'polls', 'pollVotes', 'memberMarks', 'works', 'trips'] && canEdit(c)
+                                         'announcements', 'polls', 'pollVotes', 'works', 'trips'] && canEdit(c)
           && !(col == 'config' && doc == 'main');
         allow delete: if col in ['members', 'productions', 'attendance', 'config', 'subs', 'rsvp',
-                                 'announcements', 'polls', 'pollVotes', 'memberMarks', 'works', 'trips'] && canEdit(c)
+                                 'announcements', 'polls', 'pollVotes', 'works', 'trips'] && canEdit(c)
           && !(col == 'config' && doc == 'main');
+      }
+      // Arxiu de l'assistència: totes les llistes d'un tros de temporada ja acabat en un sol document (menys lectures).
+      // Qui pot passar llista el crea i el corregeix; el llegeix tothom qui llegeix les llistes.
+      match /attArchive/{id} {
+        allow read: if isStaff(c) || hasRole(c, ['backup']) || isService();
+        allow create, update: if canEdit(c);
+        allow delete: if isAdmin(c);
+      }
+      // Converses privades entre algú de la plantilla i l'equip (vegeu inThread). Es poden afegir missatges i marcar-les com a
+      // llegides, però no canviar qui hi participa.
+      match /threads/{id} {
+        allow read: if inThread(c, resource.data) || hasRole(c, ['backup']) || isService();
+        allow create: if isStaff(c) && inThread(c, request.resource.data)
+          && request.resource.data.keys().hasAll(['memberId', 'toRole', 'toEmail', 'section', 'msgs', 'lastAt', 'lastSide'])
+          && (!mine(c, request.resource.data.memberId) || request.resource.data.section == memberSection(c))
+          && request.resource.data.msgs is list && request.resource.data.msgs.size() == 1
+          && request.resource.data.msgs[0].by == email()
+          && request.resource.data.msgs[0].text is string && request.resource.data.msgs[0].text.size() <= 2000;
+        allow update: if inThread(c, resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['msgs', 'lastAt', 'lastSide', 'readM', 'readS'])
+          && request.resource.data.msgs is list && request.resource.data.msgs.size() <= 300
+          && request.resource.data.msgs.size() >= resource.data.msgs.size();
+        allow delete: if isAdmin(c) || (hasSpace(c) && mine(c, resource.data.memberId));
+      }
+      // Recordatoris a qui encara no ha respost (una enquesta, una convocatòria, una sortida): els envia l'equip i els
+      // reparteix avisos.py al mòbil de cadascú.
+      match /nudges/{id} {
+        allow read: if canEdit(c) || hasRole(c, ['backup']) || isService();
+        allow create: if canEdit(c) && request.resource.data.by == email()
+          && request.resource.data.memberIds is list && request.resource.data.memberIds.size() <= 500
+          && request.resource.data.kind in ['poll', 'rsvp', 'trip']
+          && request.resource.data.title is string && request.resource.data.title.size() <= 300;
+        allow delete: if isAdmin(c);
       }
       // Inscripcions a una sortida: cadascú diu si hi va (i una nota); l'equip les veu totes i hi posa el transport i
       // l'habitació, que la persona no es pot canviar.
@@ -245,11 +292,12 @@ service cloud.firestore {
         allow read: if canEdit(c) || (hasSpace(c) && mine(c, mid));
         allow create, update: if canEdit(c) || (hasSpace(c) && mine(c, mid)
           && request.resource.data.memberId == mid
-          && request.resource.data.keys().hasOnly(['memberId', 'phone', 'size', 'emergencyName', 'emergencyPhone', 'at', 'imageOk', 'dataOk', 'consentAt'])
+          && request.resource.data.keys().hasOnly(['memberId', 'phone', 'size', 'emergencyName', 'emergencyPhone', 'diet', 'at', 'imageOk', 'dataOk', 'consentAt'])
           && (!('imageOk' in request.resource.data) || request.resource.data.imageOk in ['yes', 'no', ''])
           && (!('dataOk' in request.resource.data) || request.resource.data.dataOk in ['yes', ''])
           && shortText(request.resource.data, 'phone', 20) && shortText(request.resource.data, 'size', 10)
-          && shortText(request.resource.data, 'emergencyName', 60) && shortText(request.resource.data, 'emergencyPhone', 20));
+          && shortText(request.resource.data, 'emergencyName', 60) && shortText(request.resource.data, 'emergencyPhone', 20)
+          && shortText(request.resource.data, 'diet', 200));
         allow delete: if canEdit(c);
       }
       // Cadascú pot llegir la seva pròpia fitxa per saber quin rol té, i deixar-hi
@@ -367,9 +415,10 @@ service cloud.firestore {
               && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewedAt', 'reviewedBy']));
         allow delete: if teaches(c) || (hasSpace(c) && mine(c, resource.data.memberId) && resource.data.status == 'pending');
       }
-      // Còpia de les marques de cada cantaire: només les seves.
+      // Restes dels enllaços personals d'abans del setembre del 2026 (còpies de les marques i les claus): ja no es fan servir.
+      // Només l'administració les pot mirar i esborrar (Ajustos › Dades › Restes de versions antigues).
       match /memberMarks/{mid} {
-        allow read: if hasSpace(c) && mine(c, mid);
+        allow read, delete: if isAdmin(c);
       }
       match /pollVotes/{id} {
         allow read: if hasSpace(c) && mine(c, resource.data.memberId);
@@ -379,7 +428,7 @@ service cloud.firestore {
           && get(/databases/$(database)/documents/cors/$(c)/polls/$(request.resource.data.pollId)).data.get('closed', false) == false;
       }
       match /secrets/{doc} {
-        allow read, write: if canEdit(c);
+        allow read, delete: if isAdmin(c);
       }
       // Substitut: pot passar llista d'aquella sessió i secció fins que caduca.
       match /attendance/{id} {

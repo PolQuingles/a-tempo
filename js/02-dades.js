@@ -5,11 +5,11 @@
 /* ================= Persistence (Firebase) ================= */
 // Everyone signs in with Google; the account's groups are listed in staffIndex/<email>/agrupacions.
 // Nobody gets in without an account: old links (#k=…) only show a message asking to sign in.
-const LS_KEY = 'atempo:clau';
-const LS_LINK = 'atempo:enllac';
+const LS_KEY = 'atempo:clau';       // l'enllaç antic desat al mòbil (només per esborrar-lo)
+const LS_LINK = 'atempo:enllac';    // la fitxa d'accés de cada agrupació, per obrir l'app sense connexió
 const LS_ME = 'atempo:jo';
-const ROLE_NAME = { edit: 'Edició', read: 'Només lectura', view: 'Només lectura', singer: 'Enllaç personal' };
-let db = null, fs = null, auth = null, LINK = null;   // LINK = { secret, choirId, role }
+const ROLE_NAME = { edit: 'Edició', read: 'Només lectura' };
+let db = null, fs = null, auth = null, LINK = null;   // LINK = { choirId, role, email, memberId }: l'accés a l'agrupació oberta
 const queue = new Map();   // path -> { data | null, timer }  (debounce window)
 let inflight = 0;
 
@@ -34,7 +34,9 @@ const isDirty = path => queue.has(path);
 
 /** Write one document (data) or delete it (null). Local state must already be updated. */
 function persist(col, id, data, delay = 350) {
+  if (PREVIEW) { previewBlocked(); return; }
   const path = `${col}/${id}`;
+  if (data === null && EPOCH_ON_DELETE.includes(col)) bumpSoon(col);
   const q = queue.get(path) || {};
   clearTimeout(q.timer);
   q.data = data === null ? null : clone(data);
@@ -92,7 +94,10 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 //    col·lecció sencera. Un dia de classe esborrat queda com a `deleted: true` (el professorat no toca la configuració);
 //    una llista d'una sessió esborrada no cal treure-la, perquè ja no es mostra enlloc;
 //  · la primera vegada, un cop per setmana i si el mòbil no té res desat, es baixa tot sencer.
-const DELTA = ['members', 'productions', 'attendance', 'classes', 'works'];
+const DELTA = ['members', 'productions', 'attendance', 'classes', 'works', 'announcements', 'polls', 'trips', 'rsvp', 'pollVotes'];
+// En aquestes, esborrar un document fa que els altres mòbils les tornin a baixar senceres (vegeu bumpEpoch). Només
+// n'esborra l'equip, que pot canviar la configuració. Les llistes (attendance) no cal: una d'esborrada ja no es mostra.
+const EPOCH_ON_DELETE = ['announcements', 'polls', 'trips', 'rsvp', 'pollVotes'];
 // Fins aquest dia tothom ho baixa tot, perquè els mòbils que encara tenen oberta l'app d'abans (sense syncAt) s'actualitzin.
 const DELTA_FROM = '2026-09-28';
 const FULL_EVERY = 7 * 864e5;
@@ -102,7 +107,7 @@ const SYNC = { st: {}, unsub: {}, mode: {}, got: {}, mine: new Map(), started: f
 const deltaOn = () => { const f = lsGet('atempo:delta'); return f === '1' || (f !== '0' && TODAY >= (window.COR_DELTA_FROM || DELTA_FROM)); };
 function syncLoad() { try { SYNC.st = JSON.parse(localStorage.getItem(`${LS_SYNC}:${GID}`) || '{}') || {}; } catch { SYNC.st = {}; } }
 function syncSave() { try { localStorage.setItem(`${LS_SYNC}:${GID}`, JSON.stringify(SYNC.st)); } catch {} }
-const epochOf = col => { const e = S.config.syncEpoch || {}; return `${e.all || ''}|${e[col] || ''}`; };
+const epochOf = col => { const e = S.config.syncEpoch || {}; return `${e.all || ''}|${e[col] || ''}${col === 'attendance' ? `|${archCut()}` : ''}`; };
 /** Les dades que es desen: a les col·leccions grans, amb l'hora del servidor. */
 const stamped = (path, data) => {
   if (!DELTA.includes(path.split('/')[0])) return data;
@@ -117,6 +122,13 @@ function bumpEpoch(...cols) {
   for (const c of cols) if (c !== 'all' && SYNC.st[c]) SYNC.st[c].epoch = epochOf(c);
   if (cols.includes('all')) for (const c of DELTA) if (SYNC.st[c]) SYNC.st[c].epoch = epochOf(c);
   syncSave();
+}
+/** Diverses supressions seguides (una enquesta i els seus vots): un sol canvi de configuració. */
+const bumpWait = new Set();
+function bumpSoon(col) {
+  if (!canEdit() || bumpWait.has(col)) return;
+  bumpWait.add(col);
+  setTimeout(() => { const cols = [...bumpWait]; bumpWait.clear(); bumpEpoch(...cols); }, 400);
 }
 const syncMillis = d => { const t = d.get('syncAt'); return t && typeof t.toMillis === 'function' ? t.toMillis() : 0; };
 /** Un document que arriba: es desa sense syncAt; els dies de classe esborrats o ja passats no hi entren. */
@@ -134,6 +146,7 @@ function syncCol(col) {
   const st = SYNC.st[col] = SYNC.st[col] || {};
   let un = null, stop = false;
   SYNC.unsub[col] = () => { stop = true; if (un) un(); };
+  if (col === 'attendance') SYNC.cut = archCut();
   const full = !deltaOn() || !st.full || !st.max || Date.now() - st.full > FULL_EVERY || (st.epoch || '') !== epochOf(col);
   SYNC.mode[col] = full ? 'full' : 'delta';
   if (full) {
@@ -188,47 +201,55 @@ function checkEpochs() {
   for (const col of BIG.keys()) {
     const st = SYNC.st[col];
     if (!st || (st.epoch || '') === epochOf(col)) continue;
-    if (SYNC.mode[col] === 'delta') syncCol(col);
+    // Amb un trimestre nou arxivat, la consulta de les llistes canvia (només les posteriors): cal refer-la.
+    if (SYNC.mode[col] === 'delta' || (col === 'attendance' && SYNC.cut !== archCut())) syncCol(col);
     else if (st.full) { st.epoch = epochOf(col); save = true; }
   }
   if (save) syncSave();
 }
 
+/** Un document que arriba d'una consulta normal (no de les grans): el que s'està desant en aquest mòbil té preferència. */
+function takeSnap(col, snap) {
+  const next = new Map();
+  for (const d of snap.docs) {
+    const path = `${col}/${d.id}`;
+    if (isDirty(path)) { if (S[col].has(d.id)) next.set(d.id, S[col].get(d.id)); }
+    else next.set(d.id, d.data());
+  }
+  for (const [id, v] of S[col]) if (!next.has(id) && isDirty(`${col}/${id}`) && queue.get(`${col}/${id}`)?.data !== null) next.set(id, v);
+  S[col] = next;
+}
 function subscribe() {
   const staff = S.role === 'edit';
-  const reader = S.role === 'read' || S.role === 'view';   // account with read-only access to the whole app
-  const teach = staff || hasRole(S.me, 'voice');           // veu tots els avisos de les classes
   // Les notes de classe són privades: només el professorat i l'administració les veuen totes.
   const teachCl = hasRole(S.me, 'voice') || hasRole(S.me, 'admin');
-  const wanted = ['members', 'productions', 'config', 'absences', 'subs', 'rsvp', 'announcements', 'polls', 'pollVotes', 'classes', 'classReq', 'classPlan', 'classNotes', 'works', 'trips', 'tripSignups'];
-  if (staff) wanted.push('attendance', 'secrets', 'secretsMembers', 'staff');
-  else if (reader) wanted.push('attendance');
-  else wanted.push('myMarks');
+  const teach = staff || hasRole(S.me, 'voice');           // veu tots els avisos de les classes
+  // El personal (qui té accés i amb quins rols) només es llegeix quan s'obre Gestió: vegeu ensureStaff.
+  const wanted = ['members', 'productions', 'attendance', 'config', 'absences', 'subs', 'rsvp', 'announcements', 'polls', 'pollVotes', 'classes', 'classReq', 'classNotes', 'works', 'trips', 'tripSignups'];
+  if (teachCl) wanted.push('classPlan');
   const loaded = new Set();
   const markLoaded = k => { loaded.add(k); if (loaded.size >= wanted.length && !S.ready) { S.ready = true; render(); afterReady(); } };
   const onCol = col => snap => {
-    const next = new Map();
-    for (const d of snap.docs) {
-      const path = `${col}/${d.id}`;
-      if (isDirty(path)) { if (S[col].has(d.id)) next.set(d.id, S[col].get(d.id)); }
-      else next.set(d.id, d.data());
-    }
-    for (const [id, v] of S[col]) if (!next.has(id) && isDirty(`${col}/${id}`) && queue.get(`${col}/${id}`)?.data !== null) next.set(id, v);
-    S[col] = next;
-    if (col === 'subs' && !staff && !reader) watchSubAttendance();
+    takeSnap(col, snap);
     markLoaded(col);
     if (S.ready) scheduleRender();
   };
   const mine = col => staff ? db.collection(col) : db.collection(col).where('memberId', '==', S.memberId || '-');
-  // Les col·leccions grans (vegeu syncCol): la plantilla, les produccions, les llistes i les classes de cant.
-  // De les classes, només les dues últimes setmanes i el que ve: un curs sencer serien massa lectures.
-  const big = (col, query, err) => BIG.set(col, { query, err, done: () => { markLoaded(col); if (S.ready) scheduleRender(); } });
+  // Les col·leccions grans (vegeu syncCol): la plantilla, les produccions, les llistes, les classes de cant, el repertori,
+  // el tauler (anuncis, enquestes i sortides) i, per a l'equip, les respostes a convocatòries i enquestes de tothom.
+  // De les classes, només les dues últimes setmanes i el que ve: un curs sencer serien massa lectures. De les llistes,
+  // només les dels trimestres que encara no s'han arxivat (vegeu l'arxiu de l'assistència).
+  const big = (col, query, err) => BIG.set(col, { query, err: err || (() => markLoaded(col)), done: () => { markLoaded(col); if (S.ready) scheduleRender(); } });
   big('members', () => db.collection('members'), e => { markLoaded('members'); onDbError(e); });
   big('productions', () => db.collection('productions'), e => { markLoaded('productions'); onDbError(e); });
-  big('classes', () => db.collection('classes').where('date', '>=', CLASS_FROM), () => markLoaded('classes'));
-  big('works', () => db.collection('works'), () => markLoaded('works'));
-  if (staff || reader) big('attendance', () => db.collection('attendance'), e => { markLoaded('attendance'); onDbError(e); });
-  db.collection('classPlan').onSnapshot(onCol('classPlan'), () => markLoaded('classPlan'));
+  big('classes', () => db.collection('classes').where('date', '>=', CLASS_FROM));
+  big('works', () => db.collection('works'));
+  big('attendance', () => archCut() ? db.collection('attendance').where('date', '>', archCut()) : db.collection('attendance'), e => { markLoaded('attendance'); onDbError(e); });
+  for (const col of ['announcements', 'polls', 'trips']) big(col, () => db.collection(col));
+  if (staff) for (const col of ['rsvp', 'pollVotes']) big(col, () => db.collection(col));
+  else for (const col of ['rsvp', 'pollVotes']) mine(col).onSnapshot(onCol(col), () => markLoaded(col));
+  // L'horari fix de cada professor/a només el fan servir el professorat i l'administració.
+  if (teachCl) db.collection('classPlan').onSnapshot(onCol('classPlan'), () => markLoaded('classPlan'));
   // Les notes de classe són privades: el professorat les veu totes; cada persona, només les seves.
   if (teachCl) db.collection('classNotes').where('date', '>=', CLASS_FROM).onSnapshot(onCol('classNotes'), () => markLoaded('classNotes'));
   else db.collection('classNotes').where('memberId', '==', S.memberId || '-').onSnapshot(onCol('classNotes'), () => markLoaded('classNotes'));
@@ -243,18 +264,12 @@ function subscribe() {
     // Els canvis d'hora oberts són una crida a qui pugui: els veu tothom de l'agrupació.
     grab(db.collection('classReq').where('open', '==', true), m => { openOnes = m; });
   }
-  for (const col of ['announcements', 'polls', 'trips']) db.collection(col).onSnapshot(onCol(col), () => markLoaded(col));
   mine('tripSignups').onSnapshot(onCol('tripSignups'), () => markLoaded('tripSignups'));
-  for (const col of ['absences', 'subs', 'rsvp', 'pollVotes']) mine(col).onSnapshot(onCol(col), e => { markLoaded(col); if (staff && col !== 'pollVotes') onDbError(e); });
-  if (!staff && !reader) db.doc(`memberMarks/${S.memberId || '-'}`).onSnapshot(snap => { S.myMarks = snap.exists ? snap.data() : null; markLoaded('myMarks'); if (S.ready) scheduleRender(); }, () => markLoaded('myMarks'));
-  if (staff) {
-    db.collection('staff').onSnapshot(onCol('staff'), () => markLoaded('staff'));
-    db.doc('secrets/main').onSnapshot(snap => { S.secrets = snap.exists ? snap.data() : null; markLoaded('secrets'); if (S.ready) scheduleRender(); }, () => markLoaded('secrets'));
-    db.doc('secrets/members').onSnapshot(snap => { S.secretsMembers = snap.exists ? snap.data() : {}; markLoaded('secretsMembers'); if (S.ready) scheduleRender(); }, () => markLoaded('secretsMembers'));
-  }
+  for (const col of ['absences', 'subs']) mine(col).onSnapshot(onCol(col), e => { markLoaded(col); if (staff) onDbError(e); });
   db.doc('config/main').onSnapshot(snap => {
     if (!isDirty('config/main')) S.config = { name: '', alertFNJ: 3, minAttendance: 80, demo: false, ...(snap.exists ? snap.data() : {}) };
     applyGroupConfig();
+    watchArchive();
     // Les col·leccions grans comencen quan ja se sap si algú n'ha esborrat res (syncEpoch).
     if (!SYNC.started) { SYNC.started = true; syncLoad(); for (const col of BIG.keys()) syncCol(col); }
     else checkEpochs();
@@ -262,17 +277,17 @@ function subscribe() {
     if (S.ready) scheduleRender();
   }, onDbError);
 }
-/** A singer who is today's substitute listens to the attendance sheets they may fill in. */
-const subWatchers = new Map();
-function watchSubAttendance() {
-  for (const sub of S.subs.values()) {
-    if (sub.until < Date.now() || subWatchers.has(`${sub.sessionId}_${sub.section}`)) continue;
-    const id = `${sub.sessionId}_${sub.section}`;
-    subWatchers.set(id, db.doc(`attendance/${id}`).onSnapshot(snap => {
-      if (!isDirty(`attendance/${id}`)) { if (snap.exists) S.attendance.set(id, snap.data()); else S.attendance.delete(id); }
-      if (S.ready) scheduleRender();
-    }, () => {}));
-  }
+/** El personal de l'agrupació (qui té accés i amb quins rols): només quan cal, perquè cada fitxa és una lectura.
+ *  Ho demanen Gestió, les classes (professorat amb compte) i les eines que miren qui ja té l'app. */
+let staffWatch = null;
+function ensureStaff() {
+  if (staffWatch || !db || S.role !== 'edit') return;
+  staffWatch = db.collection('staff').onSnapshot(snap => {
+    takeSnap('staff', snap);
+    S.staffReady = true;
+    noteTeamRoles();
+    if (S.ready) scheduleRender();
+  }, () => { S.staffReady = true; });
 }
 function onDbError(e) {
   const code = e && e.code;
@@ -322,13 +337,10 @@ function sessionById(id) {
 const sessionProds = s => [s.prodId, ...(s.alsoIn || [])];
 const prodNames = s => sessionProds(s).map(id => S.productions.get(id)?.name).filter(Boolean).join(' + ');
 const attKey = (sid, sec) => `${sid}_${sec}`;
-const attDoc = (sid, sec) => S.attendance.get(attKey(sid, sec)) || myMarkDoc(sid, sec);
-function myMarkDoc(sid, sec) {
-  if (S.role !== 'singer' || !S.myMarks) return undefined;
-  const me = S.members.get(S.memberId);
-  const mk = me && me.section === sec && S.myMarks.marks?.[sid];
-  return mk ? { marks: { [me.id]: mk } } : undefined;
-}
+/** La llista d'una sessió i secció: la viva o, si és d'un trimestre arxivat, la de l'arxiu. */
+const attDoc = (sid, sec) => S.attendance.get(attKey(sid, sec)) || ARCH.docs.get(attKey(sid, sec));
+/** Totes les llistes, les arxivades i les vives (per a les còpies i per mirar tota la història d'algú). */
+const allAttendance = () => new Map([...ARCH.docs, ...S.attendance]);
 const isExcluded = (prodId, mid) => !!(S.productions.get(prodId)?.excluded || []).includes(mid);
 const convoked = (s, sec) => !s.sections || !s.sections.length || s.sections.includes(sec);
 const onLeave = (m, date) => (m.leaves || []).find(l => l.from && l.from <= date && (!l.to || l.to >= date));
@@ -374,7 +386,7 @@ function lateNow(session) {
   if (!session || session.date !== TODAY || !session.time) return 0;
   const [h, m] = session.time.split(':').map(Number);
   const start = new Date(); start.setHours(h, m, 0, 0);
-  const mins = Math.floor((Date.now() - start) / 60000);
+  const mins = Math.floor((Date.now() - start.getTime()) / 60000);
   return mins > 0 && mins <= 240 ? mins : 0;
 }
 function currentProductionId() {
@@ -468,6 +480,86 @@ function ruleStatus(prodId, member) {
   return { cur, best, att, abs, remaining, status: best < min ? 'out' : cur < min ? 'risk' : 'ok' };
 }
 
+/* ---------- Arxiu de l'assistència per trimestres ---------- */
+// Cada llista és un document (una sessió × una corda): a final de temporada en són uns 400, i cada mòbil que obre l'app
+// després d'una setmana els tornaria a llegir tots. Per això, quan un tros de temporada fa dues setmanes que s'ha acabat,
+// algú de l'equip en desa totes les llistes en un sol document, attArchive/<del>_<al>, i config/main.attArchive.cut passa
+// a ser l'últim dia arxivat. A partir d'aquí, els mòbils llegeixen cada tros arxivat d'una sola lectura i, de les llistes,
+// només les posteriors (camp `date`). Les llistes arxivades no s'esborren: la còpia diària i els avisos les segueixen tenint.
+// Els trossos són fixos i seguits (gener–març, abril–juliol, agost–desembre), perquè no en quedi cap dia fora.
+const ARCH = { docs: new Map(), by: new Map(), watch: null, ids: '', busy: false };
+const ARCH_GRACE = 14 * 864e5;
+const ARCH_MAX = 850 * 1024;   // un document de Firestore no pot passar d'1 MB
+const archCut = () => (S.config.attArchive && S.config.attArchive.cut) || '';
+/** El tros de l'any on cau una data: { id, from, to }. */
+function archSegment(date) {
+  const y = date.slice(0, 4), m = +date.slice(5, 7);
+  const [from, to] = m <= 3 ? [`${y}-01-01`, `${y}-03-31`] : m <= 7 ? [`${y}-04-01`, `${y}-07-31`] : [`${y}-08-01`, `${y}-12-31`];
+  return { id: `${from}_${to}`, from, to };
+}
+const nextSegment = g => archSegment(isoDate(new Date(parseISO(g.to).getTime() + 864e5)));
+/** L'arxiu que guarda una data (si ja s'ha arxivat). */
+const archiveOf = date => { const g = archSegment(date); return ARCH.by.has(g.id) ? g : null; };
+/** Els trossos que ja es poden arxivar, per ordre: des del primer que no ho està fins al que fa dues setmanes que ha acabat. */
+function archivable(dates, cut, today = TODAY) {
+  const first = dates.filter(Boolean).sort()[0];
+  if (!first) return [];
+  const limit = isoDate(new Date(parseISO(today).getTime() - ARCH_GRACE));
+  const out = [];
+  let g = cut ? nextSegment(archSegment(cut)) : archSegment(first);
+  while (g.to <= limit) { out.push(g); g = nextSegment(g); }
+  return out;
+}
+/** Les llistes d'un tros, tal com es desen a l'arxiu. */
+function archiveDocs(g, docs, dateOf) {
+  const out = {};
+  for (const [key, d] of docs) {
+    const date = dateOf(d) || d.date;
+    if (date && date >= g.from && date <= g.to) out[key] = { ...d, date };
+  }
+  return out;
+}
+/** Es llegeixen els arxius (un document per tros) només si n'hi ha. */
+function watchArchive() {
+  const ids = ((S.config.attArchive && S.config.attArchive.ids) || []).join(',');
+  if (ids === ARCH.ids || !db) return;
+  ARCH.ids = ids;
+  if (ARCH.watch) { ARCH.watch(); ARCH.watch = null; }
+  if (!ids) { ARCH.docs = new Map(); ARCH.by = new Map(); return; }
+  ARCH.watch = db.collection('attArchive').onSnapshot(snap => {
+    ARCH.by = new Map(snap.docs.map(d => [d.id, d.data()]));
+    ARCH.docs = new Map([...ARCH.by.values()].sort((a, b) => (a.from || '').localeCompare(b.from || '')).flatMap(a => Object.entries(a.docs || {})));
+    if (S.ready) scheduleRender();
+  }, () => {});
+}
+/** Qui edita i té totes les llistes (acabades de llegir senceres del servidor) arxiva els trossos que toquen. Abans, a
+ *  qualsevol llista que encara no porti la data (desada per una versió antiga de l'app) se li posa, perquè es pugui llegir. */
+async function archiveTerms() {
+  if (!canEdit() || PREVIEW || ARCH.busy) return;
+  const dateOf = d => sessionById(d.sessionId)?.date;
+  for (const [key, d] of S.attendance) { const date = dateOf(d); if (!d.date && date && date > archCut() && archCut() && !isDirty(`attendance/${key}`)) persist('attendance', key, { ...d, date }, 30); }
+  if (SYNC.mode.attendance !== 'full' || SYNC.got.attendance == null || pendingWrites()) return;
+  const all = allSessions();
+  const todo = archivable(all.map(s => s.date), archCut());
+  if (!todo.length) return;
+  ARCH.busy = true;
+  try {
+    const cfg = { ...(S.config.attArchive || {}), ids: [...((S.config.attArchive || {}).ids || [])] };
+    for (const g of todo) {
+      const docs = archiveDocs(g, S.attendance, dateOf);
+      if (JSON.stringify(docs).length > ARCH_MAX) break;   // massa gran per a un sol document: es queda com està
+      await db.doc(`attArchive/${g.id}`).set({ from: g.from, to: g.to, docs, n: Object.keys(docs).length, builtAt: new Date().toISOString(), by: S.email || '' });
+      cfg.ids = [...new Set([...cfg.ids, g.id])]; cfg.cut = g.to;
+    }
+    if (cfg.cut && cfg.cut !== archCut()) {
+      // Les llistes de després que encara no porten la data (desades per una versió antiga de l'app) la necessiten per sortir.
+      for (const [key, d] of S.attendance) { const date = dateOf(d); if (!d.date && date && date > cfg.cut) persist('attendance', key, { ...d, date }, 30); }
+      saveConfig({ attArchive: cfg });
+    }
+  } catch { /* es tornarà a provar el pròxim cop */ }
+  ARCH.busy = false;
+}
+
 /* ---------- Absence notices ---------- */
 const absencesFor = (sid, mid) => [...S.absences.values()].filter(a => a.memberId === mid && (a.sessionIds || []).includes(sid) && a.status !== 'rejected');
 const pendingAbsences = () => [...S.absences.values()].filter(a => a.status === 'pending');
@@ -475,7 +567,8 @@ const pendingAbsences = () => [...S.absences.values()].filter(a => a.status === 
 /* ================= Mutations ================= */
 function setMark(session, member, patch) {
   const key = attKey(session.id, member.section);
-  const doc = clone(S.attendance.get(key) || { sessionId: session.id, section: member.section, marks: {} });
+  const doc = clone(attDoc(session.id, member.section) || { sessionId: session.id, section: member.section, marks: {} });
+  doc.date = session.date;   // per poder llegir només les llistes dels trimestres que no s'han arxivat
   doc.marks = doc.marks || {};
   if (patch === null) delete doc.marks[member.id];
   else doc.marks[member.id] = { ...(doc.marks[member.id] || {}), ...patch };
@@ -486,8 +579,17 @@ function setMark(session, member, patch) {
     for (const k of Object.keys(m)) if (m[k] === undefined || m[k] === '') delete m[k];
   }
   doc.updatedAt = new Date().toISOString();
+  saveAttendance(key, doc);
+}
+/** Desa una llista. Si és d'un trimestre arxivat, també la corregeix a l'arxiu (que és d'on la llegeix tothom). */
+function saveAttendance(key, doc) {
   S.attendance.set(key, doc);
   persist('attendance', key, doc);
+  const arch = !PREVIEW && doc.date && doc.date <= archCut() ? archiveOf(doc.date) : null;
+  if (!arch) return;
+  ARCH.docs.set(key, doc);
+  const path = new firebase.firestore.FieldPath('docs', key);
+  db.doc(`attArchive/${arch.id}`).update(path, doc).catch(writeFailed);
 }
 function saveMember(m) { S.members.set(m.id, m); persist('members', m.id, m, 50); }
 function saveProduction(p) { S.productions.set(p.id, p); persist('productions', p.id, p, 50); }

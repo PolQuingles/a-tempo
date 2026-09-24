@@ -15,7 +15,7 @@ function viewCalendar() {
     <span style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="seg3" role="radiogroup" aria-label="Vista del calendari"><button type="button" role="radio" aria-checked="${!month}" data-act="cal-view" data-k="list">Llista</button><button type="button" role="radio" aria-checked="${month}" data-act="cal-view" data-k="month">Mes</button></span>
     <button class="btn btn-sm" data-act="cal-subscribe">${icsOn() ? 'Subscriu-t’hi' : 'Exporta'}</button>${month ? '' : `<button class="btn btn-sm" data-act="cal-past">${ui.calPast ? 'Amaga passades' : 'Mostra passades'}</button>`}
     ${canEdit() ? `<button class="btn btn-sm btn-primary" data-act="session-new" ${month && ui.calDay ? `data-date="${ui.calDay}"` : ''}>+ Sessió</button>` : ''}</span></div>
-    ${isLinkOnly() ? '<p class="muted" style="margin:-6px 2px 12px;font-size:calc(13px*var(--ts))">Toca una sessió per avisar que no hi podràs anar.</p>' : ''}`;
+`;
   if (!prods.length) return head + `<div class="empty">${staffSvg()}<h2 class="h2">Cap producció</h2><p>Les sessions s’organitzen per produccions.</p>${canEdit() ? '<button class="btn btn-primary" data-act="prod-new">Nova producció</button>' : ''}</div>`;
 
   if (month) return head + chips + calMonthView();
@@ -57,7 +57,7 @@ function viewCalendar() {
 /** Les classes que surten al calendari de cadascú: les hores que hi tinc i, si en faig, els dies que dono. */
 function calClasses() {
   if (!classesOn()) return [];
-  const mid = myId(), mail = S.email || '';
+  const mid = myId(), mail = myEmail();
   const out = [];
   for (const c of classDays()) {
     const slot = mid ? classSlots(c).find(x => x.memberId === mid) : null;
@@ -119,44 +119,32 @@ function calMonthView() {
       : `<div class="panel" style="padding:14px;font-size:calc(13.5px*var(--ts));color:var(--muted)">Cap sessió aquest dia.</div>`}`;
 }
 function calRow(s, underProd, tone) {
-  const staff = !isLinkOnly();
-  let right = '';
-  if (staff) {
-    let marks;
-    if (SECTIONS.length <= 5) {
-      marks = SECTIONS.map(x => {
-        if (!convoked(s, x.id)) return `<span class="vm off${x.short.length > 1 ? ' long' : ''}" title="${esc(x.name)}: no convocats">${esc(x.short)}</span>`;
-        const pr = progress(s, x.id);
-        const cls = !hasData(s, x.id) ? '' : pr.total && pr.done === pr.total ? 'full' : 'part';
-        return `<span class="vm ${cls}${x.short.length > 1 ? ' long' : ''}" title="${esc(x.name)}: ${pr.done}/${pr.total}">${esc(x.short)}</span>`;
-      }).join('');
-    } else {
-      // Moltes seccions: un sol comptador de llistes completes.
-      const on = SECTIONS.filter(x => convoked(s, x.id));
-      const full = on.filter(x => { const pr = progress(s, x.id); return pr.total && pr.done === pr.total; }).length;
-      const any = on.some(x => hasData(s, x.id));
-      marks = `<span class="vm-sum ${!any ? '' : full === on.length ? 'full' : 'part'}" title="Llistes completes">${full}/${on.length}</span>`;
-    }
-    const c = emptyCounts();
-    for (const x of SECTIONS) if (convoked(s, x.id) && hasData(s, x.id)) for (const m of membersOf(x.id)) { const mk = effMark(s, m); if (mk) c[mk.s]++; }
-    const r = rate(c);
-    const rv = s.rsvp && canEdit() ? rsvpCounts(s) : null;
-    right = `<span class="cal-right"><span class="vmarks" aria-label="Llista per ${V.sections}">${marks}</span>${r != null ? `<span class="cal-pct">${pct(r)}</span>` : rv ? `<span class="cal-badge" title="Confirmacions">${rv.yes}✓ ${rv.no}✗ ${rv.none}?</span>` : ''}</span>`;
+  let marks;
+  if (SECTIONS.length <= 5) {
+    marks = SECTIONS.map(x => {
+      if (!convoked(s, x.id)) return `<span class="vm off${x.short.length > 1 ? ' long' : ''}" title="${esc(x.name)}: no convocats">${esc(x.short)}</span>`;
+      const pr = progress(s, x.id);
+      const cls = !hasData(s, x.id) ? '' : pr.total && pr.done === pr.total ? 'full' : 'part';
+      return `<span class="vm ${cls}${x.short.length > 1 ? ' long' : ''}" title="${esc(x.name)}: ${pr.done}/${pr.total}">${esc(x.short)}</span>`;
+    }).join('');
   } else {
-    const me = S.members.get(myMemberId());
-    const mine = me && [...S.absences.values()].find(a => a.memberId === me.id && (a.sessionIds || []).includes(s.id) && a.status !== 'rejected');
-    const rv = me && s.rsvp && S.rsvp.get(`${s.id}_${me.id}`);
-    right = mine ? `<span class="cal-right"><span class="st-pill st-${mine.status}">${mine.kind === 'late' ? 'Tard' : 'No hi vaig'}</span></span>`
-      : rv ? `<span class="cal-right"><span class="rsvp ${rv.answer}">${rv.answer === 'yes' ? 'Hi seré' : 'No hi seré'}</span></span>`
-      : s.rsvp && s.date >= TODAY ? '<span class="cal-right"><span class="rsvp none">Confirma</span></span>' : '<span></span>';
+    // Moltes seccions: un sol comptador de llistes completes.
+    const on = SECTIONS.filter(x => convoked(s, x.id));
+    const full = on.filter(x => { const pr = progress(s, x.id); return pr.total && pr.done === pr.total; }).length;
+    const any = on.some(x => hasData(s, x.id));
+    marks = `<span class="vm-sum ${!any ? '' : full === on.length ? 'full' : 'part'}" title="Llistes completes">${full}/${on.length}</span>`;
   }
+  const c = emptyCounts();
+  for (const x of SECTIONS) if (convoked(s, x.id) && hasData(s, x.id)) for (const m of membersOf(x.id)) { const mk = effMark(s, m); if (mk) c[mk.s]++; }
+  const r = rate(c);
+  const rv = s.rsvp && canEdit() ? rsvpCounts(s) : null;
+  const right = `<span class="cal-right"><span class="vmarks" aria-label="Llista per ${V.sections}">${marks}</span>${r != null ? `<span class="cal-pct">${pct(r)}</span>` : rv ? `<span class="cal-badge" title="Confirmacions">${rv.yes}✓ ${rv.no}✗ ${rv.none}?</span>` : ''}</span>`;
   const other = sessionProds(s).filter(id => id !== underProd).map(id => S.productions.get(id)?.name).filter(Boolean);
   const cls = [s.date === TODAY ? 'is-today' : '', s.date < TODAY ? 'is-past' : '', isShow(s) ? 'type-concert' : ''].join(' ');
-  const openAct = staff ? 'open-session' : (s.date >= TODAY ? 'absence-new' : '');
   return `<li class="cal-row ${cls}${tone ? ' prod-tone' : ''}" data-date="${s.date}"${tone ? ` style="--ph:${prodHue(S.productions.get(s.prodId))}"` : ''}>
-    <button class="cal-main" ${openAct ? `data-act="${openAct}"` : 'disabled'} data-sid="${s.id}">
+    <button class="cal-main" data-act="open-session" data-sid="${s.id}">
       <span class="cal-date"><b>${+s.date.slice(8, 10)}</b><small>${wdShort(s.date)}</small></span>
-      <span class="cal-info"><span class="cal-type">${esc(s.type || 'Assaig')}</span><span class="cal-place">${[s.info?.call ? `Convocatòria <span class="mono">${esc(s.info.call)}</span>` : '', s.time ? `<span class="mono">${esc(timeRange(s))}</span>` : '', esc(s.place || ''), esc(s.note || ''), other.length ? `També: ${esc(other.join(', '))}` : ''].filter(Boolean).join(' · ')}</span>${planOf(s) && (s.plan.items || []).length ? `<span class="cal-plan">${esc(s.plan.items.map(planTitle).join(' · '))}</span>` : ''}</span>
+      <span class="cal-info"><span class="cal-type">${esc(s.type || 'Assaig')}</span><span class="cal-place">${[s.info?.call ? `Convocatòria <span class="mono">${esc(s.info.call)}</span>` : '', s.time ? `<span class="mono">${esc(timeRange(s))}</span>` : '', esc(s.place || ''), esc(s.note || ''), other.length ? `També: ${esc(other.join(', '))}` : ''].filter(Boolean).join(' · ')}</span>${planOf(s) && planWorks(s.plan.items).length ? `<span class="cal-plan">${esc(planWorks(s.plan.items).map(planTitle).join(' · '))}</span>` : ''}</span>
       ${right}
     </button>
     ${hasInfo(s) || planOf(s) || seatRows(s).length || (canEdit() && isShow(s)) ? `<button class="icon-btn info" data-act="session-info" data-sid="${s.id}" aria-label="Fitxa de la sessió">${ICON.info}</button>` : ''}

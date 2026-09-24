@@ -44,7 +44,12 @@
       id: path.split('/').pop(), path,
       get: async () => docSnap(path),
       set: async (d, o) => write(path, d, o),
-      update: async d => { if (DB[path] === undefined) throw Object.assign(new Error('no doc'), { code: 'not-found' }); write(path, d, { merge: true }); },
+      update: async (d, v) => {
+        if (DB[path] === undefined) throw Object.assign(new Error('no doc'), { code: 'not-found' });
+        // update(FieldPath, valor): només aquell camp, dins dels mapes que calgui.
+        if (d instanceof FieldPath) { const cur = clone(DB[path]); let o = cur; for (const k of d.parts.slice(0, -1)) o = o[k] = o[k] || {}; o[d.parts[d.parts.length - 1]] = clone(v); write(path, cur); return; }
+        write(path, d, { merge: true });
+      },
       delete: async () => del(path),
       collection: sub => colRef(`${path}/${sub}`),
       onSnapshot(ok) { let last = {}; const l = () => { const s = JSON.stringify(DB[path]) || '∅'; if (s !== last) { last = s; ok(docSnap(path)); } }; listeners.add(l); setTimeout(l, 0); return () => listeners.delete(l); },
@@ -90,12 +95,16 @@
     getRedirectResult: async () => null, signOut: async () => { localStorage.removeItem('fake:user'); },
     signInWithPopup: async () => ({ user }), signInWithRedirect: async () => {},
   };
+  function FieldPath(...parts) { this.parts = parts; }
   const firestore = () => fsApi;
+  firestore.FieldPath = FieldPath;
   firestore.Blob = { fromUint8Array: a => ({ toUint8Array: () => a }) };
   firestore.FieldValue = { delete: () => undefined, serverTimestamp: () => ({ __serverTs: 1 }) };
   firestore.Timestamp = { fromMillis: ms => new Ts(ms) };
   // A les proves, la lectura per canvis funciona des del primer dia (vegeu DELTA_FROM a js/02-dades.js).
   window.COR_DELTA_FROM = '2000-01-01';
+  // L'arxiu de l'assistència no es fa sol a les proves: el prova run.py cridant archiveTerms() quan toca.
+  window.COR_ARCHIVE_WAIT = 1e9;
   const auth = () => authApi;
   auth.GoogleAuthProvider = function () { this.setCustomParameters = () => {}; };
   window.firebase = { initializeApp: () => ({}), firestore, auth };

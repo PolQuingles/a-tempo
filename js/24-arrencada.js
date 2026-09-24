@@ -29,6 +29,9 @@ function afterReady() {
   if (g && S.config.name && g.name !== S.config.name) { g.name = S.config.name; saveGroupsCache(); }
   touchLastSeen();
   watchMessages();
+  watchThreads();
+  // Qui edita arxiva els trimestres acabats (vegeu 02-dades), quan ja ha llegit totes les llistes del servidor.
+  setTimeout(archiveTerms, window.COR_ARCHIVE_WAIT || 8000);
   checkPush();
   syncDirectory();
   // Si s'obre des d'un botó d'una notificació, primer es fa el que s'hi ha triat (i no surt la benvinguda).

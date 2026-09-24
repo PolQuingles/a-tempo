@@ -2,6 +2,9 @@
 
 Cada hora comprova:
   · que l'app s'obre a cada adreça publicada (APP_URLS) i que hi carrega el codi que enllaça;
+  · que la versió publicada de l'app és la del repositori (després de 40 minuts de marge per publicar);
+  · que les regles de seguretat publicades a Firebase són les del repositori (firestore.rules): ho mira demanant
+    reglesVersio/<empremta>, que només les regles d'aquesta mateixa versió deixen llegir (vegeu tools/stamp.py);
   · que GitHub Pages continua activat (s'ha apagat sol dues vegades);
   · si algú ha tingut errors a l'app (col·lecció «errors» de Firestore, l'última hora).
 Si hi ha res, avisa al mòbil l'administració de la primera agrupació (els seus aparells amb avisos activats) i
@@ -10,7 +13,7 @@ cada sis hores (l'estat es desa al repositori privat de còpies, com els altres 
 
     python3 .github/scripts/vigilancia.py <carpeta del repositori de còpies>
 """
-import datetime, hashlib, json, os, re, sys, urllib.error, urllib.request
+import datetime, hashlib, json, os, re, subprocess, sys, urllib.error, urllib.request
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import dades
@@ -18,8 +21,26 @@ import dades
 URLS = [u.strip().rstrip("/") + "/" for u in (os.environ.get("APP_URLS") or "https://polquingles.github.io/a-tempo/").split(",") if u.strip()]
 STATE_DIR = sys.argv[1] if len(sys.argv) > 1 else None
 NOW = datetime.datetime.now(datetime.timezone.utc)
+REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+GRACE = datetime.timedelta(minutes=40)   # el que triga a publicar-se un canvi (GitHub Pages i les regles)
 REPEAT = datetime.timedelta(hours=6)
 problems = []   # (clau estable, text)
+
+
+def changed_at(*paths):
+    """Quan va canviar per última vegada al repositori (o None si no se sap)."""
+    try:
+        out = subprocess.run(["git", "-C", REPO, "log", "-1", "--format=%ct", "--", *paths], capture_output=True, text=True, timeout=20).stdout.strip()
+        return datetime.datetime.fromtimestamp(int(out), datetime.timezone.utc) if out else None
+    except Exception:
+        return None
+
+
+def repo_file(path):
+    try:
+        return open(os.path.join(REPO, path), encoding="utf-8").read()
+    except OSError:
+        return ""
 
 
 def get(url, timeout=20):
@@ -53,7 +74,25 @@ for base in URLS:
     elif missing:
         problems.append((f"web:{base}:fitxers", f"A {base} falten fitxers de l'app: {', '.join(missing[:4])}."))
     m = re.search(r'name="app-version" content="([^"]*)"', html)
-    print(f"{base}: {code} · {len(assets)} fitxers de codi · versió {m.group(1) if m else '?'}")
+    live = m.group(1) if m else "?"
+    print(f"{base}: {code} · {len(assets)} fitxers de codi · versió {live}")
+    # La versió publicada ha de ser la del repositori (un cop passat el temps de publicar-la).
+    want = re.search(r'name="app-version" content="([^"]*)"', repo_file("index.html"))
+    when = changed_at("index.html")
+    if want and live != want.group(1) and when and NOW - when > GRACE:
+        problems.append((f"web:{base}:versio:{want.group(1)}", f"A {base} hi ha la versió {live} de l'app, però la del repositori és la {want.group(1)} (desada fa {int((NOW - when).total_seconds() // 60)} minuts)."))
+
+# ---------- 1b. Les regles de seguretat publicades són les del repositori ----------
+rules_v = re.search(r"match /reglesVersio/\{v\} \{\s*allow get: if v == '([^']*)'", repo_file("firestore.rules"))
+if rules_v:
+    code, _ = get(f"{dades.BASE}/reglesVersio/{rules_v.group(1)}")
+    when = changed_at("firestore.rules")
+    if code == 404:
+        print(f"Regles publicades: les del repositori ({rules_v.group(1)})")
+    elif code == 403 and (not when or NOW - when > GRACE):
+        problems.append((f"regles:{rules_v.group(1)}", "Les regles de seguretat publicades a Firebase no són les del repositori: cal publicar firestore.rules (vegeu README › Regles)."))
+    else:
+        print(f"Regles: resposta {code or 'cap'}{' (acabades de canviar: encara es poden estar publicant)' if code == 403 else ''}")
 
 # ---------- 2. GitHub Pages activat ----------
 repo, token = os.environ.get("GITHUB_REPOSITORY"), os.environ.get("GITHUB_TOKEN")

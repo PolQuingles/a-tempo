@@ -30,8 +30,10 @@ def backup(gid):
         "attendance": r.list(f"{base}/attendance"),
     }
     for name in ["absences", "rsvp", "subs", "staff", "announcements", "polls", "pollVotes", "classes", "classReq", "classPlan", "classNotes",
-                 "works", "trips", "tripSignups", "profiles", "students", "messages", "memberNotes", "memberDocs"]:
+                 "works", "trips", "tripSignups", "profiles", "students", "messages", "memberNotes", "memberDocs", "threads", "nudges"]:
         data[name] = list(r.list(f"{base}/{name}").values())
+    # Els trossos de temporada arxivats (les mateixes llistes en un sol document cadascun: vegeu js/02-dades.js).
+    data["attArchive"] = r.list(f"{base}/attArchive")
 
     out = dades.folder(OUT, gid)
     os.makedirs(out, exist_ok=True)
@@ -57,6 +59,7 @@ def backup(gid):
     files += [x.get("file") for w in data["works"] for x in (w.get("materials") or [])]
     files += [n.get("file") for n in data["classNotes"]]   # enregistraments de classe (classFiles)
     files += [x.get("file") for d in data["memberDocs"] for x in (d.get("docs") or {}).values() if isinstance(x, dict)]   # documents signats (memberFiles)
+    files += [x.get("file") for a in data["announcements"] for x in (a.get("files") or [])]   # adjunts dels anuncis
     saved = 0
     for f in filter(None, files):
         folder = os.path.join(out, "fitxers", f["id"])

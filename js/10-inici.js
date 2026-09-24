@@ -67,10 +67,11 @@ const TODO_ICONS = {
   trip: '<path d="M4 16.5V8a2 2 0 012-2h12a2 2 0 012 2v8.5"/><path d="M3 16.5h18M7 19.5v-3M17 19.5v-3M4 11h16"/>',
   voices: '<path d="M4 20V11M9 20V6M14 20v-9M19 20V9"/><path d="M3 20h18"/>',
   msg: '<path d="M4 5.5h16v10.5H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/>',
+  thread: '<path d="M4 5.5h11v8H8l-4 3.5z"/><path d="M15 9.5h5v8l-3-2.5h-6.5v-2"/>',
 };
 const unreadAnnouncements = () => { const seen = lsGet(LS_SEEN) || ''; return visibleAnnouncements().filter(a => (a.createdAt || '') > seen && (!a.until || a.until >= TODAY)); };
 /** Les seccions on em toca passar llista: la dels caps de corda o de secció. */
-const mySections = () => hasRole(S.me, 'leader') && S.me.section && SEC_MAP[S.me.section] ? [S.me.section] : [];
+const mySections = () => { const me = ME(); return hasRole(me, 'leader') && me.section && SEC_MAP[me.section] ? [me.section] : []; };
 /** Tot el que espera alguna cosa de mi, en una sola llista: [{ icon, t, s, btn, act, n, badge }]. */
 function todoItems() {
   const me = S.members.get(myMemberId());
@@ -102,6 +103,8 @@ function todoItems() {
     const polls = openPolls().filter(p => !S.pollVotes.get(`${p.id}_${me.id}`));
     if (polls.length) out.push({ icon: 'poll', t: `${polls.length === 1 ? '1 enquesta' : `${polls.length} enquestes`} per respondre`, s: esc(polls[0].title || ''), btn: 'Respon', act: 'data-act="board-polls"', n: polls.length });
   }
+  const th = unreadThreads();
+  if (th.length) out.push({ icon: 'thread', t: `${th.length === 1 ? '1 conversa' : `${th.length} converses`} amb resposta nova`, s: esc(th.map(threadWho).slice(0, 2).join(', ')), btn: 'Llegeix', act: th.length === 1 ? `data-act="thread" data-id="${esc(th[0].id)}"` : 'data-act="threads"', n: th.length });
   const msgs = unreadMessages();
   if (msgs.length) out.push({ icon: 'msg', t: `${msgs.length === 1 ? '1 missatge nou' : `${msgs.length} missatges nous`}`, s: esc(`${msgs[0].byName || ''}: ${msgs[0].title || msgs[0].body || ''}`.slice(0, 90)), btn: 'Llegeix', act: 'data-act="msg-list"', n: msgs.length });
   for (const t of tripsToAnswer()) out.push({ icon: 'trip', t: `${esc(t.title)}: t’hi apuntes?`, s: `${esc(capz(tripDates(t)))}${t.deadline ? ` · fins al ${ddmm(t.deadline)}` : ''}`, btn: 'Respon', act: 'data-act="board-trips"', n: 1 });
@@ -122,6 +125,8 @@ function convCard(s, me) {
     ${hasInfo(s) ? fitxaChip(s) : ''}
     <div class="c-a"><button class="btn btn-sm ${a?.answer === 'yes' ? 'btn-primary' : ''}" data-act="rsvp-yes" data-sid="${s.id}">Hi seré</button>
       <button class="btn btn-sm ${a?.answer === 'no' ? 'btn-danger' : ''}" data-act="rsvp-no" data-sid="${s.id}">No hi podré anar</button></div>
+    ${s.bus && a?.answer === 'yes' ? `<div class="c-a bus-q"><span class="m">Com hi vas?</span><button class="btn btn-sm ${a.transport === 'bus' ? 'btn-primary' : ''}" data-act="rsvp-bus" data-sid="${s.id}" data-k="bus">Amb l’autocar</button><button class="btn btn-sm ${a.transport === 'own' ? 'btn-primary' : ''}" data-act="rsvp-bus" data-sid="${s.id}" data-k="own">Pel meu compte</button></div>` : ''}
+    ${a?.answer === 'yes' ? tasksBlock(s, true) : ''}
   </div>`;
 }
 function todoBlock(me) {
@@ -160,11 +165,11 @@ function todayBlock(me) {
 }
 function viewHome() {
   const me = S.members.get(myMemberId());
-  const name = me ? me.name : (S.me?.name || S.userName || '');
+  const name = me ? me.name : (ME()?.name || S.userName || '');
   const first = name.includes(',') ? name.split(',').pop().trim() : name.split(' ')[0];
   const lv = me ? leaveText(me) : '';
   const who = me ? `<b>${esc(me.name)}</b> · ${esc(SEC[me.section].name)}${me.part ? ` ${esc(me.part)}` : ''}${lv ? ` · ${lv}` : ''}`
-    : `<b>${esc(name || S.email || '')}</b>${S.me ? ` · ${esc(rolesText(S.me))}` : ''}`;
+    : `<b>${esc(name || myEmail())}</b>${ME() ? ` · ${esc(rolesText(ME()))}` : ''}`;
   const head = `<div class="page-head"><div><div class="eyebrow">${esc(longDate(TODAY))}</div><h1 class="h1">Hola${first ? `, ${esc(first)}` : ''}</h1></div></div>
     <div class="me-line" style="margin-top:-6px"><span>${who}</span></div>`;
   if (!me && !canEdit() && myMemberId()) return head + `<div class="empty">${staffSvg()}<h2 class="h2">Compte sense fitxa</h2><p>El teu correu encara no està vinculat a cap fitxa de la plantilla. Demana-ho a l’administració ${V.del}.</p></div>`;
@@ -190,12 +195,12 @@ function viewHome() {
   const ann = visibleAnnouncements().filter(a => !a.until || a.until >= TODAY).slice(0, 2);
   const missed = missedPlan(me);
   const soon = [
-    missed ? `<div class="panel" style="padding:14px"><span class="eyebrow">No hi vas ser · ${esc(missed.type || 'Assaig')} del ${esc(shortDate(missed.date))}</span><br><b style="font-size:calc(14px*var(--ts))">Què s’hi va treballar</b>${planHtml(missed)}</div>` : '',
+    missed ? `<div class="panel" style="padding:14px"><span class="eyebrow">No hi vas ser · ${esc(missed.type || 'Assaig')} del ${esc(shortDate(missed.date))}</span><br><b style="font-size:calc(14px*var(--ts))">Què s’hi va treballar</b>${planHtml(missed, false, me?.section)}</div>` : '',
     classCard,
     next ? sessCard(next, isShow(next) ? V.sh.next : 'Proper assaig') : '',
     show && show.id !== next?.id ? sessCard(show, V.sh.next) : '',
     answered.length ? `<div class="panel"><div class="todo-k" style="padding:12px 14px 0">Convocatòries que ja has respost</div>${answered.map(s => convCard(s, me)).join('')}</div>` : '',
-    ann.length ? `<div class="panel">${ann.map(a => `<article class="ann ${a.pinned ? 'pinned' : ''}"><span class="eyebrow">Tauler</span><h3 class="ann-t" style="font-size:calc(17px*var(--ts))">${esc(a.title)}</h3>${a.body ? `<div class="ann-b">${linkify(a.body.length > 220 ? a.body.slice(0, 220) + '…' : a.body)}</div>` : ''}<div class="ann-m"><span>${esc(a.author || '')}</span><span class="mono">${a.createdAt ? ddmm(a.createdAt.slice(0, 10)) : ''}</span></div></article>`).join('')}
+    ann.length ? `<div class="panel">${ann.map(a => `<article class="ann ${a.pinned ? 'pinned' : ''}"><span class="eyebrow">Tauler</span><h3 class="ann-t" style="font-size:calc(17px*var(--ts))">${esc(a.title)}</h3>${a.body ? `<div class="ann-b rich">${richText(cutText(a.body, 220))}</div>` : ''}${(a.body || '').length > 220 || (a.files || []).length ? `<button class="btn btn-sm btn-ghost ann-more" data-act="ann-read" data-id="${esc(a.id)}">Llegeix-lo sencer${(a.files || []).length ? ` · ${a.files.length} ${a.files.length === 1 ? 'adjunt' : 'adjunts'}` : ''}</button>` : ''}<div class="ann-m"><span>${esc(a.author || '')}</span><span class="mono">${a.createdAt ? ddmm(a.createdAt.slice(0, 10)) : ''}</span></div></article>`).join('')}
         <div style="padding:0 14px 12px"><button class="btn btn-sm btn-ghost" data-act="board-news">Tot el tauler</button></div></div>` : '',
   ].filter(Boolean);
   const mine = me ? [...S.absences.values()].filter(a => a.memberId === me.id).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')) : [];
@@ -206,7 +211,7 @@ function viewHome() {
     ${todoBlock(me)}
     ${messagesBlock()}
     </div><div class="home-b">
-    ${soon.length ? `<div class="section-title"><h2 class="h2">Properament</h2></div><div class="soon">${soon.join('')}</div>` : ''}
+    ${soon.length ? `<div class="section-title"><h2 class="h2">Properament</h2><button class="btn btn-sm" data-act="week">La setmana</button></div><div class="soon">${soon.join('')}</div>` : ''}
     ${me ? `${myAttendanceCard(me)}
     <div class="section-title"><h2 class="h2">Els meus avisos</h2><button class="btn btn-sm btn-primary" data-act="absence-new">Avisa d’una absència</button></div>
     <p class="muted" style="margin:-2px 2px 10px;font-size:calc(13px*var(--ts))">Si no pots venir a un assaig, avisa amb temps: el teu ${V.leader} ho veurà i, si l’accepta, la falta quedarà justificada.</p>
@@ -215,14 +220,78 @@ function viewHome() {
     </div></div>`;
 }
 
+/* ---------- La setmana ---------- */
+// El que abans era el correu setmanal, fet sol amb el que ja hi ha a l'app: què es va fer els últims set dies (el pla de cada
+// assaig i «què s'hi va fer»), què ve els pròxims deu (hores, aules, horari del dia i pla, només el que toca a cadascú), què cal
+// respondre i què hi ha de nou al tauler. Si la direcció omple el pla de cada assaig, ningú no ha d'escriure res més.
+const addDays = (iso, n) => isoDate(new Date(parseISO(iso).getTime() + n * 864e5));
+function weekData() {
+  const me = S.members.get(myMemberId());
+  const staffView = canEdit() || !me;
+  const mine = s => staffView || (convoked(s, me.section) && !isOut(s, me));
+  const since = new Date(Date.now() - 7 * 864e5).toISOString();
+  return {
+    me, sec: staffView ? '' : me.section,
+    past: allSessions().filter(s => s.date >= addDays(TODAY, -7) && s.date < TODAY && mine(s)),
+    next: allSessions().filter(s => s.date >= TODAY && s.date <= addDays(TODAY, 10) && mine(s)),
+    classes: classesOn() && me ? classDays().filter(c => c.date >= TODAY && c.date <= addDays(TODAY, 10) && classLive(c) && mySlot(c)).map(c => ({ c, x: mySlot(c) })) : [],
+    polls: openPolls().filter(p => !me || staffView || !S.pollVotes.get(`${p.id}_${me.id}`)),
+    trips: tripsSorted().filter(t => tripOpen(t) && (staffView || (tripForMe(t, me) && !signupOf(t, me.id)))),
+    conv: me && !staffView ? openConvocations(me).filter(s => !S.rsvp.get(`${s.id}_${me.id}`)) : allSessions().filter(s => s.rsvp && s.date >= TODAY && s.date <= addDays(TODAY, 30)),
+    news: visibleAnnouncements().filter(a => (a.createdAt || '') >= since),
+    mats: productionsSorted().flatMap(p => (p.materials || []).filter(x => (x.at || '') >= since && (staffView || !x.section || x.section === me.section)).map(x => ({ p, x }))),
+  };
+}
+function weekSession(s, d, past) {
+  const sum = [s.time ? timeRange(s) : '', s.place || '', s.info?.call ? `convocatòria ${s.info.call}` : ''].filter(Boolean).join(' · ');
+  const steps = infoSteps(s);
+  return `<div class="wk-s${past ? ' past' : ''}"><div class="wk-sh"><b>${esc(longDate(s.date))}</b><span>${esc(s.type || 'Assaig')} · ${esc(prodNames(s))}</span></div>
+    ${sum ? `<p class="m" style="margin:2px 0 0">${esc(sum)}</p>` : ''}${s.note ? `<p style="margin:4px 0 0;color:var(--accent)">${esc(s.note)}</p>` : ''}
+    ${!past && steps.length ? `<ol class="steps">${steps.map(x => `<li><span class="mono">${esc(x.time || '')}</span><span><b>${esc(x.what || '')}</b>${x.where ? `<small>${esc(x.where)}</small>` : ''}</span></li>`).join('')}</ol>` : ''}
+    ${planHtml(s, false, d.sec) || (past || isShow(s) ? '' : '<p class="m" style="margin:4px 0 0">Encara no hi ha pla d’assaig.</p>')}
+    ${!past && hasInfo(s) && !steps.length ? fitxaChip(s) : ''}</div>`;
+}
+function weekHtml(d) {
+  const block = (t, body) => body ? `<div class="section-title"><h2 class="h2">${t}</h2></div>${body}` : '';
+  const ask = [
+    ...d.conv.map(s => `<li><span><b>${esc(s.type)} del ${esc(shortDate(s.date))}</b><small>${d.me && !canEdit() ? 'Confirma si hi seràs' : `Convocatòria${s.rsvpBy ? ` · fins al ${ddmm(s.rsvpBy)}` : ''}`}</small></span></li>`),
+    ...d.polls.map(p => `<li><span><b>${esc(p.title)}</b><small>Enquesta${p.closesAt ? ` · fins al ${ddmm(p.closesAt)}` : ''}</small></span></li>`),
+    ...d.trips.map(t => `<li><span><b>${esc(t.title)}</b><small>Sortida · ${esc(tripDates(t))}${t.deadline ? ` · respon fins al ${ddmm(t.deadline)}` : ''}</small></span></li>`),
+  ];
+  return `<p class="muted" style="margin:0 0 6px;font-size:calc(13px*var(--ts))">${esc(capz(shortDate(addDays(TODAY, -7))))} – ${esc(shortDate(addDays(TODAY, 10)))}${d.sec ? ` · el que toca a ${esc(SEC[d.sec].name.toLowerCase())}` : ''}</p>
+    ${block('Què farem', d.next.length ? d.next.map(s => weekSession(s, d, false)).join('') : '<p class="m">No hi ha cap sessió els pròxims deu dies.</p>')}
+    ${d.classes.length ? block(esc(V.classes), `<ul class="tasks">${d.classes.map(({ c, x }) => `<li><span><b>${esc(longDate(c.date))} · ${esc(x.time || '')}</b><small>${esc([teacherOf(c), c.place].filter(Boolean).join(' · '))}</small></span></li>`).join('')}</ul>`) : ''}
+    ${block('Per respondre', ask.length ? `<ul class="tasks">${ask.join('')}</ul>` : '')}
+    ${block('Nou al tauler', d.news.length || d.mats.length ? `<ul class="tasks">${d.news.map(a => `<li><span><b>${esc(a.title)}</b><small>Anunci${a.author ? ` · ${esc(a.author)}` : ''}</small></span></li>`).join('')}${d.mats.map(({ p, x }) => `<li><span><b>${esc(x.title)}</b><small>${esc(MAT_KINDS[x.kind] || 'Material')} · ${esc(p.name)}</small></span></li>`).join('')}</ul>` : '')}
+    ${block('Què vam fer', d.past.length ? d.past.slice().reverse().map(s => weekSession(s, d, true)).join('') : '')}`;
+}
+function weekText(d) {
+  const line = s => `${longDate(s.date)} · ${s.type || 'Assaig'}${s.time ? ` · ${timeRange(s)}` : ''}${s.place ? ` · ${s.place}` : ''}`;
+  return [`LA SETMANA · ${S.config.shortName || S.config.name || ''}`, '',
+    'QUÈ FAREM', ...d.next.flatMap(s => [line(s), ...(stepsText(s) ? [stepsText(s)] : []), ...(planOf(s) ? [planText(s)] : []), '']),
+    ...(d.past.length ? ['QUÈ VAM FER', ...d.past.flatMap(s => [line(s), ...(planOf(s) ? [s.plan.after || planText(s)] : []), ''])] : []),
+    `Tot a l’app: ${appUrl()}`].join('\n');
+}
+function sheetWeek() {
+  const d = weekData();
+  openSheet({
+    title: 'La setmana',
+    wide: true,
+    body: `<div class="week">${weekHtml(d)}</div>`,
+    foot: `<button class="btn" id="wk-print">Imprimeix</button><span class="spacer"></span><button class="btn btn-primary" id="wk-copy">Copia-la</button>`,
+    onMount: el => {
+      el.querySelector('#wk-copy').onclick = () => copyText(weekText(d), 'Setmana copiada');
+      el.querySelector('#wk-print').onclick = () => printDoc('La setmana', `<div class="week">${weekHtml(d)}</div>`);
+    },
+  });
+}
+
 function afterRender() {
   if (ui.tab === 'calendari' && !ui._calScrolled) {
     ui._calScrolled = true;
     const t = $('.cal-row.is-today') || $$('.cal-row').find(r => r.dataset.date >= TODAY);
     if (t && ui.calPast) t.scrollIntoView({ block: 'center' });
   }
-  const chip = ui.tab === 'gestio' && $('#people-menu .chip[aria-pressed="true"]');
-  if (chip) chip.scrollIntoView({ block: 'nearest', inline: 'center' });
   const ctx = $('#ctx');
   if (ctx) onScroll();
 }

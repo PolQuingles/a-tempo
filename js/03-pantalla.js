@@ -33,7 +33,6 @@ const TAB_SHORT = { stats: 'Estad.', classes: 'Classes', calendari: 'Calend.', l
 // estadístiques), Calendari, Tauler (comunicació) i, si n'hi ha, Classes. La gestió s'obre des del menú del compte.
 const tabsForRole = () => {
   const cl = seeClasses() ? ['classes'] : [];
-  if (isLinkOnly()) return ['avisos', 'tauler', ...(mySubs().length ? ['llista'] : []), 'calendari'];
   return ['avisos', 'llista', 'calendari', 'tauler', ...cl];
 };
 /** La pestanya de baix que s'il·lumina. Gestió no és cap pestanya: s'obre des del menú del compte. */
@@ -54,8 +53,8 @@ function renderTabs() {
   const gname = S.config.shortName || S.config.name || MARCA?.short || '';
   const side = `<div class="side-brand" aria-hidden="true">${logo ? `<img src="${esc(logo)}" alt="">` : `<span class="sb-ini">${esc(personInitials(gname))}</span>`}<span><b>${esc(gname)}</b><small>A Tempo</small></span></div>`;
   // A l'ordinador, Gestió també és al menú lateral (al mòbil s'obre des del menú del compte).
-  const pend = canEdit() && !PREVIEW ? pendingAbsences().length : 0;
-  const gestio = canEdit() && !PREVIEW ? `<button class="tab tab-extra" data-act="manage" data-k="${pend ? 'avisos' : ROUTE_MANAGE[ui.manage] ? ui.manage : 'personal'}" aria-current="${ui.tab === 'gestio' ? 'page' : 'false'}">
+  const pend = canEdit() ? pendingAbsences().length : 0;
+  const gestio = canEdit() ? `<button class="tab tab-extra" data-act="manage" data-k="${pend ? 'avisos' : ROUTE_MANAGE[ui.manage] ? ui.manage : 'personal'}" aria-current="${ui.tab === 'gestio' ? 'page' : 'false'}">
     <span class="tab-ico"><svg viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>${pend ? `<span class="tab-badge">${pend}</span>` : ''}</span>Gestió</button>` : '';
   $('.tabs-in').innerHTML = side + tabs.map(t => `<button class="tab" data-act="tab" data-tab="${t}" aria-current="${t === navTab() ? 'page' : 'false'}"${shortName(t) ? ` aria-label="${TAB_LABEL[t]}"` : ''}>
     <span class="tab-ico"><svg viewBox="0 0 24 24">${TAB_ICONS[t]}</svg>${t === 'avisos' && badge ? `<span class="tab-badge">${badge > 99 ? '99+' : badge}</span>` : ''}</span>${shortName(t) || TAB_LABEL[t]}</button>`).join('') + gestio;
@@ -242,7 +241,7 @@ function render() {
   }
   const html = { llista: viewRoll, calendari: viewCalendar, stats: () => viewStats(false), gestio: viewManage, avisos: viewHome, tauler: viewBoard, classes: viewClasses }[ui.tab]();
   v.innerHTML = html;
-  const key = [ui.tab, ui.att, ui.board, ui.manage, ui.people, ui.rollSec, ui.clWho, ui.sessionId].join('|');
+  const key = [ui.tab, ui.att, ui.board, ui.manage, ui.people, ui.cantTab, ui.rollSec, ui.clWho, ui.sessionId].join('|');
   if (key !== lastViewKey) { lastViewKey = key; v.classList.remove('view-in'); void v.offsetWidth; v.classList.add('view-in'); }
   afterRender();
   if (typeof syncRoute === 'function') syncRoute();
@@ -252,7 +251,7 @@ function renderBanner() {
   const b = $('#banner');
   let h = '';
   if (S.error) h += `<div class="banner warn"><span>${esc(S.error)}</span><button class="btn btn-sm" data-act="reload">Recarrega</button></div>`;
-  if (PREVIEW) h += `<div class="banner"><span>Estàs veient l’app com <b>${esc(S.members.get(PREVIEW.memberId)?.name || '')}</b>. No pots canviar res.</span><button class="btn btn-sm" data-act="preview-off">Torna a l’edició</button></div>`;
+  if (PREVIEW) h += `<div class="banner preview-banner"><span>Vista prèvia · <b>${esc(PREVIEW.label || '')}</b>${PREVIEW.name ? ` · ${esc(fullName(PREVIEW.name))}` : ''}. Veus l’app com la veu; no es desa res.</span><button class="btn btn-sm" data-act="preview-off">Surt de la vista prèvia</button></div>`;
   if (S.config.demo && canEdit() && S.mode === 'shared') h += `<div class="banner"><span><b>Dades d’exemple.</b> Quan vulguis començar amb les dades reals, esborra-les.</span><button class="btn btn-sm" data-act="wipe-demo">Esborra l’exemple</button></div>`;
   b.innerHTML = h;
 }

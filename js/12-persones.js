@@ -247,21 +247,88 @@ function sheetStaffBulk() {
 function indexPerson(mail) {
   fs.doc(`staffIndex/${mail}/agrupacions/${GID}`).set({ at: new Date().toISOString(), name: (S.config.name || '').slice(0, 80) }).catch(() => {});
 }
-/** See the app the way a member sees it: read-only, with their own space. */
+/* ---------- «Mira l'app com…»: la vista prèvia de cada rol ---------- */
+// L'administració pot veure l'app tal com la veu un cantaire, un cap de corda, la direcció, la gerència, la secretaria o un
+// professor de cant. Es fa servir la fitxa real d'algú que tingui aquell rol (o una de genèrica si encara no n'hi ha cap).
+// Només canvia el que es veu en aquest mòbil i no es desa res: ni els canvis de les llistes ni res que s'escrigui.
+const PREVIEW_ROLES = [['singer', () => V.Member], ['leader', () => capz(V.leader)], ['director', () => 'Direcció'], ['gerencia', () => 'Gerència'], ['secretaria', () => 'Secretaria'], ['voice', () => V.Teacher]];
+/** Les persones que es poden triar per a un rol: [{ key, label, person }]. */
+function previewPeople(role) {
+  if (role === 'singer') return membersOf(null).sort(byName).map(m => ({ key: m.id, label: `${m.name} · ${SEC[m.section].name}`, person: { roles: ['singer'], memberId: m.id, section: m.section, name: m.name, email: accountFor(m.id)?.email || '' } }));
+  if (role === 'leader') return SECTIONS.map(x => {
+    const p = peopleWithRole('leader').find(q => q.section === x.id);
+    const m = p?.memberId ? S.members.get(p.memberId) : membersOf(x.id).find(q => q.leader);
+    return { key: x.id, label: `${capz(V.leader)} de ${x.name.toLowerCase()}${p || m ? ` · ${fullName((p || m).name)}` : ''}`,
+      person: { roles: p ? rolesOf(p).filter(r => r !== 'admin') : ['leader', ...(m ? ['singer'] : [])], section: x.id, memberId: p?.memberId || m?.id || '', name: p?.name || m?.name || '', email: p?.email || '' } };
+  });
+  if (role === 'voice') return teacherOptions().map(t => {
+    const p = S.staff.get(t.key);
+    return { key: t.key, label: t.name, person: { roles: p ? rolesOf(p).filter(r => r !== 'admin') : ['voice'], email: t.key, name: t.name, memberId: p?.memberId || '', section: p?.section || '' } };
+  });
+  const people = peopleWithRole(role).map(p => ({ key: p.email, label: fullName(p.name || p.email), person: { roles: rolesOf(p).filter(r => r !== 'admin'), email: p.email, name: p.name || '', memberId: p.memberId || '', section: p.section || '' } }));
+  return people.length ? people : [{ key: '', label: `${PREVIEW_ROLES.find(r => r[0] === role)[1]()} (encara no hi ha ningú amb aquest rol)`, person: { roles: [role], email: '', name: '', memberId: '', section: '' } }];
+}
 function sheetPreview() {
+  ensureStaff();
+  let role = 'singer';
+  const paint = el => {
+    const list = previewPeople(role);
+    el.querySelector('#pv-who-l').textContent = role === 'singer' ? V.Member : role === 'leader' ? capz(V.section) : role === 'voice' ? V.Teacher : 'Qui';
+    el.querySelector('#pv-who').innerHTML = list.map(x => `<option value="${esc(x.key)}">${esc(x.label)}</option>`).join('');
+    el.querySelectorAll('#pv-role .pick').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.k === role)));
+  };
   openSheet({
-    title: `Mira-ho com un ${V.member}`,
-    body: `<p style="margin-top:0">Tria qui vulguis de la plantilla i veuràs l’app exactament com la veu: pot consultar-ho tot, però no pot canviar res. Només afecta aquest mòbil i se’n surt amb un botó.</p>
-      <label class="field"><span>${V.Member}</span><select class="inp" id="pv-m">${memberOptions(myId() || '')}</select></label>`,
+    title: 'Mira l’app com…',
+    body: `<p style="margin-top:0">Tria un rol i una persona, i veuràs l’app tal com la veu. Només canvia en aquest mòbil i no es desa res del que facis. Se’n surt amb el botó de dalt.</p>
+      <div class="field"><span>Rol</span><div class="pickers" id="pv-role">${PREVIEW_ROLES.filter(([k]) => k !== 'voice' || classesOn()).map(([k, l]) => `<button type="button" class="pick" data-k="${k}" aria-pressed="${k === role}">${esc(l())}</button>`).join('')}</div></div>
+      <label class="field"><span id="pv-who-l">${esc(V.Member)}</span><select class="inp" id="pv-who"></select></label>`,
     foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="pv-ok">Mira-ho</button>`,
     onMount: el => {
+      paint(el);
+      el.querySelectorAll('#pv-role .pick').forEach(b => b.onclick = () => { role = b.dataset.k; paint(el); });
+      // El personal pot arribar després d'obrir la finestra.
+      const t = setInterval(() => { if (!document.body.contains(el)) { clearInterval(t); return; } if (S.staffReady) { clearInterval(t); const v = el.querySelector('#pv-who').value; paint(el); el.querySelector('#pv-who').value = v; } }, 300);
       el.querySelector('#pv-ok').onclick = () => {
-        const id = el.querySelector('#pv-m').value;
-        if (!id) { toast(`Tria un ${V.member}`); return; }
-        PREVIEW = { memberId: id };
-        ui.tab = 'avisos'; ui.rollSec = null;
-        closeSheet(); render(); window.scrollTo({ top: 0 });
+        const pick = previewPeople(role).find(x => x.key === el.querySelector('#pv-who').value);
+        if (!pick) { toast('Tria qui vols veure'); return; }
+        const label = PREVIEW_ROLES.find(r => r[0] === role)[1]();
+        closeSheet();
+        startPreview({ ...pick.person, label, role });
       };
     },
   });
+}
+let REAL_FS = null;
+function startPreview(p) {
+  PREVIEW = { ...p, roles: p.roles.length ? p.roles : ['singer'], blocked: false, blockedAt: 0 };
+  // Cap escriptura arriba a la base de dades: ni les de les finestres ni les de qualsevol altre lloc.
+  if (!REAL_FS) { REAL_FS = fs; fs = previewFs(REAL_FS); }
+  ui.tab = 'avisos'; ui.rollSec = null; ui.clWho = null; ui.sessionId = null;
+  document.body.classList.toggle('ro', !canEdit());
+  render(); window.scrollTo({ top: 0 });
+}
+function stopPreview() {
+  const blocked = PREVIEW && PREVIEW.blocked;
+  PREVIEW = null;
+  if (REAL_FS) { fs = REAL_FS; REAL_FS = null; }
+  // Si s'hi ha tocat res, aquest mòbil ho té canviat a la pantalla (però no desat): es torna a carregar tal com és.
+  if (blocked) { location.reload(); return; }
+  ui.tab = 'gestio'; ui.manage = 'personal'; ui.rollSec = null; ui.clWho = null;
+  document.body.classList.toggle('ro', !canEdit());
+  render(); window.scrollTo({ top: 0 });
+}
+/** A la vista prèvia no es desa res: s'avisa (un cop cada pocs segons) i es recorda per refer la pantalla en sortir. */
+function previewBlocked() {
+  if (!PREVIEW) return;
+  const first = Date.now() - PREVIEW.blockedAt > 2500;
+  PREVIEW.blocked = true; PREVIEW.blockedAt = Date.now();
+  if (first) toast('Vista prèvia: no s’ha desat res');
+}
+/** La base de dades vista des de la vista prèvia: es pot llegir, però cap escriptura no surt del mòbil. */
+function previewFs(real) {
+  const no = () => { previewBlocked(); return Promise.reject(Object.assign(new Error('Vista prèvia'), { code: 'preview' })); };
+  const pass = (o, k) => { const v = o[k]; return typeof v === 'function' ? v.bind(o) : v; };
+  const wrap = t => new Proxy(t, { get: (o, k) => ['set', 'update', 'delete', 'add'].includes(k) ? no : k === 'doc' || k === 'collection' ? (...a) => wrap(o[k](...a)) : pass(o, k) });
+  return new Proxy(real, { get: (o, k) => k === 'doc' || k === 'collection' ? (...a) => wrap(o[k](...a))
+    : k === 'batch' ? () => ({ set() {}, update() {}, delete() {}, commit: no }) : k === 'runTransaction' ? no : pass(o, k) });
 }

@@ -113,6 +113,8 @@ const ICON = {
   info: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.6v.2"/></svg>',
   up: '<svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg>',
   check: '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  clip: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.5l-7.8 7.8a5 5 0 01-7.1-7.1l8.5-8.5a3.3 3.3 0 014.7 4.7l-8.5 8.5a1.7 1.7 0 01-2.4-2.4l7.8-7.8"/></svg>',
+  link: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/></svg>',
 };
 
 /* ================= Utils ================= */
@@ -157,14 +159,15 @@ const S = {
   mode: 'loading',          // loading | setup | nokey | nostaff | pick | create | suspended | badlink | shared
   ready: false,
   error: null,
-  role: null,               // edit | view | singer
+  role: null,               // edit | read
   uid: null,
   config: { name: '', alertFNJ: 3, minAttendance: 80, demo: false },
   members: new Map(),
   productions: new Map(),
   attendance: new Map(),
   absences: new Map(),
-  staff: new Map(),       // email -> { email, name, roles: [admin|director|leader|palau|singer], role (the first one), section?, memberId? }
+  staff: new Map(),       // email -> { email, name, roles: [admin|director|gerencia|secretaria|leader|voice|singer], section?, memberId? } (es llegeix quan cal: ensureStaff)
+  staffReady: false,
   subs: new Map(),        // <sessionId>_<corda> -> substitute for that roll call
   rsvp: new Map(),        // <sessionId>_<memberId> -> { answer: yes|no, note }
   announcements: new Map(),
@@ -179,11 +182,9 @@ const S = {
   memberDocs: null,       // secretaria: documents i quotes de cada persona (es llegeixen quan cal)
   trips: new Map(),       // <id> -> una sortida o gira: dates, transport i habitacions
   tripSignups: new Map(), // <tripId>_<memberId> -> qui hi va, amb quin transport i a quina habitació
-  myMarks: null,          // singer: my own marks
-  secrets: null,
-  secretsMembers: null,   // memberId -> personal link key
-  me: null,               // staff record when signed in with Google
-  memberId: null,         // singer's own member id (personal link)
+  threads: new Map(),     // <id> -> una conversa privada entre algú de la plantilla i l'equip (25-converses)
+  me: null,               // la fitxa d'accés de qui ha entrat (staff/<correu>)
+  memberId: null,         // la seva fitxa de la plantilla, si en té
   profiles: null,         // equip: les fitxes que omple cadascú (es llegeixen quan cal: llistes i sortides)
   push: new Map(),        // staff: one doc per device that has notifications on (read when «Qui ha entrat» opens)
   pushOn: false,          // this device
@@ -200,19 +201,15 @@ const ui = {
   tab: 'avisos', section: '', sessionId: null, rollSec: null,
   calProd: 'all', calPast: false,
   statsScope: 'prod', statsProd: null, statsTerm: null, statsSec: '', statsSort: 'pct',
-  manage: 'personal', people: 'singer', absFilter: 'pending',
+  manage: 'personal', people: 'singer', cantTab: 'plantilla', absFilter: 'pending',
   clWho: null, clMonth: null, clDay: null,
 };
 /* ---------- Memòria del mòbil, per agrupació ---------- */
-// Cada agrupació guarda a part la pestanya oberta, els avisos vistos, etc. La primera agrupació
-// encara llegeix les claus d'abans, que no duien l'agrupació al nom.
+// Cada agrupació guarda a part la pestanya oberta, els avisos vistos, etc.
 let GID = null;
 const lsKey = base => GID ? `${base}:${GID}` : base;
 function lsGet(base) {
-  try {
-    const v = localStorage.getItem(lsKey(base));
-    return v != null || GID !== FOUNDER ? v : localStorage.getItem(base);
-  } catch { return null; }
+  try { return localStorage.getItem(lsKey(base)); } catch { return null; }
 }
 function lsSet(base, v) { try { v == null ? localStorage.removeItem(lsKey(base)) : localStorage.setItem(lsKey(base), v); } catch {} }
 function loadUI() {
@@ -221,18 +218,17 @@ function loadUI() {
   ui.clWho = null;   // les classes comencen sempre pel quadre del professorat
 }
 function saveUI() {
-  lsSet(LS_UI, JSON.stringify({ tab: ui.tab, section: ui.section, calProd: ui.calProd, calView: ui.calView, statsScope: ui.statsScope, statsSec: ui.statsSec, statsSort: ui.statsSort, manage: ui.manage, people: ui.people, board: ui.board, att: ui.att }));
+  lsSet(LS_UI, JSON.stringify({ tab: ui.tab, section: ui.section, calProd: ui.calProd, calView: ui.calView, statsScope: ui.statsScope, statsSec: ui.statsSec, statsSort: ui.statsSort, manage: ui.manage, people: ui.people, cantTab: ui.cantTab, board: ui.board, att: ui.att }));
 }
 // Rols de les persones de l'agrupació. Una persona pot tenir-ne més d'un (p. ex. cap de corda i cantaire).
 // Administració ho pot fer tot; direcció, caps i equip passen llista i editen; cantaires i músics només llegeixen.
 const ROLE_KEYS = ['admin', 'director', 'gerencia', 'secretaria', 'leader', 'voice', 'singer'];
 const roleLabel = r => ({ admin: 'Administració', director: 'Director', gerencia: 'Gerència', secretaria: 'Secretaria', leader: V.Leader, singer: V.Member, voice: V.Teacher }[r] || r);
 const EDIT_ROLES = new Set(['admin', 'director', 'gerencia', 'secretaria', 'leader']);
-/** The roles of a person record, in ROLE_KEYS order: the list, or the single role of older records.
- *  «palau» (l'antic rol únic de l'equip tècnic) es llegeix com a gerència fins que se'n desa un de nou. */
+/** The roles of a person record, in ROLE_KEYS order: the list, or the single role of older records. */
 const rolesOf = p => {
   const list = !p ? [] : Array.isArray(p.roles) && p.roles.length ? p.roles : p.role ? [p.role] : [];
-  return ROLE_KEYS.filter(k => list.includes(k) || (k === 'gerencia' && list.includes('palau')));
+  return ROLE_KEYS.filter(k => list.includes(k));
 };
 const hasRole = (p, r) => rolesOf(p).includes(r);
 const rolesText = p => rolesOf(p).map(roleLabel).join(' · ') || 'Sense rol';
@@ -247,16 +243,22 @@ const rolesHint = roles => !roles.length ? 'Tria almenys un rol.' : [
   roles.includes('gerencia') || roles.includes('secretaria') ? 'Forma part de l’equip de l’agrupació.' : '',
   roles.includes('voice') ? `Porta les ${V.classes.toLowerCase()}: en fa el calendari i rep els avisos dels ${V.members}.` : '',
 ].filter(Boolean).join(' ');
-// «Mira-ho com un cantaire»: només canvia el que es veu en aquest mòbil, no els permisos.
+// «Mira l'app com…»: l'administració veu l'app com un cantaire, un cap de corda, la direcció, la gerència, la secretaria
+// o un professor de cant. Només canvia el que es veu en aquest mòbil: no es desa res (vegeu previewBlocked).
+// PREVIEW = { roles, memberId, section, email, name, label }.
 let PREVIEW = null;
-const canEdit = () => S.role === 'edit' && !PREVIEW;
+/** Qui soc a efectes de la pantalla: la fitxa de qui ha entrat o, a la vista prèvia, la de qui s'està mirant. */
+const ME = () => PREVIEW ? { email: PREVIEW.email || '', name: PREVIEW.name || '', roles: PREVIEW.roles, section: PREVIEW.section || '', memberId: PREVIEW.memberId || '' } : S.me;
+const myEmail = () => PREVIEW ? PREVIEW.email || '' : S.email || '';
+const iHave = r => hasRole(ME(), r);
+const canEdit = () => S.role === 'edit' && (!PREVIEW || PREVIEW.roles.some(r => EDIT_ROLES.has(r)));
 const isAdmin = () => S.role === 'edit' && !PREVIEW && hasRole(S.me, 'admin');
 /** Name, type, sections and look of the group, and deleting it: only a Pro user who runs it. */
 const canManageGroup = () => isAdmin() && S.pro;
 /* ---------- Classes de cant ---------- */
 const classesOn = () => !!S.config.classesOn;
 /** Fa el calendari de classes i respon els avisos: el professorat i l'administració. */
-const teachesClasses = () => !PREVIEW && (hasRole(S.me, 'voice') || hasRole(S.me, 'admin'));
+const teachesClasses = () => iHave('voice') || iHave('admin');
 const classDays = who => [...S.classes.values()].filter(c => !who || (c.teacher || '') === who)
   .sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.id || '').localeCompare(b.id || ''));
 /** Els llocs del dia, amb els canvis d'hora acceptats ja aplicats. */
@@ -314,8 +316,6 @@ const reqsForTeacher = () => [...S.classReq.values()].filter(r => r.status === '
 const classBadge = () => reqsToAnswer().length + (teachesClasses() ? reqsForTeacher().length : 0);
 /** The member this account really is (from the account record or a personal link), if any. */
 const myId = () => { const id = PREVIEW ? PREVIEW.memberId : S.memberId; return id && S.members.has(id) ? id : null; };
-/** Narrow personal link: only «El meu espai», no access to the rest of the app. */
-const isLinkOnly = () => S.role === 'singer';
 const subKey = (sid, sec) => `${sid}_${sec}`;
 const subFor = (sid, sec) => S.subs.get(subKey(sid, sec));
 /** Member allowed to take today's roll for this session and section. */

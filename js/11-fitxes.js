@@ -52,6 +52,8 @@ function confirmSheet(title, text, ok = 'Confirma', danger = true) {
 
 let toastTimer = null;
 function toast(msg, action) {
+  // A la vista prèvia, just després d'avisar que no s'ha desat res, no surt el «Desat» de la finestra.
+  if (PREVIEW && PREVIEW.blockedAt && Date.now() - PREVIEW.blockedAt < 1500 && !msg.startsWith('Vista prèvia')) return;
   const root = $('#toast-root');
   clearTimeout(toastTimer);
   root.innerHTML = `<div class="toast" role="status"><span>${esc(msg)}</span>${action ? `<button id="toast-act">${esc(action.label)}</button>` : ''}</div>`;
@@ -141,23 +143,32 @@ function sheetSummary(initial) {
 
 /* ---------- Sheet: session edit ---------- */
 /* ---------- Fitxa del concert (o de l'actuació) ---------- */
+// info.steps = [{ time, what, where }]: l'horari del dia (recollida de material, trobada, autocar, prova de so, concert, tornada).
+// s.bus = la convocatòria pregunta si van amb l'autocar o pel seu compte (rsvp.transport = bus | own).
+// s.tasks = [{ id, label, need }]: feines per a voluntaris (carregar material…); qui s'hi apunta queda a rsvp.tasks.
 const INFO_FIELDS = [['call', 'Convocatòria'], ['dress', 'Vestuari'], ['meet', 'Punt de trobada'], ['bring', 'Cal portar'], ['extra', 'Altres indicacions']];
-const hasInfo = s => !!(s && s.info && INFO_FIELDS.some(([k]) => s.info[k]));
+const infoSteps = s => ((s && s.info && s.info.steps) || []).filter(x => x.time || x.what);
+const hasInfo = s => !!(s && s.info && (INFO_FIELDS.some(([k]) => s.info[k]) || infoSteps(s).length));
 function infoSummary(s) {
   const i = s.info || {};
-  return [i.call && `Convocatòria ${i.call}`, i.dress && 'vestuari', i.meet && 'punt de trobada', i.bring && 'què cal portar'].filter(Boolean).join(' · ');
+  return [i.call && `Convocatòria ${i.call}`, infoSteps(s).length && 'horari del dia', i.dress && 'vestuari', i.meet && 'punt de trobada', i.bring && 'què cal portar'].filter(Boolean).join(' · ');
 }
 function fitxaHtml(s) {
   const rows = [['Quan', `${longDate(s.date)}${s.time ? ` · ${timeRange(s)}` : ''}`], ...(s.place ? [['On', s.place]] : []),
     ...INFO_FIELDS.filter(([k]) => s.info?.[k]).map(([k, l]) => [l, s.info[k]])];
-  return `<dl class="fitxa">${rows.map(([l, v]) => `<div class="${l === 'Convocatòria' ? 'key' : ''}"><dt>${l}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>`;
+  const steps = infoSteps(s);
+  return `<dl class="fitxa">${rows.map(([l, v]) => `<div class="${l === 'Convocatòria' ? 'key' : ''}"><dt>${l}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>
+    ${steps.length ? `<div class="section-title" style="margin-top:14px"><h2 class="h2">Horari del dia</h2></div><ol class="steps">${steps.map(x => `<li><span class="mono">${esc(x.time || '')}</span><span><b>${esc(x.what || '')}</b>${x.where ? `<small>${esc(x.where)}</small>` : ''}</span></li>`).join('')}</ol>` : ''}`;
 }
+const stepsText = s => infoSteps(s).map(x => `${x.time || ''} ${x.what || ''}${x.where ? ` (${x.where})` : ''}`.trim()).join('\n');
+/** De quina corda és qui mira el pla: veu primer el que li toca (l'equip ho veu tot). */
+const planSec = s => { const me = S.members.get(myMemberId()); return me && !canEdit() && convoked(s, me.section) ? me.section : ''; };
 function sheetSessionInfo(sid) {
   const s = sessionById(sid);
   if (!s) return;
   const prod = S.productions.get(s.prodId);
   const text = [`${s.type || 'Assaig'} · ${prodNames(s)}`, `${longDate(s.date)}${s.time ? ` · ${timeRange(s)}` : ''}`, s.place ? `Lloc: ${s.place}` : '',
-    ...INFO_FIELDS.filter(([k]) => s.info?.[k]).map(([k, l]) => `${l}: ${s.info[k]}`), s.note || ''].filter(Boolean).join('\n');
+    ...INFO_FIELDS.filter(([k]) => s.info?.[k]).map(([k, l]) => `${l}: ${s.info[k]}`), infoSteps(s).length ? `Horari:\n${stepsText(s)}` : '', s.note || ''].filter(Boolean).join('\n');
   openSheet({
     title: isShow(s) ? `Fitxa ${V.sh.del}` : `Fitxa · ${s.type || 'Sessió'}`,
     body: `${prod && prod.poster && isShow(s) ? `<button class="poster-banner" data-act="poster" data-pid="${esc(prod.id)}" aria-label="Cartell de ${esc(prod.name)}"><img src="${esc(prod.poster)}" alt=""></button>` : ''}<div class="prod-band prod-tone" style="--ph:${prodHue(prod)}"><h2 class="h2"><i class="pdot"></i>${esc(prodNames(s))}</h2><span class="eyebrow">${esc(s.type || 'Assaig')}</span></div>
@@ -165,10 +176,13 @@ function sheetSessionInfo(sid) {
       ${s.note ? `<p class="fitxa-note">${esc(s.note)}</p>` : ''}
       ${hasInfo(s) ? '' : `<p class="muted" style="font-size:calc(13px*var(--ts))">Encara no hi ha indicacions de convocatòria, vestuari ni punt de trobada.</p>`}
       ${planOf(s) || canEdit() ? `<div class="section-title" style="margin-top:16px"><h2 class="h2">${isShow(s) ? 'Programa' : s.date < TODAY ? 'Què s’hi va treballar' : 'Pla d’assaig'}</h2>${canEdit() ? `<button class="btn btn-sm" data-act="plan-edit" data-sid="${s.id}">${planOf(s) ? 'Edita’l' : 'Fes-lo'}</button>` : ''}</div>
-        ${planHtml(s) || `<p class="muted" style="font-size:calc(13px*var(--ts));margin:0">${isShow(s) ? 'Encara no hi ha programa: quines obres es cantaran i en quin ordre.' : 'Encara no hi ha pla: quines obres i quins compassos s’assajaran.'}</p>`}` : ''}
+        ${planHtml(s, false, planSec(s)) || `<p class="muted" style="font-size:calc(13px*var(--ts));margin:0">${isShow(s) ? 'Encara no hi ha programa: quines obres es cantaran i en quin ordre.' : 'Encara no hi ha pla: quines obres i quins compassos s’assajaran.'}</p>`}` : ''}
+      ${tasksBlock(s)}
       ${isShow(s) ? balanceBlock(s) + seatingBlock(s) : ''}`,
     foot: `${canEdit() ? `<button class="btn" data-act="session-edit" data-sid="${s.id}">Edita</button>` : ''}${canEdit() && isShow(s) ? `<button class="btn" data-act="participants" data-sid="${s.id}">Llista de participants</button>` : ''}<span class="spacer"></span><button class="btn btn-primary" id="fx-copy">Copia per al grup</button>`,
-    onMount: el => { el.querySelector('#fx-copy').onclick = () => copyText(text + (planOf(s) && (s.plan.items || []).length ? `\n\nPla d’assaig:\n${s.plan.items.map(it => `· ${planTitle(it)}${it.bars ? ` (c. ${it.bars})` : ''}${planItemWho(it) ? ` · ${planItemWho(it)}` : ''}`).join('\n')}` : ''), 'Fitxa copiada'); },
+    onMount: el => {
+      el.querySelector('#fx-copy').onclick = () => copyText(text + (planOf(s) ? `\n\nPla d’assaig:\n${planText(s)}` : ''), 'Fitxa copiada');
+    },
   });
 }
 function fitxaChip(s) {
@@ -193,7 +207,12 @@ function sheetSession(sid, presetProd, presetDate) {
       <label class="field"><span>Lloc</span><input class="inp" id="se-place" type="text" maxlength="60" value="${esc(cur.place || '')}" placeholder="Sala d’assaig"></label>
       <div class="field"><span>${V.Sections} convocades</span><div class="pickers" id="se-secs">${SECTIONS.map(x => secPick(x, secs.has(x.id))).join('')}</div></div>
       <div class="toggle-row"><span><b>Demana confirmació</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Els ${V.members} convocats responen si hi seran</span></span><label class="switch"><input type="checkbox" id="se-rsvp" ${cur.rsvp ? 'checked' : ''}><span></span></label></div>
-      <label class="field" id="se-rsvpby-f" ${cur.rsvp ? '' : 'hidden'}><span>Respondre abans del (opcional)</span><input class="inp" id="se-rsvpby" type="date" value="${esc(cur.rsvpBy || '')}"></label>
+      <div id="se-rsvp-more" ${cur.rsvp ? '' : 'hidden'} style="display:grid;gap:12px">
+        <label class="field"><span>Respondre abans del (opcional)</span><input class="inp" id="se-rsvpby" type="date" value="${esc(cur.rsvpBy || '')}"></label>
+        <div class="toggle-row"><span><b>Hi ha autocar</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Qui diu que hi serà, diu també si va amb l’autocar o pel seu compte</span></span><label class="switch"><input type="checkbox" id="se-bus" ${cur.bus ? 'checked' : ''}><span></span></label></div>
+        <div class="field"><span>Feines per a voluntaris (opcional)</span><div id="se-tasks" style="display:grid;gap:6px"></div><button type="button" class="btn btn-sm" id="se-task-add" style="width:max-content;margin-top:6px">+ Feina</button>
+          <small>P. ex. «Carregar i descarregar el material» · 4 persones. Qui confirma s’hi pot apuntar.</small></div>
+      </div>
       <div class="field"><span>També compta per a</span><div class="pickers" id="se-also">${prods.map(p => `<button type="button" class="pick" data-also="${p.id}" aria-pressed="${(cur.alsoIn || []).includes(p.id)}">${esc(p.name)}</button>`).join('')}</div>
         <small>Per a assajos compartits entre produccions: comptaran a les estadístiques i a la norma de totes les marcades.</small></div>
       <label class="field"><span>Nota</span><input class="inp" id="se-note" type="text" maxlength="80" value="${esc(cur.note || '')}" placeholder="p. ex. Portar partitures del Gloria"></label>
@@ -204,7 +223,9 @@ function sheetSession(sid, presetProd, presetDate) {
           <label class="field"><span>Vestuari</span><input class="inp" id="se-dress" type="text" maxlength="100" value="${esc(cur.info?.dress || '')}" placeholder="p. ex. Uniforme negre i fulard lila"></label>
           <label class="field"><span>Punt de trobada</span><input class="inp" id="se-meet" type="text" maxlength="100" value="${esc(cur.info?.meet || '')}" placeholder="p. ex. Entrada d’artistes, c. Sant Pere Més Alt"></label>
           <label class="field"><span>Cal portar</span><input class="inp" id="se-bring" type="text" maxlength="120" value="${esc(cur.info?.bring || '')}" placeholder="p. ex. Carpeta negra, partitures i aigua"></label>
-          <label class="field"><span>Altres indicacions</span><textarea class="inp" id="se-extra" maxlength="500" style="min-height:70px" placeholder="p. ex. Prova acústica a les 19:00 a l’escenari">${esc(cur.info?.extra || '')}</textarea></label>
+          <div class="field"><span>Horari del dia (opcional)</span><div id="se-steps" style="display:grid;gap:8px"></div><button type="button" class="btn btn-sm" id="se-step-add" style="width:max-content;margin-top:6px">+ Pas</button>
+            <small>Cada pas amb l’hora, què es fa i on: recollida de material, trobada, sortida de l’autocar, prova de so, concert, tornada…</small></div>
+          <label class="field"><span>Altres indicacions</span><textarea class="inp" id="se-extra" maxlength="800" style="min-height:70px" placeholder="p. ex. Porteu el DNI per a l’acreditació. Qui vingui en cotxe, aparqueu al pàrquing de la T1.">${esc(cur.info?.extra || '')}</textarea></label>
         </div>
       </details>
     </div>`,
@@ -216,7 +237,24 @@ function sheetSession(sid, presetProd, presetDate) {
         b.setAttribute('aria-pressed', on);
       });
       el.querySelectorAll('#se-also .pick').forEach(b => b.onclick = () => b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') !== 'true'));
-      el.querySelector('#se-rsvp').onchange = e => { el.querySelector('#se-rsvpby-f').hidden = !e.target.checked; };
+      el.querySelector('#se-rsvp').onchange = e => { el.querySelector('#se-rsvp-more').hidden = !e.target.checked; };
+      const steps = clone(cur.info?.steps || []), tasks = clone(cur.tasks || []);
+      const readRows = () => {
+        el.querySelectorAll('#se-steps [data-i]').forEach(r => { const x = steps[+r.dataset.i]; if (x) { x.time = r.querySelector('[data-f="time"]').value; x.what = r.querySelector('[data-f="what"]').value.trim(); x.where = r.querySelector('[data-f="where"]').value.trim(); } });
+        el.querySelectorAll('#se-tasks [data-i]').forEach(r => { const x = tasks[+r.dataset.i]; if (x) { x.label = r.querySelector('[data-f="label"]').value.trim(); x.need = +r.querySelector('[data-f="need"]').value || 0; } });
+      };
+      const paintRows = () => {
+        el.querySelector('#se-steps').innerHTML = steps.map((x, i) => `<div class="step-row" data-i="${i}"><input class="inp" data-f="time" type="time" value="${esc(x.time || '')}" aria-label="Hora">
+          <input class="inp" data-f="what" maxlength="80" value="${esc(x.what || '')}" placeholder="Què (p. ex. Sortida de l’autocar)"><button type="button" class="icon-btn" data-rm-step="${i}" aria-label="Treu-lo">${ICON.close}</button>
+          <input class="inp" data-f="where" maxlength="80" value="${esc(x.where || '')}" placeholder="On (opcional)"></div>`).join('');
+        el.querySelector('#se-tasks').innerHTML = tasks.map((x, i) => `<div class="sec-row" data-i="${i}" style="display:flex;gap:6px;align-items:center"><input class="inp" data-f="label" maxlength="80" value="${esc(x.label || '')}" placeholder="Feina" style="flex:1;min-width:0">
+          <input class="inp" data-f="need" type="number" min="1" max="99" inputmode="numeric" value="${esc(String(x.need || ''))}" style="width:74px" aria-label="Quantes persones"><button type="button" class="icon-btn" data-rm-task="${i}" aria-label="Treu-la">${ICON.close}</button></div>`).join('');
+        el.querySelectorAll('[data-rm-step]').forEach(b => b.onclick = () => { readRows(); steps.splice(+b.dataset.rmStep, 1); paintRows(); });
+        el.querySelectorAll('[data-rm-task]').forEach(b => b.onclick = () => { readRows(); tasks.splice(+b.dataset.rmTask, 1); paintRows(); });
+      };
+      paintRows();
+      el.querySelector('#se-step-add').onclick = () => { readRows(); steps.push({ time: '', what: '', where: '' }); paintRows(); };
+      el.querySelector('#se-task-add').onclick = () => { readRows(); tasks.push({ id: uid('tk'), label: '', need: 2 }); paintRows(); };
       el.querySelector('#se-type').onchange = e => { if (SHOWS.has(e.target.value)) el.querySelector('#se-fitxa').open = true; };
       el.querySelector('#se-save').onclick = () => {
         const date = el.querySelector('#se-date').value;
@@ -231,8 +269,16 @@ function sheetSession(sid, presetProd, presetDate) {
         const prodId = el.querySelector('#se-prod').value;
         const also = $$('#se-also .pick[aria-pressed="true"]', el).map(b => b.dataset.also).filter(id => id !== prodId);
         if (also.length) next.alsoIn = also;
-        if (el.querySelector('#se-rsvp').checked) { next.rsvp = true; const by = el.querySelector('#se-rsvpby').value; if (by) next.rsvpBy = by; }
+        readRows();
+        if (el.querySelector('#se-rsvp').checked) {
+          next.rsvp = true; const by = el.querySelector('#se-rsvpby').value; if (by) next.rsvpBy = by;
+          if (el.querySelector('#se-bus').checked) next.bus = true;
+          const ts = tasks.filter(x => x.label);
+          if (ts.length) next.tasks = ts;
+        }
         const info = Object.fromEntries(INFO_FIELDS.map(([k]) => [k, el.querySelector(`#se-${k}`).value.trim()]).filter(([, v]) => v));
+        const st = steps.filter(x => x.time || x.what).sort((a, b) => (a.time || '99').localeCompare(b.time || '99'));
+        if (st.length) info.steps = st;
         if (Object.keys(info).length) next.info = info;
         if (existing && existing.prodId !== prodId) {
           const old = clone(S.productions.get(existing.prodId));
@@ -323,7 +369,7 @@ function sheetMember(mid) {
         const name = el.querySelector('#me-name').value.trim();
         if (!name) { toast('Escriu el nom i els cognoms'); return; }
         const section = el.querySelector('#me-sec .pick[aria-pressed="true"]').dataset.sec;
-        if (existing && existing.section !== section && [...S.attendance.values()].some(d => d.section === existing.section && d.marks?.[m.id])) {
+        if (existing && existing.section !== section && [...allAttendance().values()].some(d => d.section === existing.section && d.marks?.[m.id])) {
           toast(`Canvi de ${V.section} desat. Les llistes antigues queden a la ${V.section} anterior.`);
         }
         const next = { ...m, name, section, leader: el.querySelector('#me-leader').checked, active: el.querySelector('#me-active').checked, phone: el.querySelector('#me-phone').value.trim(), notes: el.querySelector('#me-notes').value.trim(), part: el.querySelector('#me-part .pick[aria-pressed="true"]').dataset.part };

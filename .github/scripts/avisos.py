@@ -3,9 +3,11 @@
 Llegeix les dades amb el compte de servei (només lectura) i envia avisos als aparells que s'han donat
 d'alta des de l'app. Cada avís s'envia un sol cop per aparell:
 
-  · anuncis nous al tauler
+  · anuncis nous al tauler, missatges i respostes a les converses privades
+  · canvis al calendari: una sessió que canvia de dia, d'hora o de lloc, una de nova i una d'anul·lada
   · convocatòries que encara no han contestat, quan s'acosta la data límit
-  · enquestes que es tanquen demà
+  · enquestes i sortides noves, i les que es tanquen demà (a qui encara no ha respost)
+  · els recordatoris que l'equip envia des de l'app a qui encara no ha respost («Recorda-ho»)
   · recordatori de l'assaig de demà, al vespre (amb la fitxa del concert si n'hi ha)
   · material o document nou per a la secció i la part de cadascú
   · resposta a un avís d'absència (acceptat o no)
@@ -18,13 +20,14 @@ donat d'alta es miren en dues lectures, i la plantilla i les llistes només quan
 L'estat («què ja s'ha enviat») es desa al repositori privat de còpies, perquè el compte de servei no pot
 escriure a la base de dades: la primera agrupació a l'arrel i la resta a agrupacions/<agrupació>/.
 """
-import datetime, json, math, os, sys
+import datetime, hashlib, json, math, os, sys
 from zoneinfo import ZoneInfo
 
 from pywebpush import WebPushException, webpush
 
 sys.path.insert(0, os.path.dirname(__file__))
 import dades
+import norma
 
 VAPID = os.environ["PUSH_PRIVATE_KEY"]
 APP_URL = os.environ.get("APP_URL", "https://polquingles.github.io/a-tempo/")
@@ -46,9 +49,9 @@ EVENING = 18 <= NOW.hour < 21                   # finestra dels recordatoris del
 # La norma d'assistència només canvia quan es passa llista: es revisa dos cops al dia.
 RISK_TIME = os.environ.get("AVISOS_RISK") == "1" or (NOW.hour in (10, 19) and NOW.minute < 30)
 
-DEFAULT_PREFS = {"missatges": True, "anuncis": True, "convocatories": True, "enquestes": True, "assajos": False,
-                 "materials": True, "absencies": True, "llistes": True, "risc": True, "classes": True}
-EDIT_ROLES = {"admin", "director", "gerencia", "secretaria", "leader", "palau"}
+DEFAULT_PREFS = {"missatges": True, "calendari": True, "anuncis": True, "convocatories": True, "enquestes": True, "sortides": True,
+                 "assajos": False, "materials": True, "absencies": True, "llistes": True, "risc": True, "classes": True}
+EDIT_ROLES = {"admin", "director", "gerencia", "secretaria", "leader"}
 
 
 def roles_of(person):
@@ -70,16 +73,8 @@ def day_label(iso):
     return f"{WEEKDAYS[d.weekday()]} {d.strftime('%d/%m')}"
 
 
-def convoked(s, section):
-    secs = s.get("sections") or []
-    return not secs or section in secs
-
-
-def on_leave(m, date):
-    for lv in m.get("leaves") or []:
-        if lv.get("from") and lv["from"] <= date and (not lv.get("to") or lv["to"] >= date):
-            return True
-    return False
+convoked = norma.convoked
+on_leave = norma.on_leave
 
 
 def part_matches(item_part, member):
@@ -133,27 +128,26 @@ class Group:
         return {mid: m for mid, m in self.members().items() if m.get("active") is not False}
 
     def attendance(self):
+        """Totes les llistes. Els trossos de temporada ja arxivats (vegeu js/02-dades.js) es llegeixen d'un sol document."""
         if self._attendance is None:
-            self._attendance = r.list(f"{self.base}/attendance")
+            cut = (self.config.get("attArchive") or {}).get("cut")
+            if cut:
+                docs = {}
+                for a in sorted(r.list(f"{self.base}/attArchive").values(), key=lambda a: a.get("from") or ""):
+                    docs.update(a.get("docs") or {})
+                docs.update(r.query(self.base, "attendance", [("date", ">", cut)]))
+                self._attendance = docs
+            else:
+                self._attendance = r.list(f"{self.base}/attendance")
         return self._attendance
 
     def _sessions(self):
         """Totes les sessions, amb les produccions a què pertanyen (les compartides surten un cop)."""
-        out = {}
-        for p in self.productions.values():
-            for s in p.get("sessions") or []:
-                sid = s.get("id")
-                if not sid:
-                    continue
-                row = out.setdefault(sid, dict(s))
-                row.setdefault("prodName", p.get("name", ""))
-                row["prods"] = sorted(set(row.get("prods", []) + [p.get("id")] + (s.get("alsoIn") or [])))
-        return out
+        return norma.sessions_of(self.productions)
 
     def excluded(self, mid, prods):
         """Només queda fora si no fa cap de les produccions de la sessió."""
-        prods = [pid for pid in prods if pid in self.productions]
-        return bool(prods) and all(mid in (self.productions[pid].get("excluded") or []) for pid in prods)
+        return norma.excluded(self.productions, mid, prods)
 
     # ---------- enviament ----------
     def targets(self, kind, member_ids=None):
@@ -264,6 +258,106 @@ class Group:
                 self.deliver(f"pollnew:{pid}:{did}", d, f"Nova enquesta: {p.get('title', '')}", f"poll-{pid}")
             self.state["polls_new"].append(pid)
 
+    # ---------- 1c. Converses privades ----------
+    def thread_staff(self, t, d):
+        """Si aquest aparell és de qui ha de rebre la conversa per part de l'equip (el seu correu o el seu rol)."""
+        person = self.people.get(d.get("email") or "")
+        if not person:
+            return False
+        if t.get("toEmail") and d.get("email") == t["toEmail"]:
+            return True
+        role, roles = t.get("toRole") or "", roles_of(person)
+        if role == "leader":
+            return "leader" in roles and person.get("section") == t.get("section")
+        return bool(role) and role in roles
+
+    def threads(self):
+        """Un missatge nou en una conversa arriba a l'altra banda: a la persona, o a qui té el rol a qui ha escrit."""
+        fresh = r.query(self.base, "threads", [("lastAt", ">=", FRESH)])
+        seen = self.state.get("threads")
+        if seen is None:
+            self.state["threads"] = {tid: t.get("lastAt") or "" for tid, t in fresh.items()}
+            return
+        if QUIET:
+            return
+        for tid, t in sorted(fresh.items(), key=lambda kv: kv[1].get("lastAt") or ""):
+            last = t.get("lastAt") or ""
+            if seen.get(tid, "") >= last:
+                continue
+            msg = (t.get("msgs") or [{}])[-1]
+            body = f"{msg.get('name') or 'Missatge'}: {(msg.get('text') or '')[:140]}"
+            if t.get("lastSide") == "m":
+                for did, d in self.targets("missatges"):
+                    if self.thread_staff(t, d):
+                        self.deliver(f"th:{tid}:{last}:{did}", d, body, f"th-{tid}")
+            else:
+                for did, d in self.targets("missatges", member_ids={t.get("memberId")}):
+                    self.deliver(f"th:{tid}:{last}:{did}", d, body, f"th-{tid}")
+            seen[tid] = last
+        self.state["threads"] = {k: v for k, v in seen.items() if k in fresh}
+
+    # ---------- 1d. Recordatoris que envia l'equip («Recorda-ho») ----------
+    def nudges(self):
+        """Només a qui encara no havia respost quan l'equip ho va enviar (la llista ve feta de l'app)."""
+        fresh = r.query(self.base, "nudges", [("createdAt", ">=", FRESH)])
+        seen = self.state.setdefault("nudges", [])
+        if QUIET or not fresh:
+            return
+        pref = {"poll": "enquestes", "rsvp": "convocatories", "trip": "sortides"}
+        for nid, n in sorted(fresh.items(), key=lambda kv: kv[1].get("createdAt") or ""):
+            if nid in seen:
+                continue
+            extra = {"sid": n.get("ref"), "actions": [{"action": "rsvp-yes", "title": "Hi seré"}, {"action": "rsvp-no", "title": "No hi podré anar"}]} if n.get("kind") == "rsvp" else None
+            for did, d in self.targets(pref.get(n.get("kind"), "enquestes"), member_ids=set(n.get("memberIds") or [])):
+                self.deliver(f"nudge:{nid}:{did}", d, n.get("title") or "Tens una cosa pendent de respondre a l'app.", f"nudge-{n.get('ref') or nid}", extra)
+            seen.append(nid)
+
+    # ---------- 1e. Canvis al calendari ----------
+    def calendar(self):
+        """Una sessió que ve i canvia de dia, d'hora o de lloc; una de nova; una que desapareix. Només a qui hi és convocat."""
+        today = TODAY.isoformat()
+        cur = {sid: [s.get("date") or "", s.get("time") or "", s.get("end") or "", s.get("place") or "", s.get("type") or "Assaig"]
+               for sid, s in self.all.items() if (s.get("date") or "") >= today}
+        prev = self.state.get("cal")
+        if prev is None:
+            self.state["cal"] = cur
+            return
+        if QUIET:
+            return   # l'estat no canvia: s'avisarà al matí
+        changes = []
+        for sid, now in cur.items():
+            was = prev.get(sid)
+            s = self.all[sid]
+            what = now[4]
+            if was is None:
+                if (datetime.date.fromisoformat(now[0]) - TODAY).days <= 90:
+                    changes.append((sid, s, f"Nova sessió al calendari: {what.lower()} el {day_label(now[0])}{f' a les {now[1]}' if now[1] else ''}{f' · {now[3]}' if now[3] else ''}."))
+            elif was[0] != now[0]:
+                changes.append((sid, s, f"Canvi al calendari: {what.lower()} del {day_label(was[0])} passa al {day_label(now[0])}{f' a les {now[1]}' if now[1] else ''}{f' · {now[3]}' if now[3] and now[3] != was[3] else ''}."))
+            elif was[1] != now[1] or was[2] != now[2]:
+                changes.append((sid, s, f"Canvi d'hora: {what.lower()} del {day_label(now[0])} serà {f'a les {now[1]}' if now[1] else 'sense hora fixada'}{f'–{now[2]}' if now[1] and now[2] else ''}."))
+            elif was[3] != now[3] and now[3]:
+                changes.append((sid, s, f"Canvi de lloc: {what.lower()} del {day_label(now[0])} serà a {now[3]}."))
+        for sid, was in prev.items():
+            if sid not in cur and was[0] >= today:
+                changes.append((sid, {"id": sid, "date": was[0], "sections": [], "prods": []}, f"S'ha anul·lat: {was[4].lower()} del {day_label(was[0])}."))
+        self.state["cal"] = cur
+        if not changes:
+            return
+        if len(changes) > 8:
+            # Molts canvis alhora (una producció nova, una temporada importada…): un sol avís.
+            for did, d in self.targets("calendari"):
+                self.deliver(f"cal:many:{NOW.strftime('%Y%m%d%H%M')}:{did}", d, f"Hi ha {len(changes)} canvis al calendari. Mira'ls a l'app.", "cal-many")
+            return
+        for sid, s, body in changes:
+            for did, d in self.targets("calendari"):
+                sec, mid = d.get("section"), d.get("memberId")
+                if sec and not convoked(s, sec):
+                    continue
+                if mid and self.excluded(mid, s.get("prods") or []):
+                    continue
+                self.deliver(f"cal:{sid}:{hashlib.sha1(body.encode()).hexdigest()[:8]}:{did}", d, body, f"cal-{sid}")
+
     # ---------- 2. Convocatòries per confirmar ----------
     def convocations(self):
         due = []
@@ -311,6 +405,46 @@ class Group:
                 if secs and d.get("section") and d["section"] not in secs:
                     continue
                 self.deliver(f"poll:{pid}:{did}", d, f"Demà es tanca l'enquesta «{p.get('title', '')}».", f"poll-{pid}")
+
+    # ---------- 3b. Sortides: noves, i la vespra del termini a qui encara no ha dit res ----------
+    def trips(self):
+        fresh = r.query(self.base, "trips", [("createdAt", ">=", FRESH)])
+        if "trips_new" not in self.state:
+            self.state["trips_new"] = list(fresh.keys())
+            return
+        if QUIET:
+            return
+        for tid, t in sorted(fresh.items(), key=lambda kv: kv[1].get("createdAt") or ""):
+            if tid in self.state["trips_new"]:
+                continue
+            self.state["trips_new"].append(tid)
+            if t.get("closed"):
+                continue
+            secs = t.get("sections") or []
+            limit = f" Respon abans del {datetime.date.fromisoformat(t['deadline']).strftime('%d/%m')}." if t.get("deadline") else ""
+            for did, d in self.targets("sortides"):
+                if secs and d.get("section") and d["section"] not in secs:
+                    continue
+                self.deliver(f"trip:{tid}:{did}", d, f"Nova sortida: {t.get('title', '')}. Digues si hi vas, encara que no hi puguis anar.{limit}", f"trip-{tid}")
+
+    def trip_deadlines(self):
+        tomorrow = (TODAY + datetime.timedelta(days=1)).isoformat()
+        closing = {tid: t for tid, t in r.query(self.base, "trips", [("deadline", "==", tomorrow)]).items() if not t.get("closed")}
+        if not closing:
+            return
+        answered = {}
+        tids = list(closing)
+        for i in range(0, len(tids), 30):
+            answered.update(r.query(self.base, "tripSignups", [("tripId", "in", tids[i:i + 30])]))
+        for tid, t in closing.items():
+            secs = t.get("sections") or []
+            for did, d in self.targets("sortides"):
+                mid = d.get("memberId")
+                if not mid or f"{tid}_{mid}" in answered:
+                    continue
+                if secs and d.get("section") and d["section"] not in secs:
+                    continue
+                self.deliver(f"tripdl:{tid}:{did}", d, f"Demà s'acaba el termini de «{t.get('title', '')}» i encara no has dit si hi vas.", f"trip-{tid}")
 
     # ---------- 4. Recordatori de l'assaig de demà ----------
     def rehearsals(self):
@@ -494,14 +628,7 @@ class Group:
         return {m["section"]} if m and m.get("leader") and m.get("section") else set()
 
     def eff_mark(self, s, m, mid, attendance, ctx=None):
-        if ctx and mid in (self.productions.get(ctx, {}).get("excluded") or []):
-            return {"s": "NP"}
-        mk = ((attendance.get(f"{s['id']}_{m.get('section')}") or {}).get("marks") or {}).get(mid)
-        if mk and mk.get("s"):
-            return mk
-        if on_leave(m, s["date"]) or self.excluded(mid, s.get("prods") or []):
-            return {"s": "NP"}
-        return None
+        return norma.eff_mark(self.productions, s, m, mid, attendance, ctx)
 
     # ---------- 7. Llista a mitges en acabar l'assaig ----------
     def rolls(self):
@@ -548,35 +675,12 @@ class Group:
             return
         if not any(self.leader_sections(d) for _, d in self.targets("risc")):
             return
-        minimum = min(100, max(1, int(self.config.get("minAttendance") or 80))) / 100
+        minimum = norma.minimum(self.config)
         attendance = self.attendance()
         today = TODAY.isoformat()
 
         def rule_status(pid, mid, m):
-            if mid in (self.productions[pid].get("excluded") or []):
-                return None
-            att = ab = remaining = 0
-            for s in self.all.values():
-                if pid not in (s.get("prods") or []) or s.get("type") in self.rule_skip or not convoked(s, m.get("section")):
-                    continue
-                doc = attendance.get(f"{s['id']}_{m.get('section')}") or {}
-                marked = self.eff_mark(s, m, mid, attendance, pid) if s["date"] <= today and doc.get("marks") else None
-                if not marked:
-                    if s["date"] >= today and not on_leave(m, s["date"]):
-                        remaining += 1
-                    continue
-                if marked["s"] == "NP":
-                    continue
-                if marked["s"] in ("P", "R"):
-                    att += 1
-                else:
-                    ab += 1
-            done = att + ab
-            if not done:
-                return None
-            cur, best = att / done, (att + remaining) / (done + remaining)
-            return {"cur": cur, "best": best, "att": att, "ab": ab, "remaining": remaining,
-                    "status": "out" if best < minimum else "risk" if cur < minimum else "ok"}
+            return norma.rule_status(self.productions, self.all, attendance, pid, mid, m, today, minimum, self.rule_skip)
 
         live = [pid for pid in self.productions if any(pid in (s.get("prods") or []) and s["date"] >= today for s in self.all.values())]
         for pid in live:
@@ -609,10 +713,15 @@ class Group:
     def run(self):
         self.announcements()
         self.messages()
+        self.threads()
+        self.nudges()
+        self.calendar()
         self.new_polls()
+        self.trips()
         if not self.first_run and EVENING and not QUIET:
             self.convocations()
             self.polls()
+            self.trip_deadlines()
             self.rehearsals()
         self.materials()
         self.absences()
@@ -626,7 +735,7 @@ class Group:
         cut = (NOW - datetime.timedelta(days=35)).isoformat(timespec="seconds")
         self.state["sent"] = {k: v for k, v in self.sent.items() if v >= cut}
         self.state["announcements"] = self.state["announcements"][-400:]
-        for k in ("messages", "polls_new"):
+        for k in ("messages", "polls_new", "trips_new", "nudges"):
             if k in self.state:
                 self.state[k] = self.state[k][-400:]
         self.state["dead"] = sorted(self.dead)
