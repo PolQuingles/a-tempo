@@ -76,6 +76,18 @@ S'activen a Ajustos (`config/main.classesOn`) quan l'agrupació fa classes indiv
 - L'app avisa si una classe cau dins d'un assaig o un concert d'aquella persona.
 - Qui té el rol `voice` (professor de cant) fa el calendari, marca l'assistència i respon els avisos; no pot editar res més de l'app. Cada persona veu i escriu només els seus avisos.
 
+## Repertori, concerts, sortides i fitxes
+
+- `works/<id>`: una obra del repertori (compositor, durada, formació, notes), enllaçada a produccions (`prods`), amb `roles` (solos i petits grups: nom i `memberIds`) i `materials` (partitures i àudios per corda i veu, fitxer o enllaç). Tauler › Repertori; els materials de producció d'abans surten a «Altres materials».
+- Pla d'assaig: `session.plan` = { items: [{ work | title, bars, who, note }], text, after } dins de la sessió (a la producció). Es veu a Inici, al Calendari i a la fitxa de la sessió; qui hi va faltar el veu a Inici.
+- Concerts: equilibri de veus segons les confirmacions (`rsvp`) i el mínim de cada corda (`config/main.voiceMin`); col·locació a `session.seating` = { rows: [[memberId…]] } (fila 1 = davant, vist des de la direcció); llista de participants en PDF (s'imprimeix des del navegador) o Excel (CSV amb punt i coma).
+- `trips/<id>` (sortides i gires, amb `transports` i `rooms`) i `tripSignups/<sortida>_<membre>` (cadascú hi diu si hi va; el transport i l'habitació els posa l'equip, i les regles no deixen que cadascú se'ls canviï).
+- `profiles/<membre>`: la fitxa que omple cadascú (telèfon, talla, contacte d'emergència); només la llegeixen la persona i l'equip.
+- Certificats d'assistència (PDF) des de les estadístiques d'una persona, i memòria de la temporada (PDF, Excel o text) des de Gestió › Produccions.
+- Classes: `students/<membre>` (objectius i repertori de l'alumne, del professorat), enregistraments de classe a `classFiles/<id>_<n>` (a trossos, amb `memberId`: només el professorat i l'alumne) enllaçats des de la nota (`classNotes.file`, `where: 'classFiles'`), vista de setmana i horari per imprimir.
+- Partitures al mòbil: «Desa’ls al mòbil» guarda els fitxers a Cache Storage (`atempo-fitxers`, que el treballador de servei no esborra mai) i `loadFile` els busca primer allà.
+- Notificacions amb botons: `avisos.py` hi afegeix `actions` («Hi seré», «No hi podré anar») i `sid`; en tocar-los, `sw.js` obre l'app amb `?accio=…&s=…` i `runNotificationAction()` ho fa.
+
 ## Tasques automàtiques (GitHub Actions)
 
 Llegeixen amb el compte de servei (secret `SERVICE_REFRESH_TOKEN`), que pot llegir totes les agrupacions però no escriure-hi.
@@ -91,7 +103,7 @@ Llegeixen amb el compte de servei (secret `SERVICE_REFRESH_TOKEN`), que pot lleg
 
 L'app és estàtica: HTML, CSS i JavaScript sense cap pas de compilació, amb les dades a Firestore.
 
-- `js/` són **scripts clàssics** que comparteixen l'àmbit global i es carreguen **en ordre** (l'ordre dels `<script>` d'`index.html` importa: el codi que s'executa en carregar un fitxer només pot fer servir el que ja han definit els anteriors). Cada fitxer comença dient què hi ha: `00-errors` (registre d'errors, el primer de tots), `01-base` (constants, estat, utilitats), `02-dades` (Firestore), `03-pantalla` (pintar), `04-llista` … `10-inici` (una per pantalla), `11-fitxes` (finestres), `12-persones`, `13-avisos-mobil`, `14-eines`, `15-copies`, `16-agrupacions`, `17-rutes`, `18-accions` (clics i formularis) i `19-arrencada` (`init()`).
+- `js/` són **scripts clàssics** que comparteixen l'àmbit global i es carreguen **en ordre** (l'ordre dels `<script>` d'`index.html` importa: el codi que s'executa en carregar un fitxer només pot fer servir el que ja han definit els anteriors). Cada fitxer comença dient què hi ha: `00-errors` (registre d'errors, el primer de tots), `01-base` (constants, estat, utilitats), `02-dades` (Firestore), `03-pantalla` (pintar), `04-llista` … `10-inici` (una per pantalla), `11-fitxes` (finestres), `12-persones`, `13-avisos-mobil`, `14-eines`, `15-copies`, `16-agrupacions`, `17-rutes`, `18-repertori` (obres, pla d'assaig, reproductor d'estudi, partitures desades), `19-concerts` (equilibri de veus, col·locació, llistes, certificats, memòria, imprimir), `20-sortides` (sortides i gires), `21-accions` (clics i formularis) i `22-arrencada` (`init()`).
 - **Empremtes**: cada fitxer s'enllaça amb `?v=<empremta del contingut>`. Després de canviar qualsevol fitxer de `js/`, `css/` o `config.js`, cal executar `python3 tools/stamp.py`, que també posa la versió a `index.html` (`<meta name="app-version">`) i la llista de fitxers a `sw.js`. Les proves fallen si no s'ha fet.
 - **Rutes**: cada pantalla té la seva adreça (`#/inici`, `#/assistencia/estadistiques`, `#/gestio/personal`, `#/classes/<professor>`…). El botó «enrere» del mòbil torna a la pantalla d'abans i tanca la finestra que hi hagi oberta. Els enllaços amb una ruta obren aquella pantalla (si la persona hi té accés).
 - **Sense cobertura** (`sw.js`): la pàgina es demana sempre primer a la xarxa i, si no n'hi ha o tarda més de quatre segons, s'obre la darrera desada. Els fitxers amb empremta es desen i no es tornen a baixar; les dades no passen pel treballador de servei (Firestore ja en guarda una còpia al mòbil).

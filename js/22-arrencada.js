@@ -1,4 +1,4 @@
-// A Tempo · 18-arrencada.js — Arrencada de l'app, entrada amb correu i contrasenya, i init().
+// A Tempo · 22-arrencada.js — Arrencada de l'app, entrada amb correu i contrasenya, i init().
 // Els fitxers de js/ són scripts clàssics que comparteixen l'àmbit global i es carreguen en ordre (vegeu index.html).
 'use strict';
 
@@ -30,7 +30,8 @@ function afterReady() {
   touchLastSeen();
   checkPush();
   syncDirectory();
-  setTimeout(maybeWelcome, 500);
+  // Si s'obre des d'un botó d'una notificació, primer es fa el que s'hi ha triat (i no surt la benvinguda).
+  setTimeout(() => { if (new URLSearchParams(location.search).has('accio')) runNotificationAction(); else maybeWelcome(); }, 500);
 }
 const waitForUser = () => new Promise(res => { const un = auth.onAuthStateChanged(u => { un(); res(u); }); });
 /** Signed in with Google: this person's record and role in one group, and the group's directory record. */
@@ -273,6 +274,21 @@ async function signOut() {
   try { localStorage.removeItem(LS_GROUPS); } catch {}
   try { await auth.signOut(); } catch {}
   location.replace(location.pathname);
+}
+/* ---------- Respondre des d'una notificació ---------- */
+// Els botons «Hi seré», «No hi podré anar»… de la notificació obren l'app amb ?accio=…&s=<sessió>, i aquí es fa.
+function runNotificationAction() {
+  const q = new URLSearchParams(location.search);
+  const act = q.get('accio'), sid = q.get('s');
+  if (!act) return;
+  q.delete('accio'); q.delete('s');
+  history.replaceState(history.state, '', `${location.pathname}${q.toString() ? `?${q}` : ''}${location.hash}`);
+  const s = sid && sessionById(sid);
+  if (!s) { toast('Aquesta sessió ja no hi és'); return; }
+  if (!myMemberId()) { toast('El teu compte no està vinculat a cap fitxa de la plantilla'); return; }
+  if (act === 'rsvp-yes') rsvpAnswer(sid, 'yes');
+  else if (act === 'rsvp-no') sheetRsvpNo(sid);
+  else if (act === 'absence') { ui.tab = 'avisos'; render(); sheetAbsence(sid); }
 }
 /* ---------- Un dia nou ---------- */
 // «Avui» (TODAY) es calcula en obrir l'app, i els mòbils la mantenen oberta en segon pla durant dies. Si en tornar-hi ja

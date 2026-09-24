@@ -164,9 +164,10 @@ class Group:
                 continue
             yield did, d
 
-    def send(self, d, body, tag):
-        """'ok' enviat · 'gone' l'aparell ja no hi és · 'retry' error passatger."""
-        payload = {"title": self.name, "body": body, "url": self.url, "tag": tag}
+    def send(self, d, body, tag, extra=None):
+        """'ok' enviat · 'gone' l'aparell ja no hi és · 'retry' error passatger.
+        extra: botons de la notificació ({"actions": [...], "sid": sessió}) per respondre sense obrir l'app."""
+        payload = {"title": self.name, "body": body, "url": self.url, "tag": tag, **(extra or {})}
         if self.icon:
             payload["icon"] = self.icon
         try:
@@ -191,11 +192,11 @@ class Group:
                 return "gone"
             return "retry"
 
-    def deliver(self, key, d, body, tag):
+    def deliver(self, key, d, body, tag, extra=None):
         """Envia si encara no s'havia enviat. Si l'error és passatger, es tornarà a provar."""
         if key in self.sent:
             return
-        res = self.send(d, body, tag)
+        res = self.send(d, body, tag, extra)
         if res != "retry":
             self.sent[key] = NOW.isoformat(timespec="seconds")
         if res == "ok":
@@ -247,7 +248,8 @@ class Group:
             }
             when = datetime.date.fromisoformat(s["date"]).strftime("%d/%m")
             for did, d in self.targets("convocatories", member_ids=pending):
-                self.deliver(f"rsvp:{sid}:{stage}:{did}", d, f"{s.get('type', 'Assaig')} del {when}: encara no has dit si hi seràs.", f"rsvp-{sid}")
+                self.deliver(f"rsvp:{sid}:{stage}:{did}", d, f"{s.get('type', 'Assaig')} del {when}: encara no has dit si hi seràs.", f"rsvp-{sid}",
+                             {"sid": sid, "actions": [{"action": "rsvp-yes", "title": "Hi seré"}, {"action": "rsvp-no", "title": "No hi podré anar"}]})
 
     # ---------- 3. Enquestes que es tanquen demà ----------
     def polls(self):
@@ -286,7 +288,8 @@ class Group:
             place = f" · {s['place']}" if s.get("place") else ""
             extra = "".join(f" {label}: {info[k]}." for k, label in [("dress", "Vestuari"), ("meet", "Punt de trobada")] if info.get(k))
             for did, d in self.targets("assajos", member_ids=who):
-                self.deliver(f"ses:{sid}:{did}", d, f"Demà {s.get('type', 'assaig').lower()}{hour}{call_at}{place}.{extra}", f"ses-{sid}")
+                self.deliver(f"ses:{sid}:{did}", d, f"Demà {s.get('type', 'assaig').lower()}{hour}{call_at}{place}.{extra}", f"ses-{sid}",
+                             {"sid": sid, "actions": [{"action": "absence", "title": "No hi podré anar"}]})
 
     # ---------- 5. Material o document nou ----------
     def materials(self):

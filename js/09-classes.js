@@ -17,6 +17,19 @@ function ruleSentence(rs) {
   if (rs.status === 'risk') return `<span class="rsvp none" style="background:var(--fj-soft);color:var(--fj-ink)">Per sota del ${min}%</span> <span class="muted" style="font-size:13px">Encara hi pots arribar: si vens als ${rs.remaining} assajos que queden, arribaràs al ${pct(rs.best)}.</span>`;
   return `<span class="rsvp no">No arribes al ${min}%</span> <span class="muted" style="font-size:13px">Parla amb el teu ${V.leader}.</span>`;
 }
+/** «Et pots permetre 2 faltes més abans del concert del 12 d’oct.»: quantes faltes queden fins a no arribar a la norma. */
+function normHint(me, pid) {
+  const rs = ruleStatus(pid, me);
+  if (!rs || !rs.remaining) return '';
+  const min = minAttendance() / 100;
+  const k = Math.floor(rs.att + rs.remaining - min * (rs.att + rs.abs + rs.remaining) + 1e-9);
+  const show = allSessions(pid).find(s => isShow(s) && s.date >= TODAY);
+  const when = show ? `${V.sh.el} del ${shortDate(show.date)}` : 'el final de la producció';
+  if (k < 0 || rs.status === 'out') return `<p class="norm-hint out">Ja no arribes al ${minAttendance()}% dels assajos per fer ${esc(when)}. Parla amb el teu ${V.leader}.</p>`;
+  if (k >= rs.remaining) return `<p class="norm-hint ok">Ja tens assegurat el ${minAttendance()}% per fer ${esc(when)}.</p>`;
+  if (k === 0) return `<p class="norm-hint zero">No et pots permetre <b>cap falta més</b> si vols fer ${esc(when)}: queden ${rs.remaining} assajos.</p>`;
+  return `<p class="norm-hint">Et pots permetre <b>${k} ${k === 1 ? 'falta' : 'faltes'} més</b> ${show ? `abans ${V.sh.del} del ${esc(shortDate(show.date))}` : 'fins al final de la producció'} (queden ${rs.remaining} assajos).</p>`;
+}
 function myAttendanceCard(me) {
   const x = myProdSummary(me, currentProductionId());
   if (!x) return '';
@@ -26,7 +39,7 @@ function myAttendanceCard(me) {
     <div class="panel my-att prod-tone tinted" style="--ph:${prodHue(prod)}">
       ${counted ? `<div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span class="big">${Math.round(rate(r) * 100)}<small>%</small></span>
         <span class="muted" style="font-size:13px">${r.P + r.R} de ${counted} assajos${r.R ? ` · ${r.R} retards` : ''}${r.FJ ? ` · ${r.FJ} just.` : ''}${r.FNJ ? ` · ${r.FNJ} no just.` : ''}</span></div>
-        <div>${ruleSentence(rs)}</div>
+        ${normHint(me, prod.id) || `<div>${ruleSentence(rs)}</div>`}
         <div class="dots" aria-label="Sessió a sessió">${dots}</div>`
       : `<span class="muted" style="font-size:13.5px">Encara no hi ha cap llista passada en aquesta producció.</span>`}
       <button class="btn btn-sm" data-act="my-att" style="justify-self:start">Totes les produccions</button>
@@ -305,7 +318,7 @@ function classSlotRow(c, x, past) {
   const noteBtn = teach && x.memberId ? `<span class="cl-acts"><button class="btn btn-sm" data-act="cl-note" data-c="${esc(c.id)}" data-s="${esc(x.id)}">${note ? 'Canvia la nota' : '+ Nota'}</button></span>` : '';
   return `<div class="cl-slot ${meNow ? 'me' : ''}">
     <span class="t">${esc(x.time || '')}</span>
-    <span class="who">${m ? esc(m.name) : x.name ? `${esc(x.name)} <span class="m">· sense fitxa</span>` : '<span class="cl-free">lliure</span>'}${m && m.section ? ` <span class="m">· ${esc(SEC[m.section].short)}</span>` : ''}${x.swapped ? ' <span class="m">(canviat)</span>' : ''}${pills || mark ? `<br>${[mark, pills].filter(Boolean).join(' ')}` : ''}${note ? `<span class="cl-note">${esc(note.text)}</span>` : ''}</span>
+    <span class="who">${m && teach ? `<button class="who-b" data-act="cl-student" data-m="${esc(m.id)}">${esc(m.name)}</button>` : m ? esc(m.name) : x.name ? `${esc(x.name)} <span class="m">· sense fitxa</span>` : '<span class="cl-free">lliure</span>'}${m && m.section ? ` <span class="m">· ${esc(SEC[m.section].short)}</span>` : ''}${x.swapped ? ' <span class="m">(canviat)</span>' : ''}${pills || mark ? `<br>${[mark, pills].filter(Boolean).join(' ')}` : ''}${note && note.text ? `<span class="cl-note">${esc(note.text)}</span>` : ''}${note && note.file ? `<button class="cl-rec" data-act="cl-rec" data-id="${esc(note.id)}">▶ Enregistrament</button>` : ''}</span>
     ${acts}${free ? `<button class="btn btn-sm" data-act="cl-free" data-c="${esc(c.id)}" data-s="${esc(x.id)}">Demana-la</button>` : ''}${marks}${noteBtn}</div>`;
 }
 /** Un dia de classe. Dins de l'espai d'un professor/a (inside) el dia i el nom ja són a dalt. */
@@ -429,7 +442,8 @@ function classTeacherSpace(who) {
     </div>
     ${teach ? `<div class="sec-h" style="margin-top:0"><span class="muted" style="font-size:13px">Les classes d’aquest ${esc(V.Teacher.toLowerCase())}.</span>
       <span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" data-act="cl-paste" data-k="${esc(who)}">Enganxa un horari</button><button class="btn btn-sm btn-primary" data-act="cl-new" data-k="${esc(who)}" data-date="${esc(ui.clDay)}">+ Dia</button></span></div>` : ''}
-    <div class="panel month">
+    <div class="seg3 cl-view" role="radiogroup" aria-label="Vista">${[['month', 'Mes'], ['week', 'Setmana']].map(([k, l]) => `<button type="button" role="radio" aria-checked="${(ui.clView || 'month') === k}" data-act="cl-view" data-k="${k}">${l}</button>`).join('')}</div>
+    ${ui.clView === 'week' ? classWeekHtml(who) : `<div class="panel month">
       <div class="mnav"><button class="nav-arrow" data-act="cl-month" data-dir="-1" aria-label="Mes anterior">${ICON.left}</button><h2 class="h2">${esc(title)}</h2><button class="nav-arrow" data-act="cl-month" data-dir="1" aria-label="Mes següent">${ICON.right}</button></div>
       <div class="mweek" aria-hidden="true">${['dl', 'dt', 'dc', 'dj', 'dv', 'ds', 'dg'].map(d => `<span>${d}</span>`).join('')}</div>
       <div class="mgrid">${cells.join('')}</div>
@@ -438,7 +452,7 @@ function classTeacherSpace(who) {
     </div>
     <div class="section-title" style="margin-top:18px"><h2 class="h2">${esc(longDate(ui.clDay))}</h2>${dayClasses.length ? `<span class="eyebrow">${esc(classDaySpan(dayClasses[0]))}</span>` : ''}</div>
     ${dayClasses.length ? `<div class="panel">${dayClasses.map(c => classDayCard(c, c.date < TODAY, true)).join('')}</div>`
-      : `<div class="panel" style="padding:14px;font-size:13.5px;color:var(--muted)">Cap classe aquest dia.${teach ? ' Amb <b>+ Dia</b> en pots posar una.' : ''}</div>`}
+      : `<div class="panel" style="padding:14px;font-size:13.5px;color:var(--muted)">Cap classe aquest dia.${teach ? ' Amb <b>+ Dia</b> en pots posar una.' : ''}</div>`}`}
     ${soon.length ? `<div class="section-title" style="margin-top:18px"><h2 class="h2">Properes classes</h2><span class="eyebrow">${soon.length}</span></div>
       <div class="cl-next">${soon.map(c => {
         const mineSlot = mid ? classSlots(c).find(x => x.memberId === mid) : null;
@@ -461,7 +475,7 @@ function viewClasses() {
   const answer = reqsToAnswer();
   const pending = teach ? reqsForTeacher() : [];
   const mineReq = myId() ? [...S.classReq.values()].filter(r => r.memberId === myId() && r.status === 'pending').sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')) : [];
-  const myNotes = !teach && myId() ? [...S.classNotes.values()].filter(n => n.memberId === myId() && n.text)
+  const myNotes = !teach && myId() ? [...S.classNotes.values()].filter(n => n.memberId === myId() && (n.text || n.file))
     .sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, 6) : [];
   const open = openSwaps();
   const openCard = r => {
@@ -505,8 +519,10 @@ function viewClasses() {
       <button class="btn btn-sm" data-act="cl-mystats">Mira-la</button></div>`}
       <div class="setting"><div><div class="t">Les teves classes al calendari del mòbil</div><div class="s">Subscriu-t’hi i les tindràs al Google Calendar, a l’Apple o a l’Outlook, sempre al dia.</div></div>
         <button class="btn btn-sm" data-act="cl-ics">Com fer-ho</button></div></div>` : ''}
+    ${myId() && !teach && inClasses() ? `<div class="panel" style="margin-top:12px"><div class="setting"><div><div class="t">La teva fitxa de cant</div><div class="s">Els objectius, el repertori que treballes i totes les notes i enregistraments de les classes.</div></div>
+      <button class="btn btn-sm btn-primary" data-act="cl-student" data-m="${esc(myId())}">Obre-la</button></div></div>` : ''}
     ${myNotes.length ? `<div class="section-title"><h2 class="h2">Notes de les teves classes</h2></div>
-      <ul class="mini-list" style="max-height:none">${myNotes.map(n => `<li style="display:grid;gap:2px"><span class="m mono">${esc(shortDate(n.date))}</span><span style="white-space:pre-wrap">${esc(n.text)}</span></li>`).join('')}</ul>` : ''}
+      <ul class="mini-list" style="max-height:none">${myNotes.map(n => `<li style="display:grid;gap:4px"><span class="m mono">${esc(shortDate(n.date))}</span>${n.text ? `<span style="white-space:pre-wrap">${esc(n.text)}</span>` : ''}${n.file ? `<button class="btn btn-sm" style="justify-self:start" data-act="cl-rec" data-id="${esc(n.id)}">Escolta l’enregistrament</button>` : ''}</li>`).join('')}</ul>` : ''}
     <p class="muted" style="font-size:12.5px;margin-top:14px">Els canvis d’hora valen només per al dia que es demanen. Qui rep la petició ha de dir que sí perquè es faci.</p>`;
 }
 /* ---------- Classes: fitxes ---------- */
@@ -650,19 +666,44 @@ function sheetClassNote(classId, slotId) {
     title: `Nota de la classe${m ? ` de ${firstName(m.name)}` : ''}`,
     body: `<div class="kv">
       <p style="margin:0">${esc(longDate(c.date))}, a les <b>${esc(slot.time || '')}</b>.</p>
-      <label class="field"><span>Què s’ha treballat i què cal preparar</span><textarea class="inp" id="cn-text" maxlength="600" style="min-height:150px" placeholder="p. ex. Vocalitzacions fins al la. Per la setmana vinent, els compassos 1-40 de memòria.">${esc(ex?.text || '')}</textarea></label>
+      <label class="field"><span>Què s’ha treballat i què cal preparar</span><textarea class="inp" id="cn-text" maxlength="600" style="min-height:130px" placeholder="p. ex. Vocalitzacions fins al la. Per la setmana vinent, els compassos 1-40 de memòria.">${esc(ex?.text || '')}</textarea></label>
+      <div class="field"><span>Enregistrament de la classe (opcional)</span>
+        ${ex?.file ? `<div class="rec-cur" id="cn-cur"><span>${esc(ex.file.name)} · ${fmtSize(ex.file.size)}</span><button type="button" class="btn btn-sm btn-ghost" id="cn-rec-rm">Treu-lo</button></div>` : ''}
+        <label class="dropzone" for="cn-file" id="cn-drop"><input id="cn-file" type="file" accept="audio/*,video/*,.m4a,.mp3" class="sr">
+          <span class="dz-t">${ex?.file ? 'Canvia’l per un altre' : 'Tria l’àudio de la classe'}</span><span class="dz-s">Fins a 20 MB (uns 20 minuts en qualitat de veu). L’alumne el podrà escoltar més lent i repetir fragments.</span></label></div>
       <p class="muted" style="font-size:12.5px;margin:0">Només ho veieu tu i ${m ? esc(firstName(m.name)) : `qui tingui aquesta hora`}. La resta de l’agrupació, no.</p>
     </div>`,
     foot: `${ex ? '<button class="btn btn-danger-ghost" id="cn-del">Esborra</button>' : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="cn-save">Desa</button>`,
     onMount: el => {
-      el.querySelector('#cn-save').onclick = () => {
-        const text = el.querySelector('#cn-text').value.trim();
-        if (!text) { if (ex) { S.classNotes.delete(id); persist('classNotes', id, null, 10); } closeSheet(); render(); return; }
-        const rec = { id, classId, slotId, memberId: slot.memberId || '', date: c.date, text, at: new Date().toISOString(), by: S.email || '' };
-        S.classNotes.set(id, rec); persist('classNotes', id, rec, 10);
-        closeSheet(); toast('Nota desada'); render();
+      let picked = null, drop = false;
+      const input = el.querySelector('#cn-file');
+      input.onchange = () => {
+        const f = input.files && input.files[0];
+        if (!f) return;
+        if (f.size > FILE_MAX) { toast(`${f.name} passa de 20 MB. Retalla’l o grava’l en qualitat més baixa.`); input.value = ''; return; }
+        picked = f;
+        el.querySelector('#cn-drop .dz-t').textContent = f.name;
+        el.querySelector('#cn-drop .dz-s').textContent = `${fileKind(f)} · ${fmtSize(f.size)} · es pujarà en desar`;
+        el.querySelector('#cn-drop').classList.add('ready');
       };
-      el.querySelector('#cn-del')?.addEventListener('click', () => { S.classNotes.delete(id); persist('classNotes', id, null, 10); closeSheet(); toast('Nota esborrada'); render(); });
+      el.querySelector('#cn-rec-rm')?.addEventListener('click', () => { drop = true; el.querySelector('#cn-cur').remove(); });
+      el.querySelector('#cn-save').onclick = async e => {
+        const text = el.querySelector('#cn-text').value.trim();
+        let file = drop ? null : ex?.file || null;
+        if (picked) {
+          if (!navigator.onLine) { toast('Cal connexió per pujar l’enregistrament'); return; }
+          const btn = e.currentTarget, label = btn.textContent;
+          btn.disabled = true;
+          try { file = await uploadFile(picked, (i, n) => { btn.textContent = n > 1 ? `Pujant ${i} de ${n}…` : 'Pujant…'; }, { where: 'classFiles', memberId: slot.memberId || '' }); }
+          catch { toast('No s’ha pogut pujar l’enregistrament. Torna-ho a provar.'); btn.disabled = false; btn.textContent = label; return; }
+        }
+        if (ex?.file && (!file || file.id !== ex.file.id)) deleteFile(ex.file);
+        if (!text && !file) { if (ex) { S.classNotes.delete(id); persist('classNotes', id, null, 10); } closeSheet(); render(); return; }
+        const rec = { id, classId, slotId, memberId: slot.memberId || '', date: c.date, text, at: new Date().toISOString(), by: S.email || '', ...(file ? { file } : {}) };
+        S.classNotes.set(id, rec); persist('classNotes', id, rec, 10);
+        closeSheet(); toast(picked ? 'Nota i enregistrament desats' : 'Nota desada'); render();
+      };
+      el.querySelector('#cn-del')?.addEventListener('click', () => { if (ex?.file) deleteFile(ex.file); S.classNotes.delete(id); persist('classNotes', id, null, 10); closeSheet(); toast('Nota esborrada'); render(); });
     },
   });
 }
@@ -916,4 +957,112 @@ function answerClassReq(id, status) {
   saveClassReq({ ...r, status, reviewedAt: new Date().toISOString(), reviewedBy: S.email || '' });
   toast(status === 'accepted' ? 'Acceptat' : status === 'cancelled' ? 'Avís retirat' : 'Rebutjat');
   render();
+}
+
+/* ---------- Fitxa de cada alumne ---------- */
+// students/<membre> = { memberId, goals, repertoire: [{ id, title, composer, status }], at, by }. La fa el professorat i la
+// veu l'alumne; hi surten també totes les notes de classe i els enregistraments (classNotes amb «file»).
+const STUDENT_STATUS = { nova: 'Per començar', treballant: 'Treballant-la', apunt: 'A punt' };
+const NOTE_CACHE = new Map();   // les notes carregades a la fitxa, per obrir-ne l'enregistrament
+async function sheetStudent(mid) {
+  const m = S.members.get(mid);
+  const teach = teachesClasses();
+  if (!m || (!teach && mid !== myId())) return;
+  openSheet({ title: m.name, wide: true, body: '<p class="muted" style="margin:0">Carregant la fitxa…</p>' });
+  let rec = { goals: '', repertoire: [] }, notes = [];
+  try { const d = await db.doc(`students/${mid}`).get(); if (d.exists) rec = { ...rec, ...d.data() }; } catch {}
+  try { notes = (await db.collection('classNotes').where('memberId', '==', mid).get()).docs.map(d => d.data()); }
+  catch { notes = [...S.classNotes.values()].filter(n => n.memberId === mid); }
+  if (!sheetClose) return;
+  notes.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  for (const n of notes) NOTE_CACHE.set(n.id, n);
+  rec.repertoire = (rec.repertoire || []).map(x => ({ ...x }));
+  const hours = [...S.classPlan.values()].flatMap(p => (p.rows || []).filter(r => r.memberId === mid).map(r => `${capz(DAYS_CA[r.day])} ${r.time} amb ${teacherName(p.teacher || p.id) || V.Teacher}`));
+  const repRows = () => rec.repertoire.length ? rec.repertoire.map(x => teach
+    ? `<div class="sec-row st-rep" data-id="${esc(x.id)}" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <input class="inp" data-f="title" maxlength="80" value="${esc(x.title)}" placeholder="Obra" style="flex:2 1 150px;min-width:0">
+        <input class="inp" data-f="composer" maxlength="50" value="${esc(x.composer || '')}" placeholder="Compositor" style="flex:1 1 110px;min-width:0">
+        <select class="inp" data-f="status" style="flex:1 1 120px">${Object.entries(STUDENT_STATUS).map(([k, l]) => `<option value="${k}" ${x.status === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
+        <button type="button" class="icon-btn" data-rm="${esc(x.id)}" aria-label="Treu-la">${ICON.close}</button></div>`
+    : `<li><span><b>${esc(x.title)}</b>${x.composer ? ` · ${esc(x.composer)}` : ''}</span><span class="st-pill ${x.status === 'apunt' ? 'st-accepted' : 'st-pending'}">${STUDENT_STATUS[x.status] || ''}</span></li>`).join('')
+    : `<p class="muted" style="margin:0;font-size:13px">${teach ? 'Encara no n’hi ha. Afegeix les obres que treballa.' : 'Encara no hi ha repertori.'}</p>`;
+  const read = el => {
+    if (!teach) return;
+    rec.goals = el.querySelector('#stu-goals').value.trim();
+    el.querySelectorAll('.st-rep').forEach(row => { const x = rec.repertoire.find(z => z.id === row.dataset.id); if (x) for (const f of ['title', 'composer', 'status']) x[f] = row.querySelector(`[data-f="${f}"]`).value.trim(); });
+  };
+  const paint = el => {
+    const box = el.querySelector('#stu-rep');
+    box.innerHTML = teach ? repRows() : (rec.repertoire.length ? `<ul class="mini-list" style="max-height:none">${repRows()}</ul>` : repRows());
+    box.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { read(el); rec.repertoire = rec.repertoire.filter(x => x.id !== b.dataset.rm); paint(el); });
+  };
+  openSheet({
+    title: m.name,
+    wide: true,
+    body: `<p style="margin-top:0"><span class="muted" style="font-size:13.5px">${esc(SEC[m.section].name)}${hours.length ? ` · ${esc(hours.join(' · '))}` : ''}</span></p>
+      <div class="section-title"><h2 class="h2">Objectius</h2></div>
+      ${teach ? `<textarea class="inp" id="stu-goals" maxlength="1000" style="min-height:80px" placeholder="p. ex. Guanyar agilitat a la zona aguda. Treballar el suport a les frases llargues.">${esc(rec.goals || '')}</textarea>`
+        : `<p style="white-space:pre-wrap;margin:0">${esc(rec.goals || '') || '<span class="muted">Encara no n’hi ha.</span>'}</p>`}
+      <div class="section-title" style="margin-top:14px"><h2 class="h2">Repertori</h2>${teach ? '<button type="button" class="btn btn-sm" id="stu-add">+ Obra</button>' : ''}</div>
+      <div id="stu-rep" style="display:grid;gap:8px"></div>
+      <div class="section-title" style="margin-top:14px"><h2 class="h2">Notes de classe</h2><span class="eyebrow">${notes.length}</span></div>
+      ${notes.length ? `<ul class="mini-list" style="max-height:none">${notes.map(n => `<li style="display:grid;gap:4px"><span class="m mono">${esc(shortDate(n.date))}</span>${n.text ? `<span style="white-space:pre-wrap">${esc(n.text)}</span>` : ''}
+          ${n.file ? `<button class="btn btn-sm" style="justify-self:start" data-act="cl-rec" data-id="${esc(n.id)}">Escolta l’enregistrament</button>` : ''}</li>`).join('')}</ul>`
+        : '<p class="muted" style="margin:0;font-size:13px">Encara no hi ha notes.</p>'}
+      ${teach ? '' : `<p class="muted" style="font-size:12px;margin-top:12px">Només ho veieu tu i el professorat de cant.</p>`}`,
+    foot: teach ? `<span class="spacer"></span><button class="btn" data-act="sheet-close">Tanca</button><button class="btn btn-primary" id="stu-save">Desa</button>` : '',
+    onMount: el => {
+      paint(el);
+      el.querySelector('#stu-add')?.addEventListener('click', () => { read(el); rec.repertoire.push({ id: uid('sr'), title: '', composer: '', status: 'treballant' }); paint(el); });
+      el.querySelector('#stu-save')?.addEventListener('click', async () => {
+        read(el);
+        const out = { memberId: mid, goals: rec.goals || '', repertoire: rec.repertoire.filter(x => x.title), at: new Date().toISOString(), by: S.email || '' };
+        try { await db.doc(`students/${mid}`).set(out); closeSheet(); toast('Fitxa desada'); }
+        catch { toast('No s’ha pogut desar. Comprova la connexió.'); }
+      });
+    },
+  });
+}
+function openRecording(id) {
+  const n = NOTE_CACHE.get(id) || S.classNotes.get(id);
+  if (n?.file) sheetOpenFile(n.file, `Classe del ${shortDate(n.date)}`);
+}
+
+/* ---------- La setmana i l'horari per imprimir ---------- */
+const weekStart = iso => { const d = new Date((iso || TODAY) + 'T12:00:00'); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return isoDate(d); };
+const weekDates = start => Array.from({ length: 7 }, (_, i) => { const d = new Date(start + 'T12:00:00'); d.setDate(d.getDate() + i); return isoDate(d); });
+function classWeekHtml(who) {
+  const start = weekStart(ui.clDay || TODAY);
+  const dates = weekDates(start);
+  const mid = myId();
+  const days = classDays(who).filter(c => dates.includes(c.date)).sort((a, b) => a.date.localeCompare(b.date));
+  const title = `Del ${shortDate(dates[0])} al ${shortDate(dates[6])}`;
+  return `<div class="panel month">
+      <div class="mnav"><button class="nav-arrow" data-act="cl-week" data-dir="-1" aria-label="Setmana anterior">${ICON.left}</button><h2 class="h2">${esc(title)}</h2><button class="nav-arrow" data-act="cl-week" data-dir="1" aria-label="Setmana següent">${ICON.right}</button></div>
+      ${days.length ? days.map(c => `<div class="wk-day${c.cancelled ? ' off' : ''}"><div class="wk-h"><b>${esc(capz(fmtD(c.date, { weekday: 'long', day: 'numeric' })))}</b>${c.place ? ` <span class="m">· ${esc(c.place)}</span>` : ''}${c.cancelled ? ' <span class="st-pill st-rejected">Anul·lada</span>' : ''}</div>
+        ${classSlots(c).map(x => { const m = S.members.get(x.memberId); return `<div class="wk-slot${mid && x.memberId === mid ? ' me' : ''}"><span class="mono">${esc(x.time || '')}</span><span>${m ? esc(m.name) : x.name ? esc(x.name) : '<span class="cl-free">lliure</span>'}</span>${x.mark ? `<span class="cl-mk ${x.mark}">${esc(STATUS[x.mark].short)}</span>` : ''}</div>`; }).join('')}</div>`).join('')
+        : '<p class="muted" style="margin:10px 4px 0;font-size:13px">Aquesta setmana no hi ha classes.</p>'}
+    </div>
+    <div class="sec-h" style="margin-top:10px"><span class="muted" style="font-size:13px">Per penjar a la porta de l’aula o per enviar.</span>
+      <span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" data-act="cl-print-week" data-k="${esc(who)}">Imprimeix la setmana</button>${planRows(who).length ? `<button class="btn btn-sm" data-act="cl-print-plan" data-k="${esc(who)}">Imprimeix l’horari fix</button>` : ''}</span></div>`;
+}
+/** Una graella: una columna per dia i una fila per hora. cols = [{ label, sub, cells: { hora: text } }]. */
+function timetableHtml(cols) {
+  const times = [...new Set(cols.flatMap(c => Object.keys(c.cells)))].sort();
+  if (!cols.length) return '<p>No hi ha classes.</p>';
+  return `<table class="pr-table pr-tt"><thead><tr><th></th>${cols.map(c => `<th>${esc(c.label)}${c.sub ? `<small>${esc(c.sub)}</small>` : ''}</th>`).join('')}</tr></thead>
+    <tbody>${times.map(t => `<tr><th class="mono">${esc(t)}</th>${cols.map(c => `<td>${esc(c.cells[t] || '')}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+}
+const slotName = x => S.members.get(x.memberId)?.name || x.name || '';
+function printClassWeek(who) {
+  const dates = weekDates(weekStart(ui.clDay || TODAY));
+  const days = classDays(who).filter(c => dates.includes(c.date) && !c.cancelled).sort((a, b) => a.date.localeCompare(b.date));
+  const cols = days.map(c => ({ label: capz(fmtD(c.date, { weekday: 'long', day: 'numeric', month: 'short' })), sub: c.place || '', cells: Object.fromEntries(classSlots(c).map(x => [x.time || '', slotName(x)])) }));
+  printDoc(`Classes de ${teacherName(who) || V.Teacher} · del ${shortDate(dates[0])} al ${shortDate(dates[6])}`, timetableHtml(cols));
+}
+function printClassPlan(who) {
+  const rows = planRows(who), places = planPlaces(who);
+  const days = [...new Set(rows.map(r => +r.day))].sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7));
+  const cols = days.map(d => ({ label: capz(DAYS_CA[d]), sub: places[d] || '', cells: Object.fromEntries(rows.filter(r => +r.day === d).map(r => [r.time, S.members.get(r.memberId)?.name || r.name || ''])) }));
+  printDoc(`Horari de ${teacherName(who) || V.Teacher}`, timetableHtml(cols));
 }

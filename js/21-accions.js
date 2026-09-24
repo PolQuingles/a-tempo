@@ -1,4 +1,4 @@
-// A Tempo · 17-accions.js — Accions de la interfície i escolta d'esdeveniments (clics, formularis).
+// A Tempo · 21-accions.js — Accions de la interfície i escolta d'esdeveniments (clics, formularis).
 // Els fitxers de js/ són scripts clàssics que comparteixen l'àmbit global i es carreguen en ordre (vegeu index.html).
 'use strict';
 
@@ -10,7 +10,8 @@ const PRO_ONLY = new Set(['brand-color', 'logo-remove', 'kind-set', 'group-delet
 // El calendari de les classes: només el professorat de cant i l'administració.
 const CLASS_ONLY = new Set(['cl-new', 'cl-edit', 'cl-review', 'cl-paste', 'cl-plan', 'cl-note', 'cl-mark', 'cl-stats', 'cl-cancel-day']);
 const EDIT_ONLY = new Set(['mark', 'min', 'mark-rest', 'session-new', 'sub-set', 'ann-new', 'ann-edit', 'mat-new', 'mat-edit', 'poll-new', 'poll-edit', 'poll-results', 'poll-remind', 'rsvp-remind', 'doc-new', 'doc-edit', 'share-app', 'staff-bulk', 'preview-on', 'who-in', 'mail-check', 'concert-list', 'concert-toggle', 'session-edit', 'member-edit', 'member-bulk', 'prod-new', 'prod-edit',
-  'wipe-demo', 'wipe-all', 'load-demo', 'export-json', 'abs-accept', 'abs-reject', 'abs-delete', 'manage']);
+  'wipe-demo', 'wipe-all', 'load-demo', 'export-json', 'abs-accept', 'abs-reject', 'abs-delete', 'manage',
+  'work-new', 'work-edit', 'work-link', 'plan-edit', 'seating-edit', 'participants', 'certificate', 'season-report', 'trip-new', 'trip-edit', 'trip-admin']);
 const actions = {
   'tab': el => { if (el.dataset.tab === 'gestio' && ui.tab !== 'gestio') ui.gestioFrom = ui.tab; ui.tab = el.dataset.tab; ui.rollSec = null; ui._calScrolled = false; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
   'reload': () => location.reload(),
@@ -50,8 +51,8 @@ const actions = {
   'preview-on': () => sheetPreview(),
   'push-setup': () => sheetPush(),
   'file-open': el => {
-    const item = el.dataset.src === 'doc'
-      ? (S.config.documents || []).find(x => x.id === el.dataset.id)
+    const item = el.dataset.src === 'doc' ? (S.config.documents || []).find(x => x.id === el.dataset.id)
+      : el.dataset.src === 'work' ? (S.works.get(el.dataset.pid)?.materials || []).find(x => x.id === el.dataset.id)
       : (S.productions.get(el.dataset.pid)?.materials || []).find(x => x.id === el.dataset.id);
     if (item?.file) sheetOpenFile(item.file, item.title);
   },
@@ -59,6 +60,32 @@ const actions = {
   'doc-edit': el => sheetDocument(el.dataset.id),
   'theme': el => setTheme(el.dataset.k),
   'account': () => sheetAccount(),
+  // Repertori, pla d'assaig i concerts (18 i 19).
+  'work-new': () => sheetWorkEdit(null, ui.matProd),
+  'work-edit': el => sheetWorkEdit(el.dataset.id),
+  'work-open': el => sheetWork(el.dataset.id),
+  'work-link': () => sheetLinkWork(ui.matProd),
+  'offline-save-all': () => offlineSaveAll(),
+  'offline-clear': () => offlineClear(),
+  'plan-edit': el => sheetPlan(el.dataset.sid),
+  'seating-edit': el => sheetSeating(el.dataset.sid),
+  'participants': el => sheetParticipants(el.dataset.sid),
+  'certificate': el => sheetCertificate(el.dataset.mid),
+  'season-report': () => sheetSeasonReport(),
+  // Sortides (20).
+  'trip-new': () => sheetTrip(null),
+  'trip-edit': el => sheetTrip(el.dataset.id),
+  'trip-admin': el => sheetTripAdmin(el.dataset.id),
+  'trip-yes': el => sheetTripSignup(el.dataset.id),
+  'trip-no': el => tripAnswer(el.dataset.id, 'no'),
+  'board-trips': () => { ui.tab = 'tauler'; ui.board = 'sortides'; render(); window.scrollTo({ top: 0 }); },
+  // Classes: fitxa de l'alumne, enregistraments, setmana i imprimir.
+  'cl-student': el => sheetStudent(el.dataset.m),
+  'cl-rec': el => openRecording(el.dataset.id),
+  'cl-view': el => { ui.clView = el.dataset.k; render(); },
+  'cl-week': el => { const d = new Date((ui.clDay || TODAY) + 'T12:00:00'); d.setDate(d.getDate() + 7 * +el.dataset.dir); ui.clDay = isoDate(d); ui.clMonth = ui.clDay.slice(0, 7); render(); },
+  'cl-print-week': el => printClassWeek(el.dataset.k),
+  'cl-print-plan': el => printClassPlan(el.dataset.k),
   'install-hide': () => { lsSet(LS_INSTALL, String(Date.now())); render(); },
   'install-go': async () => { const p = installPrompt; if (!p) return; installPrompt = null; try { await p.prompt(); await p.userChoice; } catch {} render(); },
   'acct-open': el => { const f = ACCT_SHEETS[el.dataset.k]; if (f) { SHEET_BACK.at = Date.now(); f(); } },
@@ -309,4 +336,6 @@ document.addEventListener('change', e => {
   if (e.target.closest('[data-bind="cfg-classes"]') && isAdmin()) { saveConfig({ classesOn: e.target.checked }); toast(e.target.checked ? `${V.classes} activades` : `${V.classes} desactivades`); render(); }
   if (e.target.closest('[data-bind="cfg-ics"]') && isAdmin()) { saveConfig({ icsOn: e.target.checked }); toast(e.target.checked ? 'Calendari subscrit activat: funcionarà d’aquí a unes hores' : 'Calendari subscrit desactivat'); render(); }
   if (e.target.closest('[data-bind="min"]')) refreshRow(e.target.closest('.row').dataset.mid);
+  const vm = e.target.closest('[data-bind="cfg-vmin"]');
+  if (vm && canEdit()) { const v = Math.max(0, parseInt(vm.value, 10) || 0); saveConfig({ voiceMin: { ...voiceMin(), [vm.dataset.sec]: v } }); toast('Mínim desat'); }
 });

@@ -201,19 +201,46 @@ service cloud.firestore {
       }
       match /{col}/{doc} {
         allow read: if (col in ['members', 'productions', 'attendance', 'config', 'staff', 'subs', 'rsvp', 'absences',
-                                'announcements', 'polls', 'pollVotes', 'memberMarks', 'push', 'classes', 'classReq', 'classPlan'] && canEdit(c))
-                    // Cantaires i músics: veuen tota l'app, però no poden canviar res.
+                                'announcements', 'polls', 'pollVotes', 'memberMarks', 'push', 'classes', 'classReq', 'classPlan',
+                                'works', 'trips'] && canEdit(c))
+                    // Cantaires i músics: veuen tota l'app (també el repertori i les sortides), però no poden canviar res.
                     || (col in ['members', 'productions', 'attendance', 'config', 'subs',
-                                'announcements', 'polls'] && isStaff(c))
+                                'announcements', 'polls', 'works', 'trips'] && isStaff(c))
                     || (col in ['productions', 'config'] && hasRole(c, ['calendar']))
                     || (col in ['members', 'productions', 'attendance', 'config', 'staff', 'subs', 'rsvp', 'absences',
-                                'announcements', 'polls', 'pollVotes', 'push', 'classes', 'classReq', 'classPlan', 'classNotes', 'classIcs'] && (hasRole(c, ['backup']) || isService()));
+                                'announcements', 'polls', 'pollVotes', 'push', 'classes', 'classReq', 'classPlan', 'classNotes', 'classIcs',
+                                'works', 'trips', 'tripSignups', 'profiles', 'students', 'classFiles'] && (hasRole(c, ['backup']) || isService()));
         allow create, update: if col in ['members', 'productions', 'attendance', 'config', 'subs', 'rsvp',
-                                         'announcements', 'polls', 'pollVotes', 'memberMarks'] && canEdit(c)
+                                         'announcements', 'polls', 'pollVotes', 'memberMarks', 'works', 'trips'] && canEdit(c)
           && !(col == 'config' && doc == 'main');
         allow delete: if col in ['members', 'productions', 'attendance', 'config', 'subs', 'rsvp',
-                                 'announcements', 'polls', 'pollVotes', 'memberMarks'] && canEdit(c)
+                                 'announcements', 'polls', 'pollVotes', 'memberMarks', 'works', 'trips'] && canEdit(c)
           && !(col == 'config' && doc == 'main');
+      }
+      // Inscripcions a una sortida: cadascú diu si hi va (i una nota); l'equip les veu totes i hi posa el transport i
+      // l'habitació, que la persona no es pot canviar.
+      match /tripSignups/{id} {
+        allow read: if canEdit(c) || (hasSpace(c) && mine(c, resource.data.memberId));
+        allow create: if canEdit(c) || (hasSpace(c)
+          && mine(c, request.resource.data.memberId)
+          && id == request.resource.data.tripId + '_' + myMember(c)
+          && request.resource.data.answer in ['yes', 'no']
+          && !request.resource.data.keys().hasAny(['transport', 'room']));
+        allow update: if canEdit(c) || (hasSpace(c)
+          && mine(c, resource.data.memberId)
+          && request.resource.data.answer in ['yes', 'no']
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['transport', 'room', 'tripId', 'memberId']));
+        allow delete: if canEdit(c);
+      }
+      // La fitxa que omple cada persona (telèfon, talla, contacte d'emergència): només la veuen ella i l'equip.
+      match /profiles/{mid} {
+        allow read: if canEdit(c) || (hasSpace(c) && mine(c, mid));
+        allow create, update: if canEdit(c) || (hasSpace(c) && mine(c, mid)
+          && request.resource.data.memberId == mid
+          && request.resource.data.keys().hasOnly(['memberId', 'phone', 'size', 'emergencyName', 'emergencyPhone', 'at'])
+          && shortText(request.resource.data, 'phone', 20) && shortText(request.resource.data, 'size', 10)
+          && shortText(request.resource.data, 'emergencyName', 60) && shortText(request.resource.data, 'emergencyPhone', 20));
+        allow delete: if canEdit(c);
       }
       // Cadascú pot llegir la seva pròpia fitxa per saber quin rol té, i deixar-hi
       // constància de l'última vegada que ha entrat. La resta, només administració.
@@ -253,6 +280,16 @@ service cloud.firestore {
           && request.resource.data.token is string
           && request.resource.data.token.size() >= 24 && request.resource.data.token.size() <= 64;
         allow delete: if teaches(c) || (hasSpace(c) && mine(c, mid));
+      }
+      // La fitxa de cant de cada alumne (objectius i repertori): la fa el professorat i la veu l'alumne.
+      match /students/{mid} {
+        allow read: if teaches(c) || (hasSpace(c) && mine(c, mid));
+        allow create, update, delete: if teaches(c);
+      }
+      // Enregistraments de classe, a trossos com els fitxers del tauler: només el professorat i l'alumne.
+      match /classFiles/{id} {
+        allow read: if teaches(c) || (hasSpace(c) && mine(c, resource.data.memberId));
+        allow create, update, delete: if teaches(c);
       }
       // Les notes de cada classe: només les veuen el professorat i l'alumne de qui són.
       match /classNotes/{id} {

@@ -156,10 +156,10 @@ function calRow(s, underProd, tone) {
   return `<li class="cal-row ${cls}${tone ? ' prod-tone' : ''}" data-date="${s.date}"${tone ? ` style="--ph:${prodHue(S.productions.get(s.prodId))}"` : ''}>
     <button class="cal-main" ${openAct ? `data-act="${openAct}"` : 'disabled'} data-sid="${s.id}">
       <span class="cal-date"><b>${+s.date.slice(8, 10)}</b><small>${wdShort(s.date)}</small></span>
-      <span class="cal-info"><span class="cal-type">${esc(s.type || 'Assaig')}</span><span class="cal-place">${[s.info?.call ? `Convocatòria <span class="mono">${esc(s.info.call)}</span>` : '', s.time ? `<span class="mono">${esc(timeRange(s))}</span>` : '', esc(s.place || ''), esc(s.note || ''), other.length ? `També: ${esc(other.join(', '))}` : ''].filter(Boolean).join(' · ')}</span></span>
+      <span class="cal-info"><span class="cal-type">${esc(s.type || 'Assaig')}</span><span class="cal-place">${[s.info?.call ? `Convocatòria <span class="mono">${esc(s.info.call)}</span>` : '', s.time ? `<span class="mono">${esc(timeRange(s))}</span>` : '', esc(s.place || ''), esc(s.note || ''), other.length ? `També: ${esc(other.join(', '))}` : ''].filter(Boolean).join(' · ')}</span>${planOf(s) && (s.plan.items || []).length ? `<span class="cal-plan">${esc(s.plan.items.map(planTitle).join(' · '))}</span>` : ''}</span>
       ${right}
     </button>
-    ${hasInfo(s) ? `<button class="icon-btn info" data-act="session-info" data-sid="${s.id}" aria-label="Fitxa de la sessió">${ICON.info}</button>` : ''}
+    ${hasInfo(s) || planOf(s) || seatRows(s).length || (canEdit() && isShow(s)) ? `<button class="icon-btn info" data-act="session-info" data-sid="${s.id}" aria-label="Fitxa de la sessió">${ICON.info}</button>` : ''}
     ${canEdit() ? `<button class="icon-btn" data-act="session-edit" data-sid="${s.id}" aria-label="Edita la sessió">${ICON.more}</button>` : ''}
   </li>`;
 }

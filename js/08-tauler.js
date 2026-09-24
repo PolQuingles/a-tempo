@@ -1,4 +1,4 @@
-// A Tempo · 08-tauler.js — Tauler: anuncis, materials, documents, enquestes i fitxers pujats.
+// A Tempo · 08-tauler.js — Tauler: anuncis, documents, enquestes i fitxers pujats (el repertori i les sortides són a 18 i 20).
 // Els fitxers de js/ són scripts clàssics que comparteixen l'àmbit global i es carreguen en ordre (vegeu index.html).
 'use strict';
 
@@ -22,12 +22,13 @@ function boardBadge() {
   return news + polls;
 }
 function viewBoard() {
-  const tabs = [['anuncis', 'Anuncis'], ['materials', 'Materials'], ['documents', 'Documents'], ['enquestes', 'Enquestes']];
+  const tabs = [['anuncis', 'Anuncis'], ['materials', 'Repertori'], ['documents', 'Documents'], ['enquestes', 'Enquestes'], ['sortides', 'Sortides']];
   if (!tabs.some(([k]) => k === ui.board)) ui.board = 'anuncis';
   if (ui.board === 'anuncis') { lsSet(LS_SEEN, new Date().toISOString()); setTimeout(renderTabs, 0); }
   const head = `<div class="page-head"><h1 class="h1">Tauler</h1></div>
     <div class="subtabs board-tabs" role="tablist" style="margin-bottom:10px;grid-template-columns:repeat(${tabs.length},1fr)">${tabs.map(([k, l]) => `<button class="subtab" role="tab" aria-selected="${ui.board === k}" data-act="board" data-k="${k}">${l}</button>`).join('')}</div>`;
-  if (ui.board === 'materials') return head + boardMaterials();
+  if (ui.board === 'materials') return head + boardRepertoire();
+  if (ui.board === 'sortides') return head + boardTrips();
   if (ui.board === 'documents') return head + boardDocuments();
   if (ui.board === 'enquestes') return head + boardPolls();
   return head + boardAnnouncements();
@@ -46,27 +47,6 @@ function boardAnnouncements() {
     ${active.length ? `<div class="panel">${active.map(card).join('')}</div>` : `<div class="empty"><p>No hi ha anuncis.</p></div>`}
     ${canEdit() && expired.length ? `<details class="np-group"><summary><span>Caducats (${expired.length})</span>${ICON.chev}</summary><div class="panel">${expired.map(card).join('')}</div></details>` : ''}`;
 }
-function boardMaterials() {
-  const prods = productionsSorted();
-  if (!ui.matProd || !S.productions.has(ui.matProd)) ui.matProd = currentProductionId();
-  const prod = S.productions.get(ui.matProd);
-  if (!prod) return '<div class="empty"><p>Encara no hi ha produccions.</p></div>';
-  const me = S.members.get(myMemberId());
-  const onlyMine = !!me && !canEdit() && ui.matMine !== false;
-  const items = (prod.materials || []).filter(x => !onlyMine || !me || ((!x.section || x.section === me.section) && (!x.part || !me.part || me.part.includes(x.part) || x.part.includes(me.part))));
-  const chips = `<div class="filters"><label class="sel"><span class="sr">Producció</span><select data-pick="mat-prod">${prods.map(p => `<option value="${p.id}" ${p.id === prod.id ? 'selected' : ''}>${esc(p.name)}${(p.materials || []).length ? ` · ${(p.materials || []).length}` : ''}</option>`).join('')}</select></label></div>`;
-  const tools = canEdit()
-    ? `<div class="sec-h" style="margin-top:4px"><span class="muted" style="font-size:13px">Enllaços a Drive, Dropbox, YouTube…</span><button class="btn btn-sm btn-primary" data-act="mat-new">+ Material</button></div>`
-    : me
-      ? `<div class="sec-h" style="margin-top:4px"><span class="muted" style="font-size:13px">${onlyMine ? `Mostrant el material per a ${esc(SEC[me.section].name.toLowerCase())}${me.part ? ` ${esc(me.part)}` : ''}` : 'Mostrant tot el material'}</span><button class="btn btn-sm btn-ghost" data-act="mat-mine">${onlyMine ? 'Mostra-ho tot' : `Només la meva ${V.part}`}</button></div>`
-      : '';
-  const order = Object.keys(MAT_KINDS);
-  const sorted = [...items].sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind) || a.title.localeCompare(b.title, 'ca'));
-  const row = x => `<div class="mat"><span class="mat-k ${x.kind}">${MAT_KINDS[x.kind]?.slice(0, 4) || ''}</span>
-      <span class="mat-i">${itemLink(x, `data-act="file-open" data-src="mat" data-pid="${prod.id}" data-id="${x.id}"`)}<small>${[MAT_KINDS[x.kind], x.section ? esc(SEC[x.section].name) : capz(V.tot), x.part ? `${V.part} ${esc(x.part)}` : '', fileNote(x)].filter(Boolean).join(' · ')}</small></span>
-      ${canEdit() ? `<button class="icon-btn" data-act="mat-edit" data-pid="${prod.id}" data-id="${x.id}" aria-label="Edita">${ICON.more}</button>` : ''}</div>`;
-  return chips + tools + (sorted.length ? `<div class="panel prod-tone tinted" style="--ph:${prodHue(prod)}">${sorted.map(row).join('')}</div>` : `<div class="empty"><p>Encara no hi ha material per a ${esc(prod.name)}.</p></div>`);
-}
 /* ---------- Fitxers pujats des de l'ordinador (PDF, àudio, imatges…) ---------- */
 // Cada fitxer es desa a trossos de 700 KB dins de cors/<agrupació>/config (config/fitxer_<id>_<n>).
 // Aquesta col·lecció ja té els permisos que cal: tothom de l'agrupació la pot llegir i només l'equip
@@ -74,7 +54,8 @@ function boardMaterials() {
 // descarreguen quan algú obre el fitxer. Materials i documents en guarden la fitxa a «file».
 const FILE_CHUNK = 700 * 1024;
 const FILE_MAX = 20 * 1024 * 1024;
-const chunkPath = (fid, i) => `config/fitxer_${fid}_${i}`;
+// Els enregistraments de classe (where: 'classFiles') van a part: només els llegeixen el professorat i l'alumne.
+const chunkPath = (fid, i, where) => where === 'classFiles' ? `classFiles/${fid}_${i}` : `config/fitxer_${fid}_${i}`;
 const fmtSize = n => !n ? '0 MB' : n < 1024 ? `${n} B` : n < 1048576 ? `${Math.max(1, Math.round(n / 1024))} KB` : `${(n / 1048576).toFixed(1).replace('.', ',')} MB`;
 function fileKind(f) {
   const t = f.type || '', ext = (f.name.split('.').pop() || '').toLowerCase();
@@ -85,28 +66,31 @@ function fileKind(f) {
   return ext ? ext.toUpperCase() : 'Fitxer';
 }
 const titleFromFile = name => name.replace(/\.[^.]+$/, '').replace(/[_]+/g, ' ').trim();
-async function uploadFile(file, onProgress) {
+async function uploadFile(file, onProgress, opts = {}) {
   const id = uid('f');
   const bytes = new Uint8Array(await file.arrayBuffer());
   const n = Math.max(1, Math.ceil(bytes.length / FILE_CHUNK));
   for (let i = 0; i < n; i++) {
     const part = bytes.subarray(i * FILE_CHUNK, (i + 1) * FILE_CHUNK);
-    await db.doc(chunkPath(id, i)).set({ d: firebase.firestore.Blob.fromUint8Array(part), i, of: n });
+    await db.doc(chunkPath(id, i, opts.where)).set({ d: firebase.firestore.Blob.fromUint8Array(part), i, of: n, ...(opts.memberId ? { memberId: opts.memberId } : {}) });
     onProgress?.(i + 1, n);
   }
-  return { id, name: file.name, type: file.type || '', size: file.size, chunks: n, at: new Date().toISOString() };
+  return { id, name: file.name, type: file.type || '', size: file.size, chunks: n, at: new Date().toISOString(), ...(opts.where ? { where: opts.where } : {}) };
 }
 function deleteFile(f) {
   if (!f || !f.id) return;
   const b = fs.batch();
-  for (let i = 0; i < (f.chunks || 1); i++) b.delete(db.doc(chunkPath(f.id, i)));
+  for (let i = 0; i < (f.chunks || 1); i++) b.delete(db.doc(chunkPath(f.id, i, f.where)));
   b.commit().catch(() => {});
   fileUrls.delete(f.id);
 }
 const fileUrls = new Map();
 async function loadFile(f) {
   if (fileUrls.has(f.id)) return fileUrls.get(f.id);
-  const snaps = await Promise.all(Array.from({ length: f.chunks || 1 }, (_, i) => db.doc(chunkPath(f.id, i)).get()));
+  // Desat al mòbil (vegeu 18-repertori.js): s'obre sense cobertura i sense gastar lectures.
+  const kept = await offlineGet(f);
+  if (kept) { const u = URL.createObjectURL(kept); fileUrls.set(f.id, u); return u; }
+  const snaps = await Promise.all(Array.from({ length: f.chunks || 1 }, (_, i) => db.doc(chunkPath(f.id, i, f.where)).get()));
   if (snaps.some(x => !x.exists)) throw new Error('incomplet');
   const blob = new Blob(snaps.map(x => x.data().d.toUint8Array()), { type: f.type || 'application/octet-stream' });
   const url = URL.createObjectURL(blob);
@@ -123,11 +107,20 @@ function sheetOpenFile(f, title) {
       try {
         const url = await loadFile(f);
         if (!box.isConnected) return;
-        const media = kind === 'Àudio' ? `<audio controls preload="metadata" src="${url}" style="width:100%"></audio>`
+        const media = kind === 'Àudio' ? studyPlayer(url)
           : kind === 'Imatge' ? `<img src="${url}" alt="" style="display:block;width:100%;border-radius:12px">` : '';
+        const kept = offlineSaved().has(f.id);
         box.innerHTML = `${media}
-          <p class="muted" style="margin:${media ? '12px' : '0'} 0 14px;font-size:13px;overflow-wrap:anywhere">${esc(f.name)} · ${esc(kind)} · ${fmtSize(f.size)}</p>
-          <div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn btn-primary" href="${url}" target="_blank" rel="noopener">Obre</a><a class="btn" href="${url}" download="${esc(f.name)}">Desa al dispositiu</a></div>`;
+          <p class="muted" style="margin:${media ? '12px' : '0'} 0 14px;font-size:13px;overflow-wrap:anywhere">${esc(f.name)} · ${esc(kind)} · ${fmtSize(f.size)}${kept ? ' · desat al mòbil' : ''}</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn btn-primary" href="${url}" target="_blank" rel="noopener">Obre</a><a class="btn" href="${url}" download="${esc(f.name)}">Desa al dispositiu</a>
+            ${f.where !== 'classFiles' && 'caches' in window ? `<button class="btn" id="fo-keep">${kept ? 'Treu-lo del mòbil' : 'Tenir-lo sense cobertura'}</button>` : ''}</div>`;
+        bindStudyPlayer(box);
+        box.querySelector('#fo-keep')?.addEventListener('click', async e => {
+          try {
+            if (offlineSaved().has(f.id)) { (await caches.open(OFFLINE)).delete(offlineReq(f.id)); offlineMark(f.id, false); e.target.textContent = 'Tenir-lo sense cobertura'; toast('Tret del mòbil'); }
+            else { await offlinePut(f, await (await fetch(url)).blob()); e.target.textContent = 'Treu-lo del mòbil'; toast('Desat: el podràs obrir sense cobertura'); }
+          } catch { toast('No s’ha pogut desar al mòbil'); }
+        });
       } catch {
         if (box.isConnected) box.innerHTML = '<p style="margin:0">No s’ha pogut carregar el fitxer. Comprova la connexió i torna-ho a provar.</p>';
       }

@@ -172,11 +172,15 @@ const S = {
   classReq: new Map(),    // <id> -> a lateness/absence notice or a swap request
   classPlan: new Map(),   // <teacher email> -> their fixed weekly timetable
   classNotes: new Map(),  // <classId>_<slotId> -> what was worked on (teacher and that singer only)
+  works: new Map(),       // <id> -> una obra del repertori: partitures, àudios, durada, solistes i petits grups
+  trips: new Map(),       // <id> -> una sortida o gira: dates, transport i habitacions
+  tripSignups: new Map(), // <tripId>_<memberId> -> qui hi va, amb quin transport i a quina habitació
   myMarks: null,          // singer: my own marks
   secrets: null,
   secretsMembers: null,   // memberId -> personal link key
   me: null,               // staff record when signed in with Google
   memberId: null,         // singer's own member id (personal link)
+  profiles: null,         // equip: les fitxes que omple cadascú (es llegeixen quan cal: llistes i sortides)
   push: new Map(),        // staff: one doc per device that has notifications on (read when «Qui ha entrat» opens)
   pushOn: false,          // this device
   pushPrefs: null,

@@ -235,6 +235,66 @@ def main():
         check(not errors, "sense errors a l'importador", "; ".join(errors[:3]))
         ctx.close()
 
+        print("Repertori, pla d'assaig i concerts")
+        ctx, page, errors = open_app(browser, base, "pol", MOBILE)
+        r = page.evaluate("""async () => {
+          const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          ui.tab = 'tauler'; ui.board = 'materials'; ui.matProd = 'p1'; render(); await s(200);
+          out.works = document.querySelectorAll('#view .work').length;
+          sheetSession('s4'); await s(200); document.querySelector('#se-save').click(); await s(200);
+          out.planKept = !!sessionById('s4').plan && sessionById('s4').plan.items.length === 2;
+          out.planText = planHtml(sessionById('s4')).includes('Gloria');
+          const bal = concertBalance(sessionById('s6'));
+          out.tenorsShort = bal.find(b => b.x.id === 'T').short && todoItems().some(x => x.icon === 'voices');
+          updateSession('s6', { seating: { rows: autoSeating(sessionById('s6'), 2) } }); await s(100);
+          out.seat = !!mySeat(sessionById('s6'), myMemberId());
+          await loadProfiles();
+          const t = participantRows(sessionById('s6'), true, new Set(['sec', 'phone', 'emerg', 'size']));
+          out.participants = t.rows.length === 4 && t.rows.some(x => x.includes('600000001') && x.includes('L'));
+          out.cert = certificateHtml({ m: S.members.get(myMemberId()), from: seasonCfg().season.from, to: seasonCfg().season.to, label: 'la temporada', signer: 'X', role: 'Secretaria', place: 'Barcelona' }).includes('CERTIFICA');
+          const f = await seasonFigures();
+          out.season = f.active === 16 && seasonRows(f).length > 20;
+          out.norm = /Et pots permetre|No et pots permetre|assegurat/.test(normHint(S.members.get(myMemberId()), 'p1'));
+          out.week = timetableHtml([{ label: 'Dilluns', sub: 'Aula 2', cells: { '17:00': 'Anna' } }]).includes('Aula 2');
+          return out;
+        }""")
+        for k, label in [("works", "el Repertori mostra les obres de la producció"), ("planKept", "editar una sessió no n'esborra el pla d'assaig"),
+                         ("planText", "el pla d'assaig es mostra amb les obres"), ("tenorsShort", "l'equilibri de veus avisa si una corda no arriba al mínim"),
+                         ("seat", "la col·locació diu a cadascú el seu lloc"), ("participants", "la llista de participants porta el telèfon, la talla i l'emergència"),
+                         ("cert", "el certificat d'assistència es genera"), ("season", "la memòria de la temporada té les xifres"),
+                         ("norm", "el cantaire veu quantes faltes es pot permetre"), ("week", "l'horari per imprimir porta l'aula")]:
+            check(r.get(k) if k != "works" else r.get(k, 0) >= 1, label, str(r))
+        check(not errors, "sense errors al repertori i als concerts", "; ".join(errors[:3]))
+        ctx.close()
+
+        print("Sortides, fitxa pròpia i notificacions")
+        ctx, page, errors = open_app(browser, base, "singer", MOBILE)
+        r = page.evaluate("""async () => {
+          const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          out.todoTrip = todoItems().some(x => x.icon === 'trip');
+          tripAnswer('t1', 'yes', 'Vaig pel meu compte'); flushAll(); await s(300);
+          out.signed = S.tripSignups.get(`t1_${myMemberId()}`)?.answer === 'yes' && !todoItems().some(x => x.icon === 'trip');
+          sheetMyProfile(); await s(300);
+          document.querySelector('#pf-phone').value = '611222333'; document.querySelector('#pf-size .pick[data-k="M"]').click();
+          document.querySelector('#pf-save').click(); await s(300);
+          out.profile = (await firebase.firestore().doc(`cors/${GID}/profiles/${myMemberId()}`).get()).data()?.size === 'M';
+          await firebase.firestore().doc(`cors/${GID}/rsvp/s6_${myMemberId()}`).delete();
+          return out;
+        }""")
+        check(r["todoTrip"], "«Per fer» demana si t'apuntes a la sortida", str(r))
+        check(r["signed"], "el cantaire s'apunta a la sortida", str(r))
+        check(r["profile"], "el cantaire omple la seva fitxa", str(r))
+        page.goto(f"{base}/index.html?u=singer&accio=rsvp-yes&s=s6")
+        page.wait_for_function(READY, timeout=20000)
+        page.wait_for_timeout(1500)
+        check(page.evaluate("S.rsvp.get(`s6_${myMemberId()}`)?.answer === 'yes' && !location.search.includes('accio')"), "el botó «Hi seré» de la notificació confirma sense passos de més")
+        page.goto(f"{base}/index.html?u=singer&accio=absence&s=s4")
+        page.wait_for_function(READY, timeout=20000)
+        page.wait_for_timeout(1500)
+        check(page.evaluate("document.querySelector('.sheet-h .h2')?.textContent") == "Avís d’absència", "el botó «No hi podré anar» obre l'avís d'absència")
+        check(not errors, "sense errors a les sortides i a la fitxa", "; ".join(errors[:3]))
+        ctx.close()
+
         print("Registre d'errors")
         ctx, page, errors = open_app(browser, base, "pol", MOBILE)
         page.evaluate("setTimeout(() => { funcioQueNoExisteix(); }, 0)")
