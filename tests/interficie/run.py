@@ -151,7 +151,8 @@ def main():
         check(page.locator(".acct-item .s, .acct-item small, .acct-menu .setting").count() == 0 and page.locator(".acct-item").count() >= 4,
               "cada opció del menú és una fila amb només el títol")
         page.click('.acct-item[data-k="theme"]'); page.wait_for_timeout(300)
-        check(page.inner_text(".sheet-h .h2") == "Aparença" and page.locator(".sheet .seg3").count() == 1, "una fila obre la seva finestra sencera")
+        check(page.inner_text(".sheet-h .h2") == "Aparença" and page.locator('.sheet [data-act="theme"]').count() == 3 and page.locator('.sheet [data-act="text-size"]').count() == 3,
+              "una fila obre la seva finestra sencera (Aparença: tema i mida del text)")
         page.click(".sheet-up"); page.wait_for_timeout(300)
         check(page.inner_text(".sheet-h .h2") == "El teu compte", "la fletxa torna al menú")
         page.go_back(); page.wait_for_timeout(400)
