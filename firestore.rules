@@ -113,6 +113,23 @@ service cloud.firestore {
       allow create, update: if isPlatform();
     }
 
+    // ---- Registre d'errors de l'app ----
+    // Quan l'app falla al mòbil d'algú, hi deixa una nota breu (sense noms ni correus). Només la llegeixen la
+    // plataforma i el compte de servei (la vigilància automàtica); ningú no la pot canviar ni esborrar.
+    function shortText(d, k, n) { return !(k in d) || (d[k] is string && d[k].size() <= n); }
+    match /errors/{id} {
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['kind', 'msg', 'where', 'at', 'app', 'gid', 'route', 'ua', 'online'])
+        && request.resource.data.keys().hasAll(['kind', 'msg', 'at'])
+        && request.resource.data.kind in ['error', 'promesa']
+        && shortText(request.resource.data, 'msg', 400) && shortText(request.resource.data, 'where', 400)
+        && shortText(request.resource.data, 'at', 40) && shortText(request.resource.data, 'app', 40)
+        && shortText(request.resource.data, 'gid', 40) && shortText(request.resource.data, 'route', 80)
+        && shortText(request.resource.data, 'ua', 220)
+        && (!('online' in request.resource.data) || request.resource.data.online is bool);
+      allow read: if isPlatform() || isService();
+    }
+
     match /agrupacions/{c} {
       allow get: if isPlatform() || isService() || isMember(c);
       allow list: if isPlatform() || isService();

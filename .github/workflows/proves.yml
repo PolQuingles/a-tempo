@@ -1,0 +1,60 @@
+name: Proves
+# A cada canvi: les regles de seguretat de Firestore (a l'emulador), la interfície sencera en un navegador
+# sense pantalla, i que les empremtes dels fitxers i els scripts estiguin bé.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: proves-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  regles:
+    name: Regles de seguretat
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Emulador de Firestore i proves de les regles
+        run: npx --yes firebase-tools@13 emulators:exec --only firestore --project demo-cor "python3 tests/regles/test_regles.py firestore.rules"
+  interficie:
+    name: Interfície
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Navegador sense pantalla
+        run: |
+          pip install --quiet "playwright>=1.47,<2"
+          python -m playwright install --with-deps chromium
+      - name: Proves de la interfície
+        run: python3 tests/interficie/run.py
+  estructura:
+    name: Empremtes i scripts
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Empremtes dels fitxers al dia
+        run: python3 tools/stamp.py --check
+      - name: Els scripts de Python compilen
+        run: python3 -m py_compile .github/scripts/*.py tools/*.py tests/regles/*.py tests/interficie/*.py

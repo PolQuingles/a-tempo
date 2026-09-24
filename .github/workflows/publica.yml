@@ -1,0 +1,37 @@
+name: Publica a Firebase Hosting
+# Publica l'app a Firebase Hosting (i al domini propi, si n'hi ha) quan les proves de main han passat, i
+# també després de cada «Calendari» (que actualitza els calendaris i les icones). GitHub Pages continua
+# publicant la mateixa branca, de manera que les adreces d'abans segueixen funcionant.
+# No fa res fins que hi hagi el secret FIREBASE_SERVICE_ACCOUNT (vegeu README › Allotjament).
+on:
+  workflow_run:
+    workflows: [Proves, Calendari]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency: publica
+jobs:
+  publica:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Hi ha la clau de publicació?
+        id: clau
+        env:
+          KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -n "$KEY" ]; then echo "si=1" >> "$GITHUB_OUTPUT"
+          else echo "::notice::Encara no hi ha el secret FIREBASE_SERVICE_ACCOUNT: no es publica a Firebase Hosting (GitHub Pages continua funcionant)."; fi
+      - name: Publica
+        if: steps.clau.outputs.si == '1'
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          projectId: cor-present
+          channelId: live

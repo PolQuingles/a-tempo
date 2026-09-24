@@ -1,3 +1,7 @@
 __pycache__/
 *.pyc
 .DS_Store
+
+# Còpia de proves de la interfície
+tests/interficie/site/
+__pycache__/
