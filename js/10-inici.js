@@ -1,4 +1,4 @@
-// A Tempo · 10-inici.js — Inici: la sessió d'avui, el «Per fer», la Gestió i el que ve.
+// A Tempo · 10-inici.js — Inici: la sessió d'avui, el «Per fer» i el que ve.
 // Els fitxers de js/ són scripts clàssics que comparteixen l'àmbit global i es carreguen en ordre (vegeu index.html).
 'use strict';
 
@@ -12,31 +12,6 @@ function myMemberId() {
 function openConvocations(me) {
   if (!me) return [];
   return allSessions().filter(s => s.rsvp && s.date >= TODAY && convoked(s, me.section) && !isOut(s, me));
-}
-/** L'apartat de gestió d'Inici, per a qui edita: avisos, personal, produccions i ajustos. */
-const MG_ICONS = {
-  avisos: '<path d="M6 16.5V11a6 6 0 0112 0v5.5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 004 0"/>',
-  personal: TAB_ICONS.gestio,
-  produccions: '<path d="M9 18V6.5l10-2.5v11.5"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="15.5" r="2.5"/>',
-  config: '<circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/>',
-};
-function manageBlock() {
-  if (!canEdit()) return '';
-  const pend = pendingAbsences().length;
-  const people = S.staff.size;
-  const active = membersOf(null).length;
-  const prods = productionsSorted();
-  const live = prods.filter(p => (!p.end || p.end >= TODAY) && p.start <= TODAY).length;
-  const items = [
-    ['avisos', 'Avisos', pend ? `${pend} per veure` : 'Absències i retards', pend],
-    ['personal', 'Personal', `${active} ${V.members}${people ? ` · ${people} amb accés` : ''}`],
-    ['produccions', 'Produccions', prods.length ? `${prods.length} ${prods.length === 1 ? 'producció' : 'produccions'}${live ? ` · ${live} en curs` : ''}` : 'Encara cap'],
-    ['config', 'Ajustos', isAdmin() ? 'Persones, agrupació i dades' : 'Temporada i norma'],
-  ];
-  return `<div class="section-title"><h2 class="h2">Gestió</h2><span class="eyebrow">${esc(rolesText(S.me))}</span></div>
-    <div class="mg-grid">${items.map(([k, t, sub, n]) => `<button class="mg ${n ? 'warn' : ''}" data-act="manage" data-k="${k}">
-      <span class="mg-i"><svg viewBox="0 0 24 24" aria-hidden="true">${MG_ICONS[k]}</svg></span>
-      <b>${t}</b><small>${esc(sub)}</small></button>`).join('')}</div>`;
 }
 /* ---------- Inici: el que tens per fer i el que ve ---------- */
 // La primera pantalla de tothom. A dalt, la sessió d'avui; a sota, tot el que espera una resposta teva
@@ -177,7 +152,6 @@ function viewHome() {
     <div class="home-grid"><div class="home-a">
     ${todayBlock(me)}
     ${todoBlock(me)}
-    ${manageBlock()}
     </div><div class="home-b">
     ${soon.length ? `<div class="section-title"><h2 class="h2">Properament</h2></div><div class="soon">${soon.join('')}</div>` : ''}
     ${me ? `${myAttendanceCard(me)}

@@ -39,7 +39,17 @@ async () => {
     if (await cl('.quad')) { chk('classes/professor'); await cl('[data-act="cl-back"]'); }
   }
   await cl('[data-act="tab"][data-tab="avisos"]');
-  if (await cl('.mg[data-k="personal"]')) {
+  // El menú del compte: cada fila obre la seva finestra; la fletxa hi torna.
+  if (await cl('#acct-btn')) {
+    chk('compte');
+    for (const k of [...document.querySelectorAll('.acct-item[data-act="acct-open"]')].map(b => b.dataset.k)) {
+      if (k === 'classIcs') continue;   // demana una adreça a Firestore abans d'obrir-se
+      await cl(`.acct-item[data-k="${k}"]`); chk('compte/' + k);
+      if (!(await cl('.sheet-up'))) bad.push(`compte/${k}: sense fletxa per tornar al menú`);
+    }
+    if (!(await cl('.acct-item[data-act="manage"]'))) await cl('[data-act="sheet-close"]');
+  }
+  if (ui.tab === 'gestio') {
     for (const k of ['avisos', 'personal', 'produccions', 'config']) { await cl(`[data-act="manage"][data-k="${k}"]`); chk('gestio/' + k); }
     await cl('[data-act="manage"][data-k="personal"]');
     for (const b of [...document.querySelectorAll('#people-menu .chip')]) { b.click(); await s(250); chk('personal/' + b.dataset.k); }
@@ -48,6 +58,5 @@ async () => {
     chk('ajustos/tot-obert');
     await cl('.ph-back .nav-arrow');
   }
-  if (await cl('#acct-btn')) { chk('compte'); await cl('[data-act="sheet-close"]'); }
   return { vistes: seen.length, desbordaments: bad };
 }

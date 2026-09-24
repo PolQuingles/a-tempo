@@ -120,15 +120,6 @@ async function checkPush() {
     scheduleRender();
   } catch {}
 }
-function pushRow() {
-  if (!pushSupported()) return '';
-  const on = S.pushOn;
-  const why = isiOS() && !installed()
-    ? 'Al iPhone cal afegir l’app a la pantalla d’inici abans d’activar-los.'
-    : on ? 'Rebràs avisos en aquest aparell.' : 'Assabenta’t dels anuncis i de les convocatòries sense mirar l’app.';
-  return `<div class="setting"><div><div class="t">Avisos al mòbil</div><div class="s">${why}</div></div>
-    <button class="btn btn-sm ${on ? '' : 'btn-primary'}" data-act="push-setup">${on ? 'Ajusta’ls' : 'Activa’ls'}</button></div>`;
-}
 function sheetPush() {
   const blocked = Notification.permission === 'denied';
   const needsInstall = isiOS() && !installed();

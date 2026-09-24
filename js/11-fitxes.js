@@ -4,12 +4,17 @@
 
 /* ================= Sheets ================= */
 let sheetClose = null;
+/** Una finestra oberta des del menú del compte porta una fletxa per tornar-hi. Algunes es preparen abans d'obrir-se
+ *  (les classes al calendari), per això el senyal dura uns segons i el gasta la primera finestra que s'obre. */
+const SHEET_BACK = { at: 0 };
 function openSheet({ title, body, foot = '', onMount, wide }) {
+  const fromMenu = Date.now() - SHEET_BACK.at < 4000;
+  SHEET_BACK.at = 0;
   closeSheet();
   const root = $('#sheet-root');
   root.innerHTML = `<div class="sheet-back" data-sheet-back>
     <div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(title)}" ${wide ? 'style="max-width:680px"' : ''}>
-      <div class="sheet-h"><h2 class="h2">${esc(title)}</h2><button class="icon-btn" data-act="sheet-close" aria-label="Tanca">${ICON.close}</button></div>
+      <div class="sheet-h">${fromMenu ? `<button class="icon-btn sheet-up" data-act="account" aria-label="Torna a El teu compte">${ICON.left}</button>` : ''}<h2 class="h2">${esc(title)}</h2><button class="icon-btn" data-act="sheet-close" aria-label="Tanca">${ICON.close}</button></div>
       <div class="sheet-b">${body}</div>
       ${foot ? `<div class="sheet-f">${foot}</div>` : ''}
     </div></div>`;
