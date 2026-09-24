@@ -51,12 +51,12 @@ function threadTargets() {
   const me = S.members.get(myId() || '');
   const have = new Set(S.config.teamRoles || []);
   const out = [];
-  if (me && have.has(`leader:${me.section}`)) out.push({ k: 'leader', label: `El teu ${V.leader}`, toRole: 'leader' });
-  for (const [r, l] of Object.entries(THREAD_ROLES)) if (r !== 'admin' && have.has(r)) out.push({ k: r, label: l, toRole: r });
+  if (me && have.has(`leader:${me.section}`)) out.push({ k: 'leader', label: `El teu ${V.leader}`, toRole: 'leader', toEmail: '', toName: '' });
+  for (const [r, l] of Object.entries(THREAD_ROLES)) if (r !== 'admin' && have.has(r)) out.push({ k: r, label: l, toRole: r, toEmail: '', toName: '' });
   const teachers = new Map();
   if (me) for (const c of classDays()) if ((c.teacher || '').includes('@') && (c.slots || []).some(x => x.memberId === me.id)) teachers.set(c.teacher, teacherOf(c));
-  for (const [mail, name] of teachers) out.push({ k: `t:${mail}`, label: `${name} (${V.Teacher.toLowerCase()})`, toEmail: mail, toName: name });
-  if (have.has('admin') || !out.length) out.push({ k: 'admin', label: 'Administració', toRole: 'admin' });
+  for (const [mail, name] of teachers) out.push({ k: `t:${mail}`, label: `${name} (${V.Teacher.toLowerCase()})`, toRole: '', toEmail: mail, toName: name });
+  if (have.has('admin') || !out.length) out.push({ k: 'admin', label: 'Administració', toRole: 'admin', toEmail: '', toName: '' });
   return out;
 }
 /** Es pot respondre a qui ha escrit un anunci o un missatge: si en sabem el correu i qui respon és de la plantilla. */
@@ -88,7 +88,7 @@ function sheetThreads() {
 function sheetThreadNew(preset = {}) {
   const me = S.members.get(myId() || '');
   if (!me) return;
-  const targets = preset.toEmail ? [{ k: 'x', label: preset.toName || preset.toEmail, toEmail: preset.toEmail, toName: preset.toName }] : threadTargets();
+  const targets = preset.toEmail ? [{ k: 'x', label: preset.toName || preset.toEmail, toRole: '', toEmail: preset.toEmail, toName: preset.toName }] : threadTargets();
   let pick = targets[0];
   openSheet({
     title: preset.ref ? 'Respon' : 'Escriu a l’equip',

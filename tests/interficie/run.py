@@ -86,6 +86,16 @@ def open_app(browser, base, user, opts, route=""):
     return ctx, page, errors
 
 
+def switch_user(page, base, user):
+    """Una altra persona al mateix navegador: les dades (la base de dades falsa) es conserven."""
+    page.goto(f"{base}/index.html?u={user}")
+    page.wait_for_function(READY, timeout=20000)
+    page.wait_for_timeout(900)
+    if page.locator(".sheet").count():
+        page.click('.sheet [data-act="sheet-close"]')
+        page.wait_for_timeout(400)
+
+
 def screen(page):
     return page.evaluate("location.hash + ' ' + ui.tab + (document.querySelector('.sheet') ? ' +finestra' : '')")
 
@@ -476,9 +486,8 @@ def main():
         check(r["targets"] == ["director", "gerencia", "t:prof@exemple.cat", "admin"], "un cantaire pot escriure a la direcció, la gerència, el seu professor de cant o l'administració", str(r))
         check(r["sent"], "el missatge queda desat", str(r))
         check(r["replyBtn"], "es pot respondre a qui ha escrit un anunci", str(r))
-        ctx.close()
-        ctx, page, errors = open_app(browser, base, "ger", MOBILE)
-        page.wait_for_timeout(600)
+        switch_user(page, base, "ger")
+        page.wait_for_timeout(300)
         r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
           out.todo = todoItems().some(x => x.icon === 'thread');
           const t = [...S.threads.values()][0]; sheetThread(t.id); await s(500);
@@ -489,9 +498,8 @@ def main():
         check(r["todo"], "a la gerència li surt a «Per fer»", str(r))
         check(r["read"] and r["reply"], "la gerència la llegeix i hi respon", str(r))
         check(not errors, "sense errors a les converses de l'equip", "; ".join(errors[:3]))
-        ctx.close()
-        ctx, page, errors = open_app(browser, base, "singer", MOBILE)
-        page.wait_for_timeout(600)
+        switch_user(page, base, "singer")
+        page.wait_for_timeout(300)
         check(page.evaluate("unreadThreads().length === 1 && todoItems().some(x => x.icon === 'thread')"), "el cantaire veu que li han respost")
         ctx.close()
         ctx, page, errors = open_app(browser, base, "pol", MOBILE)
@@ -524,8 +532,7 @@ def main():
         check(r["rich"], "un anunci llarg té format, adjunts i «Llegeix-lo sencer»", str(r))
         check(r["steps"], "la fitxa del concert porta l'horari del dia", str(r))
         check(not errors, "sense errors en preparar-ho", "; ".join(errors[:3]))
-        ctx.close()
-        ctx, page, errors = open_app(browser, base, "singer", MOBILE)
+        switch_user(page, base, "singer")
         r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
           sheetTripSignup('t1'); await s(300);
           document.querySelector('.pickers[data-q="q"] .pick[data-v="Sí"]').click(); document.querySelector('#ts-ok').click(); await s(300); flushAll(); await s(300);
@@ -552,8 +559,7 @@ def main():
                          ("week", "«La setmana» es pot obrir"), ("weekPlan", "«La setmana» porta el pla dels pròxims assajos")]:
             check(r.get(k), label, str(r))
         check(not errors, "sense errors al cantaire", "; ".join(errors[:3]))
-        ctx.close()
-        ctx, page, errors = open_app(browser, base, "pol", MOBILE)
+        switch_user(page, base, "pol")
         r = page.evaluate("""async () => { const out = {};
           await loadProfiles();
           const rows = tripRows(S.trips.get('t1'));

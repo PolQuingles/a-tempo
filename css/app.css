@@ -285,7 +285,7 @@ details.np-group[open] summary .chev{transform:rotate(180deg)}
 /* ---------- Stats ---------- */
 .kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
 @media (min-width:640px){.kpis{grid-template-columns:repeat(4,1fr)}}
-.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:12px 14px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:12px 14px;min-width:0}
 .kpi-v{font-family:var(--f-display);font-weight:600;font-size:32px;line-height:1.05;letter-spacing:-.01em;font-variant-numeric:lining-nums tabular-nums}
 .kpi-v small{font-family:var(--f-ui);font-size:calc(14px*var(--ts));font-weight:600;color:var(--muted);margin-left:2px}
 .kpi-l{font-size:calc(13px*var(--ts));color:var(--muted);margin-top:4px}
@@ -1339,3 +1339,7 @@ svg{stroke-linecap:round;stroke-linejoin:round}
 .preview-banner{background:var(--surface-2);border-style:dashed}
 @media (max-width:420px){.step-row{grid-template-columns:88px minmax(0,1fr) auto}.plan-row .row3{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.plan-row .row3 [data-f="mins"]{grid-column:1 / -1}}
 @media print{.week .btn,.week .fitxa-chip{display:none}}
+.kpis-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.kpis-3 .kpi{padding:10px}
+.kpis-3 .kpi-l{overflow-wrap:anywhere;hyphens:auto}
+@media (max-width:360px){:root[data-text] .kpis-3{grid-template-columns:1fr 1fr}}

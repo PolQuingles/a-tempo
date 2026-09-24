@@ -44,12 +44,12 @@ async function resolveStaff(gid) {
     fs.doc(`cors/${gid}/staff/${S.email}`).get(),
     fs.doc(`agrupacions/${gid}`).get().catch(() => null),
   ]);
-  if (!me.exists) { const e = new Error('no-staff'); e.code = 'no-staff'; throw e; }
+  if (!me.exists) throw Object.assign(new Error('no-staff'), { code: 'no-staff' });
   S.me = me.data();
   S.group = { id: gid, ...(dir && dir.exists ? dir.data() : {}) };
   const g = S.groups.find(x => x.id === gid);
   if (g && dir && dir.exists) { Object.assign(g, { name: S.group.name || g.name, kind: S.group.kind, status: S.group.status }); saveGroupsCache(); }
-  if (S.group.status && S.group.status !== 'active') { const e = new Error('suspended'); e.code = 'suspended'; throw e; }
+  if (S.group.status && S.group.status !== 'active') throw Object.assign(new Error('suspended'), { code: 'suspended' });
   return { choirId: gid, role: roleLevel(S.me), via: 'google', email: S.email, memberId: S.me.memberId || null };
 }
 async function enterGroup(gid) {

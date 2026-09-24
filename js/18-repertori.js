@@ -199,14 +199,14 @@ function sheetWorkMaterial(onDone) {
     <div class="sheet-f"><span class="spacer"></span><button class="btn" id="wm-no">Cancel·la</button><button class="btn btn-primary" id="wm-ok">Afegeix</button></div></div>`;
   document.body.appendChild(box);
   const close = () => { box.remove(); if (back) back.hidden = false; };
-  const single = sel => box.querySelectorAll(`${sel} .pick`).forEach(b => b.onclick = () => box.querySelectorAll(`${sel} .pick`).forEach(x => x.setAttribute('aria-pressed', x === b)));
+  const single = sel => box.querySelectorAll(`${sel} .pick`).forEach(b => b.onclick = () => box.querySelectorAll(`${sel} .pick`).forEach(x => x.setAttribute('aria-pressed', String(x === b))));
   single('#wm-kind'); single('#wm-sec'); single('#wm-part');
   const title = box.querySelector('#wm-title');
   const src = bindSource(box, 'wm', f => {
     if (!title.value.trim()) title.value = titleFromFile(f.name);
     const k = fileKind(f);
     const guess = k === 'PDF' ? 'partitura' : k === 'Àudio' ? 'audio' : k === 'Vídeo' ? 'video' : null;
-    if (guess) box.querySelectorAll('#wm-kind .pick').forEach(x => x.setAttribute('aria-pressed', x.dataset.k === guess));
+    if (guess) box.querySelectorAll('#wm-kind .pick').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.k === guess)));
   });
   box.querySelector('#wm-x').onclick = close;
   box.querySelector('#wm-no').onclick = close;

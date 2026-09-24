@@ -62,7 +62,7 @@ function manageHistory() {
   const inSeason = events.filter(e => e.date >= season.from && e.date <= season.to);
   const active = all.filter(m => m.active !== false).sort((a, b) => (a.joined || '9999').localeCompare(b.joined || '9999') || byName(a, b));
   const noDate = active.filter(m => !m.joined).length;
-  return `<div class="kpis" style="grid-template-columns:repeat(3,1fr);margin-top:4px">
+  return `<div class="kpis kpis-3" style="margin-top:4px">
       <div class="kpi"><div class="kpi-v">${active.length}</div><div class="kpi-l">En actiu</div></div>
       <div class="kpi"><div class="kpi-v">${inSeason.filter(e => e.kind !== 'baixa').length}</div><div class="kpi-l">Altes aquesta temporada</div></div>
       <div class="kpi"><div class="kpi-v">${inSeason.filter(e => e.kind === 'baixa').length}</div><div class="kpi-l">Baixes aquesta temporada</div></div></div>

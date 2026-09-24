@@ -251,7 +251,8 @@ function indexPerson(mail) {
 // L'administració pot veure l'app tal com la veu un cantaire, un cap de corda, la direcció, la gerència, la secretaria o un
 // professor de cant. Es fa servir la fitxa real d'algú que tingui aquell rol (o una de genèrica si encara no n'hi ha cap).
 // Només canvia el que es veu en aquest mòbil i no es desa res: ni els canvis de les llistes ni res que s'escrigui.
-const PREVIEW_ROLES = [['singer', () => V.Member], ['leader', () => capz(V.leader)], ['director', () => 'Direcció'], ['gerencia', () => 'Gerència'], ['secretaria', () => 'Secretaria'], ['voice', () => V.Teacher]];
+const PREVIEW_ROLES = ['singer', 'leader', 'director', 'gerencia', 'secretaria', 'voice'];
+const previewLabel = r => ({ singer: V.Member, leader: capz(V.leader), director: 'Direcció', gerencia: 'Gerència', secretaria: 'Secretaria', voice: V.Teacher }[r] || r);
 /** Les persones que es poden triar per a un rol: [{ key, label, person }]. */
 function previewPeople(role) {
   if (role === 'singer') return membersOf(null).sort(byName).map(m => ({ key: m.id, label: `${m.name} · ${SEC[m.section].name}`, person: { roles: ['singer'], memberId: m.id, section: m.section, name: m.name, email: accountFor(m.id)?.email || '' } }));
@@ -266,7 +267,7 @@ function previewPeople(role) {
     return { key: t.key, label: t.name, person: { roles: p ? rolesOf(p).filter(r => r !== 'admin') : ['voice'], email: t.key, name: t.name, memberId: p?.memberId || '', section: p?.section || '' } };
   });
   const people = peopleWithRole(role).map(p => ({ key: p.email, label: fullName(p.name || p.email), person: { roles: rolesOf(p).filter(r => r !== 'admin'), email: p.email, name: p.name || '', memberId: p.memberId || '', section: p.section || '' } }));
-  return people.length ? people : [{ key: '', label: `${PREVIEW_ROLES.find(r => r[0] === role)[1]()} (encara no hi ha ningú amb aquest rol)`, person: { roles: [role], email: '', name: '', memberId: '', section: '' } }];
+  return people.length ? people : [{ key: '', label: `${previewLabel(role)} (encara no hi ha ningú amb aquest rol)`, person: { roles: [role], email: '', name: '', memberId: '', section: '' } }];
 }
 function sheetPreview() {
   ensureStaff();
@@ -280,7 +281,7 @@ function sheetPreview() {
   openSheet({
     title: 'Mira l’app com…',
     body: `<p style="margin-top:0">Tria un rol i una persona, i veuràs l’app tal com la veu. Només canvia en aquest mòbil i no es desa res del que facis. Se’n surt amb el botó de dalt.</p>
-      <div class="field"><span>Rol</span><div class="pickers" id="pv-role">${PREVIEW_ROLES.filter(([k]) => k !== 'voice' || classesOn()).map(([k, l]) => `<button type="button" class="pick" data-k="${k}" aria-pressed="${k === role}">${esc(l())}</button>`).join('')}</div></div>
+      <div class="field"><span>Rol</span><div class="pickers" id="pv-role">${PREVIEW_ROLES.filter(k => k !== 'voice' || classesOn()).map(k => `<button type="button" class="pick" data-k="${k}" aria-pressed="${k === role}">${esc(previewLabel(k))}</button>`).join('')}</div></div>
       <label class="field"><span id="pv-who-l">${esc(V.Member)}</span><select class="inp" id="pv-who"></select></label>`,
     foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="pv-ok">Mira-ho</button>`,
     onMount: el => {
@@ -291,7 +292,7 @@ function sheetPreview() {
       el.querySelector('#pv-ok').onclick = () => {
         const pick = previewPeople(role).find(x => x.key === el.querySelector('#pv-who').value);
         if (!pick) { toast('Tria qui vols veure'); return; }
-        const label = PREVIEW_ROLES.find(r => r[0] === role)[1]();
+        const label = previewLabel(role);
         closeSheet();
         startPreview({ ...pick.person, label, role });
       };
@@ -328,7 +329,7 @@ function previewBlocked() {
 function previewFs(real) {
   const no = () => { previewBlocked(); return Promise.reject(Object.assign(new Error('Vista prèvia'), { code: 'preview' })); };
   const pass = (o, k) => { const v = o[k]; return typeof v === 'function' ? v.bind(o) : v; };
-  const wrap = t => new Proxy(t, { get: (o, k) => ['set', 'update', 'delete', 'add'].includes(k) ? no : k === 'doc' || k === 'collection' ? (...a) => wrap(o[k](...a)) : pass(o, k) });
+  const wrap = t => new Proxy(t, { get: (o, k) => typeof k === 'string' && ['set', 'update', 'delete', 'add'].includes(k) ? no : k === 'doc' || k === 'collection' ? (...a) => wrap(o[k](...a)) : pass(o, k) });
   return new Proxy(real, { get: (o, k) => k === 'doc' || k === 'collection' ? (...a) => wrap(o[k](...a))
     : k === 'batch' ? () => ({ set() {}, update() {}, delete() {}, commit: no }) : k === 'runTransaction' ? no : pass(o, k) });
 }

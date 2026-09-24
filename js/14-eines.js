@@ -318,7 +318,7 @@ function uploadLogo(file) {
       toast('Logotip desat'); render();
     };
     img.onerror = () => toast('No s’ha pogut llegir la imatge');
-    img.src = reader.result;
+    img.src = String(reader.result);
   };
   reader.readAsDataURL(file);
 }
@@ -691,7 +691,7 @@ function searchAll(q) {
   const has = (...xs) => xs.some(x => x && normText(x).includes(n));
   const out = [];
   const add = (group, items) => { if (items.length) out.push({ group, items: items.slice(0, SR_MAX), more: Math.max(0, items.length - SR_MAX) }); };
-  add('Persones', membersOf(null, true).filter(m => has(m.name, fullName(m.name))).sort((a, b) => (a.active === false) - (b.active === false) || byName(a, b))
+  add('Persones', membersOf(null, true).filter(m => has(m.name, fullName(m.name))).sort((a, b) => Number(a.active === false) - Number(b.active === false) || byName(a, b))
     .map(m => ({ t: m.name, s: `${SEC[m.section].name}${m.part ? ` ${m.part}` : ''}${m.active === false ? ' · inactiu' : ''}`, act: `data-act="member-stats" data-mid="${esc(m.id)}"` })));
   const ss = allSessions().filter(s => has(s.type, s.place, s.note, prodNames(s), longDate(s.date), ddmm(s.date), `${ddmm(s.date)}/${s.date.slice(0, 4)}`));
   add('Sessions', [...ss.filter(s => s.date >= TODAY), ...ss.filter(s => s.date < TODAY).reverse()]

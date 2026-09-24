@@ -7,7 +7,7 @@ let sheetClose = null;
 /** Una finestra oberta des del menú del compte porta una fletxa per tornar-hi. Algunes es preparen abans d'obrir-se
  *  (les classes al calendari), per això el senyal dura uns segons i el gasta la primera finestra que s'obre. */
 const SHEET_BACK = { at: 0 };
-function openSheet({ title, body, foot = '', onMount, wide }) {
+function openSheet({ title, body, foot = '', onMount = null, wide = false }) {
   const fromMenu = Date.now() - SHEET_BACK.at < 4000;
   SHEET_BACK.at = 0;
   closeSheet();
