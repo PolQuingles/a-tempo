@@ -36,6 +36,11 @@ const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in win
 const isiOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent)
   || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1 && !/Android|Windows|Linux|CrOS/.test(navigator.userAgent));
 const installed = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+const isAndroid = () => /Android/.test(navigator.userAgent);
+/** Chrome a l'Android ofereix instal·lar l'app: es guarda l'oferta per fer-la servir des del botó d'Inici. */
+let installPrompt = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installPrompt = e; if (typeof scheduleRender === 'function' && S.ready) scheduleRender(); });
+window.addEventListener('appinstalled', () => { installPrompt = null; if (typeof scheduleRender === 'function' && S.ready) scheduleRender(); });
 const deviceName = () => isiOS() ? (/iPad/.test(navigator.userAgent) ? 'iPad' : 'iPhone') : /Android/.test(navigator.userAgent) ? 'Android' : 'Ordinador';
 const b64ToU8 = str => {
   const pad = '='.repeat((4 - str.length % 4) % 4);

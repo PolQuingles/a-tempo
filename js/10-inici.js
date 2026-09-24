@@ -13,6 +13,31 @@ function openConvocations(me) {
   if (!me) return [];
   return allSessions().filter(s => s.rsvp && s.date >= TODAY && convoked(s, me.section) && !isOut(s, me));
 }
+/* ---------- Instal·lar l'app i activar els avisos ---------- */
+// A l'iPhone, els avisos només funcionen si l'app està a la pantalla d'inici, i el Safari no ho diu enlloc. Mentre el mòbil
+// no la tingui instal·lada, Inici explica com fer-ho; després, proposa activar els avisos. «Ara no» l'amaga 30 dies.
+const LS_INSTALL = 'atempo:installa';
+function installCard() {
+  if (PREVIEW || !(isiOS() || isAndroid())) return '';
+  const hidden = +lsGet(LS_INSTALL) || 0;
+  if (Date.now() - hidden < 30 * 864e5) return '';
+  const hide = '<button class="btn btn-sm btn-ghost" data-act="install-hide">Ara no</button>';
+  const icon = '<span class="todo-i"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 18.5h3"/></svg></span>';
+  if (installed()) {
+    if (!pushSupported() || S.pushOn) return '';
+    return `<div class="install-card">${icon}<div><b>Activa els avisos al mòbil</b>
+      <p>T’assabentaràs dels anuncis, de les convocatòries i dels canvis sense haver d’obrir l’app. Mai de nit.</p>
+      <div class="install-acts"><button class="btn btn-sm btn-primary" data-act="push-setup">Activa’ls</button>${hide}</div></div></div>`;
+  }
+  const inApp = /FBAN|FBAV|Instagram|WhatsApp|Line\//i.test(navigator.userAgent);
+  const steps = isiOS()
+    ? [inApp ? 'Obre aquest enllaç amb el <b>Safari</b> (menú «···» › Obre al navegador).' : '', 'Toca <b>Comparteix</b> <span class="ios-share" aria-hidden="true"></span> a la barra del navegador.', 'Tria <b>Afegeix a la pantalla d’inici</b> i toca <b>Afegeix</b>.', 'Obre l’app des de la icona nova i activa els avisos des de les teves inicials.'].filter(Boolean)
+    : installPrompt ? [] : ['Obre el menú <b>⋮</b> del Chrome.', 'Tria <b>Instal·la l’aplicació</b> (o <b>Afegeix a la pantalla d’inici</b>).', 'Obre l’app des de la icona nova.'];
+  return `<div class="install-card">${icon}<div><b>Posa l’app a la pantalla d’inici</b>
+    <p>${isiOS() ? 'Al iPhone és l’única manera de rebre els avisos al mòbil.' : 'La tindràs com una app més, i s’obre més de pressa.'}</p>
+    ${steps.length ? `<ol>${steps.map(x => `<li>${x}</li>`).join('')}</ol>` : ''}
+    <div class="install-acts">${installPrompt ? '<button class="btn btn-sm btn-primary" data-act="install-go">Instal·la-la</button>' : ''}${hide}</div></div></div>`;
+}
 /* ---------- Inici: el que tens per fer i el que ve ---------- */
 // La primera pantalla de tothom. A dalt, la sessió d'avui; a sota, tot el que espera una resposta teva
 // (abans repartit entre Gestió, Classes, el Tauler i l'espai personal), i després el que ve.
@@ -149,6 +174,7 @@ function viewHome() {
   ].filter(Boolean);
   const mine = me ? [...S.absences.values()].filter(a => a.memberId === me.id).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')) : [];
   return `${head}
+    ${installCard()}
     <div class="home-grid"><div class="home-a">
     ${todayBlock(me)}
     ${todoBlock(me)}

@@ -306,6 +306,7 @@ function sheetMember(mid) {
         const ok = await confirmSheet(`Esborrar la fitxa?`, `S’esborrarà <b>${esc(existing.name)}</b> i deixarà de sortir a les estadístiques. Si només és una baixa, desactiva’l.`, 'Esborra');
         if (!ok) return;
         S.members.delete(existing.id); persist('members', existing.id, null, 20);
+        bumpEpoch('members');
         toast('Fitxa esborrada');
         render();
       };
@@ -456,6 +457,7 @@ function sheetProduction(pid) {
         if (!ok) return;
         const att = (existing.sessions || []).flatMap(s => SECTIONS.map(x => ['attendance', attKey(s.id, x.id)])).filter(([, k]) => S.attendance.has(k));
         S.productions.delete(existing.id); persist('productions', existing.id, null, 20);
+        bumpEpoch('productions');
         (existing.materials || []).forEach(x => deleteFile(x.file));
         await removeMany(att);
         toast('Producció esborrada');

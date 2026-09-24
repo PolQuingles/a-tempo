@@ -88,28 +88,47 @@ function matchMember(name) {
   return { hits: top.map(x => x.m), sure: top.length === 1 && scored[0].s >= words.length * 0.8 };
 }
 /** Llegeix la graella enganxada: retorna { rows, days } amb el dia de la setmana de cada fila. */
+const TIME_RE = /\d{1,2}[:'.h]\d{2}/;
+// «Dilluns — Tarda Aula 2 Petit Palau»: el dia i, darrere, on es fa (sense «matí», «tarda»…).
+const HEAD_RE = /^(diumenge|dilluns|dimarts|dimecres|dijous|divendres|dissabte)\b[\s—–\-:·,]*(.*)$/i;
+// «10:40 – 11:20 Oriol Boada», com es passa l'horari per WhatsApp.
+const LINE_RE = /^(\d{1,2}[:'.h]\d{2})h?\s*[–—-]\s*(\d{1,2}[:'.h]\d{2})h?\s+(.+)$/;
 function parseSchedule(text, fallbackDay) {
   const lines = String(text || '').split(/\r?\n/);
   let cols = [];   // [{ day: 0-6, at: índex de columna }]
-  const rows = [];
+  const rows = [], places = {};
+  const dayOf = i => { const col = cols.filter(c => c.at <= i).pop() || cols[0]; return col ? col.day : fallbackDay; };
   for (const line of lines) {
     const cells = line.split('\t').map(c => c.trim());
     const found = [];
     cells.forEach((c, i) => { const d = DAYS_CA.indexOf(normTxt(c)); if (d >= 0) found.push({ day: d, at: i }); });
     if (found.length) { cols = found; continue; }
+    const one = cells.filter(Boolean);
+    const head = one.length === 1 && !TIME_RE.test(one[0]) && one[0].match(HEAD_RE);
+    if (head) {
+      const day = DAYS_CA.indexOf(normTxt(head[1]));
+      cols = [{ day, at: 0 }];
+      const place = head[2].replace(/(^|[\s—–\-:·,])(matí|mati|tarda|vespre|nit|matins|tardes)(?=$|[\s—–\-:·,])/gi, '$1').replace(/^[\s—–\-:·,]+|[\s—–\-:·,]+$/g, '').replace(/\s{2,}/g, ' ').trim();
+      if (place) places[day] = places[day] && !places[day].split(' / ').includes(place) ? `${places[day]} / ${place}` : place;
+      continue;
+    }
+    const inLine = one.length === 1 && one[0].match(LINE_RE);
+    if (inLine) {
+      const from = parseTime(inLine[1]), to = parseTime(inLine[2]), name = inLine[3].trim();
+      if (from != null && to != null && to > from && normTxt(name).length >= 2) rows.push({ name, day: dayOf(0), from, to, mins: to - from, ...matchMember(name) });
+      continue;
+    }
     // Cada nom seguit de dues hores és una classe; la columna diu de quin dia és.
     for (let i = 0; i < cells.length; i++) {
       const name = cells[i];
       if (!name || parseTime(name) != null || SKIP_WORDS.has(normTxt(name)) || normTxt(name).length < 2) continue;
       const from = parseTime(cells[i + 1]), to = parseTime(cells[i + 2]);
       if (from == null || to == null || to <= from) continue;
-      const col = cols.filter(c => c.at <= i).pop() || cols[0];
-      const day = col ? col.day : fallbackDay;
-      rows.push({ name, day, from, to, mins: to - from, ...matchMember(name) });
+      rows.push({ name, day: dayOf(i), from, to, mins: to - from, ...matchMember(name) });
       i += 2;
     }
   }
-  return { rows, days: [...new Set(rows.map(r => r.day))].sort() };
+  return { rows, days: [...new Set(rows.map(r => r.day))].sort(), places };
 }
 /** Les dates d'un període que cauen en aquests dies de la setmana, tret dels dies de festa. */
 function classDates(from, to, days, skipText) {
@@ -139,7 +158,7 @@ function countClashes(dates, rows) {
   return n;
 }
 /** Escriu un dia de classe per data, amb les hores que toquen aquell dia de la setmana. */
-async function writeClassDays(dates, rows, teacher) {
+async function writeClassDays(dates, rows, teacher, places = {}) {
   const at = new Date().toISOString();
   const older = new Map([...S.classes.values()].filter(c => (c.teacher || '') === teacher).map(c => [c.date, c]));
   let done = 0;
@@ -151,11 +170,11 @@ async function writeClassDays(dates, rows, teacher) {
         .map(r => ({ id: uid('sl'), time: hhmm(r.from), mins: r.mins, memberId: r.memberId || '', ...(r.memberId ? {} : { name: r.name || '' }) }));
       if (!slots.length) continue;
       const prev = older.get(date);
-      // Si el dia ja hi era, se'n manté el lloc, la nota i les marques d'assistència que ja s'hi hagin posat.
+      // L'aula és la d'aquell dia de la setmana a l'horari; si no n'hi ha, i el dia ja hi era, se'n manté el lloc, la nota i les marques d'assistència que ja s'hi hagin posat.
       const keep = new Map((prev?.slots || []).filter(x => x.mark).map(x => [`${x.time}_${x.memberId}`, x]));
       for (const x of slots) { const old = keep.get(`${x.time}_${x.memberId}`); if (old) { x.mark = old.mark; if (old.markFor) x.markFor = old.markFor; } }
-      const rec = { id: prev?.id || uid('cl'), date, place: prev?.place || '', note: prev?.note || '', teacher, teacherName: teacherName(teacher) || '', slots, at, by: S.email || '' };
-      b.set(db.doc(`classes/${rec.id}`), rec);
+      const rec = { id: prev?.id || uid('cl'), date, place: places[day] || prev?.place || '', note: prev?.note || '', teacher, teacherName: teacherName(teacher) || '', slots, at, by: S.email || '' };
+      b.set(db.doc(`classes/${rec.id}`), stamped(`classes/${rec.id}`, rec));
       S.classes.set(rec.id, rec);
       done++;
     }
@@ -163,6 +182,11 @@ async function writeClassDays(dates, rows, teacher) {
   }
   return done;
 }
+/** Un camp «Aula» per a cada dia de la setmana que té classes. */
+const placeFields = (days, value) => days.length ? `<div class="field" style="margin-top:12px"><span>Aula de cada dia</span>
+    <div style="display:grid;gap:6px">${days.map(d => `<label style="display:flex;gap:8px;align-items:center"><span style="width:84px;flex:none;font-size:13.5px">${esc(capz(DAYS_CA[d]))}</span>
+      <input class="inp" type="text" maxlength="40" data-place="${d}" value="${esc(value(d))}" placeholder="p. ex. Aula 2 · Petit Palau" style="flex:1;min-width:0"></label>`).join('')}</div>
+    <small>Es posa a cada dia de classe i queda desada amb l’horari.</small></div>` : '';
 const planRows = who => ((S.classPlan.get(who) || {}).rows || []);
 /** L'horari fix, en el format que fan servir la generació i la vista prèvia. */
 const planToRows = who => planRows(who).map(r => ({ name: S.members.get(r.memberId)?.name || r.name || '', day: +r.day,
@@ -174,7 +198,10 @@ function sheetClassPaste(preset) {
   const mine = preset && teachers.some(t => t.key === preset) ? preset
     : me && hasRole(me, 'voice') ? me.email : (teachers[0]?.key || S.email || '');
   const season = seasonCfg().season;
-  let parsed = { rows: [], days: [] };
+  let parsed = { rows: [], days: [], places: {} };
+  const places = {};   // el que s'ha escrit a mà a cada aula
+  const whoNow = el => el.querySelector('#cp-who')?.value || mine;
+  const placeOf = (el, d) => places[d] ?? parsed.places?.[d] ?? planPlaces(whoNow(el))[d] ?? '';
   const draw = el => {
     const box = el.querySelector('#cp-prev');
     if (!parsed.rows.length) { box.innerHTML = '<span class="muted" style="font-size:13px">Enganxa la graella i prem «Comprova».</span>'; return; }
@@ -183,14 +210,16 @@ function sheetClassPaste(preset) {
     box.innerHTML = `<p style="margin:0 0 8px;font-size:13.5px"><b>${parsed.rows.length}</b> hores per setmana (${esc(perDay)}) · es crearan <b>${dates.length}</b> dies de classe</p>
       <ul class="mini-list" style="max-height:280px">${parsed.rows.map((r, i) => `<li><span>${esc(DAY_SHORT[r.day])} ${esc(hhmm(r.from))}–${esc(hhmm(r.to))}<br><span class="m">${esc(r.name)}</span></span>
         <select class="inp" data-row="${i}" style="max-width:52%"><option value="">— sense fitxa —</option>${memberOptions(r.memberId || (r.sure ? r.hits[0].id : ''))}</select></li>`).join('')}</ul>
-      ${parsed.rows.some(r => !r.sure) ? '<p class="muted" style="font-size:12.5px;margin:8px 0 0">Comprova els noms que l’app no ha sabut lligar: tria’ls a la llista.</p>' : ''}`;
+      ${parsed.rows.some(r => !r.sure) ? '<p class="muted" style="font-size:12.5px;margin:8px 0 0">Comprova els noms que l’app no ha sabut lligar: tria’ls a la llista.</p>' : ''}
+      ${placeFields(parsed.days, d => placeOf(el, d))}`;
     box.querySelectorAll('[data-row]').forEach(sel => sel.onchange = () => { parsed.rows[+sel.dataset.row].memberId = sel.value; });
+    box.querySelectorAll('[data-place]').forEach(inp => inp.oninput = () => { places[inp.dataset.place] = inp.value; });
   };
   const plannedDates = el => classDates(el.querySelector('#cp-from').value, el.querySelector('#cp-to').value, parsed.days, el.querySelector('#cp-skip').value);
   openSheet({
     title: 'Enganxa un horari',
     wide: true,
-    body: `<p style="margin-top:0">Copia la graella del full de càlcul (dies de la setmana a dalt i, a sota, cada alumne amb l’hora d’inici i la de final) i enganxa-la aquí. L’app crearà un dia de classe per cada setmana.</p>
+    body: `<p style="margin-top:0">Copia la graella del full de càlcul (dies de la setmana a dalt i, a sota, cada alumne amb l’hora d’inici i la de final) i enganxa-la aquí. També serveix la llista del WhatsApp: «Dilluns — Tarda Aula 2» i, a sota, «15:00 – 15:40 Nom Cognom». L’app crearà un dia de classe per cada setmana.</p>
       <label class="field"><span>Graella</span><textarea class="inp" id="cp-text" style="min-height:130px" placeholder="Dilluns&#9;&#9;&#9;Dimecres&#10;Anna García&#9;15'00h&#9;15'40h&#9;Martina Mata&#9;16'20h&#9;17'00h"></textarea></label>
       <div class="row3" style="margin-top:10px">
         <label class="field"><span>Des del</span><input class="inp" id="cp-from" type="date" value="${TODAY}"></label>
@@ -205,7 +234,7 @@ function sheetClassPaste(preset) {
     foot: `<button class="btn" id="cp-check">Comprova</button><span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="cp-go">Crea el calendari</button>`,
     onMount: el => {
       el.querySelector('#cp-check').onclick = () => { parsed = parseSchedule(el.querySelector('#cp-text').value, new Date(el.querySelector('#cp-from').value + 'T12:00:00').getDay()); draw(el); };
-      ['#cp-from', '#cp-to', '#cp-skip'].forEach(id => el.querySelector(id).onchange = () => draw(el));
+      ['#cp-from', '#cp-to', '#cp-skip', '#cp-who'].forEach(id => { const x = el.querySelector(id); if (x) x.onchange = () => draw(el); });
       el.querySelector('#cp-go').onclick = async () => {
         if (!parsed.rows.length) { parsed = parseSchedule(el.querySelector('#cp-text').value, new Date(el.querySelector('#cp-from').value + 'T12:00:00').getDay()); draw(el); }
         const rows = parsed.rows.map(r => ({ ...r, memberId: r.memberId != null ? r.memberId : (r.sure ? r.hits[0].id : '') }));
@@ -216,8 +245,9 @@ function sheetClassPaste(preset) {
         const clashes = countClashes(dates, rows);
         if (!await confirmSheet('Crear el calendari?', `Es crearan <b>${dates.length} dies de classe</b>, del ${ddmm(dates[0])} al ${ddmm(dates[dates.length - 1])}, amb ${rows.length} hores cada setmana. Els dies que ja hi hagi d’aquest ${esc(V.Teacher.toLowerCase())} es reescriuran.${clashes ? `<br><br><b>Atenció:</b> ${clashes} ${clashes === 1 ? 'hora coincideix' : 'hores coincideixen'} amb un assaig o un concert. Les marcarà al calendari perquè les puguis moure.` : ''}`, 'Crea-les')) return;
         try {
-          const done = await writeClassDays(dates, rows, who);
-          if (el.querySelector('#cp-plan').checked) savePlan(who, rows.map(r => ({ id: uid('pl'), day: r.day, time: hhmm(r.from), mins: r.mins, memberId: r.memberId || '', ...(r.memberId ? {} : { name: r.name || '' }) })));
+          const pl = Object.fromEntries(parsed.days.map(d => [d, String(placeOf(el, d)).trim()]).filter(([, v]) => v));
+          const done = await writeClassDays(dates, rows, who, pl);
+          if (el.querySelector('#cp-plan').checked) savePlan(who, rows.map(r => ({ id: uid('pl'), day: r.day, time: hhmm(r.from), mins: r.mins, memberId: r.memberId || '', ...(r.memberId ? {} : { name: r.name || '' }) })), pl);
           closeSheet(); toast(`${done} dies de classe creats`); render();
         } catch { toast('No s’han pogut desar. Comprova la connexió.'); render(); }
       };
@@ -534,14 +564,18 @@ function planWho() {
   if (me && hasRole(me, 'voice')) return me.email;
   return teacherOptions()[0]?.key || S.email || '';
 }
-function savePlan(who, rows) {
-  const rec = { id: who, teacher: who, rows, at: new Date().toISOString(), by: S.email || '' };
+/** L'aula de cada dia de la setmana a l'horari fix: { 1: 'Aula 2 · Petit Palau', 3: … }. */
+const planPlaces = who => ({ ...((S.classPlan.get(who) || {}).places || {}) });
+function savePlan(who, rows, places = planPlaces(who)) {
+  const clean = Object.fromEntries(Object.entries(places).map(([d, v]) => [d, String(v || '').trim().slice(0, 40)]).filter(([, v]) => v));
+  const rec = { id: who, teacher: who, rows, places: clean, at: new Date().toISOString(), by: S.email || '' };
   S.classPlan.set(who, rec); persist('classPlan', who, rec, 10);
 }
 /** L'horari fix d'un professor/a: l'hora setmanal de cada alumne, per generar els trimestres. */
 function sheetClassPlan(who) {
-  const rec = { rows: planRows(who).map(r => ({ ...r })) };
+  const rec = { rows: planRows(who).map(r => ({ ...r })), places: planPlaces(who) };
   const season = seasonCfg().season;
+  const planDays = () => [...new Set(rec.rows.map(r => +r.day))].sort();
   const rows = () => rec.rows.length ? rec.rows.map((r, i) => `<div class="sec-row" data-i="${i}" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
       <select class="inp" data-f="day" style="width:110px">${DAYS_CA.map((d, k) => `<option value="${k}" ${+r.day === k ? 'selected' : ''}>${capz(d)}</option>`).join('')}</select>
       <input class="inp" type="time" value="${esc(r.time || '')}" data-f="time" style="width:105px">
@@ -549,16 +583,24 @@ function sheetClassPlan(who) {
       <select class="inp" data-f="member" style="flex:1;min-width:130px"><option value="">— lliure —</option>${memberOptions(r.memberId || '')}</select>
       <button type="button" class="icon-btn" data-rm="${i}" aria-label="Treu aquesta hora">${ICON.close}</button>
     </div>`).join('') : '<p class="muted" style="margin:0;font-size:13px">Encara no hi ha cap hora fixa. Afegeix-ne o enganxa la graella del full de càlcul.</p>';
-  const read = el => el.querySelectorAll('.sec-row').forEach(row => {
-    const r = rec.rows[+row.dataset.i];
-    if (!r) return;
-    r.day = +row.querySelector('[data-f="day"]').value;
-    r.time = row.querySelector('[data-f="time"]').value;
-    r.mins = +row.querySelector('[data-f="mins"]').value || 30;
-    r.memberId = row.querySelector('[data-f="member"]').value;
-    if (r.memberId) delete r.name;
-  });
-  const paint = el => { el.querySelector('#pl-rows').innerHTML = rows(); el.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { read(el); rec.rows.splice(+b.dataset.rm, 1); paint(el); }); };
+  const read = el => {
+    el.querySelectorAll('#pl-rows .sec-row').forEach(row => {
+      const r = rec.rows[+row.dataset.i];
+      if (!r) return;
+      r.day = +row.querySelector('[data-f="day"]').value;
+      r.time = row.querySelector('[data-f="time"]').value;
+      r.mins = +row.querySelector('[data-f="mins"]').value || 30;
+      r.memberId = row.querySelector('[data-f="member"]').value;
+      if (r.memberId) delete r.name;
+    });
+    el.querySelectorAll('#pl-places [data-place]').forEach(inp => { rec.places[inp.dataset.place] = inp.value; });
+  };
+  const paint = el => {
+    el.querySelector('#pl-rows').innerHTML = rows();
+    el.querySelector('#pl-places').innerHTML = placeFields(planDays(), d => rec.places[d] || '');
+    el.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { read(el); rec.rows.splice(+b.dataset.rm, 1); paint(el); });
+    el.querySelectorAll('#pl-rows [data-f="day"]').forEach(x => x.addEventListener('change', () => { read(el); paint(el); }));
+  };
   const opts = teacherOptions();
   openSheet({
     title: `Horari fix${teacherName(who) ? ` · ${teacherName(who)}` : ''}`,
@@ -567,6 +609,7 @@ function sheetClassPlan(who) {
       ${opts.length > 1 ? `<label class="field" style="margin-bottom:12px"><span>${esc(V.Teacher)}</span><select class="inp" id="pl-who">${opts.map(t => `<option value="${esc(t.key)}" ${t.key === who ? 'selected' : ''}>${esc(t.name)}${planRows(t.key).length ? ` · ${planRows(t.key).length} hores` : ''}</option>`).join('')}</select></label>` : ''}
       <div id="pl-rows" style="display:grid;gap:8px">${rows()}</div>
       <button type="button" class="btn btn-sm" id="pl-add" style="margin-top:10px">+ Afegeix una hora</button>
+      <div id="pl-places"></div>
       <div class="sec-h" style="margin-top:18px"><h2 class="h2">Genera els dies</h2></div>
       <div class="row3">
         <label class="field"><span>Des del</span><input class="inp" id="pl-from" type="date" value="${TODAY}"></label>
@@ -579,17 +622,17 @@ function sheetClassPlan(who) {
       paint(el);
       el.querySelector('#pl-who')?.addEventListener('change', e => sheetClassPlan(e.target.value));
       el.querySelector('#pl-add').onclick = () => { read(el); rec.rows.push({ id: uid('pl'), day: 1, time: '17:00', mins: 30, memberId: '' }); paint(el); };
-      el.querySelector('#pl-save').onclick = () => { read(el); savePlan(who, rec.rows.filter(r => r.time)); closeSheet(); toast('Horari fix desat'); render(); };
+      el.querySelector('#pl-save').onclick = () => { read(el); savePlan(who, rec.rows.filter(r => r.time), rec.places); closeSheet(); toast('Horari fix desat'); render(); };
       el.querySelector('#pl-gen').onclick = async () => {
         read(el);
         const keep = rec.rows.filter(r => r.time);
-        savePlan(who, keep);
+        savePlan(who, keep, rec.places);
         const list = keep.map(r => ({ name: S.members.get(r.memberId)?.name || r.name || '', day: +r.day, from: parseTime(r.time) ?? 0, mins: +r.mins || 30, memberId: r.memberId || '' }));
         const dates = classDates(el.querySelector('#pl-from').value, el.querySelector('#pl-to').value, [...new Set(list.map(r => r.day))], el.querySelector('#pl-skip').value);
         if (!dates.length) { toast('Tria un període que tingui aquests dies de la setmana'); return; }
         const clashes = countClashes(dates, list);
         if (!await confirmSheet('Generar els dies?', `Es crearan <b>${dates.length} dies de classe</b>, del ${ddmm(dates[0])} al ${ddmm(dates[dates.length - 1])}, amb ${list.length} hores cada setmana.${clashes ? `<br><br><b>Atenció:</b> ${clashes} ${clashes === 1 ? 'hora coincideix' : 'hores coincideixen'} amb un assaig o un concert.` : ''}`, 'Genera-los')) return;
-        try { const done = await writeClassDays(dates, list, who); closeSheet(); toast(`${done} dies de classe creats`); render(); }
+        try { const done = await writeClassDays(dates, list, who, rec.places); closeSheet(); toast(`${done} dies de classe creats`); render(); }
         catch { toast('No s’han pogut desar. Comprova la connexió.'); }
       };
     },
@@ -658,7 +701,7 @@ function sheetClassStats(onlyMine) {
     body: '<p class="muted" style="margin:0">Carregant les classes del curs…</p>',
     onMount: async el => {
       let days = [];
-      try { const snap = await db.collection('classes').get(); days = snap.docs.map(d => d.data()); }
+      try { const snap = await db.collection('classes').get(); days = snap.docs.map(d => d.data()).filter(c => !c.deleted); }
       catch { el.querySelector('.sheet-b').innerHTML = '<p style="margin:0">No s’han pogut llegir les classes. Comprova la connexió.</p>'; return; }
       const per = new Map();
       let marked = 0;
@@ -757,7 +800,8 @@ function sheetClassDay(id, preset) {
       const del = el.querySelector('#cd-del');
       if (del) del.onclick = async () => {
         if (!await confirmSheet('Esborrar el dia de classe?', 'S’esborraran les hores d’aquell dia. Els avisos que hi hagi deixaran de sortir.', 'Esborra')) return;
-        S.classes.delete(rec.id); persist('classes', rec.id, null, 10);
+        // Queda com a esborrat (i no s'esborra del tot) perquè els altres mòbils, que només demanen el que canvia, ho sàpiguen.
+        S.classes.delete(rec.id); persist('classes', rec.id, { id: rec.id, date: rec.date, teacher: rec.teacher || '', deleted: true, at: new Date().toISOString(), by: S.email || '' }, 10);
         closeSheet(); toast('Dia esborrat'); render();
       };
     },

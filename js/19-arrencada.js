@@ -274,4 +274,15 @@ async function signOut() {
   try { await auth.signOut(); } catch {}
   location.replace(location.pathname);
 }
+/* ---------- Un dia nou ---------- */
+// «Avui» (TODAY) es calcula en obrir l'app, i els mòbils la mantenen oberta en segon pla durant dies. Si en tornar-hi ja
+// és un altre dia, es torna a carregar: si no, Inici mostraria la sessió d'ahir com la d'avui, «Arriba ara» comptaria
+// malament i el calendari marcaria el dia que no toca. Si hi ha una finestra oberta o canvis per desar, s'espera.
+function checkNewDay() {
+  if (isoDate(new Date()) === TODAY || sheetClose || pendingWrites()) return;
+  location.reload();
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkNewDay(); });
+window.addEventListener('pageshow', e => { if (e.persisted) checkNewDay(); });
+setInterval(() => { if (document.visibilityState === 'visible') checkNewDay(); }, 60 * 1000);
 init();

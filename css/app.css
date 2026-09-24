@@ -468,6 +468,15 @@ input[type=date].inp,input[type=time].inp{min-width:0;width:100%}
 .hero-cta{display:grid;gap:10px;padding:18px;border-radius:var(--r-lg);background:var(--accent);color:var(--accent-ink);margin-top:8px}
 .hero-cta .h2{color:inherit}
 .hero-cta .btn{background:var(--surface);color:var(--accent);border-color:transparent;justify-self:start}
+/* Inici: instal·lar l'app i activar els avisos */
+.install-card{display:grid;grid-template-columns:36px minmax(0,1fr);gap:12px;margin:4px 0 14px;padding:14px;border-radius:var(--r-lg);background:var(--accent-soft);color:var(--ink)}
+.install-card .todo-i{background:var(--surface)}
+.install-card .todo-i svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.install-card b{font-size:15px}
+.install-card p{margin:3px 0 0;font-size:13.5px;color:var(--ink-2)}
+.install-card ol{margin:8px 0 0;padding-left:20px;display:grid;gap:4px;font-size:13.5px}
+.install-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.ios-share{display:inline-block;width:14px;height:16px;vertical-align:-2px;background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 16' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 1v9M4 4l3-3 3 3M4.5 7H2.5v8h9V7h-2'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 16' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 1v9M4 4l3-3 3 3M4.5 7H2.5v8h9V7h-2'/%3E%3C/svg%3E") center/contain no-repeat}
 .me-line{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;font-size:13.5px;color:var(--muted);margin-top:10px}
 .me-line b{color:var(--ink)}
 .ph-back{display:flex;align-items:center;gap:12px}

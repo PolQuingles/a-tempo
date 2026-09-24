@@ -21,6 +21,31 @@ SMALL = dict(viewport={"width": 320, "height": 700}, is_mobile=True, has_touch=T
 MOBILE = dict(viewport={"width": 375, "height": 812}, is_mobile=True, has_touch=True, device_scale_factor=2)
 DESKTOP = dict(viewport={"width": 1366, "height": 860})
 READY = 'typeof S !== "undefined" && S.ready === true && !!document.querySelector("#view > *")'
+# Canvis fets des d'«un altre mòbil» (directament a la base de dades), mentre aquest llegeix per canvis.
+DELTA_JS = """async () => {
+  const s = ms => new Promise(r => setTimeout(r, ms));
+  const F = firebase.firestore(), base = `cors/${GID}`, TS = firebase.firestore.FieldValue.serverTimestamp;
+  const out = {};
+  const [mid, m] = [...S.members.entries()][0];
+  await F.doc(`${base}/members/${mid}`).set({ ...m, name: m.name + ' (canviat)', syncAt: TS() }); await s(300);
+  out.canvi = S.members.get(mid).name.endsWith('(canviat)') && !('syncAt' in S.members.get(mid));
+  const gone = [...S.members.keys()].pop();
+  await F.doc(`${base}/members/${gone}`).delete();
+  const cfg = (await F.doc(`${base}/config/main`).get()).data();
+  await F.doc(`${base}/config/main`).set({ ...cfg, syncEpoch: { ...(cfg.syncEpoch || {}), members: 'prova' } }); await s(500);
+  out.esborrada = !S.members.has(gone);
+  const [cid, c] = [...S.classes.entries()][0];
+  await F.doc(`${base}/classes/${cid}`).set({ id: cid, date: c.date, teacher: c.teacher, deleted: true, syncAt: TS() }); await s(300);
+  out.classeFora = !S.classes.has(cid);
+  const [aid, a] = [...S.attendance.entries()][0];
+  await F.doc(`${base}/attendance/${aid}`).set({ ...a, syncAt: TS() }); await s(300);
+  await F.doc(`${base}/attendance/${aid}`).set({ ...a, marks: { ...a.marks, antiga: { s: 'P' } } }); await s(600);
+  out.appAntiga = !!(S.attendance.get(aid).marks || {}).antiga;
+  const sess = allSessions().find(x => x.date <= TODAY), mem = membersOf('T')[0];
+  setMark(sess, mem, { s: 'R', min: 5 }); flushAll(); await s(500);
+  out.marca = !!(await F.doc(`${base}/attendance/${attKey(sess.id, 'T')}`).get()).data().syncAt;
+  return out;
+}"""
 FAILS, PASSES = [], [0]
 
 
@@ -148,6 +173,66 @@ def main():
         ctx.close()
         ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/assistencia/estadistiques")
         check(page.evaluate("ui.tab + '/' + ui.att") == "llista/stats", "un enllaç obre Assistència › Estadístiques")
+        ctx.close()
+
+        print("Lectures: només el que ha canviat")
+        ctx, page, errors = open_app(browser, base, "pol", MOBILE)
+        first = page.evaluate("({ mode: { ...SYNC.mode }, sizes: DELTA.map(c => S[c].size) })")
+        check(set(first["mode"].values()) == {"full"}, "el primer cop es baixa tot", str(first["mode"]))
+        page.goto(f"{base}/index.html?u=pol")
+        page.wait_for_function(READY, timeout=20000)
+        page.wait_for_timeout(800)
+        again = page.evaluate("({ mode: { ...SYNC.mode }, sizes: DELTA.map(c => S[c].size) })")
+        check(set(again["mode"].values()) == {"delta"} and again["sizes"] == first["sizes"],
+              "després només es demana el que ha canviat, i hi continua havent tot", str(again))
+        res = page.evaluate(DELTA_JS)
+        check(res["canvi"], "un canvi fet en un altre mòbil arriba", str(res))
+        check(res["esborrada"], "una fitxa esborrada en un altre mòbil desapareix", str(res))
+        check(res["classeFora"], "un dia de classe esborrat en un altre mòbil desapareix", str(res))
+        check(res["appAntiga"], "el que desa una app antiga (sense hora del servidor) també arriba", str(res))
+        check(res["marca"], "cada marca de la llista porta l'hora del servidor", str(res))
+        check(page.evaluate("S.memberMarks === undefined && S.push.size === 0"), "no es llegeixen les còpies antigues ni els aparells amb avisos")
+        check(not errors, "sense errors en llegir per canvis", "; ".join(errors[:3]))
+        ctx.close()
+
+        print("Un dia nou")
+        ctx, page, errors = open_app(browser, base, "pol", MOBILE)
+        page.evaluate("""() => { window.__marca = 1; const R = Date, t = R.now() + 864e5;
+          window.Date = class extends R { constructor(...a) { super(...(a.length ? a : [t])); } static now() { return t; } }; }""")
+        page.click("#acct-btn"); page.wait_for_timeout(300)
+        page.evaluate("checkNewDay()")
+        check(page.evaluate("window.__marca === 1"), "amb una finestra oberta, no es recarrega")
+        page.click('.sheet [data-act="sheet-close"]'); page.wait_for_timeout(400)
+        with page.expect_navigation(timeout=10000):
+            page.evaluate("setTimeout(checkNewDay, 0)")
+        page.wait_for_function(READY, timeout=20000)
+        check(page.evaluate("window.__marca === undefined"), "si en tornar-hi ja és un altre dia, l'app es recarrega sola")
+        ctx.close()
+
+        print("Instal·lar l'app")
+        IPHONE = dict(MOBILE, user_agent="Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1")
+        ctx, page, errors = open_app(browser, base, "singer", IPHONE)
+        check(page.locator(".install-card").count() == 1 and "Comparteix" in page.inner_text(".install-card"), "a l'iPhone, Inici explica com posar l'app a la pantalla d'inici")
+        page.click('[data-act="install-hide"]'); page.wait_for_timeout(300)
+        check(page.locator(".install-card").count() == 0, "«Ara no» l'amaga")
+        check(not errors, "sense errors a la guia d'instal·lació", "; ".join(errors[:3]))
+        ctx.close()
+        ctx, page, errors = open_app(browser, base, "pol", DESKTOP)
+        check(page.locator(".install-card").count() == 0, "a l'ordinador no surt")
+        ctx.close()
+
+        print("Importador d'horaris i aula")
+        ctx, page, errors = open_app(browser, base, "pol", MOBILE)
+        r = page.evaluate("""() => { const p = parseSchedule(['Dilluns — Matí Aula 2 Petit Palau', '', '10:40 –11:20 Anna Puig',
+            'Dimecres  — Tarda  Aula 11 Espai Palau', '17:40–18:20 Laia Ferrer'].join('\\n'), 1);
+          return { rows: p.rows.map(x => `${x.day} ${hhmm(x.from)} ${x.sure ? 'ok' : 'no'}`), places: p.places }; }""")
+        check(r["rows"] == ["1 10:40 ok", "3 17:40 ok"], "l'importador entén la llista del WhatsApp", str(r))
+        check(r["places"] == {"1": "Aula 2 Petit Palau", "3": "Aula 11 Espai Palau"}, "i en treu l'aula de cada dia", str(r))
+        got = page.evaluate("""async () => { const who = teacherOptions()[0].key, rows = [{ day: 1, from: 600, mins: 40, memberId: membersOf('S')[0].id }];
+          const dates = classDates('2026-10-05', '2026-10-12', [1], ''); await writeClassDays(dates, rows, who, { 1: 'Aula 2' });
+          return dates.map(d => [...S.classes.values()].find(c => c.date === d && c.teacher === who)?.place); }""")
+        check(got == ["Aula 2", "Aula 2"], "cada dia de classe generat porta l'aula", str(got))
+        check(not errors, "sense errors a l'importador", "; ".join(errors[:3]))
         ctx.close()
 
         print("Registre d'errors")
