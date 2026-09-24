@@ -66,10 +66,10 @@ function manageHistory() {
       <div class="kpi"><div class="kpi-v">${active.length}</div><div class="kpi-l">En actiu</div></div>
       <div class="kpi"><div class="kpi-v">${inSeason.filter(e => e.kind !== 'baixa').length}</div><div class="kpi-l">Altes aquesta temporada</div></div>
       <div class="kpi"><div class="kpi-v">${inSeason.filter(e => e.kind === 'baixa').length}</div><div class="kpi-l">Baixes aquesta temporada</div></div></div>
-    <div class="sec-h" style="margin-top:10px"><span class="muted" style="font-size:13px">L’alta i la baixa es posen a la fitxa de cada persona (en desactivar-la, se’n demana la data i el motiu).</span><button class="btn btn-sm" data-act="roster-export">Exporta la plantilla a Excel</button></div>
+    <div class="sec-h" style="margin-top:10px"><span class="muted" style="font-size:calc(13px*var(--ts))">L’alta i la baixa es posen a la fitxa de cada persona (en desactivar-la, se’n demana la data i el motiu).</span><button class="btn btn-sm" data-act="roster-export">Exporta la plantilla a Excel</button></div>
     <div class="section-title"><h2 class="h2">Moviments</h2><span class="eyebrow">${esc(season.name)}</span></div>
     ${inSeason.length ? `<ul class="list">${inSeason.map(e => `<li class="li"><button data-act="member-edit" data-mid="${e.m.id}"><span><span class="hist-k ${e.kind}">${HIST_WORD[e.kind] || e.kind}</span> <span class="t">${esc(e.m.name)}</span><br><span class="s">${esc(ddmm(e.date))}/${e.date.slice(2, 4)} · ${esc(SEC[e.m.section].name)}${e.note ? ` · ${esc(e.note)}` : ''}</span></span></button></li>`).join('')}</ul>`
-      : '<p class="muted" style="margin:0 2px;font-size:13px">Aquesta temporada encara no hi ha hagut cap alta ni cap baixa.</p>'}
+      : '<p class="muted" style="margin:0 2px;font-size:calc(13px*var(--ts))">Aquesta temporada encara no hi ha hagut cap alta ni cap baixa.</p>'}
     <div class="section-title"><h2 class="h2">Antiguitat</h2><span class="eyebrow">${noDate ? `${noDate} sense data d’alta` : 'de més a menys'}</span></div>
     <ul class="list">${active.map(m => `<li class="li"><button data-act="member-edit" data-mid="${m.id}"><span><span class="t">${esc(m.name)}</span> <span class="part">${esc(partTag(m) || SEC[m.section].short)}</span><br><span class="s">${m.joined ? `Des del ${esc(ddmm(m.joined))}/${m.joined.slice(0, 4)} · ${esc(seniority(m))}` : 'Sense data d’alta'}</span></span></button></li>`).join('')}</ul>
     ${events.length > inSeason.length ? `<details class="np-group"><summary><span>Moviments d’altres temporades (${events.length - inSeason.length})</span>${ICON.chev}</summary>
@@ -84,9 +84,9 @@ function manageDocs() {
   const pend = k => ms.filter(m => !docState(m.id, k).v).length;
   return `<div class="panel" style="padding:12px 14px;margin-top:4px">
       <b>No poden sortir a fotos ni vídeos</b> <span class="m">(${noImg.length})</span>
-      <p style="margin:6px 0 0;font-size:13.5px">${noImg.length ? esc(noImg.map(m => fullName(m.name)).join(', ')) : 'Ningú no ha dit que no.'}</p>
+      <p style="margin:6px 0 0;font-size:calc(13.5px*var(--ts))">${noImg.length ? esc(noImg.map(m => fullName(m.name)).join(', ')) : 'Ningú no ha dit que no.'}</p>
       ${noImg.length ? '<button class="btn btn-sm" data-act="docs-copy-noimg" style="margin-top:8px">Copia la llista (per a qui fa les fotos)</button>' : ''}</div>
-    <div class="sec-h" style="margin-top:10px"><span class="muted" style="font-size:13px">Pendents: ${DOC_ITEMS.map(([k, l]) => `${esc(l.toLowerCase())} ${pend(k)}`).join(' · ')}. Cadascú pot respondre els dos primers a «La meva fitxa».</span><button class="btn btn-sm" data-act="docs-export">Excel</button></div>
+    <div class="sec-h" style="margin-top:10px"><span class="muted" style="font-size:calc(13px*var(--ts))">Pendents: ${DOC_ITEMS.map(([k, l]) => `${esc(l.toLowerCase())} ${pend(k)}`).join(' · ')}. Cadascú pot respondre els dos primers a «La meva fitxa».</span><button class="btn btn-sm" data-act="docs-export">Excel</button></div>
     ${SECTIONS.map(x => {
       const rows = membersOf(x.id);
       if (!rows.length) return '';

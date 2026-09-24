@@ -15,7 +15,7 @@ function viewCalendar() {
     <span style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="seg3" role="radiogroup" aria-label="Vista del calendari"><button type="button" role="radio" aria-checked="${!month}" data-act="cal-view" data-k="list">Llista</button><button type="button" role="radio" aria-checked="${month}" data-act="cal-view" data-k="month">Mes</button></span>
     <button class="btn btn-sm" data-act="cal-subscribe">${icsOn() ? 'Subscriu-t’hi' : 'Exporta'}</button>${month ? '' : `<button class="btn btn-sm" data-act="cal-past">${ui.calPast ? 'Amaga passades' : 'Mostra passades'}</button>`}
     ${canEdit() ? `<button class="btn btn-sm btn-primary" data-act="session-new" ${month && ui.calDay ? `data-date="${ui.calDay}"` : ''}>+ Sessió</button>` : ''}</span></div>
-    ${isLinkOnly() ? '<p class="muted" style="margin:-6px 2px 12px;font-size:13px">Toca una sessió per avisar que no hi podràs anar.</p>' : ''}`;
+    ${isLinkOnly() ? '<p class="muted" style="margin:-6px 2px 12px;font-size:calc(13px*var(--ts))">Toca una sessió per avisar que no hi podràs anar.</p>' : ''}`;
   if (!prods.length) return head + `<div class="empty">${staffSvg()}<h2 class="h2">Cap producció</h2><p>Les sessions s’organitzen per produccions.</p>${canEdit() ? '<button class="btn btn-primary" data-act="prod-new">Nova producció</button>' : ''}</div>`;
 
   if (month) return head + chips + calMonthView();
@@ -36,7 +36,7 @@ function viewCalendar() {
     }
     if (rows) rows += '</ul>';
     body += `<section class="cal-prod prod-tone" style="--ph:${prodHue(p)}">
-      <div class="cal-prod-h"><h2 class="h2"><i class="pdot"></i>${esc(p.name)}</h2><span class="mono muted" style="font-size:12px;white-space:nowrap">${total} sessions</span></div>
+      <div class="cal-prod-h">${posterThumb(p)}<h2 class="h2" style="flex:1;min-width:0"><i class="pdot"></i>${esc(p.name)}</h2><span class="mono muted" style="font-size:calc(13px*var(--ts));white-space:nowrap">${total} sessions</span></div>
       ${rows || `<p class="muted">No queden sessions pendents. ${ui.calPast ? '' : 'Mostra les passades per veure-les.'}</p>`}
     </section>`;
   }
@@ -50,7 +50,7 @@ function viewCalendar() {
       if (m !== mo) { if (rows) rows += '</ul>'; mo = m; rows += `<div class="cal-month">${monthYear(x.c.date)}</div><ul class="cal-list">`; }
       rows += calClassRow(x);
     }
-    body += `<section class="cal-prod cal-classes"><div class="cal-prod-h"><h2 class="h2"><i class="pdot" style="background:var(--accent)"></i>${esc(V.classes)}</h2><span class="mono muted" style="font-size:12px;white-space:nowrap">${cls.length} ${cls.length === 1 ? 'dia' : 'dies'}</span></div>${rows}</ul></section>`;
+    body += `<section class="cal-prod cal-classes"><div class="cal-prod-h"><h2 class="h2"><i class="pdot" style="background:var(--accent)"></i>${esc(V.classes)}</h2><span class="mono muted" style="font-size:calc(13px*var(--ts));white-space:nowrap">${cls.length} ${cls.length === 1 ? 'dia' : 'dies'}</span></div>${rows}</ul></section>`;
   }
   return head + chips + body;
 }
@@ -112,11 +112,11 @@ function calMonthView() {
       <div class="mnav"><button class="nav-arrow" data-act="cal-month" data-dir="-1" aria-label="Mes anterior">${ICON.left}</button><h2 class="h2">${esc(title)}</h2><button class="nav-arrow" data-act="cal-month" data-dir="1" aria-label="Mes següent">${ICON.right}</button></div>
       <div class="mweek" aria-hidden="true">${['dl', 'dt', 'dc', 'dj', 'dv', 'ds', 'dg'].map(d => `<span>${d}</span>`).join('')}</div>
       <div class="mgrid">${cells.join('')}</div>
-      ${legendProds.length || clByDay.size ? `<div class="mlegend">${legendProds.map(p => `<span class="prod-tone" style="--ph:${prodHue(p)}"><i class="pdot"></i>${esc(p.name)}</span>`).join('')}${hasConcert ? `<span><i class="mk concert key"></i>${V.sh.Show}</span>` : ''}${clByDay.size ? `<span><i class="mk cl mine"></i>${esc(V.classes)}</span>` : ''}</div>` : '<p class="muted" style="margin:10px 4px 0;font-size:13px">Aquest mes no hi ha cap sessió.</p>'}
+      ${legendProds.length || clByDay.size ? `<div class="mlegend">${legendProds.map(p => `<span class="prod-tone" style="--ph:${prodHue(p)}"><i class="pdot"></i>${esc(p.name)}</span>`).join('')}${hasConcert ? `<span><i class="mk concert key"></i>${V.sh.Show}</span>` : ''}${clByDay.size ? `<span><i class="mk cl mine"></i>${esc(V.classes)}</span>` : ''}</div>` : '<p class="muted" style="margin:10px 4px 0;font-size:calc(13px*var(--ts))">Aquest mes no hi ha cap sessió.</p>'}
     </div>
     <div class="section-title" style="margin-top:18px"><h2 class="h2">${esc(longDate(ui.calDay))}</h2>${ui.calDay !== TODAY ? '<button class="btn btn-sm btn-ghost" data-act="cal-today">Avui</button>' : ''}</div>
     ${daySessions.length || (clByDay.get(ui.calDay) || []).length ? `<ul class="cal-list cal-day-list">${daySessions.map(x => calRow(x, x.prodId, true)).join('')}${(clByDay.get(ui.calDay) || []).map(calClassRow).join('')}</ul>`
-      : `<div class="panel" style="padding:14px;font-size:13.5px;color:var(--muted)">Cap sessió aquest dia.</div>`}`;
+      : `<div class="panel" style="padding:14px;font-size:calc(13.5px*var(--ts));color:var(--muted)">Cap sessió aquest dia.</div>`}`;
 }
 function calRow(s, underProd, tone) {
   const staff = !isLinkOnly();

@@ -98,7 +98,7 @@ function viewRollOverview(cur, list, pendingBySec) {
         <div><i class="i-FNJ"></i><b>${c.FNJ}</b><span>Faltes injustificades</span></div>
         <div><i class="i-none"></i><b>${c.none}</b><span>Sense marcar</span></div>
       </div>
-      ${out ? `<p class="muted" style="margin:0;font-size:12.5px">${out === 1 ? `1 ${V.member} està` : `${out} ${V.members} estan`} de baixa o no fan aquesta producció.</p>` : ''}
+      ${out ? `<p class="muted" style="margin:0;font-size:calc(13px*var(--ts))">${out === 1 ? `1 ${V.member} està` : `${out} ${V.members} estan`} de baixa o no fan aquesta producció.</p>` : ''}
     </div>`;
   return `${attTabs()}<div class="ctx" id="ctx">${sessionNav(cur, list, false)}</div>
     ${fitxaChip(cur)}
@@ -133,15 +133,28 @@ function rsvpPanel(session) {
       <span style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-sm" data-act="rsvp-list" data-sid="${session.id}">Veure les respostes</button>${r.none && session.date >= TODAY ? `<button class="btn btn-sm btn-primary" data-act="rsvp-remind" data-sid="${session.id}">Recorda-ho als ${r.none} que falten</button>` : ''}</span>
     </div>`;
 }
+/** La llista d'una corda és completa quan tothom hi té marca (els de baixa o fora de la producció ja compten). */
+const rollDone = (s, sec) => { const pr = progress(s, sec); return pr.total > 0 && pr.done === pr.total; };
+const doneCount = pr => `${ICON.check.replace('<svg', '<svg class="ic-sm" aria-hidden="true"')}${pr.done}/${pr.total}`;
+/** En acabar una llista: el comptador es torna verd amb un check, un avís breu i un toc de vibració. */
+function celebrateRoll(s, sec, quiet) {
+  const pr = progress(s, sec);
+  const box = $('#secbar-count');
+  if (box) { box.classList.add('is-done'); box.innerHTML = doneCount(pr); }
+  const bar = $('.secbar');
+  if (bar) { bar.classList.remove('done-pop'); void bar.offsetWidth; bar.classList.add('done-pop'); }
+  if (!quiet) toast(`Llista de ${SEC[sec].name.toLowerCase()} completa: ${pr.done} de ${pr.total}`);
+  buzz([12, 70, 24]);
+}
 function viewRollSection(cur, list, sec, pendingBySec) {
   const on = convoked(cur, sec);
   const pr = progress(cur, sec);
   const head = `<div class="ctx" id="ctx">
     ${sessionNav(cur, list, true)}
     <div class="secbar">
-      <button class="btn btn-sm btn-ghost back" ${isLinkOnly() ? 'data-act="tab" data-tab="avisos"' : 'data-act="close-sec"'} aria-label="Torna enrere">${ICON.left.replace('<svg', '<svg style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.2"')} ${V.Sections}</button>
+      <button class="btn btn-sm btn-ghost back" ${isLinkOnly() ? 'data-act="tab" data-tab="avisos"' : 'data-act="close-sec"'} aria-label="Torna enrere">${ICON.left.replace('<svg', '<svg class="ic-sm" aria-hidden="true"')} ${V.Sections}</button>
       <span class="secbar-t"><em>${esc(secShort(sec))}</em>${esc(SEC[sec].name)}</span>
-      <span class="mono" id="secbar-count">${on ? `${pr.done}/${pr.total}` : ''}</span>
+      <span class="mono${on && rollDone(cur, sec) ? ' is-done' : ''}" id="secbar-count">${on ? (rollDone(cur, sec) ? doneCount(pr) : `${pr.done}/${pr.total}`) : ''}</span>
     </div>
   </div>`;
   const pend = (pendingBySec[sec] || []).filter(s => s.id !== cur.id);
@@ -175,7 +188,7 @@ function viewRollSection(cur, list, sec, pendingBySec) {
       <ul class="roster" style="margin-top:0">${out.map(m => rowHtml(cur, m)).join('')}</ul>
     </details>` : ''}
   ${isLinkOnly() ? '' : `<button class="btn" data-act="close-sec" style="display:flex;margin:18px auto 0">Torna a totes les ${V.sections}</button>`}
-  ${canMark(cur, sec) ? '<p class="muted" style="font-size:12.5px;text-align:center;margin-top:12px">Toca l’estat marcat una altra vegada per desmarcar-lo.</p>' : ''}`;
+  ${canMark(cur, sec) ? '<p class="muted" style="font-size:calc(13px*var(--ts));text-align:center;margin-top:12px">Toca l’estat marcat una altra vegada per desmarcar-lo.</p>' : ''}`;
 }
 function subLine(cur, sec, leader) {
   const sub = subFor(cur.id, sec);
@@ -249,7 +262,7 @@ function rowHtml(session, m) {
         <input class="note-input" id="note-${m.id}" type="text" maxlength="120" placeholder="Opcional" value="${esc(mk.note || '')}" data-bind="note"></div>`;
     }
   } else if (mk && mk.note) {
-    body = `<div class="muted" style="font-size:12.5px">${esc(mk.note)}</div>`;
+    body = `<div class="muted" style="font-size:calc(13px*var(--ts))">${esc(mk.note)}</div>`;
   }
   const dot = s === 'none' ? '' : `<i class="i-${s}" style="display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px"></i>`;
   return `<li class="row ${mk ? 'has-mark' : ''}" data-mid="${m.id}" data-s="${s}">
@@ -272,5 +285,5 @@ function refreshRow(mid) {
   const lead = $('.leader .mono');
   if (lead) lead.textContent = `${all.length - c.none}/${all.length} marcats`;
   const sb = $('#secbar-count');
-  if (sb) { const pr = progress(cur, ui.section); sb.textContent = `${pr.done}/${pr.total}`; }
+  if (sb) { const pr = progress(cur, ui.section); const done = pr.total > 0 && pr.done === pr.total; sb.classList.toggle('is-done', done); sb.innerHTML = done ? doneCount(pr) : `${pr.done}/${pr.total}`; }
 }

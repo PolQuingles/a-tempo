@@ -59,7 +59,7 @@ function messagesBlock() {
   return `<div class="section-title"><h2 class="h2">Missatges</h2>${write}</div>
     ${list.length ? `<div class="panel msgs">${list.slice(0, 3).map(m => msgCard(m)).join('')}
       ${list.length > 3 || list.some(m => (m.body || '').length > 180) ? `<div style="padding:4px 14px 12px"><button class="btn btn-sm btn-ghost" data-act="msg-list">Tots els missatges${list.length > 3 ? ` (${list.length})` : ''}</button></div>` : ''}</div>`
-      : `<p class="muted" style="margin:0 2px;font-size:13px">${lead && !canWriteAll() ? `Escriu a tota la ${esc(SEC[lead].name.toLowerCase())} des d’aquí: els arriba a l’app i al mòbil, sense correus ni WhatsApp.` : 'Escriu a tothom o a una corda des d’aquí: els arriba a l’app i al mòbil, sense correus ni WhatsApp.'}</p>`}`;
+      : `<p class="muted" style="margin:0 2px;font-size:calc(13px*var(--ts))">${lead && !canWriteAll() ? `Escriu a tota la ${esc(SEC[lead].name.toLowerCase())} des d’aquí: els arriba a l’app i al mòbil, sense correus ni WhatsApp.` : 'Escriu a tothom o a una corda des d’aquí: els arriba a l’app i al mòbil, sense correus ni WhatsApp.'}</p>`}`;
 }
 function sheetMessages() {
   let all = false;
@@ -72,7 +72,7 @@ function sheetMessages() {
     wide: true,
     body: `${canWriteAll() ? '<div class="seg3" role="radiogroup" aria-label="Quins" style="margin-bottom:10px"><button type="button" role="radio" aria-checked="true" data-k="mine">Per a mi</button><button type="button" role="radio" aria-checked="false" data-k="all">Tots</button></div>' : ''}
       <div class="panel msgs" id="ms-list"></div>
-      <p class="muted" style="font-size:12px;margin:10px 2px 0">Es guarden els dels últims ${MSG_DAYS} dies.</p>`,
+      <p class="muted" style="font-size:calc(13px*var(--ts));margin:10px 2px 0">Es guarden els dels últims ${MSG_DAYS} dies.</p>`,
     foot: canMessage() ? `<span class="spacer"></span><button class="btn btn-primary" data-act="msg-new">Escriu un missatge</button>` : '',
     onMount: el => {
       draw(el);
@@ -104,7 +104,7 @@ function sheetMessage() {
         : `<p style="margin:0">Per a tota la <b>${esc(SEC[lead].name.toLowerCase())}</b> (${membersOf(lead).length} persones). Els arribarà a l’app i, a qui tingui els avisos activats, al mòbil.</p>`}
       <label class="field"><span>Assumpte (opcional)</span><input class="inp" id="mg-title" maxlength="80" placeholder="p. ex. Assaig parcial de dijous"></label>
       <label class="field"><span>Missatge</span><textarea class="inp" id="mg-body" maxlength="1500" style="min-height:140px" placeholder="Escriu aquí…"></textarea></label>
-      <p class="muted" id="mg-reach" style="margin:0;font-size:12.5px"></p>
+      <p class="muted" id="mg-reach" style="margin:0;font-size:calc(13px*var(--ts))"></p>
     </div>`,
     foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="mg-send">Envia</button>`,
     onMount: el => {
@@ -130,9 +130,15 @@ function sheetMessage() {
 }
 async function deleteMessage(id) {
   const m = S.messages.get(id);
-  if (!m || !await confirmSheet('Esborrar el missatge?', 'Deixarà de sortir a tothom.', 'Esborra')) return;
+  if (!m) return;
+  // El propi es pot desfer; el d'una altra persona no es podria tornar a publicar amb el seu nom: es pregunta.
+  if (m.by !== S.email && !await confirmSheet('Esborrar el missatge?', 'Deixarà de sortir a tothom.', 'Esborra')) return;
+  const before = clone(m);
   S.messages.delete(id); persist('messages', id, null, 10);
-  toast('Missatge esborrat'); render();
+  document.querySelector(`[data-act="msg-del"][data-id="${CSS.escape(id)}"]`)?.closest('.msg')?.remove();
+  render();
+  if (m.by === S.email) undoable('Missatge esborrat', () => { S.messages.set(before.id, before); persist('messages', before.id, before, 10); });
+  else toast('Missatge esborrat');
 }
 
 /* ---------- Notes de seguiment ---------- */
@@ -152,7 +158,7 @@ async function trackBox(el, m) {
   const draw = () => {
     if (!box.isConnected) return;
     box.innerHTML = `<div class="section-title" style="margin-top:20px"><h3 class="eyebrow">Notes de seguiment</h3><span class="eyebrow">només direcció i ${esc(V.leaders)}</span></div>
-      ${notes == null ? '<p class="muted" style="font-size:13px">No s’han pogut carregar.</p>' : notes.length ? `<ul class="notes-list">${notes.map(n => `<li><span class="mono muted">${esc(ddmm((n.at || '').slice(0, 10)))}</span><span><span style="white-space:pre-wrap">${esc(n.text)}</span><br><span class="m">${esc(n.byName || '')}</span>${n.by === S.email || canTrackAll() ? ` <button class="linkish" data-note-del="${esc(n.id)}">Esborra</button>` : ''}</span></li>`).join('')}</ul>` : '<p class="muted" style="font-size:13px;margin:0 0 8px">Encara no n’hi ha.</p>'}
+      ${notes == null ? '<p class="muted" style="font-size:calc(13px*var(--ts))">No s’han pogut carregar.</p>' : notes.length ? `<ul class="notes-list">${notes.map(n => `<li><span class="mono muted">${esc(ddmm((n.at || '').slice(0, 10)))}</span><span><span style="white-space:pre-wrap">${esc(n.text)}</span><br><span class="m">${esc(n.byName || '')}</span>${n.by === S.email || canTrackAll() ? ` <button class="linkish" data-note-del="${esc(n.id)}">Esborra</button>` : ''}</span></li>`).join('')}</ul>` : '<p class="muted" style="font-size:calc(13px*var(--ts));margin:0 0 8px">Encara no n’hi ha.</p>'}
       <label class="field"><span class="sr">Nova nota</span><textarea class="inp" id="tn-text" maxlength="800" style="min-height:70px" placeholder="p. ex. Afinació més segura als aguts. Parlar-li de la prova de solista."></textarea></label>
       <button class="btn btn-sm" id="tn-save" style="margin-top:6px">Desa la nota</button>`;
     box.querySelector('#tn-save').onclick = async () => {
@@ -166,6 +172,6 @@ async function trackBox(el, m) {
       try { await db.doc(`memberNotes/${b.dataset.noteDel}`).delete(); notes = notes.filter(n => n.id !== b.dataset.noteDel); draw(); } catch { toast('No s’ha pogut esborrar'); }
     });
   };
-  box.innerHTML = '<p class="muted" style="font-size:13px">Carregant les notes de seguiment…</p>';
+  box.innerHTML = '<p class="muted" style="font-size:calc(13px*var(--ts))">Carregant les notes de seguiment…</p>';
   await load(); draw();
 }

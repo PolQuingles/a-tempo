@@ -29,14 +29,29 @@ function installCard() {
       <p>T’assabentaràs dels anuncis, de les convocatòries i dels canvis sense haver d’obrir l’app. Mai de nit.</p>
       <div class="install-acts"><button class="btn btn-sm btn-primary" data-act="push-setup">Activa’ls</button>${hide}</div></div></div>`;
   }
-  const inApp = /FBAN|FBAV|Instagram|WhatsApp|Line\//i.test(navigator.userAgent);
-  const steps = isiOS()
-    ? [inApp ? 'Obre aquest enllaç amb el <b>Safari</b> (menú «···» › Obre al navegador).' : '', 'Toca <b>Comparteix</b> <span class="ios-share" aria-hidden="true"></span> a la barra del navegador.', 'Tria <b>Afegeix a la pantalla d’inici</b> i toca <b>Afegeix</b>.', 'Obre l’app des de la icona nova i activa els avisos des de les teves inicials.'].filter(Boolean)
-    : installPrompt ? [] : ['Obre el menú <b>⋮</b> del Chrome.', 'Tria <b>Instal·la l’aplicació</b> (o <b>Afegeix a la pantalla d’inici</b>).', 'Obre l’app des de la icona nova.'];
+  const steps = installSteps();
   return `<div class="install-card">${icon}<div><b>Posa l’app a la pantalla d’inici</b>
     <p>${isiOS() ? 'Al iPhone és l’única manera de rebre els avisos al mòbil.' : 'La tindràs com una app més, i s’obre més de pressa.'}</p>
     ${steps.length ? `<ol>${steps.map(x => `<li>${x}</li>`).join('')}</ol>` : ''}
     <div class="install-acts">${installPrompt ? '<button class="btn btn-sm btn-primary" data-act="install-go">Instal·la-la</button>' : ''}${hide}</div></div></div>`;
+}
+/** Els passos per posar l'app a la pantalla d'inici en aquest mòbil (buit si el Chrome ho fa amb un botó). */
+function installSteps() {
+  const inApp = /FBAN|FBAV|Instagram|WhatsApp|Line\//i.test(navigator.userAgent);
+  return isiOS()
+    ? [inApp ? 'Obre aquest enllaç amb el <b>Safari</b> (menú «···» › Obre al navegador).' : '', 'Toca <b>Comparteix</b> <span class="ios-share" aria-hidden="true"></span> a la barra del navegador.', 'Tria <b>Afegeix a la pantalla d’inici</b> i toca <b>Afegeix</b>.', 'Obre l’app des de la icona nova i activa els avisos des de les teves inicials.'].filter(Boolean)
+    : installPrompt ? [] : ['Obre el menú <b>⋮</b> del Chrome.', 'Tria <b>Instal·la l’aplicació</b> (o <b>Afegeix a la pantalla d’inici</b>).', 'Obre l’app des de la icona nova.'];
+}
+const canInstall = () => (isiOS() || isAndroid()) && !installed() && !PREVIEW;
+/** La mateixa guia, des del menú del compte (encara que s'hagi tancat la targeta d'Inici). */
+function sheetInstall() {
+  const steps = installSteps();
+  openSheet({
+    title: 'Instal·la l’app',
+    body: `<p style="margin-top:0">${isiOS() ? 'Al iPhone, posar l’app a la pantalla d’inici és l’única manera de rebre els avisos al mòbil.' : 'La tindràs com una app més, i s’obre més de pressa.'}</p>
+      ${steps.length ? `<ol class="install-steps">${steps.map(x => `<li>${x}</li>`).join('')}</ol>` : ''}`,
+    foot: installPrompt ? '<span class="spacer"></span><button class="btn btn-primary" data-act="install-go">Instal·la-la</button>' : '',
+  });
 }
 /* ---------- Inici: el que tens per fer i el que ve ---------- */
 // La primera pantalla de tothom. A dalt, la sessió d'avui; a sota, tot el que espera una resposta teva
@@ -101,9 +116,9 @@ function convCard(s, me) {
   const a = S.rsvp.get(`${s.id}_${me.id}`);
   return `<div class="conv-card">
     <div class="a-h" style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><b>${longDate(s.date)}</b>${a ? `<span class="rsvp ${a.answer}">${a.answer === 'yes' ? 'Hi seràs' : 'No hi seràs'}</span>` : '<span class="rsvp none">Confirma-ho</span>'}</div>
-    <span class="muted" style="font-size:13.5px">${esc(s.type)}${s.time ? ` · ${esc(timeRange(s))}` : ''}${s.place ? ` · ${esc(s.place)}` : ''} · ${esc(prodNames(s))}</span>
-    ${s.note ? `<span style="font-size:13px;color:var(--accent)">${esc(s.note)}</span>` : ''}
-    ${s.rsvpBy ? `<span class="muted mono" style="font-size:12px">Respon abans del ${ddmm(s.rsvpBy)}</span>` : ''}
+    <span class="muted" style="font-size:calc(13.5px*var(--ts))">${esc(s.type)}${s.time ? ` · ${esc(timeRange(s))}` : ''}${s.place ? ` · ${esc(s.place)}` : ''} · ${esc(prodNames(s))}</span>
+    ${s.note ? `<span style="font-size:calc(13px*var(--ts));color:var(--accent)">${esc(s.note)}</span>` : ''}
+    ${s.rsvpBy ? `<span class="muted mono" style="font-size:calc(13px*var(--ts))">Respon abans del ${ddmm(s.rsvpBy)}</span>` : ''}
     ${hasInfo(s) ? fitxaChip(s) : ''}
     <div class="c-a"><button class="btn btn-sm ${a?.answer === 'yes' ? 'btn-primary' : ''}" data-act="rsvp-yes" data-sid="${s.id}">Hi seré</button>
       <button class="btn btn-sm ${a?.answer === 'no' ? 'btn-danger' : ''}" data-act="rsvp-no" data-sid="${s.id}">No hi podré anar</button></div>
@@ -131,11 +146,12 @@ function todayBlock(me) {
       ? `<button class="btn" data-act="home-roll" data-sid="${esc(s.id)}" data-sec="${esc(secs[0] || '')}">${pr ? `Passa llista · ${pr.done}/${pr.total}` : 'Passa llista'}</button>`
       : me && !out ? (mine ? `<span class="st-pill st-${mine.status}">${mine.kind === 'late' ? 'Has avisat que arribaràs tard' : 'Has avisat que no hi vas'}</span>`
         : `<button class="btn" data-act="absence-new" data-sid="${esc(s.id)}">No hi puc anar o arribaré tard</button>`) : '';
-    return `<div class="hero-cta today-hero">
+    const prodP = S.productions.get(s.prodId);
+    return `<div class="hero-cta today-hero${prodP?.poster ? ' has-poster' : ''}">${posterThumb(prodP)}
       <span class="eyebrow">Avui${s.time ? ` · ${esc(timeRange(s))}` : ''}</span>
       <h2 class="h2">${esc(s.type || 'Assaig')}</h2>
-      <span style="font-size:14px">${[esc(s.place || ''), esc(prodNames(s)), s.info?.call ? `Convocatòria a les ${esc(s.info.call)}` : ''].filter(Boolean).join(' · ')}${out ? ` · ${esc(onLeave(me, TODAY) ? 'Estàs de baixa' : 'No fas aquesta producció')}` : ''}</span>
-      ${s.note ? `<span style="font-size:13px">${esc(s.note)}</span>` : ''}
+      <span style="font-size:calc(14px*var(--ts))">${[esc(s.place || ''), esc(prodNames(s)), s.info?.call ? `Convocatòria a les ${esc(s.info.call)}` : ''].filter(Boolean).join(' · ')}${out ? ` · ${esc(onLeave(me, TODAY) ? 'Estàs de baixa' : 'No fas aquesta producció')}` : ''}</span>
+      ${s.note ? `<span style="font-size:calc(13px*var(--ts))">${esc(s.note)}</span>` : ''}
       ${hasInfo(s) ? fitxaChip(s) : ''}
       ${planChip(s)}
       ${action}
@@ -169,17 +185,17 @@ function viewHome() {
   const upcoming = allSessions().filter(s => s.date > TODAY && (!me || convoked(s, me.section)));
   const next = upcoming[0];
   const show = allSessions().find(x => isShow(x) && x.date > TODAY && (!me || (convoked(x, me.section) && !isOut(x, me))) && hasInfo(x));
-  const sessCard = (s, label) => `<div class="panel" style="padding:14px"><span class="eyebrow">${label}</span><br><b>${longDate(s.date)}</b><div class="muted" style="font-size:13.5px">${esc(s.type)}${s.time ? ` · ${esc(timeRange(s))}` : ''}${s.place ? ` · ${esc(s.place)}` : ''} · ${esc(prodNames(s))}</div>${s.note ? `<div style="font-size:13px;color:var(--accent);margin-top:4px">${esc(s.note)}</div>` : ''}${hasInfo(s) ? fitxaChip(s) : ''}${planChip(s)}</div>`;
+  const sessCard = (s, label) => `<div class="panel${S.productions.get(s.prodId)?.poster ? ' soon-card' : ''}" style="padding:14px">${S.productions.get(s.prodId)?.poster ? `${posterThumb(S.productions.get(s.prodId))}<div class="soon-t">` : '<div>'}<span class="eyebrow">${label}</span><br><b>${longDate(s.date)}</b><div class="muted" style="font-size:calc(13.5px*var(--ts))">${esc(s.type)}${s.time ? ` · ${esc(timeRange(s))}` : ''}${s.place ? ` · ${esc(s.place)}` : ''} · ${esc(prodNames(s))}</div>${s.note ? `<div style="font-size:calc(13px*var(--ts));color:var(--accent);margin-top:4px">${esc(s.note)}</div>` : ''}${hasInfo(s) ? fitxaChip(s) : ''}${planChip(s)}</div></div>`;
   const answered = me ? openConvocations(me).filter(s => S.rsvp.get(`${s.id}_${me.id}`)) : [];
   const ann = visibleAnnouncements().filter(a => !a.until || a.until >= TODAY).slice(0, 2);
   const missed = missedPlan(me);
   const soon = [
-    missed ? `<div class="panel" style="padding:14px"><span class="eyebrow">No hi vas ser · ${esc(missed.type || 'Assaig')} del ${esc(shortDate(missed.date))}</span><br><b style="font-size:14px">Què s’hi va treballar</b>${planHtml(missed)}</div>` : '',
+    missed ? `<div class="panel" style="padding:14px"><span class="eyebrow">No hi vas ser · ${esc(missed.type || 'Assaig')} del ${esc(shortDate(missed.date))}</span><br><b style="font-size:calc(14px*var(--ts))">Què s’hi va treballar</b>${planHtml(missed)}</div>` : '',
     classCard,
     next ? sessCard(next, isShow(next) ? V.sh.next : 'Proper assaig') : '',
     show && show.id !== next?.id ? sessCard(show, V.sh.next) : '',
     answered.length ? `<div class="panel"><div class="todo-k" style="padding:12px 14px 0">Convocatòries que ja has respost</div>${answered.map(s => convCard(s, me)).join('')}</div>` : '',
-    ann.length ? `<div class="panel">${ann.map(a => `<article class="ann ${a.pinned ? 'pinned' : ''}"><span class="eyebrow">Tauler</span><h3 class="ann-t" style="font-size:17px">${esc(a.title)}</h3>${a.body ? `<div class="ann-b">${linkify(a.body.length > 220 ? a.body.slice(0, 220) + '…' : a.body)}</div>` : ''}<div class="ann-m"><span>${esc(a.author || '')}</span><span class="mono">${a.createdAt ? ddmm(a.createdAt.slice(0, 10)) : ''}</span></div></article>`).join('')}
+    ann.length ? `<div class="panel">${ann.map(a => `<article class="ann ${a.pinned ? 'pinned' : ''}"><span class="eyebrow">Tauler</span><h3 class="ann-t" style="font-size:calc(17px*var(--ts))">${esc(a.title)}</h3>${a.body ? `<div class="ann-b">${linkify(a.body.length > 220 ? a.body.slice(0, 220) + '…' : a.body)}</div>` : ''}<div class="ann-m"><span>${esc(a.author || '')}</span><span class="mono">${a.createdAt ? ddmm(a.createdAt.slice(0, 10)) : ''}</span></div></article>`).join('')}
         <div style="padding:0 14px 12px"><button class="btn btn-sm btn-ghost" data-act="board-news">Tot el tauler</button></div></div>` : '',
   ].filter(Boolean);
   const mine = me ? [...S.absences.values()].filter(a => a.memberId === me.id).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')) : [];
@@ -193,9 +209,9 @@ function viewHome() {
     ${soon.length ? `<div class="section-title"><h2 class="h2">Properament</h2></div><div class="soon">${soon.join('')}</div>` : ''}
     ${me ? `${myAttendanceCard(me)}
     <div class="section-title"><h2 class="h2">Els meus avisos</h2><button class="btn btn-sm btn-primary" data-act="absence-new">Avisa d’una absència</button></div>
-    <p class="muted" style="margin:-2px 2px 10px;font-size:13px">Si no pots venir a un assaig, avisa amb temps: el teu ${V.leader} ho veurà i, si l’accepta, la falta quedarà justificada.</p>
+    <p class="muted" style="margin:-2px 2px 10px;font-size:calc(13px*var(--ts))">Si no pots venir a un assaig, avisa amb temps: el teu ${V.leader} ho veurà i, si l’accepta, la falta quedarà justificada.</p>
     ${mine.length ? `<div class="panel">${mine.map(a => absenceCard(a, { mine: true })).join('')}</div>`
-      : '<div class="panel" style="padding:14px;font-size:13.5px;color:var(--muted)">Encara no has enviat cap avís.</div>'}` : ''}
+      : '<div class="panel" style="padding:14px;font-size:calc(13.5px*var(--ts));color:var(--muted)">Encara no has enviat cap avís.</div>'}` : ''}
     </div></div>`;
 }
 

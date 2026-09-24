@@ -102,7 +102,13 @@ const actions = {
   'cl-week': el => { const d = new Date((ui.clDay || TODAY) + 'T12:00:00'); d.setDate(d.getDate() + 7 * +el.dataset.dir); ui.clDay = isoDate(d); ui.clMonth = ui.clDay.slice(0, 7); render(); },
   'cl-print-week': el => printClassWeek(el.dataset.k),
   'cl-print-plan': el => printClassPlan(el.dataset.k),
-  'install-hide': () => { lsSet(LS_INSTALL, String(Date.now())); render(); },
+  'install-hide': () => { lsSet(LS_INSTALL, String(Date.now())); render(); toast('La guia és al menú de les teves inicials'); },
+  // Cerca, mida del text i cartells.
+  'search': () => sheetSearch(),
+  'search-go': el => { closeSheet(); ui.tab = el.dataset.tab; if (el.dataset.board) ui.board = el.dataset.board; if (el.dataset.prod) { ui.calProd = el.dataset.prod; ui.calView = 'list'; } saveUI(); render(); window.scrollTo({ top: 0 }); },
+  'search-link': el => { if (/^https?:\/\//.test(el.dataset.url || '')) window.open(el.dataset.url, '_blank', 'noopener'); },
+  'text-size': el => setTextSize(el.dataset.k),
+  'poster': el => sheetPoster(el.dataset.pid),
   'install-go': async () => { const p = installPrompt; if (!p) return; installPrompt = null; try { await p.prompt(); await p.userChoice; } catch {} render(); },
   'acct-open': el => { const f = ACCT_SHEETS[el.dataset.k]; if (f) { SHEET_BACK.at = Date.now(); f(); } },
   'concert-list': el => { closeSheet(); sheetConcertList(el.dataset.pid); },
@@ -149,8 +155,8 @@ const actions = {
   'abs-filter': el => { ui.absFilter = el.dataset.k; render(); },
   'abs-accept': el => { const a = S.absences.get(el.dataset.aid); if (!a) return; acceptAbsence(a); toast(a.kind === 'absent' ? 'Avís acceptat: faltes justificades' : 'Avís acceptat'); render(); },
   'abs-reject': el => { const a = S.absences.get(el.dataset.aid); if (!a) return; saveAbsence({ ...a, status: 'rejected', reviewedAt: new Date().toISOString() }); toast('Avís rebutjat'); render(); },
-  'abs-delete': async el => { const a = S.absences.get(el.dataset.aid); if (!a) return; if (!await confirmSheet('Esborrar l’avís?', 'Les faltes que ja s’hagin marcat es mantenen.', 'Esborra')) return; S.absences.delete(a.id); persist('absences', a.id, null, 10); render(); },
-  'abs-cancel': async el => { const a = S.absences.get(el.dataset.aid); if (!a) return; if (!await confirmSheet('Retirar l’avís?', `El teu ${V.leader} deixarà de veure’l.`, 'Retira')) return; S.absences.delete(a.id); persist('absences', a.id, null, 10); render(); },
+  'abs-delete': el => { const a = S.absences.get(el.dataset.aid); if (!a) return; const b = clone(a); S.absences.delete(a.id); persist('absences', a.id, null, 10); render(); undoable('Avís esborrat (les faltes ja marcades es mantenen)', () => saveAbsence(b)); },
+  'abs-cancel': el => { const a = S.absences.get(el.dataset.aid); if (!a) return; const b = clone(a); S.absences.delete(a.id); persist('absences', a.id, null, 10); render(); undoable(`Avís retirat: el teu ${V.leader} ja no el veu`, () => saveAbsence(b)); },
   'stats-scope': el => { ui.statsScope = el.dataset.k; saveUI(); render(); },
   'att': el => { ui.att = el.dataset.k; ui.rollSec = null; saveUI(); render(); window.scrollTo({ top: 0 }); },
   'stats-term': el => { ui.statsTerm = +el.dataset.i; render(); },
@@ -211,17 +217,21 @@ const actions = {
     const cur = sessionById(ui.sessionId); const m = S.members.get(mid);
     const s = el.dataset.s;
     const current = attDoc(cur.id, m.section)?.marks?.[mid];
+    const wasDone = rollDone(cur, m.section);
     if (current && current.s === s) setMark(cur, m, null);
     else if (s === 'R' && !current?.min && lateNow(cur)) setMark(cur, m, { s, min: lateNow(cur) });
     else setMark(cur, m, { s });
-    if (navigator.vibrate) try { navigator.vibrate(8); } catch {}
+    buzz(8);
     refreshRow(mid);
+    if (!wasDone && rollDone(cur, m.section)) celebrateRoll(cur, m.section);
   },
   'min': el => {
     const mid = el.closest('.row').dataset.mid;
     const cur = sessionById(ui.sessionId); const m = S.members.get(mid);
+    const wasDone = rollDone(cur, m.section);
     setMark(cur, m, { s: 'R', min: +el.dataset.min });
     refreshRow(mid);
+    if (!wasDone && rollDone(cur, m.section)) celebrateRoll(cur, m.section);
   },
   'mark-rest': () => {
     const cur = sessionById(ui.sessionId);
@@ -234,7 +244,8 @@ const actions = {
     doc.updatedAt = new Date().toISOString();
     S.attendance.set(key, doc); persist('attendance', key, doc);
     render();
-    toast(`${pending.length} marcats com a presents`, { label: 'Desfés', run: () => {
+    celebrateRoll(cur, ui.section, true);
+    toast(`${pending.length} marcats com a presents · llista completa`, { label: 'Desfés', run: () => {
       if (before) { S.attendance.set(key, before); persist('attendance', key, before); }
       else { const d = clone(S.attendance.get(key)); for (const m of pending) delete d.marks[m.id]; S.attendance.set(key, d); persist('attendance', key, d); }
       render();
@@ -356,4 +367,10 @@ document.addEventListener('change', e => {
   if (fa && canDocsWrite()) { saveConfig({ feeAmount: Math.max(0, +fa.value || 0) }); toast('Quota desada'); render(); }
   const vm = e.target.closest('[data-bind="cfg-vmin"]');
   if (vm && canEdit()) { const v = Math.max(0, parseInt(vm.value, 10) || 0); saveConfig({ voiceMin: { ...voiceMin(), [vm.dataset.sec]: v } }); toast('Mínim desat'); }
+});
+// Cerca des del teclat (ordinador): «/» o Cmd/Ctrl+K.
+document.addEventListener('keydown', e => {
+  if (S.mode !== 'shared' || !S.ready || sheetClose) return;
+  const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable;
+  if ((e.key === '/' && !typing) || ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k')) { e.preventDefault(); sheetSearch(); }
 });

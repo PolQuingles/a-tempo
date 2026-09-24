@@ -188,7 +188,7 @@ function viewCreate() {
         <div class="setting"><div><div class="t">${secs.length} ${esc(secs.length === 1 ? k.words.section : k.words.sections)}</div><div class="s">${secs.map(x => `<b>${esc(x.short)}</b> ${esc(x.name)}`).join(' · ')}</div></div></div>
         <div class="setting"><div><div class="t">Tu en seràs l’administrador/a</div><div class="s">${esc(S.email)}. Després hi afegiràs la resta de l’equip i els ${esc(k.words.members)}, cadascú amb el seu correu.</div></div></div>
       </div>
-      <p class="wiz-lead" style="font-size:13px">Les dades de l’agrupació només les veuran les persones que hi afegiu. Si només la vols provar, després la pots esborrar des d’Ajustos.</p>`;
+      <p class="wiz-lead" style="font-size:calc(13px*var(--ts))">Les dades de l’agrupació només les veuran les persones que hi afegiu. Si només la vols provar, després la pots esborrar des d’Ajustos.</p>`;
   }
   const next = c.step < 4
     ? `<button class="btn btn-primary" data-act="cr-next" ${c.step === 1 && !c.kind ? 'disabled' : ''}>Continua</button>`
@@ -279,7 +279,7 @@ async function sheetPlatform() {
             ${st !== 'deleted' ? `<label class="quota">Fitxers <select class="inp" data-quota="${esc(g.id)}">${QUOTAS.map(q => `<option value="${q}" ${(+g.fileQuotaMB || (g.id === FOUNDER ? 300 : 100)) === q ? 'selected' : ''}>${q < 1000 ? `${q} MB` : '1 GB'}</option>`).join('')}</select></label>` : ''}
           </div></div>`;
       }).join('') || '<p style="margin:0;padding:14px">Encara no hi ha cap agrupació al directori.</p>'}</div>
-      <p class="muted" style="font-size:12.5px">Una agrupació suspesa no hi pot entrar ningú fins que la reactivis, però no se n’esborra res. La base de dades gratuïta té un límit diari de lectures i 1 GB d’espai per a totes les agrupacions juntes: vigila els fitxers pujats.</p>`;
+      <p class="muted" style="font-size:calc(13px*var(--ts))">Una agrupació suspesa no hi pot entrar ningú fins que la reactivis, però no se n’esborra res. La base de dades gratuïta té un límit diari de lectures i 1 GB d’espai per a totes les agrupacions juntes: vigila els fitxers pujats.</p>`;
     const saveList = async (key, doc, emails, ok) => {
       try { await fs.doc(doc).set({ emails, at: new Date().toISOString() }); P[key].emails = emails; toast(ok); draw(el); }
       catch { toast('No s’ha pogut desar'); }

@@ -22,7 +22,9 @@ sessions = [{"id": f"s{i}", "date": d(k), "time": "20:30", "end": "22:30", "type
             for i, (k, t) in enumerate([(-9, "Assaig"), (-6, "Assaig"), (-2, "Assaig"), (0, "Assaig"), (3, "Assaig"), (7, "Assaig general"), (10, "Concert")])]
 sessions[4]["plan"] = {"items": [{"id": "pi1", "work": "w1", "title": "", "bars": "1-40", "who": "", "note": "De memòria"}, {"id": "pi2", "work": "", "title": "Escalfament", "bars": "", "who": "T", "note": ""}], "text": "Porteu llapis."}
 sessions[6]["rsvp"] = True
-put(f"cors/{F}/productions/p1", {"id": "p1", "name": "Concert de tardor", "start": d(-12), "end": d(12), "excluded": [], "sessions": sessions})
+import urllib.parse
+POSTER = "data:image/svg+xml," + urllib.parse.quote('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 400"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5A3577"/><stop offset="1" stop-color="#C9A7E6"/></linearGradient></defs><rect width="300" height="400" fill="url(#g)"/><text x="150" y="210" font-size="34" text-anchor="middle" fill="#fff" font-family="serif">Tardor</text></svg>')
+put(f"cors/{F}/productions/p1", {"id": "p1", "name": "Concert de tardor", "start": d(-12), "end": d(12), "excluded": [], "sessions": sessions, "poster": POSTER})
 for s in sessions[:3]:
     for sec, ns in names.items():
         put(f"cors/{F}/attendance/{s['id']}_{sec}", {"sessionId": s["id"], "section": sec, "marks": {mid[n]: {"s": "P" if j != 3 or s['id'] != 's1' else "FNJ"} for j, n in enumerate(ns)}})

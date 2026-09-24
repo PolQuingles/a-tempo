@@ -98,7 +98,7 @@ function sheetShareApp() {
     title: 'Enllaç de l’app',
     body: `<p style="margin-top:0">El mateix enllaç serveix per a tothom. Qui hi entri haurà d’identificar-se amb el seu correu, i només hi podrà accedir si el tens donat d’alta a <b>Persones i accessos</b>.</p>
       <div class="linkbox">${esc(url)}</div>
-      <p class="muted" style="font-size:12.5px;margin:10px 0 0">Consell: digues a tothom que l’obri al <b>navegador del mòbil</b> (Safari o Chrome, no dins del WhatsApp) i, des del menú, triï «Afegeix a la pantalla d’inici» per tenir-lo com una app.</p>`,
+      <p class="muted" style="font-size:calc(13px*var(--ts));margin:10px 0 0">Consell: digues a tothom que l’obri al <b>navegador del mòbil</b> (Safari o Chrome, no dins del WhatsApp) i, des del menú, triï «Afegeix a la pantalla d’inici» per tenir-lo com una app.</p>`,
     foot: `${navigator.share ? '<button class="btn" id="sa-native">Comparteix…</button>' : ''}<button class="btn" id="sa-msg">Copia el missatge</button><button class="btn btn-primary" id="sa-copy">Copia l’enllaç</button>`,
     onMount: el => {
       el.querySelector('#sa-copy').onclick = () => copyText(url, 'Enllaç copiat');

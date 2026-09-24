@@ -15,7 +15,7 @@ async () => {
     }
   };
   const cl = async q => { const e = document.querySelector(q); if (e) { e.click(); await s(300); } return !!e; };
-  const tabs = [...document.querySelectorAll('.tabs .tab')].map(b => b.dataset.tab);
+  const tabs = [...document.querySelectorAll('.tabs .tab[data-tab]')].map(b => b.dataset.tab);
   for (const t of tabs) { await cl(`[data-act="tab"][data-tab="${t}"]`); chk(t); }
   if (tabs.includes('llista')) {
     await cl('[data-act="tab"][data-tab="llista"]');

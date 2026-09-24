@@ -354,6 +354,61 @@ def main():
         check(not errors, "sense errors a secretaria", "; ".join(errors[:3]))
         ctx.close()
 
+        print("Cerca, text gran, desfer, cartells i llista completa")
+        ctx, page, errors = open_app(browser, base, "pol", MOBILE)
+        page.click("#search-btn"); page.wait_for_timeout(300)
+        page.fill("#sr-q", "anna"); page.wait_for_timeout(400)
+        check(page.locator(".sr-g h3").first.inner_text().upper().startswith("PERSONES") and "Anna Puig" in page.inner_text(".sr-list"), "la cerca troba persones")
+        page.fill("#sr-q", "gloria"); page.wait_for_timeout(400)
+        check("REPERTORI" in page.inner_text("#sr-res").upper(), "la cerca troba obres del repertori")
+        page.fill("#sr-q", "montserrat"); page.wait_for_timeout(400)
+        check("SORTIDES" in page.inner_text("#sr-res").upper(), "la cerca troba sortides")
+        page.fill("#sr-q", "anna"); page.wait_for_timeout(400)
+        page.click(".sr-i"); page.wait_for_timeout(500)
+        check(page.inner_text(".sheet-h .h2") == "Anna Puig", "un resultat obre la fitxa")
+        page.click('.sheet [data-act="sheet-close"]'); page.wait_for_timeout(300)
+        r = page.evaluate("""async () => {
+          const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          sheetAnnouncement('n1'); await s(300); document.querySelector('#an-del').click(); await s(200);
+          out.undoShown = !S.announcements.has('n1') && /Desf/i.test(document.querySelector('.toast')?.innerText || '');
+          document.querySelector('#toast-act').click(); await s(300);
+          out.undone = S.announcements.has('n1');
+          out.poster = !!document.querySelector('#view .poster-th img');
+          ui.tab = 'calendari'; render(); await s(200); out.posterCal = !!document.querySelector('.cal-prod-h .poster-th');
+          sheetSessionInfo('s6'); await s(300); out.posterConcert = !!document.querySelector('.sheet .poster-banner img'); closeSheet(); await s(200);
+          setTextSize('molt'); await s(100);
+          out.text = getComputedStyle(document.documentElement).getPropertyValue('--ts').trim() === '1.3' && localStorage.getItem('atempo:text') === 'molt';
+          const probe = document.createElement('p'); probe.className = 'muted'; probe.style.fontSize = 'calc(13px*var(--ts))'; document.body.appendChild(probe);
+          out.bigger = Math.round(parseFloat(getComputedStyle(probe).fontSize)) === 17; probe.remove();
+          setTextSize(''); await s(100);
+          return out;
+        }""")
+        for k, label in [("undoShown", "esborrar un anunci ofereix «Desfés» en lloc de preguntar"), ("undone", "«Desfés» el recupera"),
+                         ("poster", "el cartell surt a Inici"), ("posterCal", "el cartell surt al calendari"), ("posterConcert", "el cartell surt a la fitxa del concert"),
+                         ("text", "Aparença › Mida del text es desa i s'aplica"), ("bigger", "amb «Molt gran» el text creix un 30 %")]:
+            check(r.get(k), label, str(r))
+        page.evaluate("ui.tab = 'llista'; ui.sessionId = allSessions().find(x => x.date === TODAY).id; ui.section = 'T'; ui.rollSec = 'T'; render()")
+        page.wait_for_timeout(300)
+        for i in range(page.locator('#roster .row').count()):
+            page.locator('#roster .row').nth(i).locator('[data-act="mark"][data-s="P"]').click(); page.wait_for_timeout(150)
+        check("is-done" in (page.get_attribute("#secbar-count", "class") or "") and "completa" in page.inner_text("#toast-root"), "en acabar la llista surt la confirmació")
+        check(not errors, "sense errors a la cerca, el text gran i el desfer", "; ".join(errors[:3]))
+        ctx.close()
+        ctx, page, errors = open_app(browser, base, "pol", SMALL)
+        page.evaluate("setTextSize('molt')")
+        res = page.evaluate(SWEEP)
+        check(not res["desbordaments"], f"amb el text «Molt gran», a 320 px res no surt de la pantalla ({res['vistes']} pantalles)", "; ".join(res["desbordaments"][:3]))
+        ctx.close()
+        ctx, page, errors = open_app(browser, base, "pol", DESKTOP)
+        g = page.locator(".tabs .tab-extra")
+        check(g.is_visible() and "Gestió" in g.inner_text(), "a l'ordinador, Gestió és al menú lateral")
+        g.click(); page.wait_for_timeout(400)
+        check(page.evaluate("location.hash").startswith("#/gestio/"), "i l'obre", page.evaluate("location.hash"))
+        ctx.close()
+        ctx, page, errors = open_app(browser, base, "pol", MOBILE)
+        check(page.locator(".tabs .tab-extra").is_hidden(), "al mòbil, Gestió continua al menú del compte")
+        ctx.close()
+
         print("Registre d'errors")
         ctx, page, errors = open_app(browser, base, "pol", MOBILE)
         page.evaluate("setTimeout(() => { funcioQueNoExisteix(); }, 0)")
