@@ -23,7 +23,8 @@ if (i > 0) {
     S.attendance = new Map(Object.entries(c.attendance)); ARCH.docs = new Map();
     return c.checks.map(([pid, mid]) => { const r = ruleStatus(pid, S.members.get(mid)); return r && { status: r.status, att: r.att, abs: r.abs, remaining: r.remaining, cur: r.cur, best: r.best }; });
   })`);
-  process.stdout.write(JSON.stringify(out));
+  // Escriptura síncrona: amb una sortida llarga cap a un tub, process.exit() la tallaria.
+  fs.writeSync(1, JSON.stringify(out) + '\n');
   process.exit(0);
 }
 run('tests/logica/proves.js');
