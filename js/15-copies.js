@@ -56,6 +56,7 @@ function applyData(data, demo) {
   let i = 0;
   for (const col of COLS) for (const [id, v] of incoming[col]) { S[col].set(id, v); persist(col, id, v, 10 + (i++ % 40) * 15); }
   saveConfig({ ...cfg, demo });
+  bumpEpoch('all');
   ui.sessionId = null; ui.statsProd = null;
   render();
 }
@@ -115,6 +116,7 @@ async function wipeAll(demo) {
   let i = 0;
   for (const [col, id] of paths) { S[col].delete(id); persist(col, id, null, 10 + (i++ % 40) * 15); }
   saveConfig({ demo: false });
+  bumpEpoch('all');
   ui.sessionId = null; ui.statsProd = null;
   ui.tab = 'gestio'; ui.manage = 'personal'; ui.people = 'singer';
   toast(`Dades esborrades. Comença afegint ${V.members}.`);

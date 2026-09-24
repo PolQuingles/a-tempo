@@ -49,6 +49,10 @@ async function touchLastSeen() {
   const at = new Date().toISOString();
   try { await db.doc(`staff/${S.me.email}`).update({ lastSeen: at }); S.me.lastSeen = at; } catch {}
 }
+/** Els aparells amb avisos només surten a «Qui ha entrat»: es llegeixen en obrir-ho, no cada cop que s'obre l'app. */
+async function loadPushDevices() {
+  try { const snap = await db.collection('push').get(); S.push = new Map(snap.docs.map(d => [d.id, d.data()])); } catch {}
+}
 function accessReport() {
   const people = peopleSorted();
   const inApp = people.filter(p => p.lastSeen);

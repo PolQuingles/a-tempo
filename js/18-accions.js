@@ -63,7 +63,7 @@ const actions = {
   'concert-list': el => { closeSheet(); sheetConcertList(el.dataset.pid); },
   'concert-toggle': el => sheetConcertDecide(el.dataset.pid, el.dataset.mid),
   'risk-copy': () => copyText(window.__riskText ? window.__riskText() : '', 'Resum copiat'),
-  'who-in': () => sheetWhoIn(),
+  'who-in': async () => { await loadPushDevices(); sheetWhoIn(); },
   'mail-check': () => sheetMailCheck(),
   'preview-off': () => { PREVIEW = null; ui.tab = 'gestio'; ui.manage = 'config'; ui.rollSec = null; render(); window.scrollTo({ top: 0 }); },
   'share-app': () => sheetShareApp(),
