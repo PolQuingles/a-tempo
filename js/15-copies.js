@@ -15,7 +15,7 @@ function exportJSON() {
   const data = { app: 'a-tempo', version: 1, exportedAt: new Date().toISOString(), config: S.config,
     members: [...S.members.values()], productions: [...S.productions.values()], attendance: Object.fromEntries(S.attendance), absences: [...S.absences.values()],
     rsvp: [...S.rsvp.values()], announcements: [...S.announcements.values()], polls: [...S.polls.values()], pollVotes: [...S.pollVotes.values()],
-    classes: [...S.classes.values()], classReq: [...S.classReq.values()] };
+    classes: [...S.classes.values()], classReq: [...S.classReq.values()], works: [...S.works.values()], trips: [...S.trips.values()], tripSignups: [...S.tripSignups.values()] };
   const slug = (S.config.name || 'agrupacio').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   offerFile(`${slug}-${TODAY}.json`, JSON.stringify(data, null, 2), 'application/json');
 }

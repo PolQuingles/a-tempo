@@ -27,16 +27,20 @@ async () => {
   }
   if (tabs.includes('tauler')) {
     await cl('[data-act="tab"][data-tab="tauler"]');
-    for (const k of ['anuncis', 'materials', 'documents', 'enquestes']) { await cl(`[data-act="board"][data-k="${k}"]`); chk('tauler/' + k); }
+    for (const k of ['anuncis', 'materials', 'documents', 'enquestes', 'sortides']) { await cl(`[data-act="board"][data-k="${k}"]`); chk('tauler/' + k); }
+    await cl('[data-act="board"][data-k="materials"]');
+    if (await cl('[data-act="work-open"]')) { chk('repertori/obra'); await cl('[data-act="sheet-close"]'); }
   }
   if (tabs.includes('calendari')) {
     await cl('[data-act="tab"][data-tab="calendari"]');
     await cl('[data-act="cal-view"][data-k="month"]'); chk('calendari/mes');
     await cl('[data-act="cal-view"][data-k="list"]');
+    // La fitxa d'un concert (pla, equilibri de veus i col·locació) i la d'un assaig amb pla.
+    for (const b of [...document.querySelectorAll('.cal-row .icon-btn.info')].slice(-3)) { b.click(); await s(300); chk('calendari/fitxa'); await cl('[data-act="sheet-close"]'); }
   }
   if (tabs.includes('classes')) {
     await cl('[data-act="tab"][data-tab="classes"]');
-    if (await cl('.quad')) { chk('classes/professor'); await cl('[data-act="cl-back"]'); }
+    if (await cl('.quad')) { chk('classes/professor'); if (await cl('[data-act="cl-view"][data-k="week"]')) { chk('classes/setmana'); await cl('[data-act="cl-view"][data-k="month"]'); } await cl('[data-act="cl-back"]'); }
   }
   await cl('[data-act="tab"][data-tab="avisos"]');
   // El menú del compte: cada fila obre la seva finestra; la fletxa hi torna.

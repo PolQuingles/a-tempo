@@ -3,8 +3,8 @@
 // (o tarda massa, com a moltes sales d'assaig), s'obre la darrera que es va desar. El codi i els estils porten
 // ?v=<empremta> a l'adreça: no canvien mai, i es desen i es reaprofiten. Les dades no passen per aquí: Firestore
 // ja en guarda una còpia al mòbil. VERSION i SHELL els escriu tools/stamp.py.
-const VERSION = 'e9fc4cafae';
-const SHELL = ['./', 'index.html', 'app.webmanifest', 'app/icon-192.png', 'app/icon-180.png', 'app/favicon-48.png', 'css/app.css?v=34d8fc4b89', 'config.js?v=666ce52d45', 'js/00-errors.js?v=739f456eee', 'js/01-base.js?v=8de2457685', 'js/02-dades.js?v=57eccbb09e', 'js/03-pantalla.js?v=d6eb3a62a9', 'js/04-llista.js?v=9664f0b595', 'js/05-calendari.js?v=af35f417a0', 'js/06-estadistiques.js?v=8a73816a7e', 'js/07-gestio.js?v=a5a120ecf5', 'js/08-tauler.js?v=1f0c450f21', 'js/09-classes.js?v=259852c647', 'js/10-inici.js?v=cd05e5aea9', 'js/11-fitxes.js?v=6b25f1ec98', 'js/12-persones.js?v=686bb3c9c3', 'js/13-avisos-mobil.js?v=ed3c8795b8', 'js/14-eines.js?v=badff7c5c5', 'js/15-copies.js?v=93fac5424a', 'js/16-agrupacions.js?v=a502c98040', 'js/17-rutes.js?v=47155d2dc4', 'js/18-accions.js?v=90da5fa0c0', 'js/19-arrencada.js?v=27996b8863'];
+const VERSION = '3f2c5b7508';
+const SHELL = ['./', 'index.html', 'app.webmanifest', 'app/icon-192.png', 'app/icon-180.png', 'app/favicon-48.png', 'css/app.css?v=03ef89d16c', 'config.js?v=666ce52d45', 'js/00-errors.js?v=739f456eee', 'js/01-base.js?v=3a1b36ea3a', 'js/02-dades.js?v=241762059a', 'js/03-pantalla.js?v=d6eb3a62a9', 'js/04-llista.js?v=9664f0b595', 'js/05-calendari.js?v=85c90ec8e4', 'js/06-estadistiques.js?v=8a73816a7e', 'js/07-gestio.js?v=5a02a27cc4', 'js/08-tauler.js?v=95b2e0c84c', 'js/09-classes.js?v=911df1c9b6', 'js/10-inici.js?v=a4d31335d1', 'js/11-fitxes.js?v=6999fd3cae', 'js/12-persones.js?v=686bb3c9c3', 'js/13-avisos-mobil.js?v=8420b07856', 'js/14-eines.js?v=9a91a6f49a', 'js/15-copies.js?v=1bd680ffbf', 'js/16-agrupacions.js?v=a502c98040', 'js/17-rutes.js?v=8af2b87fcd', 'js/18-repertori.js?v=e14fe77ee2', 'js/19-concerts.js?v=5082232e7e', 'js/20-sortides.js?v=7c8343a87f', 'js/21-missatges.js?v=a03ae909dc', 'js/22-secretaria.js?v=87693ef87b', 'js/23-accions.js?v=f90b3b0e8e', 'js/24-arrencada.js?v=394c2ee5b6'];
 const CDN = [
   'https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js',
   'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js',
@@ -22,7 +22,8 @@ self.addEventListener('install', e => e.waitUntil((async () => {
 })()));
 
 self.addEventListener('activate', e => e.waitUntil((async () => {
-  for (const k of await caches.keys()) if (k.startsWith('atempo-') && k !== CACHE && k !== RUNTIME) await caches.delete(k);
+  // «atempo-fitxers» són les partitures i els àudios que cadascú ha desat al mòbil: no s'esborren mai aquí.
+  for (const k of await caches.keys()) if (k.startsWith('atempo-') && k !== CACHE && k !== RUNTIME && k !== 'atempo-fitxers') await caches.delete(k);
   await self.clients.claim();
 })()));
 
@@ -81,13 +82,19 @@ self.addEventListener('push', e => {
     lang: 'ca',
     tag: d.tag || 'a-tempo',
     renotify: true,
-    data: { url: d.url || './' },
+    // Botons per respondre des de la mateixa notificació (on el mòbil els mostra: l'Android sí, l'iPhone no).
+    actions: Array.isArray(d.actions) ? d.actions.slice(0, 2) : [],
+    data: { url: d.url || './', sid: d.sid || '' },
   }));
 });
 
 self.addEventListener('notificationclick', e => {
   e.notification.close();
-  const target = new URL((e.notification.data && e.notification.data.url) || './', self.registration.scope).href;
+  const data = e.notification.data || {};
+  const url = new URL(data.url || './', self.registration.scope);
+  // Un botó de la notificació: l'app ho fa en obrir-se (vegeu runNotificationAction).
+  if (e.action && data.sid) { url.searchParams.set('accio', e.action); url.searchParams.set('s', data.sid); }
+  const target = url.href;
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
     for (const c of list) {
       if (c.url.startsWith(self.registration.scope)) {

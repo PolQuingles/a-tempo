@@ -46,13 +46,17 @@ function accessPanel() {
   </div>`;
 }
 function managePeople() {
-  if (!ROLE_KEYS.includes(ui.people) && ui.people !== 'access') ui.people = 'singer';
+  const extra = [['altes', 'Altes i baixes', 0], ...(canDocs() ? [['docs', 'Documents', 0], ['quotes', 'Quotes', 0]] : [])];
+  if (!ROLE_KEYS.includes(ui.people) && ui.people !== 'access' && !extra.some(([k]) => k === ui.people)) ui.people = 'singer';
   const role = ui.people;
-  const chips = [['singer', rolePlural('singer'), roleCount('singer')], ...(isAdmin() ? [['access', 'Amb accés', S.staff.size]] : []),
+  const chips = [['singer', rolePlural('singer'), roleCount('singer')], ...extra, ...(isAdmin() ? [['access', 'Amb accés', S.staff.size]] : []),
     ...PEOPLE_MENU.filter(k => k !== 'singer').map(k => [k, rolePlural(k), roleCount(k)])];
   const menu = `<div class="chips" id="people-menu" role="tablist" aria-label="Rols">${chips.map(([k, l, n]) =>
     `<button class="chip" role="tab" aria-pressed="${role === k}" data-act="people-role" data-k="${k}">${esc(l)}${n ? ` · ${n}` : ''}</button>`).join('')}</div>`;
-  if (role === 'singer') return accessPanel() + menu + manageMembers();
+  if (role === 'singer') return accessPanel() + menu + `<div class="sec-h" style="margin:4px 0 0"><span class="muted" style="font-size:13px">Tota la plantilla, amb l’antiguitat, la fitxa de cadascú${canDocs() ? ', els documents i la quota' : ''}.</span><button class="btn btn-sm" data-act="roster-export">Exporta a Excel</button></div>` + manageMembers();
+  if (role === 'altes') return accessPanel() + menu + manageHistory();
+  if (role === 'docs') return accessPanel() + menu + manageDocs();
+  if (role === 'quotes') return accessPanel() + menu + manageFees();
   if (role === 'access') {
     const people = peopleSorted();
     return `${accessPanel()}${menu}<p class="muted" style="margin:4px 2px 10px;font-size:13px">Tothom qui pot entrar a l’app, amb els seus rols. Toca una persona per canviar-li els rols, convidar-la o treure-li l’accés.</p>
@@ -117,7 +121,7 @@ function manageMembers() {
 }
 function manageProductions() {
   const ps = productionsSorted();
-  return `<div class="sec-h"><span class="muted" style="font-size:13.5px">${ps.length} produccions</span><button class="btn btn-sm btn-primary" data-act="prod-new">+ Producció</button></div>
+  return `<div class="sec-h"><span class="muted" style="font-size:13.5px">${ps.length} produccions</span><span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" data-act="season-report">Memòria de la temporada</button><button class="btn btn-sm btn-primary" data-act="prod-new">+ Producció</button></span></div>
     ${ps.length ? `<div class="only-narrow" style="display:grid;gap:10px">${ps.map(p => {
       const ss = allSessions(p.id);
       const shared = ss.filter(s => s.prodId !== p.id).length;
@@ -257,7 +261,7 @@ async function deleteGroup(el) {
   const at = new Date().toISOString();
   try {
     const refs = [];
-    for (const col of ['members', 'productions', 'attendance', 'absences', 'subs', 'rsvp', 'announcements', 'polls', 'pollVotes', 'memberMarks', 'push', 'classes', 'classReq', 'classPlan', 'classNotes', 'config']) {
+    for (const col of ['members', 'productions', 'attendance', 'absences', 'subs', 'rsvp', 'announcements', 'polls', 'pollVotes', 'memberMarks', 'push', 'classes', 'classReq', 'classPlan', 'classNotes', 'classFiles', 'students', 'works', 'trips', 'tripSignups', 'profiles', 'messages', 'memberNotes', 'memberDocs', 'memberFiles', 'config']) {
       say('Preparant…');
       const snap = await db.collection(col).get();
       for (const d of snap.docs) if (!(col === 'config' && d.id === 'main')) refs.push(d.ref);
@@ -355,6 +359,10 @@ function manageConfig() {
       <div><div class="t">Avís de seguiment</div><div class="s">Assenyala qui acumula aquest nombre de faltes no justificades.</div></div>
       <input class="inp" id="cfg-alert" type="number" inputmode="numeric" min="1" max="20" style="width:80px;text-align:center" value="${+S.config.alertFNJ || 3}" data-bind="cfg-alert">
     </div>
+    <div class="setting">
+      <div><div class="t">Mínim per ${esc(V.section)} als ${esc(V.sh.els)}</div><div class="s">Quantes persones de cada ${esc(V.section)} calen com a mínim. Si en confirmen menys, l’app ho avisa a l’equip. En blanc, sense mínim.</div></div>
+      <span class="vmin">${SECTIONS.map(x => `<label><span>${esc(x.short)}</span><input class="inp" id="cfg-vmin-${esc(x.id)}" type="number" inputmode="numeric" min="0" max="200" value="${+voiceMin()[x.id] || ''}" data-bind="cfg-vmin" data-sec="${esc(x.id)}" aria-label="${esc(x.name)}"></label>`).join('')}</span>
+    </div>
   </div>
   ${cfgHead('temporada', `Temporada i trimestres`, `${esc(season.name)} · ${terms.length} trimestres`)}
   <div class="panel cfg-p"${cfgOpen('temporada') ? '' : ' hidden'} style="padding:14px;display:grid;gap:12px">
@@ -400,11 +408,12 @@ const ACCT_ICONS = {
   groups: '<circle cx="9" cy="8.5" r="3"/><path d="M3.5 19a5.5 5.5 0 0111 0"/><path d="M15 5.8a3 3 0 010 5.4M17 14a5.5 5.5 0 013.5 5"/>',
   theme: '<path d="M19.5 14.2A7.5 7.5 0 019.8 4.5a7.5 7.5 0 109.7 9.7z"/>',
   help: '<circle cx="12" cy="12" r="8.5"/><path d="M9.7 9.4a2.4 2.4 0 014.6.9c0 1.6-2.3 2.1-2.3 3.7"/><path d="M12 17v.2"/>',
+  profile: '<rect x="3.5" y="5" width="17" height="14" rx="2.5"/><circle cx="9" cy="11" r="2.2"/><path d="M5.8 16.2a3.4 3.4 0 016.4 0M14 10h4M14 13.5h3"/>',
 };
 /** Les finestres del menú. S'obren amb una fletxa per tornar-hi (vegeu openSheet). */
 const ACCT_SHEETS = {
   calendar: () => sheetCalendar(), classIcs: () => sheetClassIcs(), push: () => sheetPush(),
-  groups: () => sheetGroups(), theme: () => sheetTheme(), help: () => sheetHelp(),
+  groups: () => sheetGroups(), theme: () => sheetTheme(), help: () => sheetHelp(), profile: () => sheetMyProfile(),
 };
 function sheetAccount() {
   const name = accountName();
@@ -416,7 +425,7 @@ function sheetAccount() {
   const open = (k, t) => item(k, t, `data-act="acct-open" data-k="${k}"`);
   const groups = [
     canEdit() ? [item('gestio', 'Gestió', `data-act="manage" data-k="${pend ? 'avisos' : ROUTE_MANAGE[ui.manage] ? ui.manage : 'personal'}"`, pend)] : [],
-    [icsOn() && open('calendar', 'Calendari al mòbil'), clOn && open('classIcs', 'Les teves classes al calendari'), pushSupported() && open('push', 'Avisos al mòbil')],
+    [myId() && !PREVIEW && open('profile', 'La meva fitxa'), icsOn() && open('calendar', 'Calendari al mòbil'), clOn && open('classIcs', 'Les teves classes al calendari'), pushSupported() && open('push', 'Avisos al mòbil')],
     [groupsVisible() && open('groups', 'Agrupacions'), open('theme', 'Aparença'), open('help', 'Com funciona')],
   ].map(g => g.filter(Boolean)).filter(g => g.length);
   openSheet({

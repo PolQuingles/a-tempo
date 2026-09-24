@@ -7,10 +7,11 @@ const LS_PUSH = 'atempo:avis-id';
 const LS_PUSH_AT = 'atempo:avis-refresc';
 const LS_WELCOME = 'atempo:benvinguda';
 const pushKinds = () => ({
+  missatges: ['Missatges', `Els que t’envien el teu ${V.leader} o l’equip ${V.del}.`],
   anuncis: ['Anuncis nous', 'Quan l’equip publica alguna cosa al tauler.'],
   materials: ['Material nou', `Partitures, àudios i documents nous per a la teva ${V.section} i ${V.part}.`],
   convocatories: ['Convocatòries per confirmar', 'Si queda per respondre i s’acosta la data límit.'],
-  enquestes: ['Enquestes obertes', 'Quan una enquesta és a punt de tancar-se.'],
+  enquestes: ['Enquestes', 'Quan n’hi ha una de nova i quan és a punt de tancar-se.'],
   absencies: ['Resposta als teus avisos', 'Quan t’accepten o no un avís d’absència.'],
   assajos: ['Recordatori d’assaig', `La vespra, amb la fitxa ${V.sh.del} si n’hi ha.`],
   ...(classesOn() ? { classes: [V.classes, `Avisos i canvis d’hora de les ${V.classes.toLowerCase()}.`] } : {}),
@@ -20,7 +21,7 @@ const leaderKinds = () => ({
   llistes: ['Llista a mitges', 'Mitja hora després d’acabar l’assaig, si la llista no és completa.'],
   risc: [`${V.Members} en risc`, 'Quan algú baixa de la norma d’assistència.'],
 });
-const DEFAULT_PREFS = { anuncis: true, materials: true, convocatories: true, enquestes: true, absencies: true, assajos: false, llistes: true, risc: true, classes: true };
+const DEFAULT_PREFS = { missatges: true, anuncis: true, materials: true, convocatories: true, enquestes: true, absencies: true, assajos: false, llistes: true, risc: true, classes: true };
 const LS_PUSH_PREFS = 'atempo:avis-prefs';
 /** The sections a leader looks after: their own, from the account or from their roster record. */
 function defaultCordes() {

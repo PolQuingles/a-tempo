@@ -151,9 +151,12 @@ function sheetSessionInfo(sid) {
     body: `<div class="prod-band prod-tone" style="--ph:${prodHue(prod)}"><h2 class="h2"><i class="pdot"></i>${esc(prodNames(s))}</h2><span class="eyebrow">${esc(s.type || 'Assaig')}</span></div>
       ${fitxaHtml(s)}
       ${s.note ? `<p class="fitxa-note">${esc(s.note)}</p>` : ''}
-      ${hasInfo(s) ? '' : `<p class="muted" style="font-size:13px">Encara no hi ha indicacions de convocatòria, vestuari ni punt de trobada.</p>`}`,
-    foot: `${canEdit() ? `<button class="btn" data-act="session-edit" data-sid="${s.id}">Edita</button>` : ''}<span class="spacer"></span><button class="btn btn-primary" id="fx-copy">Copia per al grup</button>`,
-    onMount: el => { el.querySelector('#fx-copy').onclick = () => copyText(text, 'Fitxa copiada'); },
+      ${hasInfo(s) ? '' : `<p class="muted" style="font-size:13px">Encara no hi ha indicacions de convocatòria, vestuari ni punt de trobada.</p>`}
+      ${planOf(s) || canEdit() ? `<div class="section-title" style="margin-top:16px"><h2 class="h2">${isShow(s) ? 'Programa' : s.date < TODAY ? 'Què s’hi va treballar' : 'Pla d’assaig'}</h2>${canEdit() ? `<button class="btn btn-sm" data-act="plan-edit" data-sid="${s.id}">${planOf(s) ? 'Edita’l' : 'Fes-lo'}</button>` : ''}</div>
+        ${planHtml(s) || `<p class="muted" style="font-size:13px;margin:0">${isShow(s) ? 'Encara no hi ha programa: quines obres es cantaran i en quin ordre.' : 'Encara no hi ha pla: quines obres i quins compassos s’assajaran.'}</p>`}` : ''}
+      ${isShow(s) ? balanceBlock(s) + seatingBlock(s) : ''}`,
+    foot: `${canEdit() ? `<button class="btn" data-act="session-edit" data-sid="${s.id}">Edita</button>` : ''}${canEdit() && isShow(s) ? `<button class="btn" data-act="participants" data-sid="${s.id}">Llista de participants</button>` : ''}<span class="spacer"></span><button class="btn btn-primary" id="fx-copy">Copia per al grup</button>`,
+    onMount: el => { el.querySelector('#fx-copy').onclick = () => copyText(text + (planOf(s) && (s.plan.items || []).length ? `\n\nPla d’assaig:\n${s.plan.items.map(it => `· ${planTitle(it)}${it.bars ? ` (c. ${it.bars})` : ''}${planItemWho(it) ? ` · ${planItemWho(it)}` : ''}`).join('\n')}` : ''), 'Fitxa copiada'); },
   });
 }
 function fitxaChip(s) {
@@ -212,6 +215,7 @@ function sheetSession(sid, presetProd, presetDate) {
           place: el.querySelector('#se-place').value.trim(), note: el.querySelector('#se-note').value.trim(),
         };
         if (chosen.length && chosen.length < SECTIONS.length) next.sections = chosen;
+        for (const k of ['plan', 'seating']) if (existing && existing[k]) next[k] = existing[k];
         const prodId = el.querySelector('#se-prod').value;
         const also = $$('#se-also .pick[aria-pressed="true"]', el).map(b => b.dataset.also).filter(id => id !== prodId);
         if (also.length) next.alsoIn = also;
@@ -250,7 +254,7 @@ function sheetSession(sid, presetProd, presetDate) {
 /* ---------- Sheet: member ---------- */
 function sheetMember(mid) {
   const existing = mid ? S.members.get(mid) : null;
-  const m = existing ? clone(existing) : { id: uid('m'), name: '', section: ui.section, leader: false, active: true, phone: '', notes: '' };
+  const m = existing ? clone(existing) : { id: uid('m'), name: '', section: ui.section, leader: false, active: true, phone: '', notes: '', joined: TODAY };
   openSheet({
     title: existing ? V.Member : `Nou ${V.member}`,
     body: `<div class="kv">
@@ -265,15 +269,28 @@ function sheetMember(mid) {
         <button type="button" class="btn btn-sm" id="lv-add" style="width:max-content">Afegeix la baixa</button>
         <small class="muted">Durant la baixa surt en gris («No fa») i no compta a les estadístiques ni a la norma.</small>
       </fieldset>
+      <label class="field"><span>Data d’alta</span><input class="inp" id="me-joined" type="date" value="${esc(m.joined || '')}" style="max-width:190px"><small>${m.joined ? `Antiguitat: ${esc(seniority(m) || '')}` : 'Quan va entrar: serveix per a l’antiguitat.'}</small></label>
       <div class="toggle-row"><span><b>Actiu</b><br><span class="muted" style="font-size:12.5px">Desactiva’l si deixa ${V.el}; conserva l’historial</span></span><label class="switch"><input type="checkbox" id="me-active" ${m.active !== false ? 'checked' : ''}><span></span></label></div>
+      <div class="row2" id="me-move" hidden><label class="field"><span id="me-move-l">Data de la baixa</span><input class="inp" id="me-move-date" type="date" value="${TODAY}"></label>
+        <label class="field"><span>Motiu (opcional)</span><input class="inp" id="me-move-note" maxlength="80" placeholder="p. ex. Estudis a fora, trasllat…"></label></div>
+      ${(m.history || []).length ? `<div class="field"><span>Historial</span><ul class="mini-list" style="max-height:none">${m.history.slice().sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(h => `<li><span><span class="hist-k ${h.kind}">${HIST_WORD[h.kind] || h.kind}</span> ${esc(ddmm(h.date))}/${h.date.slice(2, 4)}${h.note ? ` · ${esc(h.note)}` : ''}</span></li>`).join('')}</ul></div>` : ''}
+      ${existing && canDocs() ? `<div class="toggle-row"><span><b>Documents i quota</b><br><span class="muted" style="font-size:12.5px">Drets d’imatge, protecció de dades, autoritzacions i quota</span></span><span style="display:flex;gap:6px"><button type="button" class="btn btn-sm" data-act="member-docs" data-mid="${m.id}">Documents</button><button type="button" class="btn btn-sm" data-act="fee-edit" data-mid="${m.id}">Quota</button></span></div>` : ''}
       ${existing ? (x => `<div class="toggle-row"><span><b>Accés a l’app</b><br><span class="muted" style="font-size:12.5px">${x ? esc(x.email) : 'Encara no en té'}</span></span><button type="button" class="btn btn-sm" data-act="${x ? 'staff-edit' : 'staff-new'}" ${x ? `data-email="${esc(x.email)}"` : ''}>${x ? 'Canvia' : 'Dona-li accés'}</button></div>`)(accountFor(m.id)) : ''}
       <label class="field"><span>Telèfon</span><input class="inp" id="me-phone" type="tel" maxlength="20" value="${esc(m.phone || '')}"></label>
       <label class="field"><span>Notes</span><input class="inp" id="me-notes" type="text" maxlength="120" value="${esc(m.notes || '')}"></label>
+      ${existing ? `<div class="field"><span>La seva fitxa</span><div id="me-profile"><span class="muted" style="font-size:13px">Carregant…</span></div></div>` : ''}
     </div>`,
     foot: `${existing ? '<button class="btn btn-danger-ghost" id="me-del">Esborra</button>' : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="me-save">Desa</button>`,
     onMount: el => {
       el.querySelectorAll('#me-sec .pick').forEach(b => b.onclick = () => { el.querySelectorAll('#me-sec .pick').forEach(x => x.setAttribute('aria-pressed', x === b)); });
       el.querySelectorAll('#me-part .pick').forEach(b => b.onclick = () => { el.querySelectorAll('#me-part .pick').forEach(x => x.setAttribute('aria-pressed', x === b)); });
+      if (existing) profileBox(el, existing.id);
+      const wasActive = !existing || existing.active !== false;
+      el.querySelector('#me-active').addEventListener('change', e => {
+        const moving = !!existing && e.target.checked !== wasActive;
+        el.querySelector('#me-move').hidden = !moving;
+        el.querySelector('#me-move-l').textContent = e.target.checked ? 'Data en què torna' : 'Data de la baixa';
+      });
       m.leaves = [...(m.leaves || [])];
       const drawLeaves = () => {
         el.querySelector('#me-leaves').innerHTML = m.leaves.length ? m.leaves.map((l, i) => `<div class="leave-row"><span><span class="mono">${ddmm(l.from)}/${l.from.slice(2, 4)} – ${l.to ? `${ddmm(l.to)}/${l.to.slice(2, 4)}` : 'sense data'}</span>${l.note ? ` · ${esc(l.note)}` : ''}</span><button type="button" class="icon-btn" data-lv="${i}" aria-label="Treu la baixa">${ICON.close}</button></div>`).join('') : '<span class="muted" style="font-size:13px">Cap baixa.</span>';
@@ -296,6 +313,13 @@ function sheetMember(mid) {
           toast(`Canvi de ${V.section} desat. Les llistes antigues queden a la ${V.section} anterior.`);
         }
         const next = { ...m, name, section, leader: el.querySelector('#me-leader').checked, active: el.querySelector('#me-active').checked, phone: el.querySelector('#me-phone').value.trim(), notes: el.querySelector('#me-notes').value.trim(), part: el.querySelector('#me-part .pick[aria-pressed="true"]').dataset.part };
+        // Altes i baixes: la data d'alta, i cada baixa o tornada queda a l'historial amb la data i el motiu.
+        next.joined = el.querySelector('#me-joined').value || '';
+        if (!next.joined) delete next.joined;
+        const hist = [...(m.history || [])];
+        if (!existing) hist.push({ date: next.joined || TODAY, kind: 'alta', note: '' });
+        else if (next.active !== wasActive) hist.push({ date: el.querySelector('#me-move-date').value || TODAY, kind: next.active ? 'retorn' : 'baixa', note: el.querySelector('#me-move-note').value.trim() });
+        if (hist.length) next.history = hist;
         if (next.leader) for (const o of membersOf(section, true)) if (o.id !== next.id && o.leader) saveMember({ ...o, leader: false });
         saveMember(next);
         closeSheet();
@@ -364,7 +388,10 @@ function sheetMemberStats(mid) {
       <div class="legend">${ORDER.map(k => `<span><i class="i-${k}"></i>${STATUS[k].short}</span>`).join('')}<span><i class="i-none"></i>Sense llista</span></div>
       ${r.notes.length ? `<div class="section-title" style="margin-top:20px"><h3 class="eyebrow">Motius registrats</h3></div>
       <ul class="notes-list">${r.notes.map(({ s, mk }) => `<li><span class="mono muted">${ddmm(s.date)}</span><span><span class="pill ${mk.s === 'FNJ' ? 'fnj' : ''}" style="${mk.s === 'FJ' ? 'background:var(--fj-soft);color:var(--ink)' : ''}">${mk.s}</span> ${esc(mk.note)}</span></li>`).join('')}</ul>` : ''}
-      ${m.phone ? `<p style="margin-top:18px"><a class="btn btn-sm" href="tel:${esc(m.phone.replace(/\s/g, ''))}">Truca ${esc(m.phone)}</a></p>` : ''}`,
+      ${m.phone ? `<p style="margin-top:18px"><a class="btn btn-sm" href="tel:${esc(m.phone.replace(/\s/g, ''))}">Truca ${esc(m.phone)}</a></p>` : ''}
+      ${canTrack(m) ? '<div id="ms-track"></div>' : ''}`,
+    foot: canEdit() ? `<span class="spacer"></span><button class="btn" data-act="certificate" data-mid="${m.id}">Certificat d’assistència</button>` : '',
+    onMount: el => trackBox(el, m),
   });
 }
 

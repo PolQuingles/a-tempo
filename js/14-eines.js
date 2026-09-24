@@ -318,6 +318,19 @@ function sheetHelp() {
     <h3>Tauler</h3>
     <p><b>Anuncis</b> per a tothom o per ${w.sections}, <b>materials</b> de cada producció (partitures, àudios, vídeos), <b>documents</b> de tota la temporada i <b>enquestes</b> de disponibilitat. A les convocatòries i enquestes, <b>Recorda-ho</b> prepara missatges de WhatsApp per als que no han respost.</p>
     <p>Els fitxers (PDF, àudio, imatges, fins a 20 MB) es poden pujar directament des de l’ordinador o el mòbil, o bé posar-hi un enllaç.</p>
+    <h3>Missatges</h3>
+    <p>A Inici, <b>Escriu</b> (administració, direcció, gerència i secretaria) envia un missatge a tothom o a les ${w.sections} que triïs, un anunci al tauler o una enquesta. Cada ${w.leader} hi té <b>Missatge a la ${w.section}</b>, que només arriba a la seva. Arriben a l’app i, a qui té els avisos activats, al mòbil: sense correus ni WhatsApp.</p>
+    <h3>Notes de seguiment</h3>
+    <p>A les estadístiques de cada ${w.member} (toca-li el nom) la direcció i el seu ${w.leader} hi poden deixar notes de seguiment: afinació, actitud, progressos. No les veu ningú més, ni la persona.</p>
+    <h3>Secretaria</h3>
+    <p>A <b>Gestió › Personal</b>: <b>Altes i baixes</b> (moviments de la temporada i antiguitat de cadascú; la data d’alta i la de baixa es posen a la fitxa), <b>Documents</b> (drets d’imatge, protecció de dades i autoritzacions, amb el document signat, i la llista de qui no pot sortir a fotos ni vídeos) i <b>Quotes</b> (qui ha pagat, quan i com). La plantilla sencera s’exporta a Excel.</p>
+    <h3>Repertori i pla d’assaig</h3>
+    <p>A <b>Tauler › Repertori</b> cada obra té una fitxa (compositor, durada, formació, partitures i àudios per ${w.section} i ${w.part}) i s’enllaça a les produccions on es fa, de manera que serveix d’una temporada a l’altra. A la fitxa hi poses <b>qui canta cada solo i cada petit grup</b>, i cadascú veu els seus.</p>
+    <p>A la fitxa de cada sessió hi ha el <b>pla d’assaig</b>: quines obres i compassos, per a qui i una nota. El veuen tots els convocats a Inici i al Calendari, i després de l’assaig hi pots escriure què s’ha fet: qui no hi era ho veu a Inici.</p>
+    <h3>Concerts</h3>
+    <p>A la fitxa de cada ${w.sh.show}: l’<b>${w.balance.toLowerCase()}</b> segons qui ha confirmat (amb el mínim de cada ${w.section} d’Ajustos › Norma, i un avís a «Per fer» si en falta), la <b>col·locació</b> a l’escenari (per ${w.sections}, i després toques dos llocs per canviar-los) i la <b>llista de participants</b> en PDF o Excel, amb el telèfon, la talla i el contacte d’emergència, per al teatre o l’assegurança.</p>
+    <h3>Sortides, certificats i memòria</h3>
+    <p>A <b>Tauler › Sortides</b> hi ha les sortides i gires: cadascú s’hi apunta, i l’equip reparteix el transport i les habitacions i en treu les llistes. El <b>certificat d’assistència</b> és a les estadístiques de cada ${w.member} (en PDF), i la <b>memòria de la temporada</b>, a Gestió › Produccions.</p>
     <h3>Estadístiques i norma</h3>
     <p>Per producció, trimestre o temporada. La <b>norma del ${minAttendance()}%</b> avisa de qui no pot fer ${w.sh.el} o està en risc. A <b>Assistència › Risc</b> tens totes les produccions en curs i, des d’allà, la <b>${w.sh.list.toLowerCase()}</b>: qui hi pot ${w.play}, la ${w.balance.toLowerCase()} i els canvis fets a mà, amb el motiu.</p>
     <h3>Fitxa ${w.sh.del} i calendari</h3>
@@ -348,9 +361,14 @@ function sheetHelp() {
     <h3>Convocatòries</h3>
     <p>Quan hi hagi ${w.sh.show === 'concert' ? 'un concert' : 'una actuació'} o un viatge, respon <b>Hi seré</b> o <b>No hi podré anar</b> abans de la data límit.</p>
     <h3>La meva assistència</h3>
-    <p>A Inici veus el teu percentatge d’assistència i si compleixes la norma del ${minAttendance()}% per poder fer ${w.sh.el}.</p>
+    <p>A Inici veus el teu percentatge d’assistència i quantes faltes et pots permetre abans ${w.sh.del}, per complir la norma del ${minAttendance()}%.</p>
     <h3>Tauler</h3>
-    <p>Anuncis, partitures i àudios de la teva ${w.part}, documents de la temporada i enquestes per dir quins dies pots venir.</p>
+    <p>Anuncis, el <b>repertori</b> (cada obra amb les partitures i els àudios de la teva ${w.part}, i els solos i petits grups on surts), documents de la temporada, enquestes i <b>sortides</b>, on t’hi pots apuntar.</p>
+    <p>Els àudios d’estudi es poden escoltar <b>més lents</b> i <b>repetir un fragment</b>. I amb «Desa’ls al mòbil» tens les partitures i els àudios sense cobertura.</p>
+    <h3>Missatges</h3>
+    <p>Els missatges del teu ${w.leader} i de l’equip surten a Inici i t’arriben al mòbil si tens els avisos activats.</p>
+    <h3>Pla d’assaig i la meva fitxa</h3>
+    <p>A cada assaig veus què s’hi farà (obres i compassos) per preparar-ho, i si hi has faltat, què s’hi va fer. A les teves inicials, <b>La meva fitxa</b>: el telèfon, la talla de vestuari, un contacte d’emergència i els consentiments (drets d’imatge i protecció de dades), que només veu l’equip. Hi veus també si tens la quota pagada.</p>
     <h3>Fitxa ${w.sh.del}</h3>
     <p>Toca <b>Fitxa ${w.sh.del}</b> per veure l’hora de convocatòria, el vestuari i el punt de trobada. També la tens al Calendari, que pots veure per llista o per <b>mes</b>.</p>
     <h3>Avisos al mòbil</h3>

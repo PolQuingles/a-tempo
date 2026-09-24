@@ -29,7 +29,8 @@ def backup(gid):
         "productions": list(r.list(f"{base}/productions").values()),
         "attendance": r.list(f"{base}/attendance"),
     }
-    for name in ["absences", "rsvp", "subs", "staff", "announcements", "polls", "pollVotes", "classes", "classReq", "classPlan", "classNotes"]:
+    for name in ["absences", "rsvp", "subs", "staff", "announcements", "polls", "pollVotes", "classes", "classReq", "classPlan", "classNotes",
+                 "works", "trips", "tripSignups", "profiles", "students", "messages", "memberNotes", "memberDocs"]:
         data[name] = list(r.list(f"{base}/{name}").values())
 
     out = dades.folder(OUT, gid)
@@ -53,6 +54,9 @@ def backup(gid):
 
     files = [x.get("file") for p in data["productions"] for x in (p.get("materials") or [])]
     files += [x.get("file") for x in (config.get("documents") or [])]
+    files += [x.get("file") for w in data["works"] for x in (w.get("materials") or [])]
+    files += [n.get("file") for n in data["classNotes"]]   # enregistraments de classe (classFiles)
+    files += [x.get("file") for d in data["memberDocs"] for x in (d.get("docs") or {}).values() if isinstance(x, dict)]   # documents signats (memberFiles)
     saved = 0
     for f in filter(None, files):
         folder = os.path.join(out, "fitxers", f["id"])
@@ -62,7 +66,8 @@ def backup(gid):
             continue
         parts = []
         for i in range(int(f.get("chunks") or 1)):
-            doc = dades.call(f"{dades.BASE}/{base}/config/fitxer_{f['id']}_{i}", token=r.token)
+            where = f"{f['where']}/{f['id']}_{i}" if f.get("where") in ("classFiles", "memberFiles") else f"config/fitxer_{f['id']}_{i}"
+            doc = dades.call(f"{dades.BASE}/{base}/{where}", token=r.token)
             r.reads += 1
             parts.append(base64.b64decode(doc["fields"]["d"]["bytesValue"]))
         os.makedirs(folder, exist_ok=True)

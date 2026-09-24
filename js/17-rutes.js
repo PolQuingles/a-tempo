@@ -5,7 +5,8 @@
 'use strict';
 
 const ROUTE_MANAGE = { avisos: 'avisos', personal: 'personal', produccions: 'produccions', config: 'ajustos' };
-const ROUTE_BOARD = ['anuncis', 'materials', 'documents', 'enquestes'];
+// ui.board → adreça (el repertori es deia «materials»).
+const ROUTE_BOARD = { anuncis: 'anuncis', materials: 'repertori', documents: 'documents', enquestes: 'enquestes', sortides: 'sortides' };
 const HIST = { sheet: false, closePending: false, ignorePop: 0, pending: null, started: false };
 
 /** Una clau curta i estable per a cada professor/a: la de la fitxa, o una suma del correu (el correu no va a l'adreça). */
@@ -26,7 +27,7 @@ function routeFromUi() {
       if (ui.att === 'risk') return 'assistencia/risc';
       return ui.rollSec ? `assistencia/${encodeURIComponent(ui.rollSec)}` : 'assistencia';
     case 'calendari': return 'calendari';
-    case 'tauler': return `tauler/${ROUTE_BOARD.includes(ui.board) ? ui.board : 'anuncis'}`;
+    case 'tauler': return `tauler/${ROUTE_BOARD[ui.board] || 'anuncis'}`;
     case 'classes': return ui.clWho ? `classes/${encodeURIComponent(teacherSlug(ui.clWho))}` : 'classes';
     default: return 'inici';
   }
@@ -50,7 +51,7 @@ function applyRoute(route) {
     return true;
   }
   if (a === 'calendari') { ui.tab = 'calendari'; return true; }
-  if (a === 'tauler') { ui.tab = 'tauler'; ui.board = ROUTE_BOARD.includes(sub) ? sub : 'anuncis'; return true; }
+  if (a === 'tauler') { ui.tab = 'tauler'; ui.board = sub === 'materials' ? 'materials' : Object.keys(ROUTE_BOARD).find(k => ROUTE_BOARD[k] === sub) || 'anuncis'; return true; }
   if (a === 'classes') {
     ui.tab = 'classes';
     const t = sub && typeof classTeachers === 'function' ? classTeachers().find(x => teacherSlug(x.key) === sub) : null;

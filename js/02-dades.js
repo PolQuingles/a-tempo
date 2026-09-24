@@ -92,7 +92,7 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 //    col·lecció sencera. Un dia de classe esborrat queda com a `deleted: true` (el professorat no toca la configuració);
 //    una llista d'una sessió esborrada no cal treure-la, perquè ja no es mostra enlloc;
 //  · la primera vegada, un cop per setmana i si el mòbil no té res desat, es baixa tot sencer.
-const DELTA = ['members', 'productions', 'attendance', 'classes'];
+const DELTA = ['members', 'productions', 'attendance', 'classes', 'works'];
 // Fins aquest dia tothom ho baixa tot, perquè els mòbils que encara tenen oberta l'app d'abans (sense syncAt) s'actualitzin.
 const DELTA_FROM = '2026-09-28';
 const FULL_EVERY = 7 * 864e5;
@@ -200,7 +200,7 @@ function subscribe() {
   const teach = staff || hasRole(S.me, 'voice');           // veu tots els avisos de les classes
   // Les notes de classe són privades: només el professorat i l'administració les veuen totes.
   const teachCl = hasRole(S.me, 'voice') || hasRole(S.me, 'admin');
-  const wanted = ['members', 'productions', 'config', 'absences', 'subs', 'rsvp', 'announcements', 'polls', 'pollVotes', 'classes', 'classReq', 'classPlan', 'classNotes'];
+  const wanted = ['members', 'productions', 'config', 'absences', 'subs', 'rsvp', 'announcements', 'polls', 'pollVotes', 'classes', 'classReq', 'classPlan', 'classNotes', 'works', 'trips', 'tripSignups'];
   if (staff) wanted.push('attendance', 'secrets', 'secretsMembers', 'staff');
   else if (reader) wanted.push('attendance');
   else wanted.push('myMarks');
@@ -226,6 +226,7 @@ function subscribe() {
   big('members', () => db.collection('members'), e => { markLoaded('members'); onDbError(e); });
   big('productions', () => db.collection('productions'), e => { markLoaded('productions'); onDbError(e); });
   big('classes', () => db.collection('classes').where('date', '>=', CLASS_FROM), () => markLoaded('classes'));
+  big('works', () => db.collection('works'), () => markLoaded('works'));
   if (staff || reader) big('attendance', () => db.collection('attendance'), e => { markLoaded('attendance'); onDbError(e); });
   db.collection('classPlan').onSnapshot(onCol('classPlan'), () => markLoaded('classPlan'));
   // Les notes de classe són privades: el professorat les veu totes; cada persona, només les seves.
@@ -242,7 +243,8 @@ function subscribe() {
     // Els canvis d'hora oberts són una crida a qui pugui: els veu tothom de l'agrupació.
     grab(db.collection('classReq').where('open', '==', true), m => { openOnes = m; });
   }
-  for (const col of ['announcements', 'polls']) db.collection(col).onSnapshot(onCol(col), () => markLoaded(col));
+  for (const col of ['announcements', 'polls', 'trips']) db.collection(col).onSnapshot(onCol(col), () => markLoaded(col));
+  mine('tripSignups').onSnapshot(onCol('tripSignups'), () => markLoaded('tripSignups'));
   for (const col of ['absences', 'subs', 'rsvp', 'pollVotes']) mine(col).onSnapshot(onCol(col), e => { markLoaded(col); if (staff && col !== 'pollVotes') onDbError(e); });
   if (!staff && !reader) db.doc(`memberMarks/${S.memberId || '-'}`).onSnapshot(snap => { S.myMarks = snap.exists ? snap.data() : null; markLoaded('myMarks'); if (S.ready) scheduleRender(); }, () => markLoaded('myMarks'));
   if (staff) {
