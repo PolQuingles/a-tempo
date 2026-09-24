@@ -2,11 +2,16 @@
 
 Assistència, calendari i avisos per a cors, orquestres, bandes, cobles i altres agrupacions. Cada agrupació hi té les seves dades, separades de la resta. Només els Usuaris Pro en poden crear.
 
-- `index.html` — l'app (mòbil primer)
+- `index.html` — la pàgina de l'app: la capçalera, el guió que pinta el tema abans de carregar i els `<script>` en ordre
+- `css/app.css` — tots els estils
+- `js/` — el codi, en fitxers per àrees (vegeu *Arquitectura*)
+- `sw.js` — treballador de servei: avisos al mòbil i l'app desada per obrir-la sense cobertura
 - `config.js` — configuració del projecte de Firebase
 - `firestore.rules` — regles de seguretat de Firestore
 - `demo.json` — dades d'exemple
 - `app.webmanifest`, `app/` — identitat de la plataforma (quan encara no se sap de quina agrupació és qui entra)
+- `tests/` — proves automàtiques (regles i interfície) · `tools/stamp.py` — empremtes dels fitxers
+- `firebase.json`, `.firebaserc` — Firebase Hosting i l'emulador de les proves
 
 ## Agrupacions
 
@@ -78,3 +83,38 @@ Llegeixen amb el compte de servei (secret `SERVICE_REFRESH_TOKEN`), que pot lleg
 - **Calendari** (cada 3 hores): el calendari subscrit de cada agrupació que el té activat (`calendari.ics` per a la primera i `calendaris/<agrupació>.ics` per a la resta) i la seva identitat a `marca/<agrupació>/`.
 - **Còpia de seguretat** (cada nit): totes les dades de cada agrupació al repositori privat de còpies.
 - **Avisos al mòbil** (cada mitja hora): anuncis, convocatòries, enquestes, material nou, respostes als avisos d'absència i avisos als caps de secció, llegint només el que cal.
+- **Vigilància** (cada hora): que l'app s'obre a cada adreça (`APP_URLS`, variable del repositori; per defecte la de GitHub Pages) i que hi carrega el codi, que GitHub Pages continua activat i si algú ha tingut errors a l'app l'última hora. Si hi ha res, avisa al mòbil l'administració de la primera agrupació i la tasca acaba amb error (GitHub n'envia un correu). Un mateix problema es torna a avisar com a molt cada sis hores.
+- **Proves** (a cada canvi i a cada petició de canvi): vegeu *Proves*.
+- **Publica a Firebase Hosting** (quan les proves de `main` passen i després de cada «Calendari»): vegeu *Allotjament*.
+
+## Arquitectura
+
+L'app és estàtica: HTML, CSS i JavaScript sense cap pas de compilació, amb les dades a Firestore.
+
+- `js/` són **scripts clàssics** que comparteixen l'àmbit global i es carreguen **en ordre** (l'ordre dels `<script>` d'`index.html` importa: el codi que s'executa en carregar un fitxer només pot fer servir el que ja han definit els anteriors). Cada fitxer comença dient què hi ha: `00-errors` (registre d'errors, el primer de tots), `01-base` (constants, estat, utilitats), `02-dades` (Firestore), `03-pantalla` (pintar), `04-llista` … `10-inici` (una per pantalla), `11-fitxes` (finestres), `12-persones`, `13-avisos-mobil`, `14-eines`, `15-copies`, `16-agrupacions`, `17-rutes`, `18-accions` (clics i formularis) i `19-arrencada` (`init()`).
+- **Empremtes**: cada fitxer s'enllaça amb `?v=<empremta del contingut>`. Després de canviar qualsevol fitxer de `js/`, `css/` o `config.js`, cal executar `python3 tools/stamp.py`, que també posa la versió a `index.html` (`<meta name="app-version">`) i la llista de fitxers a `sw.js`. Les proves fallen si no s'ha fet.
+- **Rutes**: cada pantalla té la seva adreça (`#/inici`, `#/assistencia/estadistiques`, `#/gestio/personal`, `#/classes/<professor>`…). El botó «enrere» del mòbil torna a la pantalla d'abans i tanca la finestra que hi hagi oberta. Els enllaços amb una ruta obren aquella pantalla (si la persona hi té accés).
+- **Sense cobertura** (`sw.js`): la pàgina es demana sempre primer a la xarxa i, si no n'hi ha o tarda més de quatre segons, s'obre la darrera desada. Els fitxers amb empremta es desen i no es tornen a baixar; les dades no passen pel treballador de servei (Firestore ja en guarda una còpia al mòbil).
+- **Registre d'errors**: si l'app falla, `js/00-errors.js` desa una nota breu a la col·lecció `errors` (què, on, versió, pantalla i agrupació; cap nom ni correu), com a molt cinc per sessió. Només les llegeixen la plataforma i el compte de servei.
+
+## Proves
+
+Viuen a `tests/` i GitHub les passa soles a cada canvi (`.github/workflows/proves.yml`):
+
+- **Regles de seguretat** (`tests/regles/test_regles.py`): 228 casos contra l'emulador de Firestore. En local: `npx firebase-tools emulators:exec --only firestore --project demo-cor "python3 tests/regles/test_regles.py firestore.rules"`.
+- **Interfície** (`tests/interficie/run.py`): l'app sencera en un Chromium sense pantalla, amb Firebase fals (`fake-firebase.js`) i dades inventades (`seed.py`). Recorre totes les pantalles amb sis perfils i tres mides, i comprova que no hi ha errors ni res que surti de la pantalla, el botó «enrere», els enllaços directes, les taules de l'ordinador, el registre d'errors i que s'obre sense xarxa. En local: `pip install playwright && python -m playwright install chromium && python3 tests/interficie/run.py`. Per mirar la còpia de proves a mà: `python3 tests/interficie/build.py` i obrir-la amb `?u=pol` (o `leader`, `singer`, `prof`, `dir`, `ger`).
+- **Estructura**: empremtes al dia i que els scripts de Python compilen.
+
+## Allotjament
+
+L'app es publica a **GitHub Pages** (`polquingles.github.io/a-tempo/`, la branca `main`) i, quan estigui configurat, a **Firebase Hosting** amb un domini propi. Firebase Hosting és el mateix projecte de Firebase, és gratuït amb el volum d'aquesta app, porta HTTPS i fa que l'entrada amb Google passi pel mateix domini de l'app (els navegadors que bloquegen dades entre webs diferents no la poden trencar).
+
+Per activar-lo (un sol cop):
+
+1. **Domini**: comprar-lo (p. ex. `a-tempo.cat`) en un registrador.
+2. **Firebase** › Hosting › *Get started*, i després *Add custom domain* amb el domini: Firebase dona els registres DNS que cal posar al registrador.
+3. **Clau de publicació**: a Google Cloud › IAM › *Service accounts*, un compte amb el rol *Firebase Hosting Admin* i una clau JSON; es desa al repositori com a secret `FIREBASE_SERVICE_ACCOUNT` (`gh secret set FIREBASE_SERVICE_ACCOUNT < clau.json`, i esborrar el fitxer).
+4. **Entrada amb Google al domini**: afegir el domini a Firebase › Authentication › *Authorized domains*, i `https://<domini>/__/auth/handler` als *Authorized redirect URIs* del client OAuth web (Google Cloud › Credentials). Després, posar el domini a `COR_OWN_DOMAINS` de `config.js`.
+5. **Vigilància**: posar les adreces a la variable del repositori `APP_URLS` (p. ex. `https://a-tempo.cat/,https://polquingles.github.io/a-tempo/`).
+
+Canviar d'adreça vol dir que cadascú ha de tornar a entrar i a activar els avisos al mòbil (van lligats al domini), i que les subscripcions al calendari fetes amb l'adreça antiga continuen funcionant mentre GitHub Pages segueixi publicant.

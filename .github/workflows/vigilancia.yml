@@ -1,0 +1,49 @@
+name: Vigilància
+# Cada hora: que l'app s'obre, que GitHub Pages continua activat i si algú ha tingut errors a l'app.
+# Si hi ha res, avisa al mòbil l'administració i la tasca acaba amb error (GitHub n'envia un correu).
+on:
+  schedule:
+    - cron: '23 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: read
+concurrency: vigilancia
+jobs:
+  vigila:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install --quiet pywebpush
+      - name: Obre el repositori privat de còpies
+        env:
+          SSH_KEY: ${{ secrets.BACKUP_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
+          git clone --depth 1 git@github.com:PolQuingles/a-tempo-copies.git copies
+      - name: Vigila
+        env:
+          APP_URLS: ${{ vars.APP_URLS }}
+          SERVICE_REFRESH_TOKEN: ${{ secrets.SERVICE_REFRESH_TOKEN }}
+          BACKUP_REFRESH_TOKEN: ${{ secrets.BACKUP_REFRESH_TOKEN }}
+          PUSH_PRIVATE_KEY: ${{ secrets.PUSH_PRIVATE_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 .github/scripts/vigilancia.py copies
+      - name: Desa què s'ha avisat
+        if: always()
+        working-directory: copies
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then echo "Sense canvis"; else
+            git commit -m "Vigilància $(date -u +%FT%H:%M)"
+            for i in 1 2 3; do git push origin HEAD:main && break || { git pull --rebase origin main; sleep 3; }; done
+          fi
