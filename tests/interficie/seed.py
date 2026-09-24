@@ -35,7 +35,7 @@ for e, p in staff.items():
     put(f"cors/{F}/staff/{e}", {"email": e, "role": p["roles"][0], "lastSeen": now, **p})
     put(f"staffIndex/{e}/agrupacions/{F}", {"at": now, "name": "Cor Jove de proves"})
 put("plataforma/pro", {"emails": ["pol@exemple.cat"]})
-put(f"cors/{F}/absences/a1", {"id": "a1", "memberId": mid["Laia Ferrer"], "sessionId": "s4", "kind": "absent", "status": "pending", "reason": "Viatge", "createdAt": now})
+put(f"cors/{F}/absences/a1", {"id": "a1", "memberId": mid["Laia Ferrer"], "memberName": "Laia Ferrer", "section": "S", "sessionIds": ["s4"], "kind": "absent", "status": "pending", "reason": "Viatge", "createdAt": now})
 put(f"cors/{F}/announcements/n1", {"id": "n1", "title": "Benvinguts al curs", "body": "Recordeu portar les partitures.", "author": "Pol Proves", "createdAt": now})
 for k, wd in [(1, 0), (3, 0), (8, 0)]:
     cid = f"c{k}"

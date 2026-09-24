@@ -7,7 +7,9 @@ function viewManage() {
   const pend = pendingAbsences().length;
   if (ui.manage === 'cantaires') ui.manage = 'personal';   // es deia així abans
   const tabs = [['avisos', `Avisos${pend ? ` (${pend})` : ''}`], ['personal', 'Personal'], ['produccions', 'Produccions'], ['config', 'Ajustos']];
-  const head = `<div class="page-head"><div class="ph-back"><button class="nav-arrow" data-act="tab" data-tab="avisos" aria-label="Torna a Inici">${ICON.left}</button><div><div class="eyebrow">Inici</div><h1 class="h1">Gestió</h1></div></div></div>
+  // S'obre des del menú del compte: la fletxa torna a la pantalla d'on s'ha vingut.
+  const from = tabsForRole().includes(ui.gestioFrom) ? ui.gestioFrom : 'avisos';
+  const head = `<div class="page-head"><div class="ph-back"><button class="nav-arrow" data-act="tab" data-tab="${from}" aria-label="Torna a ${esc(TAB_LABEL[from])}">${ICON.left}</button><div><div class="eyebrow">El teu compte</div><h1 class="h1">Gestió</h1></div></div></div>
     <div class="subtabs" role="tablist" style="grid-template-columns:repeat(4,1fr)">${tabs.map(([k, l]) => `<button class="subtab" role="tab" aria-selected="${ui.manage === k}" data-act="manage" data-k="${k}" style="font-size:12.5px">${l}</button>`).join('')}</div>`;
   if (ui.manage === 'produccions') return head + manageProductions();
   if (ui.manage === 'config') return head + manageConfig();
@@ -375,7 +377,6 @@ function manageConfig() {
   </div>
   </div>`;
 }
-/** «Les teves agrupacions» row: switch, or create a new one. */
 /** Les inicials de la persona («Quingles, Pol» → PQ). */
 function personInitials(name) {
   const n = String(name || '').includes(',') ? String(name).split(',').reverse().join(' ') : String(name || '');
@@ -390,30 +391,40 @@ function paintAccount() {
   b.hidden = !on; h.hidden = on;
   if (on) b.textContent = personInitials(accountName());
 }
+/** El menú del compte: una fila curta per opció. Cada fila obre la seva finestra (o la pantalla de Gestió). */
+const ACCT_ICONS = {
+  gestio: '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
+  calendar: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+  classIcs: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="M11 18v-5.5l4-1v4.5"/><circle cx="10" cy="18" r="1.2"/><circle cx="14" cy="16" r="1.2"/>',
+  push: '<path d="M6 16.5V11a6 6 0 0112 0v5.5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 004 0"/>',
+  groups: '<circle cx="9" cy="8.5" r="3"/><path d="M3.5 19a5.5 5.5 0 0111 0"/><path d="M15 5.8a3 3 0 010 5.4M17 14a5.5 5.5 0 013.5 5"/>',
+  theme: '<path d="M19.5 14.2A7.5 7.5 0 019.8 4.5a7.5 7.5 0 109.7 9.7z"/>',
+  help: '<circle cx="12" cy="12" r="8.5"/><path d="M9.7 9.4a2.4 2.4 0 014.6.9c0 1.6-2.3 2.1-2.3 3.7"/><path d="M12 17v.2"/>',
+};
+/** Les finestres del menú. S'obren amb una fletxa per tornar-hi (vegeu openSheet). */
+const ACCT_SHEETS = {
+  calendar: () => sheetCalendar(), classIcs: () => sheetClassIcs(), push: () => sheetPush(),
+  groups: () => sheetGroups(), theme: () => sheetTheme(), help: () => sheetHelp(),
+};
 function sheetAccount() {
   const name = accountName();
   const clOn = classesOn() && myId() && inClasses();
+  const pend = canEdit() ? pendingAbsences().length : 0;
+  const item = (k, t, act, n = 0) => `<button class="acct-item${k === 'gestio' ? ' is-main' : ''}" ${act}>
+      <span class="acct-i"><svg viewBox="0 0 24 24" aria-hidden="true">${ACCT_ICONS[k]}</svg></span>
+      <span class="acct-t">${t}</span>${n ? `<span class="acct-n" aria-label="${n} per veure">${n > 99 ? '99+' : n}</span>` : ''}${ICON.right}</button>`;
+  const open = (k, t) => item(k, t, `data-act="acct-open" data-k="${k}"`);
+  const groups = [
+    canEdit() ? [item('gestio', 'Gestió', `data-act="manage" data-k="${pend ? 'avisos' : ROUTE_MANAGE[ui.manage] ? ui.manage : 'personal'}"`, pend)] : [],
+    [icsOn() && open('calendar', 'Calendari al mòbil'), clOn && open('classIcs', 'Les teves classes al calendari'), pushSupported() && open('push', 'Avisos al mòbil')],
+    [groupsVisible() && open('groups', 'Agrupacions'), open('theme', 'Aparença'), open('help', 'Com funciona')],
+  ].map(g => g.filter(Boolean)).filter(g => g.length);
   openSheet({
     title: 'El teu compte',
     body: `<div class="acct-head"><span class="acct-btn" aria-hidden="true">${esc(personInitials(name))}</span>
         <span><b>${esc(name.includes(',') ? name.split(',').reverse().join(' ').trim() : name)}</b><small>${esc(S.email || '')}${S.me ? ` · ${esc(rolesText(S.me))}` : ''}</small></span></div>
-      <div class="panel">
-        ${icsOn() ? `<div class="setting"><div><div class="t">Calendari al mòbil</div><div class="s">Tots els assajos i ${V.sh.els} a la teva app de calendari, sempre al dia.</div></div>
-          <button class="btn btn-sm" data-act="cal-subscribe">Afegeix-lo</button></div>` : ''}
-        ${clOn ? `<div class="setting"><div><div class="t">Les teves classes al calendari</div><div class="s">Només les teves hores de classe.</div></div><button class="btn btn-sm" data-act="cl-ics">Com fer-ho</button></div>` : ''}
-        ${pushRow()}
-        ${groupsRow()}
-        <div id="acct-theme" style="border-top:1px solid var(--line)">${themeRow()}</div>
-        <div class="setting"><div><div class="t">Com funciona</div><div class="s">El manual de l’app, pas a pas.</div></div><button class="btn btn-sm" data-act="help">Obre’l</button></div>
-      </div>`,
+      <nav class="acct-menu" aria-label="El teu compte">${groups.map(g => `<div class="acct-grp">${g.join('')}</div>`).join('')}</nav>`,
     foot: `<span class="spacer"></span><button class="btn btn-danger-ghost" data-act="sign-out">Tanca la sessió</button>`,
-    onMount: el => el.querySelectorAll('#acct-theme [data-act="theme"]').forEach(b => b.addEventListener('click', () => setTimeout(() => { const box = el.querySelector('#acct-theme'); if (box) box.innerHTML = themeRow(); }, 0))),
   });
 }
-function groupsRow() {
-  if (!S.me || PREVIEW) return '';
-  const n = S.groups.length;
-  if (n < 2 && !S.pro && !S.platform && !S.platformFree) return '';
-  return `<div class="setting"><div><div class="t">${n > 1 ? `Formes part de ${n} agrupacions` : 'Agrupacions'}${S.pro ? ' <span class="role-tag">Pro</span>' : ''}</div><div class="s">${n > 1 ? (S.pro ? 'Canvia d’agrupació o crea’n una de nova.' : 'Canvia d’agrupació.') : 'Com a Usuari Pro, pots crear una altra agrupació i fer-la servir amb el mateix compte.'}</div></div>
-    <button class="btn btn-sm" data-act="groups">${n > 1 ? 'Canvia' : 'Les teves agrupacions'}</button></div>`;
-}
+const groupsVisible = () => !!S.me && !PREVIEW && (S.groups.length > 1 || S.pro || S.platform || S.platformFree);

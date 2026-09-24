@@ -30,14 +30,14 @@ const TAB_LABEL = { llista: 'Assistència', calendari: 'Calendari', stats: 'Esta
 // Amb sis pestanyes (qui edita i també és a la plantilla) els noms llargs no hi caben.
 const TAB_SHORT = { stats: 'Estad.', classes: 'Classes', calendari: 'Calend.', llista: 'Assistència' };
 // Una pestanya per feina: Inici (el que tens per fer i el que ve), Assistència (passar llista i
-// estadístiques), Calendari, Tauler (comunicació) i, si n'hi ha, Classes. La gestió s'obre des d'Inici.
+// estadístiques), Calendari, Tauler (comunicació) i, si n'hi ha, Classes. La gestió s'obre des del menú del compte.
 const tabsForRole = () => {
   const cl = seeClasses() ? ['classes'] : [];
   if (isLinkOnly()) return ['avisos', 'tauler', ...(mySubs().length ? ['llista'] : []), 'calendari'];
   return ['avisos', 'llista', 'calendari', 'tauler', ...cl];
 };
-/** La pestanya de baix que s'il·lumina: Gestió s'obre des d'Inici. */
-const navTab = () => ui.tab === 'gestio' ? 'avisos' : ui.tab;
+/** La pestanya de baix que s'il·lumina. Gestió no és cap pestanya: s'obre des del menú del compte. */
+const navTab = () => ui.tab === 'gestio' ? '' : ui.tab;
 function renderTabs() {
   const tabs = tabsForRole();
   if (ui.tab === 'stats' || (ui.tab === 'tauler' && ui.board === 'estadistiques')) { ui.tab = 'llista'; ui.att = 'stats'; ui.board = 'anuncis'; }   // on eren abans
@@ -106,10 +106,14 @@ function setTheme(t) {
   updateThemeColor();
 }
 darkQuery.addEventListener?.('change', updateThemeColor);
+const themePicker = () => `<div class="seg3" role="radiogroup" aria-label="Aparença">${[['', 'Automàtica'], ['light', 'Clara'], ['dark', 'Fosca']].map(([k, l]) => `<button type="button" role="radio" aria-checked="${currentTheme() === k}" data-act="theme" data-k="${k}">${l}</button>`).join('')}</div>`;
 function themeRow() {
-  const t = currentTheme();
   return `<div class="setting"><div><div class="t">Aparença</div><div class="s">L’automàtica segueix el mode clar o fosc del mòbil.</div></div>
-    <div class="seg3" role="radiogroup" aria-label="Aparença">${[['', 'Automàtica'], ['light', 'Clara'], ['dark', 'Fosca']].map(([k, l]) => `<button type="button" role="radio" aria-checked="${t === k}" data-act="theme" data-k="${k}">${l}</button>`).join('')}</div></div>`;
+    ${themePicker()}</div>`;
+}
+/** Aparença, des del menú del compte. */
+function sheetTheme() {
+  openSheet({ title: 'Aparença', body: `<p style="margin-top:0">Tria com vols veure l’app en aquest aparell. L’automàtica segueix el mode clar o fosc del mòbil.</p>${themePicker()}` });
 }
 
 /* ---------- Identitat abans d'entrar ---------- */

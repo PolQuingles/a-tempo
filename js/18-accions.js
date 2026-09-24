@@ -12,7 +12,7 @@ const CLASS_ONLY = new Set(['cl-new', 'cl-edit', 'cl-review', 'cl-paste', 'cl-pl
 const EDIT_ONLY = new Set(['mark', 'min', 'mark-rest', 'session-new', 'sub-set', 'ann-new', 'ann-edit', 'mat-new', 'mat-edit', 'poll-new', 'poll-edit', 'poll-results', 'poll-remind', 'rsvp-remind', 'doc-new', 'doc-edit', 'share-app', 'staff-bulk', 'preview-on', 'who-in', 'mail-check', 'concert-list', 'concert-toggle', 'session-edit', 'member-edit', 'member-bulk', 'prod-new', 'prod-edit',
   'wipe-demo', 'wipe-all', 'load-demo', 'export-json', 'abs-accept', 'abs-reject', 'abs-delete', 'manage']);
 const actions = {
-  'tab': el => { ui.tab = el.dataset.tab; ui.rollSec = null; ui._calScrolled = false; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
+  'tab': el => { if (el.dataset.tab === 'gestio' && ui.tab !== 'gestio') ui.gestioFrom = ui.tab; ui.tab = el.dataset.tab; ui.rollSec = null; ui._calScrolled = false; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
   'reload': () => location.reload(),
   'google-in': () => signInGoogle(),
   'cl-new': el => sheetClassDay(null, { teacher: el.dataset.k || '', date: el.dataset.date || '' }),
@@ -59,6 +59,7 @@ const actions = {
   'doc-edit': el => sheetDocument(el.dataset.id),
   'theme': el => setTheme(el.dataset.k),
   'account': () => sheetAccount(),
+  'acct-open': el => { const f = ACCT_SHEETS[el.dataset.k]; if (f) { SHEET_BACK.at = Date.now(); f(); } },
   'concert-list': el => { closeSheet(); sheetConcertList(el.dataset.pid); },
   'concert-toggle': el => sheetConcertDecide(el.dataset.pid, el.dataset.mid),
   'risk-copy': () => copyText(window.__riskText ? window.__riskText() : '', 'Resum copiat'),
@@ -214,7 +215,12 @@ const actions = {
   'member-stats': el => sheetMemberStats(el.dataset.mid),
   'export-csv': () => exportCSV(),
   'export-json': () => exportJSON(),
-  'manage': el => { ui.manage = el.dataset.k; ui.tab = 'gestio'; closeSheet(); saveUI(); render(); },
+  'manage': el => {
+    const enter = ui.tab !== 'gestio';
+    if (enter) ui.gestioFrom = ui.tab;
+    ui.manage = el.dataset.k; ui.tab = 'gestio'; closeSheet(); saveUI(); render();
+    if (enter) window.scrollTo({ top: 0 });
+  },
   'cfg-block': el => {
     ui.cfgOpen = ui.cfgOpen || {};
     const open = !cfgOpen(el.dataset.k);

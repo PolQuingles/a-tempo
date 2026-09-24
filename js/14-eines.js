@@ -14,11 +14,11 @@ function maybeWelcome() {
   const first = me ? me.name.split(',').pop().trim() : '';
   const body = canEdit()
     ? `<p style="margin-top:0">Hola${first ? `, ${esc(first)}` : ''}. Des d’aquí passaràs llista i gestionaràs ${esc(S.config.name || V.el)}.</p>
-       <ul class="welcome"><li><b>Inici</b> · el que tens per fer (avisos per acceptar, llistes per acabar…), la sessió d’avui i la <b>Gestió</b>: personal, produccions i ajustos.</li>
+       <ul class="welcome"><li><b>Inici</b> · el que tens per fer (avisos per acceptar, llistes per acabar…) i la sessió d’avui.</li>
        <li><b>Assistència</b> · toca el quadre de la teva ${V.section} i marca cadascú; també hi ha les estadístiques i la norma.</li>
        <li><b>Calendari</b> · totes les sessions, per produccions.</li>
        <li><b>Tauler</b> · anuncis, partitures, documents i enquestes.</li>
-       <li><b>El teu compte</b> · les teves inicials, a dalt a la dreta: tema, avisos al mòbil, calendari i agrupacions.</li></ul>`
+       <li><b>El teu compte</b> · les teves inicials, a dalt a la dreta: la <b>Gestió</b> (personal, produccions i ajustos), avisos al mòbil, calendari, aparença i agrupacions.</li></ul>`
     : `<p style="margin-top:0">Hola${first ? `, ${esc(first)}` : ''}. Benvingut/da a l’app ${esc(ofName())}.</p>
        <ul class="welcome"><li><b>Inici</b> · el que tens per fer (convocatòries, enquestes), la sessió d’avui, la teva assistència i els teus avisos d’absència.</li>
        <li><b>Assistència</b> i <b>Calendari</b> · ho pots consultar tot, però no canviar-hi res.</li>
@@ -297,7 +297,7 @@ function sheetHelp() {
   const body = staff ? `<div class="manual">
     <h3>Entrar</h3>
     <p>Tothom entra pel mateix enllaç amb <b>el seu correu</b>: amb Google o, si el correu no és de Google, creant una contrasenya («Entra amb un altre correu»). L’administració dona d’alta cada persona a <b>Gestió › Personal</b>, li envia la <b>invitació</b> per correu o WhatsApp i li dona un o més rols: administració, director, ${w.leader}, gerència, secretaria, ${esc(V.Teacher.toLowerCase())} o ${w.member}.</p>
-    <p>L’administració ho pot fer tot. Direcció, ${w.leaders}, gerència i secretaria passen llista, publiquen anuncis i convocatòries i pugen materials i documents. ${w.Members} ho veuen tot en <b>mode lectura</b>. A <b>Inici</b> hi ha tot el que tens <b>per fer</b> i la sessió d’avui; qui edita hi té també la <b>Gestió</b> (avisos d’absència, personal, produccions i ajustos): els camins «Gestió › …» d’aquesta ajuda comencen allà. El teu compte (tema, avisos al mòbil, calendari, agrupacions i sortir) és a les teves inicials, a dalt a la dreta.</p>
+    <p>L’administració ho pot fer tot. Direcció, ${w.leaders}, gerència i secretaria passen llista, publiquen anuncis i convocatòries i pugen materials i documents. ${w.Members} ho veuen tot en <b>mode lectura</b>. A <b>Inici</b> hi ha tot el que tens <b>per fer</b> i la sessió d’avui. El teu compte és a les teves inicials, a dalt a la dreta: un menú amb la <b>Gestió</b> per a qui edita (avisos d’absència, personal, produccions i ajustos; els camins «Gestió › …» d’aquesta ajuda comencen allà), els avisos al mòbil, el calendari, l’aparença, les agrupacions i el botó per sortir.</p>
     <h3>Passar llista</h3>
     <ul><li>A <b>Assistència</b> (o amb el botó <b>Passa llista</b> d’Inici) surt la sessió d’avui. Toca el quadre de la teva ${w.section}.</li>
     <li>Toca l’estat de cadascú: <b>Present</b>, <b>Retard</b>, <b>No justificada</b>, <b>Justificada</b> o <b>No fa</b>. Toca’l un altre cop per desmarcar.</li>
