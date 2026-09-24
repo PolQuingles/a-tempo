@@ -53,6 +53,11 @@ def open_app(browser, base, user, opts, route=""):
             if m.type == "error" and "Failed to load resource" not in m.text else None)
     page.goto(f"{base}/index.html?u={user}&reset=1{route}")
     page.wait_for_function(READY, timeout=20000)
+    # La primera vegada s'obre sola la benvinguda: es tanca amb el seu botó, com faria la persona.
+    page.wait_for_timeout(900)
+    if page.locator(".sheet").count():
+        page.click('.sheet [data-act="sheet-close"]')
+        page.wait_for_timeout(400)
     return ctx, page, errors
 
 
@@ -84,6 +89,18 @@ def main():
         check(box and box["x"] == 0 and 200 <= box["width"] <= 280 and box["height"] > 600, "el menú de pestanyes és una columna a l'esquerra")
         check(page.locator(".only-wide .dtable").first.is_visible(), "Personal es mostra com a taula")
         check(page.locator(".only-narrow").first.is_hidden(), "la llista del mòbil queda amagada")
+        ctx.close()
+
+        print("Benvinguda")
+        ctx = browser.new_context(**MOBILE)
+        page = ctx.new_page()
+        page.goto(f"{base}/index.html?u=pol&reset=1#/inici")
+        page.wait_for_function(READY, timeout=20000)
+        before = page.evaluate("history.length")
+        page.wait_for_selector(".sheet", timeout=5000)
+        check(page.evaluate("history.length") == before, "la benvinguda s'obre sola i no afegeix passos a l'historial")
+        page.click('.sheet [data-act="sheet-close"]'); page.wait_for_timeout(400)
+        check(page.evaluate("history.length") == before and screen(page) == "#/inici avisos", "tancar la benvinguda deixa l'app com estava", screen(page))
         ctx.close()
 
         print("Botó «enrere»")

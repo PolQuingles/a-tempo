@@ -78,10 +78,12 @@ function syncRoute() {
   const r = routeFromUi();
   if (r !== hashRoute()) history.pushState({ r }, '', routeUrl(r));
 }
-/** S'ha obert una finestra: una entrada a l'historial perquè «enrere» la tanqui. */
+/** S'ha obert una finestra: una entrada a l'historial perquè «enrere» la tanqui. Només si l'ha obert la persona:
+ *  una finestra que s'obre sola (la benvinguda) no afegeix passos, com demanen els navegadors. */
 function routeSheetOpened() {
   if (S.mode !== 'shared' || !HIST.started) return;
   if (HIST.closePending) { HIST.closePending = false; return; }   // una finestra en substitueix una altra
+  if (navigator.userActivation && !navigator.userActivation.isActive) return;
   if (!HIST.sheet) { history.pushState({ r: routeFromUi(), sheet: 1 }, '', routeUrl(routeFromUi())); HIST.sheet = true; }
 }
 /** S'ha tancat una finestra des de l'app: es treu la seva entrada (o es fa servir per a la pantalla nova). */
@@ -100,6 +102,8 @@ HIST.pending = hashRoute() || null;   // la pantalla que demana l'enllaç amb qu
 window.addEventListener('popstate', () => {
   if (HIST.ignorePop) { HIST.ignorePop--; return; }
   if (S.mode !== 'shared' || !S.ready) return;
-  if (sheetClose) { HIST.sheet = false; HIST.closePending = false; closeSheet(); return; }   // «enrere» tanca la finestra
+  // «enrere» tanca la finestra; si la finestra no tenia pas propi (s'havia obert sola), també es torna enrere.
+  const own = HIST.sheet;
+  if (sheetClose) { HIST.sheet = false; HIST.closePending = false; closeSheet(); if (own) return; }
   if (applyRoute(hashRoute())) { saveUI(); render(); window.scrollTo({ top: 0 }); }
 });
