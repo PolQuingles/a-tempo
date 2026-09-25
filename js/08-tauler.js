@@ -103,15 +103,21 @@ const FILE_MAX = 20 * 1024 * 1024;
 // Igual els documents signats de cada persona (where: 'memberFiles'): només l'equip de secretaria i la persona.
 const chunkPath = (fid, i, where) => ['classFiles', 'memberFiles'].includes(where) ? `${where}/${fid}_${i}` : `config/fitxer_${fid}_${i}`;
 const fmtSize = n => !n ? '0 MB' : n < 1024 ? `${n} B` : n < 1048576 ? `${Math.max(1, Math.round(n / 1024))} KB` : `${(n / 1048576).toFixed(1).replace('.', ',')} MB`;
+// Els àudios que passen pel WhatsApp o per l'app de notes de veu sovint arriben com a «.m4a.mp4» (només so dins d'un .mp4):
+// el nom diu que són àudio encara que el tipus digui vídeo.
+const AUDIO_EXT = ['mp3', 'm4a', 'wav', 'aac', 'ogg', 'oga', 'opus', 'flac'];
 function fileKind(f) {
-  const t = f.type || '', ext = (f.name.split('.').pop() || '').toLowerCase();
+  const name = String(f.name || '').toLowerCase(), t = f.type || '', ext = name.split('.').pop() || '';
   if (t === 'application/pdf' || ext === 'pdf') return 'PDF';
-  if (t.startsWith('audio/') || ['mp3', 'm4a', 'wav', 'aac', 'ogg', 'flac'].includes(ext)) return 'Àudio';
+  if (t.startsWith('audio/') || AUDIO_EXT.includes(ext) || /\.(m4a|mp3|aac|opus|ogg|wav)\.(mp4|m4v|mov)$/.test(name)) return 'Àudio';
   if (t.startsWith('image/')) return 'Imatge';
   if (t.startsWith('video/')) return 'Vídeo';
   return ext ? ext.toUpperCase() : 'Fitxer';
 }
-const titleFromFile = name => name.replace(/\.[^.]+$/, '').replace(/[_]+/g, ' ').trim();
+/** El títol d'un fitxer: el nom sense les extensions («Nº2 Banish sorrow .m4a.mp4» → «Nº2 Banish sorrow»). */
+const titleFromFile = name => String(name || '').replace(/(\.[a-z0-9]{2,4})+$/i, '').replace(/[_]+/g, ' ').replace(/\s+/g, ' ').trim();
+/** El tipus de material que toca a un fitxer. */
+const matKindOf = f => ({ PDF: 'partitura', Àudio: 'audio', Vídeo: 'video' }[fileKind(f)] || 'altres');
 async function uploadFile(file, onProgress, opts = {}) {
   const id = uid('f');
   const bytes = new Uint8Array(await file.arrayBuffer());
@@ -154,7 +160,8 @@ function sheetOpenFile(f, title) {
         const url = await loadFile(f);
         if (!box.isConnected) return;
         const media = kind === 'Àudio' ? studyPlayer(url)
-          : kind === 'Imatge' ? `<img src="${url}" alt="" style="display:block;width:100%;border-radius:12px">` : '';
+          : kind === 'Imatge' ? `<img src="${url}" alt="" style="display:block;width:100%;border-radius:12px">`
+          : kind === 'Vídeo' ? `<video src="${url}" controls playsinline preload="metadata" style="display:block;width:100%;border-radius:12px;background:#000"></video>` : '';
         const kept = offlineSaved().has(f.id);
         box.innerHTML = `${media}
           <p class="muted" style="margin:${media ? '12px' : '0'} 0 14px;font-size:calc(13px*var(--ts));overflow-wrap:anywhere">${esc(f.name)} · ${esc(kind)} · ${fmtSize(f.size)}${kept ? ' · desat al mòbil' : ''}</p>
@@ -174,7 +181,7 @@ function sheetOpenFile(f, title) {
   });
 }
 /** Source chooser for materials and documents: a file from the computer or a link. */
-function sourceFields(prefix, item) {
+function sourceFields(prefix, item, multiple) {
   const mode = item.url && !item.file ? 'link' : 'file';
   const f = item.file;
   return `<div class="field"><span>Què hi vols posar?</span><div class="pickers" id="${prefix}-src">
@@ -182,9 +189,9 @@ function sourceFields(prefix, item) {
       <button type="button" class="pick" data-src="link" aria-pressed="${mode === 'link'}">Un enllaç</button></div></div>
     <div class="field" id="${prefix}-file-f" ${mode === 'file' ? '' : 'hidden'}><span>Fitxer</span>
       <label class="dropzone" for="${prefix}-file" id="${prefix}-drop">
-        <input id="${prefix}-file" type="file" class="sr">
-        <span class="dz-t">${f ? esc(f.name) : 'Tria un fitxer o arrossega’l aquí'}</span>
-        <span class="dz-s">${f ? `${esc(fileKind(f))} · ${fmtSize(f.size)} · toca per canviar-lo` : 'PDF, àudio, imatges… fins a 20 MB'}</span>
+        <input id="${prefix}-file" type="file" class="sr" ${multiple ? 'multiple' : ''}>
+        <span class="dz-t">${f ? esc(f.name) : multiple ? 'Tria un o més fitxers, o arrossega’ls aquí' : 'Tria un fitxer o arrossega’l aquí'}</span>
+        <span class="dz-s">${f ? `${esc(fileKind(f))} · ${fmtSize(f.size)} · toca per canviar-lo` : `PDF, àudio, imatges… fins a 20 MB${multiple ? ' cadascun' : ''}`}</span>
       </label></div>
     <label class="field" id="${prefix}-url-f" ${mode === 'link' ? '' : 'hidden'}><span>Enllaç</span><input class="inp" id="${prefix}-url" type="url" value="${esc(item.url || '')}" placeholder="https://drive.google.com/…"><small>Si és de Google Drive, comparteix-lo com a «Qualsevol persona amb l’enllaç».</small></label>`;
 }
@@ -196,23 +203,28 @@ function bindSource(el, prefix, onPick) {
     el.querySelector(`#${prefix}-file-f`).hidden = b.dataset.src !== 'file';
     el.querySelector(`#${prefix}-url-f`).hidden = b.dataset.src !== 'link';
   });
-  const choose = file => {
-    if (!file) return;
-    if (file.size > FILE_MAX) { toast(`${file.name} passa de 20 MB. Redueix-lo o penja’n un enllaç.`); return; }
-    if (groupFileBytes() + file.size > fileQuotaMB() * 1048576) { toast(`No hi cap: l’agrupació ja fa servir ${fmtSize(groupFileBytes())} dels ${fileQuotaMB()} MB. Esborra’n algun de vell o penja’n un enllaç.`); return; }
-    picked = file;
-    drop.querySelector('.dz-t').textContent = file.name;
-    drop.querySelector('.dz-s').textContent = `${fileKind(file)} · ${fmtSize(file.size)} · a punt per pujar`;
+  let many = [];
+  const choose = list => {
+    const files = [...(list || [])].filter(Boolean);
+    if (!files.length) return;
+    const big = files.find(f => f.size > FILE_MAX);
+    if (big) { toast(`${big.name} passa de 20 MB. Redueix-lo o penja’n un enllaç.`); return; }
+    const total = files.reduce((n, f) => n + f.size, 0);
+    if (groupFileBytes() + total > fileQuotaMB() * 1048576) { toast(`No hi cap: l’agrupació ja fa servir ${fmtSize(groupFileBytes())} dels ${fileQuotaMB()} MB. Esborra’n algun de vell o penja’n un enllaç.`); return; }
+    picked = files[0]; many = files;
+    drop.querySelector('.dz-t').textContent = files.length > 1 ? `${files.length} fitxers` : files[0].name;
+    drop.querySelector('.dz-s').textContent = files.length > 1 ? `${fmtSize(total)} · se’n farà un material per fitxer` : `${fileKind(files[0])} · ${fmtSize(files[0].size)} · a punt per pujar`;
     drop.classList.add('ready');
-    onPick?.(file);
+    onPick?.(files[0], files);
   };
-  input.onchange = () => choose(input.files && input.files[0]);
+  input.onchange = () => choose(input.files);
   drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
   drop.addEventListener('dragleave', () => drop.classList.remove('over'));
-  drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); choose(e.dataTransfer?.files?.[0]); });
+  drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); const fl = e.dataTransfer?.files; choose(input.multiple ? fl : fl && [fl[0]]); });
   return {
     mode: () => el.querySelector(`#${prefix}-src .pick[aria-pressed="true"]`).dataset.src,
     picked: () => picked,
+    pickedAll: () => many,
     url: () => el.querySelector(`#${prefix}-url`).value.trim(),
   };
 }

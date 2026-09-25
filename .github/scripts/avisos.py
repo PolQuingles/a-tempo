@@ -186,6 +186,11 @@ class Group:
                 return "gone"
             return "retry"
 
+    def send_once(self, key, d, body, tag):
+        """Com deliver, però diu si ha quedat enviat (per donar per enviats també els avisos que agrupa)."""
+        self.deliver(key, d, body, tag)
+        return key in self.sent
+
     def deliver(self, key, d, body, tag, extra=None):
         """Envia si encara no s'havia enviat. Si l'error és passatger, es tornarà a provar."""
         if key in self.sent:
@@ -483,20 +488,36 @@ class Group:
         new = [(key, p, x) for key, p, x in items
                if seen[key] >= recent and any(f"{key}:{did}" not in self.sent for did, _ in self.targets("materials"))]
         if new and not QUIET:
-            for key, p, x in new:
-                for did, d in self.targets("materials"):
+            # Si se'n pugen uns quants de cop (els àudios de cada número, per exemple), cada aparell en rep un sol avís.
+            for did, d in self.targets("materials"):
+                mid = d.get("memberId")
+                m = self.members().get(mid) if mid else None
+                mine = []
+                for key, p, x in new:
                     if f"{key}:{did}" in self.sent or (x.get("by") and d.get("email") == x["by"]):
                         continue
-                    mid = d.get("memberId")
-                    m = self.members().get(mid) if mid else None
                     if x.get("section") and (not m or m.get("section") != x["section"]):
                         continue
                     if m and not part_matches(x.get("part"), m):
                         continue
                     if p and m and mid in (p.get("excluded") or []):
                         continue
+                    mine.append((key, p, x))
+                if not mine:
+                    continue
+                if len(mine) == 1:
+                    key, p, x = mine[0]
                     body = f"Material nou de {p.get('name', '')}: {x.get('title', '')}" if p else f"Document nou: {x.get('title', '')}"
                     self.deliver(f"{key}:{did}", d, body, f"mat-{x.get('id')}")
+                    continue
+                prods = {(p or {}).get("name", "") for _, p, _ in mine}
+                where = f" de {next(iter(prods))}" if len(prods) == 1 and next(iter(prods)) else ""
+                titles = ", ".join(x.get("title", "") for _, _, x in mine[:3]) + ("…" if len(mine) > 3 else "")
+                body = f"{len(mine)} materials nous{where}: {titles}"
+                group = "+".join(sorted(k for k, _, _ in mine))
+                if self.send_once(f"matgroup:{hashlib.sha1(group.encode()).hexdigest()[:10]}:{did}", d, body, "mat-group"):
+                    for key, _, _ in mine:
+                        self.sent[f"{key}:{did}"] = NOW.isoformat(timespec="seconds")
         self.state["materials"] = {k: v for k, v in seen.items() if k in {i[0] for i in items}}
 
     # ---------- 6. Resposta a un avís d'absència ----------

@@ -508,8 +508,8 @@ function sheetMaterial(pid, id) {
     title: ex ? 'Edita el material' : 'Nou material',
     body: `<div class="kv">
       <label class="field"><span>Producció</span><select class="inp" id="mt-prod" ${ex ? 'disabled' : ''}>${prods.map(p => `<option value="${p.id}" ${p.id === prodId ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select></label>
-      ${sourceFields('mt', m)}
-      <label class="field"><span>Títol</span><input class="inp" id="mt-title" maxlength="90" value="${esc(m.title)}" placeholder="p. ex. O Fortuna – partitura"></label>
+      ${sourceFields('mt', m, !ex)}
+      <label class="field" id="mt-title-f"><span>Títol</span><input class="inp" id="mt-title" maxlength="90" value="${esc(m.title)}" placeholder="p. ex. O Fortuna – partitura"></label>
       <div class="field"><span>Tipus</span><div class="pickers" id="mt-kind">${Object.entries(MAT_KINDS).map(([k, l]) => `<button type="button" class="pick" data-k="${k}" aria-pressed="${m.kind === k}">${l}</button>`).join('')}</div></div>
       <div class="field"><span>Per a</span><div class="pickers" id="mt-sec"><button type="button" class="pick" data-sec="" aria-pressed="${!m.section}">${capz(V.tot)}</button>${SECTIONS.map(x => `<button type="button" class="pick" data-sec="${esc(x.id)}" aria-pressed="${m.section === x.id}" title="${esc(x.name)}"><span class="vl">${esc(x.short)}</span></button>`).join('')}</div></div>
       <div class="field"><span>${V.Part} (opcional)</span><div class="pickers" id="mt-part"><button type="button" class="pick" data-part="" aria-pressed="${!m.part}">Totes</button>${['1', '2'].map(v => `<button type="button" class="pick" data-part="${v}" aria-pressed="${m.part === v}">${v}</button>`).join('')}</div></div>
@@ -519,14 +519,35 @@ function sheetMaterial(pid, id) {
       const single = sel => el.querySelectorAll(`${sel} .pick`).forEach(b => b.onclick = () => el.querySelectorAll(`${sel} .pick`).forEach(x => x.setAttribute('aria-pressed', x === b)));
       single('#mt-kind'); single('#mt-sec'); single('#mt-part');
       const title = el.querySelector('#mt-title');
-      const src = bindSource(el, 'mt', f => {
+      const src = bindSource(el, 'mt', (f, all) => {
+        // Diversos fitxers de cop (p. ex. els àudios de cada número): un material per fitxer, amb el títol i el tipus de cadascun.
+        el.querySelector('#mt-title-f').hidden = all && all.length > 1;
+        if (all && all.length > 1) return;
         if (!title.value.trim()) title.value = titleFromFile(f.name);
-        const k = fileKind(f);
-        const guess = k === 'PDF' ? 'partitura' : k === 'Àudio' ? 'audio' : k === 'Vídeo' ? 'video' : null;
-        if (guess) el.querySelectorAll('#mt-kind .pick').forEach(x => x.setAttribute('aria-pressed', x.dataset.k === guess));
+        const guess = matKindOf(f);
+        if (guess !== 'altres') el.querySelectorAll('#mt-kind .pick').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.k === guess)));
       });
       const saveTo = (p, list) => { const next = { ...p, materials: list }; saveProduction(next); };
       el.querySelector('#mt-save').onclick = async e => {
+        const all = src.mode() === 'file' ? src.pickedAll() : [];
+        if (all.length > 1) {
+          const btn = e.currentTarget, p0 = S.productions.get(el.querySelector('#mt-prod').value);
+          if (!navigator.onLine) { toast('Cal connexió per pujar els fitxers'); return; }
+          btn.disabled = true;
+          const add = [];
+          try {
+            for (const [i, f] of all.entries()) {
+              btn.textContent = `Pujant ${i + 1} de ${all.length}…`;
+              add.push({ id: uid('mt'), title: titleFromFile(f.name), url: '', kind: matKindOf(f), file: await uploadFile(f),
+                section: el.querySelector('#mt-sec .pick[aria-pressed="true"]').dataset.sec, part: el.querySelector('#mt-part .pick[aria-pressed="true"]').dataset.part,
+                at: new Date().toISOString(), by: S.me?.email || '' });
+            }
+          } catch { btn.disabled = false; btn.textContent = 'Desa'; toast('No s’ha pogut pujar un fitxer. Torna-ho a provar.'); return; }
+          const p = S.productions.get(p0.id);
+          saveTo(p, [...(p.materials || []), ...add]);
+          ui.matProd = p.id; closeSheet(); toast(`${add.length} materials pujats`); render();
+          return;
+        }
         if (!title.value.trim() && !src.picked()) { toast('Posa un títol'); return; }
         const got = await resolveSource(src, m, e.currentTarget);
         if (!got) return;

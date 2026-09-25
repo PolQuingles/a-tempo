@@ -196,6 +196,19 @@ prova('planForMe: cadascú veu el seu parcial, la pausa i el tutti', () => {
   igual(planForMe(items, '').length, items.length, 'l’equip ho veu tot');
 });
 
+prova('fitxers: els àudios del WhatsApp («.m4a.mp4») són àudio, amb un títol net', () => {
+  const f = (name, type) => ({ name, type });
+  igual(fileKind(f('CHORUS ACT 1 Nº2 Banish sorrow .m4a.mp4', 'video/mp4')), 'Àudio');
+  igual(fileKind(f('assaig.mp4', 'video/mp4')), 'Vídeo');
+  igual(fileKind(f('Calendari CJ 26-27 cantaires.pdf', 'application/pdf')), 'PDF');
+  igual(fileKind(f('nota.opus', '')), 'Àudio');
+  igual(titleFromFile('CHORUS ACT 1 Nº2 Banish sorrow .m4a.mp4'), 'CHORUS ACT 1 Nº2 Banish sorrow');
+  igual(titleFromFile('Pla de treball L\'Auditori - 2a Mahler OBC i OC.pdf'), 'Pla de treball L\'Auditori - 2a Mahler OBC i OC');
+  igual(titleFromFile('Partitura_v2.0.pdf'), 'Partitura v2.0');
+  igual(matKindOf(f('x.m4a.mp4', 'video/mp4')), 'audio');
+  igual(matKindOf(f('x.docx', '')), 'altres');
+});
+
 /** Executa totes les proves: { ok, fail, lines }. */
 function runProves() {
   const lines = [];
