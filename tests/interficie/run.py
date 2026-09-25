@@ -438,6 +438,91 @@ def main():
         check(not errors, "sense errors al menú de Personal", "; ".join(errors[:3]))
         ctx.close()
 
+        print("Afegir persones: cada persona un sol cop")
+        ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/gestio/personal")
+        page.wait_for_function("S.staffReady", timeout=5000)
+        r = page.evaluate("""async () => {
+          const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          const type = (q, v) => { const e = document.querySelector(q); e.value = v; e.dispatchEvent(new Event('input', { bubbles: true })); };
+          const fake = () => JSON.parse(localStorage.getItem('fake:db')), st = e => fake()[`cors/${GID}/staff/${e}`];
+          ui.people = 'singer'; ui.cantTab = 'plantilla'; render(); await s(200);
+          document.querySelector('.access-acts [data-act="staff-new"]').click(); await s(300);
+          out.title = document.querySelector('.sheet-h .h2').textContent === 'Afegeix una persona' && !!document.querySelector('#ps-email');
+          type('#ps-name', 'Soler, Marta'); await s(50);
+          out.auto = document.querySelector('#ps-mem').value === 'mS2' && document.querySelector('#ps-new').hidden;
+          type('#ps-email', 'marta@exemple.cat');
+          const n = S.members.size;
+          document.querySelector('#ps-save').click(); await s(700);
+          out.noDup = S.members.size === n && st('marta@exemple.cat')?.memberId === 'mS2';
+          out.invite = /ja pot entrar/.test(document.querySelector('.sheet-h .h2')?.textContent || '');
+          closeSheet(); await s(300);
+          sheetPerson(null, { roles: ['singer'], section: 'C' }); await s(300);
+          type('#ps-name', 'Riba, Queralt'); type('#ps-email', 'queralt@exemple.cat');
+          document.querySelector('#ps-save').click(); await s(700);
+          const q = st('queralt@exemple.cat');
+          out.fresh = !!q && S.members.get(q.memberId)?.section === 'C' && S.members.size === n + 1;
+          closeSheet(); await s(300);
+          sheetPerson(null, { roles: ['admin'] }); await s(300);
+          type('#ps-name', 'Gemma Gerent'); type('#ps-email', 'ger@exemple.cat');
+          document.querySelector('#ps-save').click(); await s(700);
+          out.merge = st('ger@exemple.cat').roles.join() === 'admin,gerencia';
+          const clara = [...S.members.values()].find(m => m.name === 'Clara Vila');
+          sheetMember(clara.id); await s(300);
+          type('#me-email', 'clara@exemple.cat'); document.querySelector('#me-leader').checked = true;
+          document.querySelector('#me-save').click(); await s(700);
+          const c = st('clara@exemple.cat');
+          out.fromCard = c?.memberId === clara.id && c.roles.join() === 'leader,singer' && c.section === 'S' && S.members.get(clara.id).leader === true;
+          closeSheet(); await s(300);
+          sheetMember(clara.id); await s(300);
+          document.querySelector('#me-leader').checked = false; document.querySelector('#me-save').click(); await s(700);
+          out.leaderOff = st('clara@exemple.cat').roles.join() === 'singer' && !S.members.get(clara.id).leader;
+          sheetPeopleBulk('B'); await s(300);
+          type('#pb-text', 'Pere Font — pere@exemple.cat\\nVidal, Roc\\troc@exemple.cat\\nSerra, Nil'); await s(400);
+          out.preview = document.querySelectorAll('#pb-prev li').length === 3;
+          const m0 = S.members.size;
+          document.querySelector('#pb-save').click(); await s(900);
+          out.bulk = S.members.size === m0 + 2 && accountFor([...S.members.values()].find(m => m.name === 'Pere Font').id)?.email === 'pere@exemple.cat' && !!st('roc@exemple.cat')?.memberId;
+          closeSheet(); await s(300);
+          sheetPerson('roc@exemple.cat'); await s(300);
+          type('#ps-email', 'roc.vidal@exemple.cat'); document.querySelector('#ps-save').click(); await s(800);
+          out.moved = !st('roc@exemple.cat') && !!st('roc.vidal@exemple.cat')?.memberId;
+          closeSheet(); await s(300);
+          await writeAccount({ email: 'joan@exemple.cat', name: 'Sala, Joan', roles: ['leader'], role: 'leader', section: 'B', addedAt: new Date().toISOString() });
+          out.unlinked = mailProblems().some(p => p.kind === 'unlinked' && p.email === 'joan@exemple.cat');
+          sheetMailCheck(); await s(300);
+          document.querySelector('.sheet [data-act="staff-link"][data-email="joan@exemple.cat"]').click(); await s(800);
+          const j = st('joan@exemple.cat');
+          out.linked = j.roles.join() === 'leader,singer' && S.members.get(j.memberId)?.name === 'Joan Sala' && S.members.get(j.memberId).leader === true;
+          closeSheet(); await s(300);
+          ui.people = 'singer'; ui.cantTab = 'plantilla'; render(); await s(200);
+          document.querySelector('#view [data-act="member-new"][data-sec="T"]').click(); await s(300);
+          out.rosterButton = document.querySelector('.sheet-h .h2')?.textContent === 'Afegeix una persona' && document.querySelector('#ps-sec .pick[aria-pressed="true"]')?.dataset.sec === 'T';
+          return out;
+        }""")
+        for k, label in [("title", "«+ Persona» obre una sola finestra amb el nom, el correu i el rol"),
+                         ("auto", "si el nom ja és a la plantilla, es fa servir la seva fitxa"), ("noDup", "i no se'n fa cap de repetida"),
+                         ("invite", "després es pot enviar la invitació"), ("fresh", "qui no hi era entra a la plantilla i a l'app d'un sol cop"),
+                         ("merge", "un correu que ja tenia accés hi suma els rols (no els perd)"),
+                         ("fromCard", "a la fitxa de la plantilla n'hi ha prou de posar-hi el correu"),
+                         ("leaderOff", "treure «cap de corda» a la fitxa també treu el permís del compte"),
+                         ("preview", "la llista enganxada mostra què farà amb cada línia"),
+                         ("bulk", "la llista fa les fitxes noves, vincula les que ja hi eren i dona els accessos"),
+                         ("moved", "es pot canviar el correu d'una persona"),
+                         ("unlinked", "«Comprova els correus» troba els comptes sense vincular a la seva fitxa"),
+                         ("linked", "«Vincula» els uneix, amb la marca de cap de corda"),
+                         ("rosterButton", "«Afegeix» d'una corda obre la mateixa finestra, amb la corda triada")]:
+            check(r.get(k), label, str(r))
+        check(not errors, "sense errors en afegir persones", "; ".join(errors[:3]))
+        ctx.close()
+        ctx, page, errors = open_app(browser, base, "dir", MOBILE)
+        r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms));
+          ui.tab = 'gestio'; ui.manage = 'personal'; ui.people = 'singer'; ui.cantTab = 'plantilla'; render(); await s(300);
+          document.querySelector('#view [data-act="member-new"]').click(); await s(300);
+          const t = document.querySelector('#pb-text'); t.value = 'Nou Cantaire nou@exemple.cat'; t.dispatchEvent(new Event('input')); await s(400);
+          return { title: document.querySelector('.sheet-h .h2')?.textContent, roles: !!document.querySelector('#pb-role'), note: document.querySelector('#pb-prev').innerText.includes('administració') }; }""")
+        check(r["title"] == "Afegeix persones" and not r["roles"] and r["note"], "la direcció afegeix noms a la plantilla, però no dona accessos", str(r))
+        ctx.close()
+
         print("Mira l'app com…")
         ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/gestio/personal")
         page.wait_for_function("S.staffReady", timeout=5000)
