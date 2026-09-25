@@ -39,6 +39,13 @@ function rosterMatch(name, { free = true, email = '' } = {}) {
   const active = hits.filter(m => m.active !== false);
   return hits.length === 1 ? hits[0] : active.length === 1 ? active[0] : null;
 }
+/** Abans de desar cal saber qui ja té accés: si no, un correu repetit perdria els rols que tenia. */
+function staffLoading() {
+  if (S.staffReady) return false;
+  ensureStaff();
+  toast('Un moment: s’està carregant qui té accés a l’app. Torna-ho a provar.');
+  return true;
+}
 /** Desa el compte d'una persona. Si li han canviat el correu, treu el vell (i les classes passen al nou). */
 async function writeAccount(rec, oldEmail = '') {
   const moved = !!oldEmail && oldEmail !== rec.email;
@@ -161,6 +168,7 @@ function sheetPerson(email, preset = {}) {
       q('#ps-inv')?.addEventListener('click', () => sheetInvite(S.staff.get(existing.email) || existing));
       q('#ps-save').onclick = async e => {
         const btn = e.currentTarget;
+        if (staffLoading()) return;
         const rs = picked(), singer = rs.includes('singer');
         const name = q('#ps-name').value.trim().replace(/\s+/g, ' ');
         const mail = q('#ps-email').value.trim().toLowerCase();
@@ -423,6 +431,7 @@ function sheetPeopleBulk(sec) {
       el.querySelectorAll('#pb-sec .pick').forEach(b => b.onclick = () => { el.querySelectorAll('#pb-sec .pick').forEach(x => x.setAttribute('aria-pressed', String(x === b))); draw(); });
       draw();
       q('#pb-save').onclick = async e => {
+        if (admin && staffLoading()) return;
         const rows = plan().filter(r => !r.skip && (r.newMember || r.adds || (role === 'leader' && r.member && !r.mail && !r.member.leader)));
         if (!rows.length) { toast(plan().length ? 'No hi ha ningú de nou per afegir' : 'Enganxa-hi la llista'); return; }
         const btn = e.currentTarget;

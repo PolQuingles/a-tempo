@@ -445,6 +445,7 @@ def main():
           const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
           const type = (q, v) => { const e = document.querySelector(q); e.value = v; e.dispatchEvent(new Event('input', { bubbles: true })); };
           const fake = () => JSON.parse(localStorage.getItem('fake:db')), st = e => fake()[`cors/${GID}/staff/${e}`];
+          ui.people = 'singer'; ui.cantTab = 'plantilla'; render(); await s(200);
           document.querySelector('.access-acts [data-act="staff-new"]').click(); await s(300);
           out.title = document.querySelector('.sheet-h .h2').textContent === 'Afegeix una persona' && !!document.querySelector('#ps-email');
           type('#ps-name', 'Soler, Marta'); await s(50);
@@ -489,7 +490,7 @@ def main():
           await writeAccount({ email: 'joan@exemple.cat', name: 'Sala, Joan', roles: ['leader'], role: 'leader', section: 'B', addedAt: new Date().toISOString() });
           out.unlinked = mailProblems().some(p => p.kind === 'unlinked' && p.email === 'joan@exemple.cat');
           sheetMailCheck(); await s(300);
-          document.querySelector('.sheet [data-act="staff-link"]').click(); await s(800);
+          document.querySelector('.sheet [data-act="staff-link"][data-email="joan@exemple.cat"]').click(); await s(800);
           const j = st('joan@exemple.cat');
           out.linked = j.roles.join() === 'leader,singer' && S.members.get(j.memberId)?.name === 'Joan Sala' && S.members.get(j.memberId).leader === true;
           closeSheet(); await s(300);

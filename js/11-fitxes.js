@@ -316,6 +316,7 @@ function sheetSession(sid, presetProd, presetDate) {
 // tornar a afegir la persona. «Cap de corda» és alhora la marca de la llista i el permís del seu compte per passar llista.
 function sheetMember(mid, sec) {
   const existing = mid ? S.members.get(mid) : null;
+  if (isAdmin()) ensureStaff();
   const m = existing ? clone(existing) : { id: uid('m'), name: '', section: SEC_MAP[sec] ? sec : ui.section, leader: false, active: true, phone: '', notes: '', joined: TODAY };
   const acc0 = existing ? accountFor(m.id) : null;
   // Si el compte en té el permís, és cap de corda encara que la fitxa no ho digués (dades d'abans).
@@ -381,6 +382,8 @@ function sheetMember(mid, sec) {
           : mailWarning(mail) || (other?.memberId && other.memberId !== m.id ? `Aquest correu ja és de ${other.name || other.email}.` : other ? `Aquest correu ja té accés (${rolesText(other)}): es vincularà a aquesta fitxa.` : 'En desar, podràs enviar-li la invitació.');
       });
       el.querySelector('#me-save').onclick = async e => {
+        const btn = e.currentTarget;   // després d'esperar, l'esdeveniment ja no el porta
+        if (isAdmin() && staffLoading()) return;
         const name = el.querySelector('#me-name').value.trim();
         if (!name) { toast('Escriu el nom i els cognoms'); return; }
         const mail = (mailBox?.value || '').trim().toLowerCase(), holder = mail ? S.staff.get(mail) || null : null;
@@ -411,9 +414,9 @@ function sheetMember(mid, sec) {
           }
         }
         if (acc) {
-          e.currentTarget.disabled = true;
+          btn.disabled = true;
           try { await writeAccount(acc); }
-          catch { e.currentTarget.disabled = false; toast('La fitxa s’ha desat, però l’accés no. Comprova la connexió i torna-ho a provar.'); render(); return; }
+          catch { btn.disabled = false; toast('La fitxa s’ha desat, però l’accés no. Comprova la connexió i torna-ho a provar.'); render(); return; }
         }
         render();
         if (acc && mail && !acc.lastSeen) { sheetInvite(acc, true); return; }
