@@ -400,7 +400,7 @@ function sheetMember(mid, sec) {
         if (hist.length) next.history = hist;
         saveMember(next);
         // El compte segueix la fitxa (cap de corda, corda, nom); i si s'hi ha posat el correu, ara en té un.
-        let acc = null;
+        let acc = /** @type {any} */ (null);
         if (isAdmin()) {
           const cur = accountFor(next.id);
           if (cur) acc = accountForMember(cur, next, existing);

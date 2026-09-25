@@ -93,6 +93,8 @@ function sheetPerson(email, preset = {}) {
   const guess = from ? from.id : existing ? rosterMatch(existing.name, { email: existing.email })?.id || '' : '';
   let roles = existing ? rolesOf(existing) : (preset.roles || []).filter(r => ROLE_KEYS.includes(r));
   if (!existing && from) roles = PERSON_ROLES.filter(k => k === 'singer' || (k === 'leader' && from.leader) || roles.includes(k));
+  // Un cap de corda gairebé sempre canta: surt marcat (es pot treure).
+  if (!existing && roles.includes('leader') && !roles.includes('singer')) roles = ['singer', ...roles];
   if (!roles.length) roles = ['singer'];
   const sec0 = from?.section || (SEC_MAP[preset.section] ? preset.section : '') || SECTIONS[0]?.id || '';
   const free = () => membersOf(null, true).filter(m => !accountFor(m.id) || m.id === from?.id);
@@ -188,7 +190,7 @@ function sheetPerson(email, preset = {}) {
             if (chosen('#ps-part').part) mem.part = chosen('#ps-part').part;
           } else if (mem && name !== mem.name && (mem.id === existing?.memberId || mem.id === from?.id)) mem = { ...mem, name };
           // 2) El compte, si té correu.
-          let rec = null;
+          let rec = /** @type {any} */ (null);
           if (mail) {
             const moved = !!existing && mail !== existing.email;
             const own = !!mem && (mem.id === existing?.memberId || mem.id === from?.id);
