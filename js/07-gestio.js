@@ -40,8 +40,8 @@ function accessPanel() {
   const r = accessReport();
   return `<div class="panel access-panel">
     <div class="setting"><div><div class="t">${withAccount} de ${members.length} ${esc(V.members)} tenen accés · ${r.inApp.length} han entrat${r.never.length ? `, ${r.never.length} encara no` : ''}</div>
-      <div class="s">Tothom entra pel mateix enllaç amb el seu correu, i només si és aquí. Si algú marxa, treu-li l’accés: el perd a l’instant, però no se n’esborra la fitxa ni les llistes.</div></div></div>
-    <div class="access-acts"><button class="btn btn-sm btn-primary" data-act="staff-new">+ Persona</button><button class="btn btn-sm" data-act="staff-bulk">Enganxa una llista</button><button class="btn btn-sm" data-act="share-app">Enllaç de l’app</button>
+      <div class="s">Afegeix cada persona un sol cop: el nom, el correu per entrar a l’app i què fa (si canta, també la ${esc(V.section)}). Si algú marxa, treu-li l’accés: el perd a l’instant, però no se n’esborra la fitxa ni les llistes.</div></div></div>
+    <div class="access-acts"><button class="btn btn-sm btn-primary" data-act="staff-new" ${ROLE_KEYS.includes(ui.people) ? `data-role="${esc(ui.people)}"` : ''}>+ Persona</button><button class="btn btn-sm" data-act="staff-bulk">Enganxa una llista</button><button class="btn btn-sm" data-act="share-app">Enllaç de l’app</button>
       <button class="btn btn-sm" data-act="who-in">Qui ha entrat</button><button class="btn btn-sm ${mailProblems().length ? 'btn-primary' : ''}" data-act="mail-check">Comprova els correus${mailProblems().length ? ` (${mailProblems().length})` : ''}</button><button class="btn btn-sm" data-act="preview-on">Mira l’app com…</button></div>
   </div>`;
 }
@@ -73,8 +73,8 @@ function managePeople() {
   }
   if (role === 'access') {
     const people = peopleSorted();
-    return `${accessPanel()}${menu}<p class="muted" style="margin:4px 2px 10px;font-size:calc(13px*var(--ts))">Tothom qui pot entrar a l’app, amb els seus rols. Toca una persona per canviar-li els rols, convidar-la o treure-li l’accés.</p>
-      ${people.length ? `<ul class="list">${people.map(personRow).join('')}</ul>` : '<div class="empty"><p>Encara no hi ha ningú. Afegeix els correus un per un o enganxa’n una llista.</p></div>'}`;
+    return `${accessPanel()}${menu}<p class="muted" style="margin:4px 2px 10px;font-size:calc(13px*var(--ts))">Tothom qui pot entrar a l’app, amb els seus rols. Toca una persona per canviar-li els rols o el correu, convidar-la o treure-li l’accés.</p>
+      ${people.length ? `<ul class="list">${people.map(personRow).join('')}</ul>` : '<div class="empty"><p>Encara no hi ha ningú. Afegeix les persones una per una o enganxa’n una llista.</p></div>'}`;
   }
   const list = peopleWithRole(role);
   const add = isAdmin() ? `<button class="btn btn-sm btn-primary" data-act="staff-new" data-role="${role}">+ Persona</button>` : '';
@@ -88,7 +88,7 @@ function managePeople() {
   }[role] || '';
   return `${accessPanel()}${menu}<div class="sec-h" style="margin-top:4px"><span class="muted" style="font-size:calc(13px*var(--ts))">${esc(what)}</span>${add}</div>
     ${list.length ? `<ul class="list">${list.map(personRow).join('')}</ul>`
-      : `<div class="empty"><p>Encara no hi ha ningú amb el rol de ${esc(roleLabel(role).toLowerCase())}.${isAdmin() ? ' Dona-li accés amb el seu correu i tria-li el rol.' : ''}</p></div>`}
+      : `<div class="empty"><p>Encara no hi ha ningú amb el rol de ${esc(roleLabel(role).toLowerCase())}.${isAdmin() ? ' Afegeix-la amb «+ Persona»: el nom, el correu i el rol, tot d’una.' : ''}</p></div>`}
     <p class="muted" style="margin:10px 2px 0;font-size:calc(13px*var(--ts))">Una persona pot tenir més d’un rol i, per tant, sortir a més d’una llista.</p>`;
 }
 function leaveText(m) {
@@ -104,7 +104,7 @@ function manageMembers() {
     const ms = membersOf(x.id, true);
     const active = ms.filter(m => m.active !== false).length;
     return `<section data-group="${x.id}"><div class="sec-h"><h2 class="h2"><em>${esc(x.short)}</em>${esc(x.name)} <span class="mono muted" style="font-size:calc(13px*var(--ts));font-weight:400">${active}</span></h2>
-      <span style="display:flex;gap:4px"><button class="btn btn-sm btn-ghost" data-act="member-bulk" data-sec="${x.id}">Afegeix</button></span></div>
+      <span style="display:flex;gap:4px"><button class="btn btn-sm btn-ghost" data-act="member-new" data-sec="${x.id}">Afegeix</button></span></div>
       ${ms.length ? `<ul class="list">${ms.map(m => {
         const lv = leaveText(m);
         const acc = isAdmin() && m.active !== false ? accountFor(m.id) : null;
@@ -121,7 +121,7 @@ function manageMembers() {
   const table = `<div class="only-wide table-wrap"><table class="dtable"><thead><tr><th>Nom</th><th>${esc(V.Part)}</th><th>Estat</th>${admin ? '<th>Accés a l’app</th>' : ''}<th>Telèfon</th></tr></thead>
     ${SECTIONS.map(x => {
       const ms = membersOf(x.id, true);
-      return `<tbody data-group="${x.id}"><tr class="grp"><td colspan="${admin ? 5 : 4}"><em>${esc(x.short)}</em>${esc(x.name)} <span class="m" style="font-weight:500">· ${ms.filter(m => m.active !== false).length}</span><button class="btn btn-sm btn-ghost" data-act="member-bulk" data-sec="${x.id}">Afegeix</button></td></tr>
+      return `<tbody data-group="${x.id}"><tr class="grp"><td colspan="${admin ? 5 : 4}"><em>${esc(x.short)}</em>${esc(x.name)} <span class="m" style="font-weight:500">· ${ms.filter(m => m.active !== false).length}</span><button class="btn btn-sm btn-ghost" data-act="member-new" data-sec="${x.id}">Afegeix</button></td></tr>
         ${ms.map(m => {
           const acc = admin ? accountFor(m.id) : null;
           const state = m.active === false ? 'Inactiu' : leaveText(m) || 'Actiu';
@@ -193,7 +193,7 @@ function onboardingSteps() {
   return [
     { done: S.members.size > 0, t: `Afegeix els ${V.members}`, s: `A Gestió › Personal, per ${V.sections}. Pots enganxar-ne els noms d’un full de càlcul.`, act: 'manage', k: 'personal', b: `Ves-hi` },
     { done: S.productions.size > 0, t: 'Crea la primera producció', s: 'Un concert o un projecte, amb totes les seves sessions d’assaig.', act: 'prod-new', b: 'Nova producció' },
-    { done: S.staff.size > 1, t: 'Dona accés a l’equip', s: `Cada persona entra amb el seu correu. Pots enganxar una llista de correus de cop.`, act: 'staff-new', b: '+ Persona' },
+    { done: S.staff.size > 1, t: 'Dona accés a l’equip', s: `Cada persona entra amb el seu correu. Pots enganxar una llista de noms i correus de cop.`, act: 'staff-new', b: '+ Persona' },
     { skip: !canManageGroup(), done: !!(S.config.brand && (S.config.brand.logo || S.config.brand.accent)), t: 'Posa-hi el logotip i el color', s: 'Surten a l’entrada de l’app i a la icona del mòbil.', act: 'manage', k: 'config', b: 'Identitat' },
     { done: !!S.config.shared, t: 'Comparteix l’enllaç de l’app', s: 'Un sol enllaç per a tothom: cadascú hi entra amb el seu correu.', act: 'share-app', b: 'Enllaç' },
   ].filter(x => !x.skip);

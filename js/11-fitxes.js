@@ -312,16 +312,26 @@ function sheetSession(sid, presetProd, presetDate) {
 }
 
 /* ---------- Sheet: member ---------- */
-function sheetMember(mid) {
+// La fitxa de la plantilla. L'administració hi dona accés a l'app posant-hi el correu (vegeu 12-persones.js): no cal
+// tornar a afegir la persona. «Cap de corda» és alhora la marca de la llista i el permís del seu compte per passar llista.
+function sheetMember(mid, sec) {
   const existing = mid ? S.members.get(mid) : null;
-  const m = existing ? clone(existing) : { id: uid('m'), name: '', section: ui.section, leader: false, active: true, phone: '', notes: '', joined: TODAY };
+  const m = existing ? clone(existing) : { id: uid('m'), name: '', section: SEC_MAP[sec] ? sec : ui.section, leader: false, active: true, phone: '', notes: '', joined: TODAY };
+  const acc0 = existing ? accountFor(m.id) : null;
+  // Si el compte en té el permís, és cap de corda encara que la fitxa no ho digués (dades d'abans).
+  const leadNow = existing ? leadsOwn(m, acc0) || !!m.leader : false;
+  const leadLocked = !!acc0 && !isAdmin();
+  const leadHint = () => acc0 ? `Passa llista de la seva ${V.section} i en rep els avisos.${leadLocked ? ' Ho canvia l’administració.' : ''}`
+    : isAdmin() ? `Passa llista de la seva ${V.section}. Des del mòbil, quan tingui accés: posa-li el correu aquí sota.`
+    : `Surt a la llista com a ${V.leader}. Per passar-la des del mòbil, l’administració li ha de donar accés.`;
   openSheet({
     title: existing ? V.Member : `Nou ${V.member}`,
     body: `<div class="kv">
       <label class="field"><span>Nom i cognoms</span><input class="inp" id="me-name" type="text" maxlength="60" value="${esc(m.name)}" autocomplete="off"></label>
       <div class="field"><span>${V.Section}</span><div class="pickers" id="me-sec">${SECTIONS.map(x => secPick(x, m.section === x.id)).join('')}</div></div>
       <div class="field"><span>${V.Part} dins la ${V.section}</span><div class="pickers" id="me-part"><button type="button" class="pick" data-part="" aria-pressed="${!m.part}">Sense</button>${PARTS.map(v => `<button type="button" class="pick" data-part="${v}" aria-pressed="${m.part === v}">${v}</button>`).join('')}</div></div>
-      <div class="toggle-row"><span><b>${V.Leader}</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Passa llista de la seva ${V.section}</span></span><label class="switch"><input type="checkbox" id="me-leader" ${m.leader ? 'checked' : ''}><span></span></label></div>
+      <div class="toggle-row"><span><b>${V.Leader}</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">${leadHint()}</span></span><label class="switch"><input type="checkbox" id="me-leader" ${leadNow ? 'checked' : ''} ${leadLocked ? 'disabled' : ''}><span></span></label></div>
+      ${isAdmin() ? memberAccessHtml(acc0) : ''}
       <fieldset class="fieldset"><legend>Baixes temporals</legend>
         <div id="me-leaves" style="display:grid;gap:6px"></div>
         <div class="row3"><label class="field"><span>Des del</span><input class="inp" id="lv-from" type="date"></label><label class="field"><span>Fins al</span><input class="inp" id="lv-to" type="date"></label></div>
@@ -335,7 +345,6 @@ function sheetMember(mid) {
         <label class="field"><span>Motiu (opcional)</span><input class="inp" id="me-move-note" maxlength="80" placeholder="p. ex. Estudis a fora, trasllat…"></label></div>
       ${(m.history || []).length ? `<div class="field"><span>Historial</span><ul class="mini-list" style="max-height:none">${m.history.slice().sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(h => `<li><span><span class="hist-k ${h.kind}">${HIST_WORD[h.kind] || h.kind}</span> ${esc(ddmm(h.date))}/${h.date.slice(2, 4)}${h.note ? ` · ${esc(h.note)}` : ''}</span></li>`).join('')}</ul></div>` : ''}
       ${existing && canDocs() ? `<div class="toggle-row"><span><b>Documents i quota</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Drets d’imatge, protecció de dades, autoritzacions i quota</span></span><span style="display:flex;gap:6px"><button type="button" class="btn btn-sm" data-act="member-docs" data-mid="${m.id}">Documents</button><button type="button" class="btn btn-sm" data-act="fee-edit" data-mid="${m.id}">Quota</button></span></div>` : ''}
-      ${existing ? (x => `<div class="toggle-row"><span><b>Accés a l’app</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">${x ? esc(x.email) : 'Encara no en té'}</span></span><button type="button" class="btn btn-sm" data-act="${x ? 'staff-edit' : 'staff-new'}" ${x ? `data-email="${esc(x.email)}"` : ''}>${x ? 'Canvia' : 'Dona-li accés'}</button></div>`)(accountFor(m.id)) : ''}
       <label class="field"><span>Telèfon</span><input class="inp" id="me-phone" type="tel" maxlength="20" value="${esc(m.phone || '')}"></label>
       <label class="field"><span>Notes</span><input class="inp" id="me-notes" type="text" maxlength="120" value="${esc(m.notes || '')}"></label>
       ${existing ? `<div class="field"><span>La seva fitxa</span><div id="me-profile"><span class="muted" style="font-size:calc(13px*var(--ts))">Carregant…</span></div></div>` : ''}
@@ -365,9 +374,18 @@ function sheetMember(mid) {
         ['#lv-from', '#lv-to', '#lv-note'].forEach(q => { el.querySelector(q).value = ''; });
         drawLeaves();
       };
-      el.querySelector('#me-save').onclick = () => {
+      const mailBox = el.querySelector('#me-email');
+      mailBox?.addEventListener('input', () => {
+        const mail = mailBox.value.trim().toLowerCase(), other = mail ? S.staff.get(mail) : null;
+        el.querySelector('#me-email-hint').textContent = !mail ? MEMBER_MAIL_HINT : !EMAIL_RE.test(mail) ? 'Aquest correu no està complet.'
+          : mailWarning(mail) || (other?.memberId && other.memberId !== m.id ? `Aquest correu ja és de ${other.name || other.email}.` : other ? `Aquest correu ja té accés (${rolesText(other)}): es vincularà a aquesta fitxa.` : 'En desar, podràs enviar-li la invitació.');
+      });
+      el.querySelector('#me-save').onclick = async e => {
         const name = el.querySelector('#me-name').value.trim();
         if (!name) { toast('Escriu el nom i els cognoms'); return; }
+        const mail = (mailBox?.value || '').trim().toLowerCase(), holder = mail ? S.staff.get(mail) || null : null;
+        if (mail && !EMAIL_RE.test(mail)) { toast('Revisa el correu: no està complet'); return; }
+        if (holder?.memberId && holder.memberId !== m.id) { toast(`Aquest correu ja és de ${holder.name || holder.email}`); return; }
         const section = el.querySelector('#me-sec .pick[aria-pressed="true"]').dataset.sec;
         if (existing && existing.section !== section && [...allAttendance().values()].some(d => d.section === existing.section && d.marks?.[m.id])) {
           toast(`Canvi de ${V.section} desat. Les llistes antigues queden a la ${V.section} anterior.`);
@@ -380,10 +398,26 @@ function sheetMember(mid) {
         if (!existing) hist.push({ date: next.joined || TODAY, kind: 'alta', note: '' });
         else if (next.active !== wasActive) hist.push({ date: el.querySelector('#me-move-date').value || TODAY, kind: next.active ? 'retorn' : 'baixa', note: el.querySelector('#me-move-note').value.trim() });
         if (hist.length) next.history = hist;
-        if (next.leader) for (const o of membersOf(section, true)) if (o.id !== next.id && o.leader) saveMember({ ...o, leader: false });
         saveMember(next);
-        closeSheet();
+        // El compte segueix la fitxa (cap de corda, corda, nom); i si s'hi ha posat el correu, ara en té un.
+        let acc = null;
+        if (isAdmin()) {
+          const cur = accountFor(next.id);
+          if (cur) acc = accountForMember(cur, next, existing);
+          else if (mail) {
+            const roles = ROLE_KEYS.filter(k => k === 'singer' || (k === 'leader' && next.leader) || hasRole(holder, k));
+            acc = { ...(holder || {}), email: mail, name: holder?.name || next.name, role: roles[0], roles, memberId: next.id, addedAt: holder?.addedAt || new Date().toISOString() };
+            if (next.leader) acc.section = next.section;
+          }
+        }
+        if (acc) {
+          e.currentTarget.disabled = true;
+          try { await writeAccount(acc); }
+          catch { e.currentTarget.disabled = false; toast('La fitxa s’ha desat, però l’accés no. Comprova la connexió i torna-ho a provar.'); render(); return; }
+        }
         render();
+        if (acc && mail && !acc.lastSeen) { sheetInvite(acc, true); return; }
+        closeSheet();
       };
       const del = el.querySelector('#me-del');
       if (del) del.onclick = async () => {
@@ -397,30 +431,6 @@ function sheetMember(mid) {
     },
   });
 }
-function sheetBulk(sec) {
-  openSheet({
-    title: `Afegeix ${SEC[sec].name.toLowerCase()}`,
-    body: `<div class="kv">
-      <div class="field"><span>${V.Section}</span><div class="pickers" id="bk-sec">${SECTIONS.map(x => secPick(x, sec === x.id)).join('')}</div></div>
-      <label class="field"><span>Noms, un per línia</span><textarea class="inp" id="bk-names" placeholder="Anna Puig&#10;Laia Ferrer&#10;Marta Soler"></textarea><small>Pots enganxar-los directament des d’un full de càlcul.</small></label>
-    </div>`,
-    foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="bk-save">Afegeix</button>`,
-    onMount: el => {
-      el.querySelectorAll('#bk-sec .pick').forEach(b => b.onclick = () => { el.querySelectorAll('#bk-sec .pick').forEach(x => x.setAttribute('aria-pressed', x === b)); });
-      el.querySelector('#bk-save').onclick = async () => {
-        const section = el.querySelector('#bk-sec .pick[aria-pressed="true"]').dataset.sec;
-        const existingNames = new Set([...S.members.values()].map(m => m.name.toLowerCase()));
-        const names = [...new Set(el.querySelector('#bk-names').value.split(/\r?\n/).map(s => s.replace(/\t.*/, '').trim()).filter(Boolean))].filter(n => !existingNames.has(n.toLowerCase()));
-        if (!names.length) { toast('No hi ha noms nous per afegir'); return; }
-        closeSheet();
-        for (const name of names) { saveMember({ id: uid('m'), name, section, leader: false, active: true }); await sleep(8); }
-        toast(`${names.length} ${names.length === 1 ? V.member : V.members} afegits a ${SEC[section].name}`);
-        render();
-      };
-    },
-  });
-}
-
 /* ---------- Sheet: member stats ---------- */
 function sheetMemberStats(mid) {
   const m = S.members.get(mid);

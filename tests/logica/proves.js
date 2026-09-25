@@ -209,6 +209,62 @@ prova('fitxers: els àudios del WhatsApp («.m4a.mp4») són àudio, amb un tít
   igual(matKindOf(f('x.docx', '')), 'altres');
 });
 
+/* ---------- Persones: cada persona un sol cop ---------- */
+prova('rosterMatch: el mateix nom en qualsevol ordre, i només si és una sola persona', () => {
+  escenari({ members: [{ id: 'a', name: 'Puig Ferrer, Anna', section: 'S' }, { id: 'b', name: 'García, Núria', section: 'S' },
+    { id: 'c', name: 'Puig, Pau', section: 'T' }, { id: 'd', name: 'Roca i Vidal, Pau', section: 'B' }] });
+  S.staff = new Map();
+  igual(rosterMatch('Anna Puig')?.id, 'a');
+  igual(rosterMatch('nuria garcia')?.id, 'b', 'sense accents ni majúscules');
+  igual(rosterMatch('Pau Roca')?.id, 'd', 'sense el «i» ni el segon cognom');
+  igual(rosterMatch('Pau Puig')?.id, 'c');
+  igual(rosterMatch('Puig'), null, 'un sol mot no n’hi ha prou');
+  igual(rosterMatch('Marta Soler'), null, 'no s’inventa ningú');
+  S.staff = new Map([['nuria@x.cat', { email: 'nuria@x.cat', roles: ['singer'], memberId: 'b' }]]);
+  igual(rosterMatch('Núria García'), null, 'qui ja té compte no es torna a vincular');
+  igual(rosterMatch('Núria García', { email: 'nuria@x.cat' })?.id, 'b', 'llevat que sigui el seu mateix compte');
+  igual(rosterMatch('Núria García', { free: false })?.id, 'b');
+  S.staff = new Map();
+});
+prova('peopleLine: el nom i el correu en qualsevol format, també les columnes d’un full de càlcul', () => {
+  escenari({ members: [] });
+  igual(peopleLine('Puig, Anna — anna@exemple.com'), { name: 'Puig, Anna', mail: 'anna@exemple.com', sec: '' });
+  igual(peopleLine('Mata, Martina <Martina@Exemple.com>'), { name: 'Mata, Martina', mail: 'martina@exemple.com', sec: '' });
+  igual(peopleLine('anna@exemple.com.'), { name: '', mail: 'anna@exemple.com', sec: '' }, 'sense el punt final');
+  igual(peopleLine('Soler, Marta'), { name: 'Soler, Marta', mail: '', sec: '' });
+  igual(peopleLine('Puig Ferrer\tAnna\tSoprano\t600 123 123\tanna@exemple.com'), { name: 'Puig Ferrer, Anna', mail: 'anna@exemple.com', sec: 'S' }, 'columnes');
+  igual(peopleLine('   '), null);
+});
+prova('peoplePlan: qui ja és a la plantilla s’hi vincula, qui no hi és té fitxa nova i qui ja té accés hi suma el rol', () => {
+  escenari({ members: [{ id: 'a', name: 'Puig, Anna', section: 'S' }, { id: 'e', name: 'Mas, Elisa', section: 'S', leader: true }] });
+  S.staff = new Map([['dir@x.cat', { email: 'dir@x.cat', name: 'Director', roles: ['director'] }]]);
+  const p = peoplePlan(['Anna Puig — anna@x.cat', 'Nova, Persona\tnova@x.cat', 'Sense Correu', 'dir@x.cat', 'Elisa Mas elisa@x.cat', 'anna@x.cat'].join('\n'), 'singer', 'C', true);
+  igual(p.map(r => [r.member?.id || '', !!r.newMember, !!r.adds, r.skip || '']),
+    [['a', false, true, ''], ['', true, true, ''], ['', true, false, ''], ['', true, true, ''], ['e', false, true, ''], ['', false, false, 'Repetida a la llista']]);
+  igual([p[1].sec, p[2].sec], ['C', 'C'], 'les fitxes noves van a la corda triada');
+  igual([p[3].name, p[3].roles], ['Director', ['director', 'singer']], 'qui ja tenia accés conserva el nom i el rol');
+  igual(peoplePlan('nou@x.cat', 'singer', 'S', true)[0].skip, 'Falta el nom', 'una fitxa nova necessita el nom');
+  igual(p[4].roles, ['leader', 'singer'], 'qui la fitxa diu que és cap de corda en té el permís');
+  const d = peoplePlan('Director, Nou\tnou@x.cat\nSense Correu', 'director', 'S', true);
+  igual(d.map(r => [!!r.newMember, r.skip || '']), [[false, ''], [false, 'Falta el correu']], 'la direcció no va a la plantilla i necessita correu');
+  const n = peoplePlan('Anna Puig — anna@x.cat\nNou Cantaire', 'singer', 'T', false);
+  igual(n.map(r => [r.mail, !!r.newMember, !!r.mailIgnored]), [['', false, true], ['', true, false]], 'sense ser administració, només noms');
+  S.staff = new Map();
+});
+prova('accountForMember i leadsOwn: la marca de cap de corda i el permís del compte van junts', () => {
+  S.staff = new Map();
+  const acc = { email: 'x@x.cat', name: 'Puig, Anna', roles: ['singer'], role: 'singer', memberId: 'a' };
+  const m = { id: 'a', name: 'Puig, Anna', section: 'S', leader: true };
+  const up = accountForMember(acc, m, { ...m, leader: false });
+  igual([up.roles, up.role, up.section], [['leader', 'singer'], 'leader', 'S'], 'en fer-la cap de corda, té el permís');
+  const down = accountForMember(up, { ...m, leader: false }, m);
+  igual([down.roles, 'section' in down], [['singer'], false], 'i en treure-li, el perd');
+  igual(accountForMember(acc, { ...m, leader: false }, { ...m, leader: false }), null, 'si no canvia res, no es desa res');
+  igual(accountForMember(up, { ...m, section: 'C' }, m).section, 'C', 'si canvia de corda, porta la nova');
+  igual(accountForMember(acc, { ...m, leader: false, name: 'Puig Ferrer, Anna' }, { ...m, leader: false }).name, 'Puig Ferrer, Anna', 'el nom segueix la fitxa');
+  igual([leadsOwn(m, up), leadsOwn(m, acc), leadsOwn(m, null)], [true, false, true], 'amb compte mana el permís; sense, la fitxa');
+});
+
 /** Executa totes les proves: { ok, fail, lines }. */
 function runProves() {
   const lines = [];

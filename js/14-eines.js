@@ -80,7 +80,7 @@ function sheetWhoIn() {
       ${never.length ? `<div class="section-title" style="margin-top:16px"><h2 class="h2">Tenen accés però no han entrat</h2></div>
         <ul class="mini-list remind-list" style="max-height:none">${never.map(row).join('')}</ul>` : ''}
       ${noAccount.length ? `<div class="section-title" style="margin-top:16px"><h2 class="h2">${V.Members} sense accés</h2><span class="eyebrow">falta el correu</span></div>
-        <ul class="mini-list" style="max-height:220px">${noAccount.map(m => `<li><span>${esc(m.name)}<br><span class="m">${SEC[m.section].name}</span></span><button class="btn btn-sm" data-act="staff-new">Dona-li accés</button></li>`).join('')}</ul>` : ''}
+        <ul class="mini-list" style="max-height:220px">${noAccount.map(m => `<li><span>${esc(m.name)}<br><span class="m">${SEC[m.section].name}</span></span><button class="btn btn-sm" data-act="staff-new" data-mid="${esc(m.id)}">Dona-li accés</button></li>`).join('')}</ul>` : ''}
       ${inApp.length ? `<div class="section-title" style="margin-top:16px"><h2 class="h2">Ja hi entren</h2></div>
         <ul class="mini-list" style="max-height:260px">${inApp.sort((a, b) => (b.lastSeen || '').localeCompare(a.lastSeen || '')).map(p => `<li><span>${esc(p.name || p.email)}<br><span class="m">${esc(rolesText(p))}${pushBy.get(p.email) ? ' · avisos actius' : ''}</span></span><span class="m">${agoText(p.lastSeen)}</span></li>`).join('')}</ul>` : ''}
       <p class="muted" style="font-size:calc(13px*var(--ts))">De ${roster.length} ${V.members} de la plantilla, ${roster.length - noAccount.length} tenen el correu donat d’alta. «Han entrat» vol dir que han obert l’app almenys un cop.</p>`,
@@ -123,7 +123,10 @@ function mailProblems() {
   for (const p of S.staff.values()) {
     const w = mailWarning(p.email);
     if (w) out.push({ kind: 'mail', email: p.email, name: p.name, text: w });
-    if (hasRole(p, 'singer') && !p.memberId) out.push({ kind: 'link', email: p.email, name: p.name, text: `${V.Member} sense fitxa de la plantilla` });
+    // Algú que és a la plantilla però el seu compte no hi està vinculat (no té el seu espai ni surt com a cap de corda).
+    const same = !p.memberId && rosterMatch(p.name, { email: p.email });
+    if (same) out.push({ kind: 'unlinked', email: p.email, name: p.name, mid: same.id, text: `És a la plantilla (${SEC[same.section].name}), però el compte no està vinculat a la seva fitxa` });
+    else if (hasRole(p, 'singer') && !p.memberId) out.push({ kind: 'link', email: p.email, name: p.name, text: `${V.Member} sense fitxa de la plantilla` });
     if (p.memberId) {
       const m = S.members.get(p.memberId);
       if (!m) out.push({ kind: 'link', email: p.email, name: p.name, text: 'Vinculat a una fitxa que ja no hi és' });
@@ -131,6 +134,12 @@ function mailProblems() {
       if (seenMember.has(p.memberId)) out.push({ kind: 'dup', email: p.email, name: p.name, text: `Aquesta fitxa també és de ${seenMember.get(p.memberId)}` });
       else seenMember.set(p.memberId, p.email);
     }
+  }
+  // La fitxa diu «cap de corda», però no pot passar llista (no té accés o el seu compte no en té el permís).
+  for (const m of membersOf(null)) {
+    const acc = m.leader ? accountFor(m.id) : null;
+    if (!m.leader || (acc && leadsOwn(m, acc))) continue;
+    out.push({ kind: 'leader', email: acc?.email || '', name: m.name, mid: m.id, text: acc ? `La fitxa diu ${V.leader}, però el compte no té permís per passar llista` : `${V.Leader} sense accés a l’app: no pot passar llista` });
   }
   return out;
 }
@@ -142,8 +151,11 @@ function sheetMailCheck() {
     wide: true,
     body: probs.length || noAccount.length
       ? `${probs.length ? `<div class="section-title" style="margin-top:0"><h2 class="h2">Per revisar</h2><span class="eyebrow">${probs.length}</span></div>
-          <ul class="mini-list" style="max-height:none">${probs.map(x => `<li><span>${esc(x.name || x.email)}<br><span class="m mono">${esc(x.email)}</span></span>
-            <span style="display:flex;gap:6px;align-items:center"><span class="m" style="text-align:right">${esc(x.text)}</span><button class="btn btn-sm" data-act="staff-edit" data-email="${esc(x.email)}">Obre</button></span></li>`).join('')}</ul>` : ''}
+          <ul class="mini-list" style="max-height:none">${probs.map(x => `<li><span>${esc(x.name || x.email)}${x.email ? `<br><span class="m mono">${esc(x.email)}</span>` : ''}</span>
+            <span style="display:flex;gap:6px;align-items:center"><span class="m" style="text-align:right">${esc(x.text)}</span>${x.kind === 'unlinked'
+              ? `<button class="btn btn-sm btn-primary" data-act="staff-link" data-email="${esc(x.email)}" data-mid="${esc(x.mid)}">Vincula</button>`
+              : x.kind === 'leader' ? `<button class="btn btn-sm" data-act="member-edit" data-mid="${esc(x.mid)}">Obre</button>`
+              : `<button class="btn btn-sm" data-act="staff-edit" data-email="${esc(x.email)}">Obre</button>`}</span></li>`).join('')}</ul>` : ''}
          ${noAccount.length ? `<div class="section-title"><h2 class="h2">${V.Members} sense correu</h2><span class="eyebrow">${noAccount.length} de ${roster.length}</span></div>
           <ul class="mini-list" style="max-height:260px">${noAccount.map(m => `<li><span>${esc(m.name)}</span><span class="m">${SEC[m.section].name}</span></li>`).join('')}</ul>` : ''}`
       : `<p style="margin:0">Tot correcte: no hi ha cap correu estrany i tots els ${V.members} tenen accés.</p>`,
@@ -330,7 +342,7 @@ function sheetHelp() {
   const w = V;
   const body = staff ? `<div class="manual">
     <h3>Entrar</h3>
-    <p>Tothom entra pel mateix enllaç amb <b>el seu correu</b>: amb Google o, si el correu no és de Google, creant una contrasenya («Entra amb un altre correu»). L’administració dona d’alta cada persona a <b>Gestió › Personal</b>, li envia la <b>invitació</b> per correu o WhatsApp i li dona un o més rols: administració, director, ${w.leader}, gerència, secretaria, ${esc(V.Teacher.toLowerCase())} o ${w.member}.</p>
+    <p>Tothom entra pel mateix enllaç amb <b>el seu correu</b>: amb Google o, si el correu no és de Google, creant una contrasenya («Entra amb un altre correu»). L’administració afegeix cada persona <b>un sol cop</b> a <b>Gestió › Personal › + Persona</b>: el nom, el correu i què fa (${w.member}, ${w.leader}, ${esc(V.Teacher.toLowerCase())}, director, gerència, secretaria o administració; pot tenir més d’un rol). Si canta, se li fa la fitxa de la plantilla amb la ${w.section} o, si ja hi era, s’hi vincula. A qui ja és a la plantilla, n’hi ha prou de posar-li el correu a la seva fitxa. Després s’envia la <b>invitació</b> per correu o WhatsApp.</p>
     <p>L’administració ho pot fer tot. Direcció, ${w.leaders}, gerència i secretaria passen llista, publiquen anuncis i convocatòries i pugen materials i documents. ${w.Members} ho veuen tot en <b>mode lectura</b>. A <b>Inici</b> hi ha tot el que tens <b>per fer</b> i la sessió d’avui. El teu compte és a les teves inicials, a dalt a la dreta: un menú amb la <b>Gestió</b> per a qui edita (avisos d’absència, personal, produccions i ajustos; els camins «Gestió › …» d’aquesta ajuda comencen allà), els avisos al mòbil, el calendari, l’aparença, les agrupacions i el botó per sortir.</p>
     <h3>Passar llista</h3>
     <ul><li>A <b>Assistència</b> (o amb el botó <b>Passa llista</b> d’Inici) surt la sessió d’avui. Toca el quadre de la teva ${w.section}.</li>

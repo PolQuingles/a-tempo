@@ -4,12 +4,12 @@
 
 /* ================= Events ================= */
 const SUB_OK = new Set(['mark', 'min', 'mark-rest']);
-const ADMIN_ONLY = new Set(['staff-new', 'staff-edit', 'staff-bulk', 'preview-on', 'who-in', 'mail-check', 'wipe-all', 'share-app', 'onboard-hide', 'cl-seats', 'legacy-clean']);
+const ADMIN_ONLY = new Set(['staff-new', 'staff-edit', 'staff-bulk', 'staff-link', 'preview-on', 'who-in', 'mail-check', 'wipe-all', 'share-app', 'onboard-hide', 'cl-seats', 'legacy-clean']);
 // La identitat de l'agrupació i esborrar-la: només un Usuari Pro que l'administri.
 const PRO_ONLY = new Set(['brand-color', 'logo-remove', 'kind-set', 'group-delete', 'sections-save', 'sections-undo']);
 // El calendari de les classes: només el professorat de cant i l'administració.
 const CLASS_ONLY = new Set(['cl-new', 'cl-edit', 'cl-review', 'cl-paste', 'cl-plan', 'cl-note', 'cl-mark', 'cl-stats', 'cl-cancel-day']);
-const EDIT_ONLY = new Set(['mark', 'min', 'mark-rest', 'session-new', 'sub-set', 'ann-new', 'ann-edit', 'mat-new', 'mat-edit', 'poll-new', 'poll-edit', 'poll-results', 'poll-remind', 'rsvp-remind', 'doc-new', 'doc-edit', 'share-app', 'staff-bulk', 'preview-on', 'who-in', 'mail-check', 'concert-list', 'concert-toggle', 'session-edit', 'member-edit', 'member-bulk', 'prod-new', 'prod-edit',
+const EDIT_ONLY = new Set(['mark', 'min', 'mark-rest', 'session-new', 'sub-set', 'ann-new', 'ann-edit', 'mat-new', 'mat-edit', 'poll-new', 'poll-edit', 'poll-results', 'poll-remind', 'rsvp-remind', 'doc-new', 'doc-edit', 'share-app', 'staff-bulk', 'preview-on', 'who-in', 'mail-check', 'concert-list', 'concert-toggle', 'session-edit', 'member-edit', 'member-new', 'member-bulk', 'prod-new', 'prod-edit',
   'wipe-demo', 'wipe-all', 'load-demo', 'export-json', 'abs-accept', 'abs-reject', 'abs-delete', 'manage',
   'write', 'msg-new', 'roster-export', 'docs-export', 'docs-copy-noimg',
   'work-new', 'work-edit', 'work-link', 'plan-edit', 'seating-edit', 'participants', 'certificate', 'season-report', 'trip-new', 'trip-edit', 'trip-admin', 'trip-remind']);
@@ -47,8 +47,10 @@ const actions = {
   'mail-out': async () => { try { await auth.signOut(); } catch {} MAIL = null; location.replace(location.pathname + location.search); },
   'sign-out': () => signOut(),
   'help': () => sheetHelp(),
-  'staff-new': el => sheetStaff(null, el && el.dataset.role ? [el.dataset.role] : null),
-  'staff-bulk': () => sheetStaffBulk(),
+  // Una persona: el nom, el correu i què fa, amb la seva fitxa de la plantilla si canta (vegeu 12-persones.js).
+  'staff-new': el => sheetPerson(null, { roles: el && el.dataset.role ? [el.dataset.role] : [], memberId: el?.dataset.mid || '', section: el?.dataset.sec || '' }),
+  'staff-bulk': () => sheetPeopleBulk(ui.people === 'singer' ? ui.section : ''),
+  'staff-link': el => linkAccount(el.dataset.email, el.dataset.mid),
   'preview-on': () => sheetPreview(),
   'push-setup': () => sheetPush(),
   'file-open': el => {
@@ -126,7 +128,7 @@ const actions = {
   'ann-read': el => sheetAnnouncementRead(el.dataset.id),
   'ann-file': el => { const f = (S.announcements.get(el.dataset.id)?.files || []).find(x => x.id === el.dataset.f); if (f && f.file) sheetOpenFile(f.file, f.title); },
   'share-app': () => sheetShareApp(),
-  'staff-edit': el => sheetStaff(el.dataset.email),
+  'staff-edit': el => sheetPerson(el.dataset.email),
   'sub-set': el => sheetSub(el.dataset.sid, el.dataset.sec),
   'rsvp-list': el => sheetRsvpList(el.dataset.sid),
   'rsvp-yes': el => rsvpAnswer(el.dataset.sid, 'yes'),
@@ -300,7 +302,9 @@ const actions = {
   'people-role': el => { ui.people = el.dataset.k; saveUI(); render(); },
   'cant-tab': el => { ui.cantTab = el.dataset.k; saveUI(); render(); },
   'member-edit': el => sheetMember(el.dataset.mid),
-  'member-bulk': el => sheetBulk(el.dataset.sec || ui.section),
+  'member-bulk': el => sheetPeopleBulk(el.dataset.sec || ui.section),
+  // A la plantilla: l'administració hi afegeix la persona amb el correu i tot; la resta de l'equip, els noms.
+  'member-new': el => isAdmin() ? sheetPerson(null, { roles: ['singer'], section: el.dataset.sec || ui.section }) : sheetPeopleBulk(el.dataset.sec || ui.section),
   'prod-new': () => sheetProduction(null),
   'prod-edit': el => sheetProduction(el.dataset.pid),
   'wipe-demo': () => wipeAll(true),

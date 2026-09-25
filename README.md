@@ -42,7 +42,7 @@ El **compte** és a les inicials, a dalt a la dreta: Gestió (per a qui edita), 
 
 ## Accés
 
-Ningú no hi entra sense identificar-se: tothom entra amb el correu que l'administració ha donat d'alta a Gestió › Ajustos › Persones. No hi ha enllaços d'accés.
+Ningú no hi entra sense identificar-se: tothom entra amb el correu que l'administració ha donat d'alta a Gestió › Personal. No hi ha enllaços d'accés.
 
 - **Amb Google**, per als correus de Google.
 - **Amb un altre correu i una contrasenya** (Hotmail, iCloud, de la feina…). El primer cop es crea la contrasenya i es confirma el correu amb l'enllaç que envia Firebase: les regles només deixen entrar comptes amb el correu confirmat. La contrasenya es pot recuperar des de la mateixa pantalla.
@@ -58,6 +58,8 @@ Cada persona té un o més rols (`roles` a la seva fitxa):
 - **Membre de la plantilla** (cantaire, músic): veu tota l'app en mode lectura i té el seu espai personal.
 
 A **Gestió › Personal** hi ha tothom, rol per rol: el desplegable de dalt tria el rol i a sota hi surt qui el té (la plantilla, per seccions).
+
+**Afegir una persona és un sol pas** (`sheetPerson`, 12-persones). Una persona pot tenir una fitxa a la plantilla (`members/<id>`, qui canta) i un compte per entrar (`staff/<correu>`, amb `memberId` si canta); abans calia fer-los per separat i vincular-los. Ara «+ Persona» demana el nom, el correu i què fa: si canta, li fa la fitxa amb la secció i la veu o, si el nom ja és a la plantilla (`rosterMatch`: les mateixes paraules en qualsevol ordre, «Puig, Anna» = «Anna Puig»), s'hi vincula. Sense correu, només queda a la plantilla. Si el correu ja tenia accés, s'hi sumen els rols (no se sobreescriuen). El correu es pot canviar (el compte vell s'esborra i un professor s'emporta les classes, `moveTeacher`). A la fitxa de la plantilla, l'administració hi pot posar el correu directament. «Enganxa una llista» (`sheetPeopleBulk`) fa el mateix per a moltes persones: una per línia, amb el nom i el correu (també columnes d'un full de càlcul, amb la secció si n'hi ha una columna). **Cap de corda** és una sola cosa: la marca de la fitxa (`members.leader`) i el rol `leader` del compte (el permís per passar llista) es desen junts (`accountForMember`, `leadsOwn`); una secció pot tenir més d'un cap. «Comprova els correus» avisa dels comptes que no estan vinculats a la fitxa amb el seu nom (botó «Vincula», `linkAccount`) i dels caps de corda que no poden passar llista.
 
 **Mira l'app com…** (administració): tria un rol (cantaire, cap de corda, direcció, gerència, secretaria o professor de cant) i una persona que el tingui (o una de genèrica), i l'app es veu tal com la veu ella. `PREVIEW` = { roles, memberId, section, email, name }; `ME()` torna aquesta fitxa en lloc de la pròpia, i els permisos de pantalla (`canEdit`, `teachesClasses`, `canWriteAll`, `canDocs`…) la fan servir. No es desa res: `persist()` no escriu, i mentre dura la vista prèvia `fs` és un embolcall que rebutja qualsevol escriptura; en sortir-ne, si s'hi ha tocat res, l'app es recarrega.
 

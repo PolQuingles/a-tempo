@@ -168,11 +168,11 @@ function viewRollSection(cur, list, sec, pendingBySec) {
   }
   const inRoll = all.filter(m => !isOut(cur, m));
   const out = all.filter(m => isOut(cur, m));
-  const leader = all.find(m => m.leader);
+  const leaders = all.filter(m => m.leader), leader = leaders[0];
   const c = countsFor(cur, all);
   return head + pendHtml + `
   <div class="leader">
-    <span>${V.Leader}: <b>${leader ? esc(leader.name) : '—'}</b></span>
+    <span>${V.Leader}: <b>${leaders.length ? leaders.map(m => esc(m.name)).join(' i ') : '—'}</b></span>
     <span class="mono">${all.length - c.none}/${all.length} marcats</span>
   </div>
   ${subLine(cur, sec, leader)}
