@@ -1,0 +1,64 @@
+name: Publica les regles
+# Quan les proves de main han passat (entre elles, les de les regles a l'emulador), publica firestore.rules a Firebase.
+# Primer mira si ja hi són (reglesVersio, vegeu tools/stamp.py); si no, les publica i comprova que ja responen.
+# No publica res fins que hi hagi el secret FIREBASE_SERVICE_ACCOUNT (vegeu README › Regles); mentrestant, avisa.
+on:
+  workflow_run:
+    workflows: [Proves]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency: regles
+env:
+  PROBE: https://firestore.googleapis.com/v1/projects/cor-present/databases/(default)/documents/reglesVersio
+jobs:
+  publica:
+    # Només per a canvis ja fusionats a main d'aquest mateix repositori, mai per a propostes de fora.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Ja són les publicades?
+        id: ara
+        run: |
+          V=$(python3 -c "import re; print(re.search(r'match /reglesVersio/\{v\} \{\s*allow get: if v == .([0-9a-f]+).', open('firestore.rules').read()).group(1))")
+          CODE=$(curl -s -o /dev/null -w '%{http_code}' "$PROBE/$V")
+          echo "v=$V" >> "$GITHUB_OUTPUT"
+          if [ "$CODE" = "404" ]; then echo "fet=1" >> "$GITHUB_OUTPUT"; echo "Les regles $V ja són les publicades."; else echo "Les publicades no són les $V (resposta $CODE)."; fi
+      - name: Hi ha la clau per publicar-les?
+        id: clau
+        if: steps.ara.outputs.fet != '1'
+        env:
+          KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -n "$KEY" ]; then echo "si=1" >> "$GITHUB_OUTPUT"
+          else echo "::warning::Les regles del repositori (${{ steps.ara.outputs.v }}) no estan publicades i encara no hi ha el secret FIREBASE_SERVICE_ACCOUNT per publicar-les soles. Publica-les a mà (README › Regles)."; fi
+      - uses: actions/setup-node@v4
+        if: steps.clau.outputs.si == '1'
+        with:
+          node-version: '20'
+      - name: Publica les regles
+        if: steps.clau.outputs.si == '1'
+        env:
+          KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          printf '%s' "$KEY" > "$RUNNER_TEMP/clau.json"
+          GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/clau.json" npx --yes firebase-tools@13 deploy --only firestore:rules --project cor-present --non-interactive
+          rm -f "$RUNNER_TEMP/clau.json"
+      - name: Comprova que ja responen
+        if: steps.clau.outputs.si == '1'
+        run: |
+          for i in 1 2 3 4 5 6 7 8 9; do
+            CODE=$(curl -s -o /dev/null -w '%{http_code}' "$PROBE/${{ steps.ara.outputs.v }}")
+            if [ "$CODE" = "404" ]; then echo "Publicades: ${{ steps.ara.outputs.v }}"; exit 0; fi
+            sleep 10
+          done
+          echo "::error::Les regles s'han enviat, però encara no responen com les del repositori."; exit 1

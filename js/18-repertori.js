@@ -199,14 +199,14 @@ function sheetWorkMaterial(onDone) {
     <div class="sheet-f"><span class="spacer"></span><button class="btn" id="wm-no">Cancel·la</button><button class="btn btn-primary" id="wm-ok">Afegeix</button></div></div>`;
   document.body.appendChild(box);
   const close = () => { box.remove(); if (back) back.hidden = false; };
-  const single = sel => box.querySelectorAll(`${sel} .pick`).forEach(b => b.onclick = () => box.querySelectorAll(`${sel} .pick`).forEach(x => x.setAttribute('aria-pressed', x === b)));
+  const single = sel => box.querySelectorAll(`${sel} .pick`).forEach(b => b.onclick = () => box.querySelectorAll(`${sel} .pick`).forEach(x => x.setAttribute('aria-pressed', String(x === b))));
   single('#wm-kind'); single('#wm-sec'); single('#wm-part');
   const title = box.querySelector('#wm-title');
   const src = bindSource(box, 'wm', f => {
     if (!title.value.trim()) title.value = titleFromFile(f.name);
     const k = fileKind(f);
     const guess = k === 'PDF' ? 'partitura' : k === 'Àudio' ? 'audio' : k === 'Vídeo' ? 'video' : null;
-    if (guess) box.querySelectorAll('#wm-kind .pick').forEach(x => x.setAttribute('aria-pressed', x.dataset.k === guess));
+    if (guess) box.querySelectorAll('#wm-kind .pick').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.k === guess)));
   });
   box.querySelector('#wm-x').onclick = close;
   box.querySelector('#wm-no').onclick = close;
@@ -318,23 +318,64 @@ async function offlineClear() {
 }
 
 /* ---------- Pla d'assaig ---------- */
-// session.plan = { items: [{ id, work (id del repertori o ''), title, bars ('1-40'), who ('' = tots, o una corda), note }],
-//   text (indicacions), after (després: què s'hi ha fet) }. El fa la direcció i el veu tothom; qui falta sap què s'ha perdut.
+// session.plan = { items: [...], text (indicacions), after (després: què s'hi ha fet) }. Cada element és:
+//   · una obra (kind ''): { work (id del repertori) o title, bars ('1-40'), who ('' = tots, una corda, 'S,C', 'Solistes'), mins, note };
+//   · un bloc (kind 'head'): { time, title ('Assaig parcial', 'Tutti'…), who (les cordes, 'S,C'; buit = tothom), where (l'aula), lead (qui el porta) };
+//   · una pausa (kind 'break'): { time, mins }.
+// Així hi cap el pla d'una setmana normal: parcials de cordes a aules diferents i amb qui les porta, la pausa i el tutti. El fa
+// la direcció i el veu tothom; cadascú hi veu el que li toca, i qui falta sap què s'ha perdut.
 const planOf = s => s && s.plan && ((s.plan.items || []).length || s.plan.text || s.plan.after) ? s.plan : null;
 const planTitle = it => (it.work && S.works.get(it.work)?.title) || it.title || 'Obra';
-const planItemWho = it => it.who ? (SEC_MAP[it.who] ? SEC[it.who].name : it.who) : '';
-/** El pla, per llegir: una línia per obra. compact = només els títols (per a les targetes). */
-function planHtml(s, compact) {
+const planWhoList = w => String(w || '').split(',').map(x => x.trim()).filter(Boolean);
+const planItemWho = it => planWhoList(it.who).map(x => SEC_MAP[x] ? SEC[x].name : x).join(' i ');
+/** El que em toca: els blocs d'altres cordes (i les seves obres) no hi surten; les obres d'una altra corda, tampoc. */
+function planForMe(items, sec) {
+  if (!sec) return items;
+  const mine = it => !it.who || planWhoList(it.who).includes(sec) || !planWhoList(it.who).some(x => SEC_MAP[x]);
+  let skip = false;
+  return items.filter(it => {
+    if (it.kind === 'head') { skip = !mine(it); return !skip; }
+    if (it.kind === 'break') { skip = false; return true; }
+    return !skip && mine(it);
+  });
+}
+const planWorks = items => (items || []).filter(it => !it.kind);
+/** El pla, per llegir. compact = només els títols (per a les targetes). sec = només el que toca a aquella corda. */
+function planHtml(s, compact, sec) {
   const p = planOf(s);
   if (!p) return '';
-  const items = p.items || [];
-  if (compact) return items.length ? `<span class="plan-line">${esc(items.map(it => `${planTitle(it)}${it.bars ? ` (${it.bars})` : ''}`).join(' · '))}</span>` : '';
+  const items = planForMe(p.items || [], sec);
+  if (compact) { const w = planWorks(items); return w.length ? `<span class="plan-line">${esc(w.map(it => `${planTitle(it)}${it.bars ? ` (${it.bars})` : ''}`).join(' · '))}</span>` : ''; }
   const past = s.date < TODAY;
-  return `<div class="plan">
-    ${items.length ? `<ol class="plan-items">${items.map(it => `<li><b>${esc(planTitle(it))}</b>${it.bars ? ` <span class="mono">c. ${esc(it.bars)}</span>` : ''}${planItemWho(it) ? ` <span class="m">· ${esc(planItemWho(it))}</span>` : ''}${it.note ? `<br><span class="m">${esc(it.note)}</span>` : ''}</li>`).join('')}</ol>` : ''}
+  const out = [];
+  let list = [];
+  const flush = () => { if (list.length) out.push(`<ol class="plan-items">${list.join('')}</ol>`); list = []; };
+  for (const it of items) {
+    if (it.kind === 'head') {
+      flush();
+      out.push(`<div class="plan-bh">${it.time ? `<span class="mono">${esc(it.time)}</span>` : ''}<b>${esc(it.title || 'Bloc')}</b>${[planItemWho(it), it.where, it.lead ? `amb ${it.lead}` : ''].filter(Boolean).length ? `<small>${esc([planItemWho(it), it.where, it.lead ? `amb ${it.lead}` : ''].filter(Boolean).join(' · '))}</small>` : ''}</div>`);
+    } else if (it.kind === 'break') {
+      flush();
+      out.push(`<div class="plan-break">${it.time ? `<span class="mono">${esc(it.time)}</span>` : ''}Pausa${it.mins ? ` · ${esc(String(it.mins))}′` : ''}</div>`);
+    } else {
+      list.push(`<li><b>${esc(planTitle(it))}</b>${it.bars ? ` <span class="mono">c. ${esc(it.bars)}</span>` : ''}${planItemWho(it) ? ` <span class="m">· ${esc(planItemWho(it))}</span>` : ''}${it.mins ? ` <span class="m mono">· ${esc(String(it.mins))}′</span>` : ''}${it.note ? `<br><span class="m">${esc(it.note)}</span>` : ''}</li>`);
+    }
+  }
+  flush();
+  const hidden = sec && items.length < (p.items || []).length;
+  return `<div class="plan">${out.join('')}
+    ${hidden ? `<button class="btn btn-sm btn-ghost" data-act="plan-all" data-sid="${esc(s.id)}">Mostra tot el pla (també les altres ${esc(V.sections)})</button>` : ''}
     ${p.text ? `<p class="plan-text">${esc(p.text)}</p>` : ''}
     ${p.after ? `<p class="plan-after"><b>${past ? 'Què s’hi va fer' : 'Després de l’assaig'}:</b> ${esc(p.after)}</p>` : ''}
   </div>`;
+}
+/** El pla en text, per copiar-lo. */
+function planText(s) {
+  const p = planOf(s);
+  if (!p) return '';
+  return (p.items || []).map(it => it.kind === 'head' ? `\n${[it.time, it.title || 'Bloc'].filter(Boolean).join(' · ')}${[planItemWho(it), it.where, it.lead ? `amb ${it.lead}` : ''].filter(Boolean).length ? ` (${[planItemWho(it), it.where, it.lead ? `amb ${it.lead}` : ''].filter(Boolean).join(' · ')})` : ''}`
+    : it.kind === 'break' ? `${it.time ? `${it.time} · ` : ''}Pausa${it.mins ? ` ${it.mins}′` : ''}`
+    : `· ${planTitle(it)}${it.bars ? ` (c. ${it.bars})` : ''}${planItemWho(it) ? ` · ${planItemWho(it)}` : ''}${it.mins ? ` · ${it.mins}′` : ''}${it.note ? ` — ${it.note}` : ''}`).join('\n').trim();
 }
 /** Canvia una sessió dins de la seva producció (les sessions van dins del document de la producció). */
 function updateSession(sid, patch) {
@@ -346,6 +387,7 @@ function updateSession(sid, patch) {
   saveProduction(p);
   return true;
 }
+const PLAN_KINDS = [['', 'Obra o fragment'], ['head', 'Bloc (parcial, tutti…)'], ['break', 'Pausa']];
 function sheetPlan(sid) {
   const s = sessionById(sid);
   if (!s) return;
@@ -353,46 +395,73 @@ function sheetPlan(sid) {
   plan.items = plan.items || [];
   const works = [...new Map([...sessionProds(s).flatMap(worksOf), ...worksSorted()].map(w => [w.id, w])).values()];
   const inProd = new Set(sessionProds(s).flatMap(worksOf).map(w => w.id));
+  const val = (row, f) => row.querySelector(`[data-f="${f}"]`)?.value.trim() ?? '';
   const read = el => el.querySelectorAll('#pl-items .plan-row').forEach(row => {
     const it = plan.items.find(x => x.id === row.dataset.id);
     if (!it) return;
-    const v = row.querySelector('[data-f="work"]').value;
-    it.work = v === '__' ? '' : v;
-    it.title = v === '__' ? row.querySelector('[data-f="title"]').value.trim() : '';
-    it.bars = row.querySelector('[data-f="bars"]').value.trim();
-    it.who = row.querySelector('[data-f="who"]').value;
-    it.note = row.querySelector('[data-f="note"]').value.trim();
+    it.kind = val(row, 'kind');
+    for (const k of ['work', 'title', 'bars', 'who', 'mins', 'time', 'where', 'lead', 'note']) delete it[k];
+    if (it.kind === 'head') {
+      Object.assign(it, { time: val(row, 'time'), title: val(row, 'title'), where: val(row, 'where'), lead: val(row, 'lead') });
+      const secs = $$('.pick[aria-pressed="true"]', row).map(b => b.dataset.sec);
+      it.who = secs.length && secs.length < SECTIONS.length ? secs.join(',') : '';
+    } else if (it.kind === 'break') {
+      Object.assign(it, { time: val(row, 'time'), mins: +val(row, 'mins') || '' });
+    } else {
+      const v = val(row, 'work');
+      Object.assign(it, { work: v === '__' ? '' : v, title: v === '__' ? val(row, 'title') : '', bars: val(row, 'bars'), who: val(row, 'who'), mins: +val(row, 'mins') || '', note: val(row, 'note') });
+    }
+    for (const k of Object.keys(it)) if (it[k] === '' && k !== 'kind' && k !== 'who') delete it[k];
   });
-  const paint = el => {
-    el.querySelector('#pl-items').innerHTML = plan.items.length ? plan.items.map((it, i) => `<div class="plan-row" data-id="${esc(it.id)}">
-      <div style="display:flex;gap:6px;align-items:center"><span class="plan-n">${i + 1}</span>
-        <select class="inp" data-f="work" style="flex:1;min-width:0">${works.length ? `<optgroup label="${inProd.size ? 'D’aquesta producció' : 'Repertori'}">${works.filter(w => !inProd.size || inProd.has(w.id)).map(w => `<option value="${esc(w.id)}" ${it.work === w.id ? 'selected' : ''}>${esc(w.title)}</option>`).join('')}</optgroup>` : ''}
-          ${inProd.size && works.length > inProd.size ? `<optgroup label="Resta del repertori">${works.filter(w => !inProd.has(w.id)).map(w => `<option value="${esc(w.id)}" ${it.work === w.id ? 'selected' : ''}>${esc(w.title)}</option>`).join('')}</optgroup>` : ''}
-          <option value="__" ${!it.work ? 'selected' : ''}>Una altra cosa…</option></select>
-        <button type="button" class="icon-btn" data-rm="${esc(it.id)}" aria-label="Treu-la">${ICON.close}</button></div>
+  const workSelect = it => `<select class="inp" data-f="work" style="flex:1;min-width:0">${works.length ? `<optgroup label="${inProd.size ? 'D’aquesta producció' : 'Repertori'}">${works.filter(w => !inProd.size || inProd.has(w.id)).map(w => `<option value="${esc(w.id)}" ${it.work === w.id ? 'selected' : ''}>${esc(w.title)}</option>`).join('')}</optgroup>` : ''}
+      ${inProd.size && works.length > inProd.size ? `<optgroup label="Resta del repertori">${works.filter(w => !inProd.has(w.id)).map(w => `<option value="${esc(w.id)}" ${it.work === w.id ? 'selected' : ''}>${esc(w.title)}</option>`).join('')}</optgroup>` : ''}
+      <option value="__" ${!it.work ? 'selected' : ''}>Una altra cosa…</option></select>`;
+  const rowHtml = (it, n) => {
+    const kind = it.kind || '';
+    const head = `<div style="display:flex;gap:6px;align-items:center"><span class="plan-n">${kind ? (kind === 'head' ? '▸' : '‖') : n}</span>
+      <select class="inp" data-f="kind" aria-label="Què és" style="flex:1;min-width:0">${PLAN_KINDS.map(([k, l]) => `<option value="${k}" ${k === kind ? 'selected' : ''}>${l}</option>`).join('')}</select>
+      <button type="button" class="icon-btn" data-up="${esc(it.id)}" aria-label="Puja-la" ${n === 1 && !kind ? '' : ''}>${ICON.up}</button>
+      <button type="button" class="icon-btn" data-rm="${esc(it.id)}" aria-label="Treu-la">${ICON.close}</button></div>`;
+    if (kind === 'head') return `<div class="plan-row is-head" data-id="${esc(it.id)}">${head}
+      <div class="row2"><input class="inp" data-f="time" type="time" value="${esc(it.time || '')}" aria-label="Hora"><input class="inp" data-f="title" maxlength="50" value="${esc(it.title || '')}" placeholder="p. ex. Assaig parcial · Tutti"></div>
+      <div class="pickers" aria-label="Qui">${SECTIONS.map(x => secPick(x, planWhoList(it.who).includes(x.id))).join('')}</div>
+      <div class="row2"><input class="inp" data-f="where" maxlength="60" value="${esc(it.where || '')}" placeholder="Aula (p. ex. Aula 1 PP)"><input class="inp" data-f="lead" maxlength="60" value="${esc(it.lead || '')}" placeholder="Qui el porta"></div></div>`;
+    if (kind === 'break') return `<div class="plan-row is-break" data-id="${esc(it.id)}">${head}
+      <div class="row2"><input class="inp" data-f="time" type="time" value="${esc(it.time || '')}" aria-label="Hora"><input class="inp" data-f="mins" type="number" min="1" max="120" inputmode="numeric" value="${esc(String(it.mins || ''))}" placeholder="Minuts"></div></div>`;
+    return `<div class="plan-row" data-id="${esc(it.id)}">${head}
+      ${workSelect(it)}
       <input class="inp" data-f="title" type="text" maxlength="60" value="${esc(it.title || '')}" placeholder="p. ex. Escalfament, lectura nova…" ${it.work ? 'hidden' : ''}>
-      <div class="row2"><input class="inp" data-f="bars" type="text" maxlength="30" value="${esc(it.bars || '')}" placeholder="Compassos (p. ex. 1-40)" aria-label="Compassos">
-        <select class="inp" data-f="who" aria-label="Qui"><option value="">Tothom</option>${SECTIONS.map(x => `<option value="${esc(x.id)}" ${it.who === x.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}<option value="Solistes" ${it.who === 'Solistes' ? 'selected' : ''}>Solistes</option></select></div>
-      <input class="inp" data-f="note" type="text" maxlength="120" value="${esc(it.note || '')}" placeholder="Nota (opcional): p. ex. de memòria, amb el text">
-    </div>`).join('') : '<p class="muted" style="margin:0;font-size:calc(13px*var(--ts))">Encara no hi ha res. Afegeix les obres que s’assajaran, per ordre.</p>';
-    el.querySelectorAll('#pl-items [data-rm]').forEach(b => b.onclick = () => { read(el); plan.items = plan.items.filter(x => x.id !== b.dataset.rm); paint(el); });
-    el.querySelectorAll('#pl-items [data-f="work"]').forEach(x => x.onchange = () => { read(el); paint(el); });
+      <div class="row3"><input class="inp" data-f="bars" type="text" maxlength="30" value="${esc(it.bars || '')}" placeholder="Compassos" aria-label="Compassos">
+        <select class="inp" data-f="who" aria-label="Qui"><option value="">Tothom</option>${SECTIONS.map(x => `<option value="${esc(x.id)}" ${it.who === x.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}<option value="Solistes" ${it.who === 'Solistes' ? 'selected' : ''}>Solistes</option></select>
+        <input class="inp" data-f="mins" type="number" min="1" max="180" inputmode="numeric" value="${esc(String(it.mins || ''))}" placeholder="Minuts" aria-label="Minuts"></div>
+      <input class="inp" data-f="note" type="text" maxlength="120" value="${esc(it.note || '')}" placeholder="Nota (opcional): p. ex. lectura, de memòria, amb el text"></div>`;
   };
+  const paint = el => {
+    let n = 0;
+    el.querySelector('#pl-items').innerHTML = plan.items.length ? plan.items.map(it => rowHtml(it, it.kind ? 0 : ++n)).join('') : '<p class="muted" style="margin:0;font-size:calc(13px*var(--ts))">Encara no hi ha res. Afegeix les obres que s’assajaran, per ordre. Si hi ha parcials, afegeix un bloc per a cada grup de cordes, amb l’aula i qui el porta.</p>';
+    el.querySelectorAll('#pl-items [data-rm]').forEach(b => b.onclick = () => { read(el); plan.items = plan.items.filter(x => x.id !== b.dataset.rm); paint(el); });
+    el.querySelectorAll('#pl-items [data-up]').forEach(b => b.onclick = () => { read(el); const i = plan.items.findIndex(x => x.id === b.dataset.up); if (i > 0) { const [x] = plan.items.splice(i, 1); plan.items.splice(i - 1, 0, x); } paint(el); });
+    el.querySelectorAll('#pl-items [data-f="work"], #pl-items [data-f="kind"]').forEach(x => x.onchange = () => { read(el); paint(el); });
+    el.querySelectorAll('#pl-items .pickers .pick').forEach(b => b.onclick = () => b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true')));
+  };
+  const add = (el, kind) => { read(el); plan.items.push(kind === 'head' ? { id: uid('pi'), kind, time: '', title: '', who: '' } : kind === 'break' ? { id: uid('pi'), kind, time: '', mins: 15 } : { id: uid('pi'), kind: '', work: works.find(w => inProd.has(w.id))?.id || works[0]?.id || '', title: '', bars: '', who: '', note: '' }); paint(el); };
   openSheet({
     title: 'Pla d’assaig',
     wide: true,
-    body: `<p style="margin-top:0"><b>${esc(longDate(s.date))}</b>${s.time ? ` · ${esc(timeRange(s))}` : ''} · ${esc(s.type || 'Assaig')}<br><span class="muted" style="font-size:calc(13px*var(--ts))">El veuen tots els ${V.members} convocats, per preparar-ho. Qui falti sabrà què s’ha fet.</span></p>
+    body: `<p style="margin-top:0"><b>${esc(longDate(s.date))}</b>${s.time ? ` · ${esc(timeRange(s))}` : ''} · ${esc(s.type || 'Assaig')}<br><span class="muted" style="font-size:calc(13px*var(--ts))">El veuen tots els ${V.members} convocats, per preparar-ho; cadascú hi veu primer el que li toca. Qui falti sabrà què s’ha fet.</span></p>
       <div id="pl-items" style="display:grid;gap:12px"></div>
-      <button type="button" class="btn btn-sm" id="pl-add" style="margin-top:10px">+ Obra o fragment</button>
-      <label class="field" style="margin-top:14px"><span>Indicacions (opcional)</span><textarea class="inp" id="pl-text" maxlength="600" style="min-height:60px" placeholder="p. ex. Porteu el llapis. Mirarem sobretot la pronunciació.">${esc(plan.text || '')}</textarea></label>
-      <label class="field" style="margin-top:10px"><span>Després de l’assaig: què s’hi ha fet (opcional)</span><textarea class="inp" id="pl-after" maxlength="600" style="min-height:60px" placeholder="p. ex. Hem arribat fins al compàs 64. Per a la setmana vinent, de memòria fins al 40.">${esc(plan.after || '')}</textarea></label>`,
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button type="button" class="btn btn-sm" id="pl-add">+ Obra</button><button type="button" class="btn btn-sm" id="pl-add-head">+ Bloc (parcial o tutti)</button><button type="button" class="btn btn-sm" id="pl-add-break">+ Pausa</button></div>
+      <label class="field" style="margin-top:14px"><span>Indicacions (opcional)</span><textarea class="inp" id="pl-text" maxlength="800" style="min-height:60px" placeholder="p. ex. Porteu el llapis. Mirarem sobretot la pronunciació.">${esc(plan.text || '')}</textarea></label>
+      <label class="field" style="margin-top:10px"><span>Després de l’assaig: què s’hi ha fet (opcional)</span><textarea class="inp" id="pl-after" maxlength="1200" style="min-height:60px" placeholder="p. ex. Hem llegit el núm. 2 i el 4; del 8, del c. 30 al 45. Per a la setmana vinent, de memòria fins al 40.">${esc(plan.after || '')}</textarea></label>`,
     foot: `${planOf(s) ? '<button class="btn btn-danger-ghost" id="pl-del">Esborra el pla</button>' : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="pl-save">Desa</button>`,
     onMount: el => {
       paint(el);
-      el.querySelector('#pl-add').onclick = () => { read(el); plan.items.push({ id: uid('pi'), work: works.find(w => inProd.has(w.id))?.id || works[0]?.id || '', title: '', bars: '', who: '', note: '' }); paint(el); };
+      el.querySelector('#pl-add').onclick = () => add(el, '');
+      el.querySelector('#pl-add-head').onclick = () => add(el, 'head');
+      el.querySelector('#pl-add-break').onclick = () => add(el, 'break');
       el.querySelector('#pl-save').onclick = () => {
         read(el);
-        plan.items = plan.items.filter(it => it.work || it.title);
+        plan.items = plan.items.filter(it => it.kind || it.work || it.title);
         plan.text = el.querySelector('#pl-text').value.trim();
         plan.after = el.querySelector('#pl-after').value.trim();
         plan.at = new Date().toISOString(); plan.by = S.me?.name || S.email || '';
@@ -415,7 +484,8 @@ const PLAN_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V6.
 function planChip(s) {
   const p = planOf(s);
   if (p) {
-    const titles = (p.items || []).map(it => `${planTitle(it)}${it.bars ? ` (${it.bars})` : ''}`).join(' · ') || p.text || p.after;
+    const me = S.members.get(myMemberId());
+    const titles = planWorks(planForMe(p.items || [], me && !canEdit() ? me.section : '')).map(it => `${planTitle(it)}${it.bars ? ` (${it.bars})` : ''}`).join(' · ') || p.text || p.after;
     return `<button class="fitxa-chip plan-chip" data-act="session-info" data-sid="${s.id}">${PLAN_ICON}<span><b>${s.date < TODAY ? 'Què s’hi va treballar' : 'Pla d’assaig'}</b><small>${esc(titles)}</small></span></button>`;
   }
   if (canEdit() && !isShow(s) && s.date >= TODAY) return `<button class="fitxa-chip empty" data-act="plan-edit" data-sid="${s.id}">${PLAN_ICON}<span><b>Afegeix el pla d’assaig</b><small>Quines obres i quins compassos, perquè ho puguin preparar</small></span></button>`;

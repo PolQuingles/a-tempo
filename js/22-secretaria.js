@@ -9,8 +9,8 @@
 // Els documents signats es pugen a memberFiles (a trossos, amb memberId), igual de privats.
 const DOCS_READ = ['admin', 'secretaria', 'gerencia', 'director'];
 const DOCS_WRITE = ['admin', 'secretaria', 'gerencia'];
-const canDocs = () => !PREVIEW && DOCS_READ.some(r => hasRole(S.me, r));
-const canDocsWrite = () => !PREVIEW && DOCS_WRITE.some(r => hasRole(S.me, r));
+const canDocs = () => DOCS_READ.some(iHave);
+const canDocsWrite = () => DOCS_WRITE.some(iHave);
 const DOC_ITEMS = [['imatge', 'Drets d’imatge', 'Fotos i vídeos dels concerts i les activitats'], ['dades', 'Protecció de dades', 'Consentiment per tractar les dades personals'], ['autoritzacio', 'Autoritzacions', 'Menors d’edat, sortides i altres permisos']];
 const FEE_METHODS = ['Transferència', 'Bizum', 'Efectiu', 'Rebut domiciliat'];
 const feeKey = () => { const s = seasonCfg().season; return `${s.from.slice(0, 4)}-${s.to.slice(2, 4)}`; };
@@ -62,7 +62,7 @@ function manageHistory() {
   const inSeason = events.filter(e => e.date >= season.from && e.date <= season.to);
   const active = all.filter(m => m.active !== false).sort((a, b) => (a.joined || '9999').localeCompare(b.joined || '9999') || byName(a, b));
   const noDate = active.filter(m => !m.joined).length;
-  return `<div class="kpis" style="grid-template-columns:repeat(3,1fr);margin-top:4px">
+  return `<div class="kpis kpis-3" style="margin-top:4px">
       <div class="kpi"><div class="kpi-v">${active.length}</div><div class="kpi-l">En actiu</div></div>
       <div class="kpi"><div class="kpi-v">${inSeason.filter(e => e.kind !== 'baixa').length}</div><div class="kpi-l">Altes aquesta temporada</div></div>
       <div class="kpi"><div class="kpi-v">${inSeason.filter(e => e.kind === 'baixa').length}</div><div class="kpi-l">Baixes aquesta temporada</div></div></div>

@@ -9,7 +9,8 @@ def put(p, v): DB[p] = v
 put(f"agrupacions/{F}", {"name": "Cor Jove de proves", "kind": "cor", "status": "active"})
 put(f"cors/{F}/config/main", {"name": "Cor Jove de proves", "shortName": "Cor Jove", "alertFNJ": 3, "minAttendance": 80,
     "brand": {"accent": "#5A3577"}, "classesOn": True, "teachers": [{"id": "pfanais", "name": "Anaïs Oliveras"}],
-    "season": {"from": d(-20), "to": d(260), "name": "Temporada"}, "voiceMin": {"T": 5}, "feeAmount": 120, "terms": [{"name": "1r trimestre", "from": d(-20), "to": d(90)}]})
+    "season": {"from": d(-20), "to": d(260), "name": "Temporada"}, "voiceMin": {"T": 5}, "feeAmount": 120, "terms": [{"name": "1r trimestre", "from": d(-20), "to": d(90)}],
+    "teamRoles": ["admin", "director", "gerencia", "leader:T"]})
 names = {"S": ["Anna Puig", "Laia Ferrer", "Marta Soler", "Clara Vila"], "C": ["Júlia Mas", "Neus Roca", "Ona Serra", "Pau Riera"],
          "T": ["Lluc Tenor", "Marc Bosch", "Oriol Camps", "Jan Pons"], "B": ["Pere Font", "Joan Sala", "Biel Costa", "Arnau Prat"]}
 mid = {}
@@ -55,7 +56,14 @@ put(f"cors/{F}/profiles/{mid['Marc Bosch']}", {"memberId": mid["Marc Bosch"], "p
 put(f"cors/{F}/messages/g1", {"id": "g1", "to": ["*"], "title": "Benvinguda", "body": "Comencem el curs dilluns.", "by": "ger@exemple.cat", "byName": "Gemma Gerent", "byRole": "Gerència", "createdAt": now})
 put(f"cors/{F}/messages/g2", {"id": "g2", "to": ["T"], "title": "", "body": "Tenors: porteu la partitura del Gloria.", "by": "leader@exemple.cat", "byName": "Lluc Tenor", "byRole": "Cap de corda de tenors", "createdAt": now})
 put(f"cors/{F}/memberDocs/{mid['Anna Puig']}", {"memberId": mid["Anna Puig"], "docs": {"imatge": {"v": "no", "at": d(-3)}}, "fees": {}})
-put(f"cors/{F}/announcements/n1", {"id": "n1", "title": "Benvinguts al curs", "body": "Recordeu portar les partitures.", "author": "Pol Proves", "createdAt": now})
+put(f"cors/{F}/announcements/n1", {"id": "n1", "title": "Benvinguts al curs", "body": "Recordeu portar les partitures.", "author": "Pol Proves", "by": "pol@exemple.cat", "createdAt": now})
+put(f"cors/{F}/polls/q1", {"id": "q1", "title": "Quin dissabte fem l'assaig extra?", "options": [{"id": "o1", "label": "Dissabte 7"}, {"id": "o2", "label": "Dissabte 14"}], "multi": True, "sections": [], "closesAt": d(6), "closed": False, "allowNote": True, "createdAt": now})
+put(f"cors/{F}/pollVotes/q1_{mid['Marc Bosch']}", {"pollId": "q1", "memberId": mid["Marc Bosch"], "section": "T", "choices": ["o1"], "at": now})
+# Una temporada passada, per provar l'arxiu de l'assistència per trimestres.
+old = [{"id": f"v{i}", "date": d(k), "time": "20:30", "type": "Assaig", "place": "Sala d'assaig"} for i, k in enumerate([-400, -380, -300])]
+put(f"cors/{F}/productions/p0", {"id": "p0", "name": "Temporada passada", "start": d(-410), "end": d(-290), "excluded": [], "sessions": old})
+for s in old:
+    put(f"cors/{F}/attendance/{s['id']}_T", {"sessionId": s["id"], "section": "T", "marks": {mid[n]: {"s": "P"} for n in names["T"]}})
 for k, wd in [(1, 0), (3, 0), (8, 0)]:
     cid = f"c{k}"
     put(f"cors/{F}/classes/{cid}", {"id": cid, "date": d(k), "place": "Aula 2", "note": "", "teacher": "prof@exemple.cat", "teacherName": "Prat, Berta",

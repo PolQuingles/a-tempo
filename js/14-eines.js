@@ -189,14 +189,43 @@ function sheetSub(sid, sec) {
 }
 
 /* ---------- Confirmations ---------- */
-function rsvpAnswer(sid, answer, note = '') {
+function rsvpAnswer(sid, answer, note = '', patch = {}) {
   const mid = myMemberId(), m = S.members.get(mid), s = sessionById(sid);
   if (!m || !s) return;
-  const id = `${sid}_${mid}`;
-  const rec = { sessionId: sid, memberId: mid, section: m.section, answer, note, at: new Date().toISOString(), uid: S.uid };
+  const id = `${sid}_${mid}`, prev = S.rsvp.get(id) || {};
+  const rec = { sessionId: sid, memberId: mid, section: m.section, answer, note: note || (answer === prev.answer ? prev.note || '' : ''), at: new Date().toISOString(), uid: S.uid };
+  // L'autocar i les feines de voluntari només valen si hi va.
+  if (answer === 'yes') for (const k of ['transport', 'tasks']) { const v = k in patch ? patch[k] : prev[k]; if (v && (!Array.isArray(v) || v.length)) rec[k] = v; }
   S.rsvp.set(id, rec); persist('rsvp', id, rec, 10);
-  toast(answer === 'yes' ? 'Confirmat: hi seràs' : 'Resposta enviada');
+  if (!Object.keys(patch).length) toast(answer === 'yes' ? (s.bus && !rec.transport ? 'Confirmat. Digues també si vens amb l’autocar.' : 'Confirmat: hi seràs') : 'Resposta enviada');
   render();
+}
+/** Autocar o pel seu compte; i les feines de voluntari (carregar material…). */
+function rsvpTransport(sid, v) { const a = S.rsvp.get(`${sid}_${myMemberId()}`); rsvpAnswer(sid, 'yes', a?.note || '', { transport: v }); toast(v === 'bus' ? 'Vas amb l’autocar' : 'Hi vas pel teu compte'); }
+function rsvpTask(sid, tid) {
+  const a = S.rsvp.get(`${sid}_${myMemberId()}`);
+  const cur = new Set(a?.tasks || []);
+  const on = !cur.has(tid);
+  on ? cur.add(tid) : cur.delete(tid);
+  rsvpAnswer(sid, 'yes', a?.note || '', { tasks: [...cur] });
+  toast(on ? 'T’hi has apuntat. Gràcies!' : 'Ja no hi ets apuntat');
+}
+/** Qui s'ha apuntat a cada feina (l'equip ho veu tot; cadascú, només les seves). */
+const taskPeople = (s, tid) => [...S.rsvp.values()].filter(r => r.sessionId === s.id && r.answer === 'yes' && (r.tasks || []).includes(tid)).map(r => S.members.get(r.memberId)).filter(Boolean);
+/** Les feines de voluntari d'una convocatòria: a la fitxa i a la targeta de convocatòria. */
+function tasksBlock(s, compact) {
+  const tasks = s && s.rsvp ? s.tasks || [] : [];
+  if (!tasks.length) return '';
+  const me = S.members.get(myMemberId());
+  const mine = me ? S.rsvp.get(`${s.id}_${me.id}`) : null;
+  const can = mine?.answer === 'yes' && s.date >= TODAY && !PREVIEW;
+  const rows = tasks.map(t => {
+    const who = canEdit() ? taskPeople(s, t.id) : [];
+    const on = (mine?.tasks || []).includes(t.id);
+    return `<li><span><b>${esc(t.label)}</b>${canEdit() ? `<small>${who.length} de ${t.need || '?'}${who.length ? ` · ${esc(who.map(m => firstName(fullName(m.name))).join(', '))}` : ''}</small>` : t.need ? `<small>Calen ${t.need} persones</small>` : ''}</span>
+      ${can ? `<button class="btn btn-sm ${on ? 'btn-primary' : ''}" data-act="rsvp-task" data-sid="${esc(s.id)}" data-k="${esc(t.id)}">${on ? 'Hi ets' : 'M’hi apunto'}</button>` : on ? '<span class="rsvp yes">Hi ets</span>' : ''}</li>`;
+  }).join('');
+  return `${compact ? '<span class="todo-k" style="margin-top:6px">Voluntaris</span>' : '<div class="section-title" style="margin-top:14px"><h2 class="h2">Voluntaris</h2></div>'}<ul class="tasks">${rows}</ul>${me && !mine && !compact ? '<p class="muted" style="margin:6px 0 0;font-size:calc(13px*var(--ts))">Confirma que hi seràs per apuntar-t’hi.</p>' : ''}`;
 }
 function sheetRsvpNo(sid) {
   openSheet({
@@ -211,7 +240,8 @@ function sheetRsvpList(sid) {
   if (!s) return;
   const block = x => {
     const ms = membersOf(x.id).filter(m => !isOut(s, m));
-    const row = m => { const a = S.rsvp.get(`${sid}_${m.id}`); return `<li><span>${esc(m.name)}${a?.note ? `<br><span class="m">${esc(a.note)}</span>` : ''}</span><span class="rsvp ${a ? a.answer : 'none'}">${a ? (a.answer === 'yes' ? 'Sí' : 'No') : '—'}</span></li>`; };
+    const extra = a => [s.bus && a?.answer === 'yes' ? (a.transport === 'bus' ? 'Autocar' : a.transport === 'own' ? 'Pel seu compte' : 'Autocar?') : '', ...(a?.tasks || []).map(t => (s.tasks || []).find(x => x.id === t)?.label).filter(Boolean)].filter(Boolean).join(' · ');
+    const row = m => { const a = S.rsvp.get(`${sid}_${m.id}`); return `<li><span>${esc(m.name)}${extra(a) ? `<br><span class="m">${esc(extra(a))}</span>` : ''}${a?.note ? `<br><span class="m">${esc(a.note)}</span>` : ''}</span><span class="rsvp ${a ? a.answer : 'none'}">${a ? (a.answer === 'yes' ? 'Sí' : 'No') : '—'}</span></li>`; };
     return `<div class="eyebrow" style="margin:14px 0 4px">${x.name}</div><ul class="mini-list" style="max-height:none">${ms.map(row).join('')}</ul>`;
   };
   openSheet({ title: `Confirmacions · ${shortDate(s.date)}`, body: SECTIONS.filter(x => convoked(s, x.id)).map(block).join('') });
@@ -288,7 +318,7 @@ function uploadLogo(file) {
       toast('Logotip desat'); render();
     };
     img.onerror = () => toast('No s’ha pogut llegir la imatge');
-    img.src = reader.result;
+    img.src = String(reader.result);
   };
   reader.readAsDataURL(file);
 }
@@ -394,12 +424,26 @@ const authorName = () => S.me?.name || S.me?.email || 'Equip';
 
 function sheetAnnouncement(id) {
   const ex = id ? S.announcements.get(id) : null;
-  const a = ex ? { ...ex } : { id: uid('n'), title: '', body: '', pinned: false, sections: [], until: '' };
+  const a = ex ? clone(ex) : { id: uid('n'), title: '', body: '', pinned: false, sections: [], until: '', files: [] };
+  a.files = a.files || [];
+  const picked = [];   // fitxers triats que encara no s'han pujat: { tmp, file }
+  const paintFiles = el => {
+    el.querySelector('#an-files').innerHTML = [...a.files.map(f => `<li><span>${f.file ? ICON.clip : ICON.link}${esc(f.title || f.file?.name || f.url)}<small>${f.file ? `${esc(fileKind(f.file))} · ${fmtSize(f.file.size)}` : esc(f.url)}</small></span><button type="button" class="icon-btn" data-rm-f="${esc(f.id)}" aria-label="Treu-lo">${ICON.close}</button></li>`),
+      ...picked.map(p => `<li><span>${ICON.clip}${esc(p.file.name)}<small>${esc(fileKind(p.file))} · ${fmtSize(p.file.size)} · es pujarà en desar</small></span><button type="button" class="icon-btn" data-rm-p="${esc(p.tmp)}" aria-label="Treu-lo">${ICON.close}</button></li>`)].join('');
+    el.querySelectorAll('[data-rm-f]').forEach(b => b.onclick = () => { a.files = a.files.filter(f => f.id !== b.dataset.rmF); paintFiles(el); });
+    el.querySelectorAll('[data-rm-p]').forEach(b => b.onclick = () => { picked.splice(picked.findIndex(p => p.tmp === b.dataset.rmP), 1); paintFiles(el); });
+  };
   openSheet({
     title: ex ? 'Edita l’anunci' : 'Nou anunci',
+    wide: true,
     body: `<div class="kv">
-      <label class="field"><span>Títol</span><input class="inp" id="an-title" maxlength="90" value="${esc(a.title)}" placeholder="p. ex. Dimecres, assaig a la Sala d’Orquestra"></label>
-      <label class="field"><span>Text</span><textarea class="inp" id="an-body" maxlength="1500" placeholder="Els enllaços es poden clicar.">${esc(a.body)}</textarea></label>
+      <label class="field"><span>Títol</span><input class="inp" id="an-title" maxlength="90" value="${esc(a.title)}" placeholder="p. ex. Informacions de la setmana"></label>
+      <label class="field"><span>Text</span><textarea class="inp" id="an-body" maxlength="12000" style="min-height:220px" placeholder="Pots escriure-hi tant com vulguis, com un correu.">${esc(a.body)}</textarea>
+        <small>Format: una línia en blanc separa paràgrafs · les línies que comencen amb «-» fan una llista · una línia en MAJÚSCULES és un títol · **així** surt en negreta · els enllaços es poden clicar.</small></label>
+      <div class="field"><span>Adjunts</span><ul class="att-edit" id="an-files"></ul>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><label class="btn btn-sm" for="an-file">Adjunta fitxers</label><input id="an-file" type="file" multiple class="sr"><button type="button" class="btn btn-sm" id="an-link">Afegeix un enllaç</button></div>
+        <div id="an-link-f" hidden style="display:grid;gap:6px;margin-top:8px"><input class="inp" id="an-link-url" type="url" placeholder="https://…"><input class="inp" id="an-link-t" maxlength="80" placeholder="Com es diu (p. ex. Formulari del cap de setmana)"><button type="button" class="btn btn-sm" id="an-link-ok" style="justify-self:start">Afegeix-lo</button></div>
+        <small>PDF, àudios, imatges… fins a 20 MB cadascun. Els veuen tots els qui veuen l’anunci.</small></div>
       <div class="field"><span>Per a (si no en tries cap, per a tothom)</span>${sectionPickers('an-secs', a.sections)}</div>
       <label class="field"><span>Visible fins al (opcional)</span><input class="inp" id="an-until" type="date" value="${esc(a.until || '')}"></label>
       <div class="toggle-row"><span><b>Fixat a dalt</b></span><label class="switch"><input type="checkbox" id="an-pin" ${a.pinned ? 'checked' : ''}><span></span></label></div>
@@ -407,18 +451,49 @@ function sheetAnnouncement(id) {
     foot: `${ex ? '<button class="btn btn-danger-ghost" id="an-del">Esborra</button>' : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="an-save">${ex ? 'Desa' : 'Publica'}</button>`,
     onMount: el => {
       bindToggles(el, '#an-secs');
-      el.querySelector('#an-save').onclick = () => {
+      paintFiles(el);
+      el.querySelector('#an-file').onchange = e => {
+        let room = fileQuotaMB() * 1048576 - groupFileBytes() - picked.reduce((n, p) => n + p.file.size, 0);
+        for (const f of e.target.files || []) {
+          if (f.size > FILE_MAX) { toast(`${f.name} passa de 20 MB`); continue; }
+          if (f.size > room) { toast(`No hi cap ${f.name}: l’espai per a fitxers és ple`); continue; }
+          room -= f.size; picked.push({ tmp: uid('t'), file: f });
+        }
+        e.target.value = ''; paintFiles(el);
+      };
+      el.querySelector('#an-link').onclick = () => { el.querySelector('#an-link-f').hidden = false; el.querySelector('#an-link-url').focus(); };
+      el.querySelector('#an-link-ok').onclick = () => {
+        const url = el.querySelector('#an-link-url').value.trim();
+        if (!/^https?:\/\//i.test(url)) { toast('L’enllaç ha de començar per https://'); return; }
+        a.files.push({ id: uid('fl'), url, title: el.querySelector('#an-link-t').value.trim() });
+        el.querySelector('#an-link-url').value = ''; el.querySelector('#an-link-t').value = ''; el.querySelector('#an-link-f').hidden = true;
+        paintFiles(el);
+      };
+      el.querySelector('#an-save').onclick = async e => {
         const title = el.querySelector('#an-title').value.trim();
         if (!title) { toast('Posa un títol a l’anunci'); return; }
+        const btn = e.currentTarget;
+        if (picked.length && !navigator.onLine) { toast('Cal connexió per pujar els fitxers'); return; }
+        btn.disabled = true;
+        try {
+          for (const [i, p] of picked.entries()) {
+            btn.textContent = `Pujant ${i + 1} de ${picked.length}…`;
+            a.files.push({ id: uid('fl'), title: titleFromFile(p.file.name), file: await uploadFile(p.file) });
+          }
+        } catch { btn.disabled = false; btn.textContent = ex ? 'Desa' : 'Publica'; toast('No s’ha pogut pujar un fitxer. Torna-ho a provar.'); return; }
+        const kept = new Set(a.files.map(f => f.id));
+        for (const f of ex?.files || []) if (f.file && !kept.has(f.id)) deleteFile(f.file);
         const rec = { ...a, title, body: el.querySelector('#an-body').value.trim(), sections: readSections(el, '#an-secs'), until: el.querySelector('#an-until').value, pinned: el.querySelector('#an-pin').checked,
-          author: ex?.author || authorName(), createdAt: ex?.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString() };
+          author: ex?.author || authorName(), by: ex?.by || S.email || '', createdAt: ex?.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString() };
+        if (!rec.files.length) delete rec.files;
         S.announcements.set(rec.id, rec); persist('announcements', rec.id, rec, 10);
         closeSheet(); toast(ex ? 'Anunci desat' : 'Anunci publicat'); render();
       };
       el.querySelector('#an-del')?.addEventListener('click', async () => {
-        const before = clone(a);
+        const before = clone(ex);
         S.announcements.delete(a.id); persist('announcements', a.id, null, 10); closeSheet(); render();
-        undoable('Anunci esborrat', () => { S.announcements.set(before.id, before); persist('announcements', before.id, before, 10); });
+        undoable('Anunci esborrat', () => { S.announcements.set(before.id, before); persist('announcements', before.id, before, 10); },
+          () => { for (const f of before.files || []) if (f.file) deleteFile(f.file); });
       });
     },
   });
@@ -433,8 +508,8 @@ function sheetMaterial(pid, id) {
     title: ex ? 'Edita el material' : 'Nou material',
     body: `<div class="kv">
       <label class="field"><span>Producció</span><select class="inp" id="mt-prod" ${ex ? 'disabled' : ''}>${prods.map(p => `<option value="${p.id}" ${p.id === prodId ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select></label>
-      ${sourceFields('mt', m)}
-      <label class="field"><span>Títol</span><input class="inp" id="mt-title" maxlength="90" value="${esc(m.title)}" placeholder="p. ex. O Fortuna – partitura"></label>
+      ${sourceFields('mt', m, !ex)}
+      <label class="field" id="mt-title-f"><span>Títol</span><input class="inp" id="mt-title" maxlength="90" value="${esc(m.title)}" placeholder="p. ex. O Fortuna – partitura"></label>
       <div class="field"><span>Tipus</span><div class="pickers" id="mt-kind">${Object.entries(MAT_KINDS).map(([k, l]) => `<button type="button" class="pick" data-k="${k}" aria-pressed="${m.kind === k}">${l}</button>`).join('')}</div></div>
       <div class="field"><span>Per a</span><div class="pickers" id="mt-sec"><button type="button" class="pick" data-sec="" aria-pressed="${!m.section}">${capz(V.tot)}</button>${SECTIONS.map(x => `<button type="button" class="pick" data-sec="${esc(x.id)}" aria-pressed="${m.section === x.id}" title="${esc(x.name)}"><span class="vl">${esc(x.short)}</span></button>`).join('')}</div></div>
       <div class="field"><span>${V.Part} (opcional)</span><div class="pickers" id="mt-part"><button type="button" class="pick" data-part="" aria-pressed="${!m.part}">Totes</button>${['1', '2'].map(v => `<button type="button" class="pick" data-part="${v}" aria-pressed="${m.part === v}">${v}</button>`).join('')}</div></div>
@@ -444,14 +519,35 @@ function sheetMaterial(pid, id) {
       const single = sel => el.querySelectorAll(`${sel} .pick`).forEach(b => b.onclick = () => el.querySelectorAll(`${sel} .pick`).forEach(x => x.setAttribute('aria-pressed', x === b)));
       single('#mt-kind'); single('#mt-sec'); single('#mt-part');
       const title = el.querySelector('#mt-title');
-      const src = bindSource(el, 'mt', f => {
+      const src = bindSource(el, 'mt', (f, all) => {
+        // Diversos fitxers de cop (p. ex. els àudios de cada número): un material per fitxer, amb el títol i el tipus de cadascun.
+        el.querySelector('#mt-title-f').hidden = all && all.length > 1;
+        if (all && all.length > 1) return;
         if (!title.value.trim()) title.value = titleFromFile(f.name);
-        const k = fileKind(f);
-        const guess = k === 'PDF' ? 'partitura' : k === 'Àudio' ? 'audio' : k === 'Vídeo' ? 'video' : null;
-        if (guess) el.querySelectorAll('#mt-kind .pick').forEach(x => x.setAttribute('aria-pressed', x.dataset.k === guess));
+        const guess = matKindOf(f);
+        if (guess !== 'altres') el.querySelectorAll('#mt-kind .pick').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.k === guess)));
       });
       const saveTo = (p, list) => { const next = { ...p, materials: list }; saveProduction(next); };
       el.querySelector('#mt-save').onclick = async e => {
+        const all = src.mode() === 'file' ? src.pickedAll() : [];
+        if (all.length > 1) {
+          const btn = e.currentTarget, p0 = S.productions.get(el.querySelector('#mt-prod').value);
+          if (!navigator.onLine) { toast('Cal connexió per pujar els fitxers'); return; }
+          btn.disabled = true;
+          const add = [];
+          try {
+            for (const [i, f] of all.entries()) {
+              btn.textContent = `Pujant ${i + 1} de ${all.length}…`;
+              add.push({ id: uid('mt'), title: titleFromFile(f.name), url: '', kind: matKindOf(f), file: await uploadFile(f),
+                section: el.querySelector('#mt-sec .pick[aria-pressed="true"]').dataset.sec, part: el.querySelector('#mt-part .pick[aria-pressed="true"]').dataset.part,
+                at: new Date().toISOString(), by: S.me?.email || '' });
+            }
+          } catch { btn.disabled = false; btn.textContent = 'Desa'; toast('No s’ha pogut pujar un fitxer. Torna-ho a provar.'); return; }
+          const p = S.productions.get(p0.id);
+          saveTo(p, [...(p.materials || []), ...add]);
+          ui.matProd = p.id; closeSheet(); toast(`${add.length} materials pujats`); render();
+          return;
+        }
         if (!title.value.trim() && !src.picked()) { toast('Posa un títol'); return; }
         const got = await resolveSource(src, m, e.currentTarget);
         if (!got) return;
@@ -484,6 +580,7 @@ function sheetPoll(id) {
       <label class="field"><span>Opcions, una per línia</span><textarea class="inp" id="pl-opts" placeholder="Dissabte 7 de novembre, 10–14 h&#10;Dissabte 14 de novembre, 10–14 h&#10;Diumenge 15 de novembre, 17–20 h">${esc((p.options || []).map(o => o.label).join('\n'))}</textarea>
         ${ex ? '<small>Si canvies el text d’una opció, es mantenen els vots de les que no hagis tocat.</small>' : ''}</label>
       <div class="toggle-row"><span><b>Es poden triar diverses opcions</b></span><label class="switch"><input type="checkbox" id="pl-multi" ${p.multi ? 'checked' : ''}><span></span></label></div>
+      <div class="toggle-row"><span><b>Deixa escriure un comentari</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Per a dubtes, casos especials o què es prepara (p. ex. per a una audició)</span></span><label class="switch"><input type="checkbox" id="pl-note" ${p.allowNote ? 'checked' : ''}><span></span></label></div>
       <div class="field"><span>Per a (si no en tries cap, per a tothom)</span>${sectionPickers('pl-secs', p.sections)}</div>
       <label class="field"><span>Respondre fins al (opcional)</span><input class="inp" id="pl-close" type="date" value="${esc(p.closesAt || '')}"></label>
       ${ex ? `<div class="toggle-row"><span><b>Tancada</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Ja no s’hi pot respondre</span></span><label class="switch"><input type="checkbox" id="pl-closed" ${p.closed ? 'checked' : ''}><span></span></label></div>` : ''}
@@ -498,7 +595,7 @@ function sheetPoll(id) {
         if (labels.length < 2) { toast('Hi ha d’haver almenys dues opcions'); return; }
         const old = new Map((p.options || []).map(o => [o.label, o.id]));
         const options = labels.map(l => ({ id: old.get(l) || uid('o'), label: l }));
-        const rec = { ...p, title, description: el.querySelector('#pl-desc').value.trim(), options, multi: el.querySelector('#pl-multi').checked,
+        const rec = { ...p, title, description: el.querySelector('#pl-desc').value.trim(), options, multi: el.querySelector('#pl-multi').checked, allowNote: el.querySelector('#pl-note').checked,
           sections: readSections(el, '#pl-secs'), closesAt: el.querySelector('#pl-close').value, closed: ex ? el.querySelector('#pl-closed').checked : false,
           author: ex?.author || authorName(), createdAt: ex?.createdAt || new Date().toISOString() };
         S.polls.set(rec.id, rec); persist('polls', rec.id, rec, 10);
@@ -521,7 +618,8 @@ function votePoll(id) {
   if (!choices.length) { toast('Tria almenys una opció'); return; }
   const m = S.members.get(myMemberId());
   const key = `${id}_${m.id}`;
-  const rec = { pollId: id, memberId: m.id, section: m.section, choices, at: new Date().toISOString(), uid: S.uid };
+  const note = box.querySelector('[data-poll-note]')?.value.trim().slice(0, 300) || '';
+  const rec = { pollId: id, memberId: m.id, section: m.section, choices, ...(note ? { note } : {}), at: new Date().toISOString(), uid: S.uid };
   S.pollVotes.set(key, rec); persist('pollVotes', key, rec, 10);
   toast('Resposta desada'); render();
 }
@@ -531,32 +629,49 @@ function sheetPollResults(id) {
   const label = Object.fromEntries((p.options || []).map(o => [o.id, o.label]));
   const block = x => {
     const ms = membersOf(x.id);
-    const rows = ms.map(m => { const v = S.pollVotes.get(`${id}_${m.id}`); return `<li><span>${esc(m.name)}${v ? `<br><span class="m">${v.choices.map(c => esc(label[c] || '—')).join(' · ')}</span>` : ''}</span><span class="rsvp ${v ? 'yes' : 'none'}">${v ? 'Ha respost' : '—'}</span></li>`; }).join('');
+    const rows = ms.map(m => { const v = S.pollVotes.get(`${id}_${m.id}`); return `<li><span>${esc(m.name)}${v ? `<br><span class="m">${v.choices.map(c => esc(label[c] || '—')).join(' · ')}</span>${v.note ? `<br><span class="m">«${esc(v.note)}»</span>` : ''}` : ''}</span><span class="rsvp ${v ? 'yes' : 'none'}">${v ? 'Ha respost' : '—'}</span></li>`; }).join('');
     return `<div class="eyebrow" style="margin:14px 0 4px">${x.name}</div><ul class="mini-list" style="max-height:none">${rows}</ul>`;
   };
   openSheet({ title: p.title, body: SECTIONS.filter(x => !p.sections?.length || p.sections.includes(x.id)).map(block).join('') });
 }
 
-/* ---------- WhatsApp reminders ---------- */
-function sheetReminder(title, pending, messageFor) {
+/* ---------- Recordatoris a qui encara no ha respost ---------- */
+// «Recorda-ho» envia un avís al mòbil només a qui falta (nudges/<id>, que avisos.py reparteix en pocs minuts) i, a més, a
+// l'app ja els surt a «Per fer». Per a qui encara no té l'app hi ha, plegat a sota, el missatge per enviar a mà.
+// nudges/<id> = { id, kind: poll | rsvp | trip, ref, title, memberIds, by, byName, createdAt }.
+async function sendNudge(kind, ref, title, members) {
+  const rec = { id: uid('nd'), kind, ref, title, memberIds: members.map(m => m.id), by: S.email || '', byName: fullName(S.me?.name || S.email || ''), createdAt: new Date().toISOString() };
+  await db.doc(`nudges/${rec.id}`).set(rec);
+  return rec;
+}
+function sheetReminder(title, pending, messageFor, nudge) {
+  ensureStaff();
   const bySec = SECTIONS.map(x => [x, pending.filter(m => m.section === x.id)]).filter(([, l]) => l.length);
   const first = m => m.name.split(',').pop().trim();
   const phone = m => (m.phone || '').replace(/[^0-9]/g, '').replace(/^(\d{9})$/, '34$1');
   const group = `${title}\n\nFalten per respondre:\n${bySec.map(([x, l]) => `${x.name}: ${l.map(first).join(', ')}`).join('\n')}\n\nPodeu respondre a l’app: ${appUrl()}`;
   openSheet({
     title: 'Recordatori',
-    body: pending.length ? `<p style="margin-top:0">${pending.length} persones encara no han respost. Envia’ls un missatge individual o copia’n un per al grup.</p>
+    body: pending.length ? `<p style="margin-top:0"><b>${pending.length} ${pending.length === 1 ? 'persona encara no ha' : 'persones encara no han'} respost.</b> Envia’ls un avís al mòbil: els arriba en pocs minuts (a qui té els avisos activats) i a l’app ja ho tenen a «Per fer».</p>
+      <div class="remind-who">${bySec.map(([x, l]) => `<p><b>${esc(x.name)}:</b> ${esc(l.map(first).join(', '))}</p>`).join('')}</div>
+      <details class="np-group" style="margin-top:12px"><summary><span>Altres maneres (per a qui encara no té l’app)</span>${ICON.chev}</summary>
       ${bySec.map(([x, l]) => `<div class="eyebrow" style="margin:14px 0 4px">${x.name}</div><ul class="mini-list remind-list" style="max-height:none">${l.map(m => {
         const msg = messageFor(m);
-        return `<li><span>${esc(m.name)}${accountFor(m.id) ? '' : '<br><span class="m">Encara no té accés a l’app</span>'}</span>
+        return `<li><span>${esc(m.name)}${S.staffReady && !accountFor(m.id) ? '<br><span class="m">Encara no té accés a l’app</span>' : ''}</span>
           <span style="display:flex;gap:4px">${phone(m) ? `<a class="btn btn-sm" href="https://wa.me/${phone(m)}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">WhatsApp</a>` : ''}<button class="btn btn-sm" data-copy="${esc(msg)}">Copia</button></span></li>`;
       }).join('')}</ul>`).join('')}
-      <p class="muted" style="font-size:calc(13px*var(--ts))">Per enviar WhatsApp directament, cal tenir el telèfon a la fitxa de cadascú.</p>`
+      <button class="btn btn-sm" id="rm-group" style="margin-top:10px">Copia el missatge per al grup</button></details>`
       : '<p style="margin:0">Tothom ha respost.</p>',
-    foot: pending.length ? '<button class="btn btn-primary" id="rm-group">Copia el missatge per al grup</button>' : '',
+    foot: pending.length && nudge ? `<span class="spacer"></span><button class="btn" data-act="sheet-close">Tanca</button><button class="btn btn-primary" id="rm-push">Envia’ls un avís</button>` : '',
     onMount: el => {
       el.querySelectorAll('[data-copy]').forEach(b => b.onclick = () => copyText(b.dataset.copy, 'Missatge copiat'));
       el.querySelector('#rm-group')?.addEventListener('click', () => copyText(group, 'Missatge per al grup copiat'));
+      el.querySelector('#rm-push')?.addEventListener('click', async e => {
+        const btn = e.currentTarget;
+        btn.disabled = true;
+        try { await sendNudge(nudge.kind, nudge.ref, nudge.title, pending); closeSheet(); toast(`Avís enviat a ${pending.length} ${pending.length === 1 ? 'persona' : 'persones'}`); }
+        catch { btn.disabled = false; toast('No s’ha pogut enviar. Comprova la connexió.'); }
+      });
     },
   });
 }
@@ -566,14 +681,24 @@ function remindRsvp(sid) {
   const pending = SECTIONS.filter(x => convoked(s, x.id)).flatMap(x => membersOf(x.id)).filter(m => !isOut(s, m) && !S.rsvp.get(`${sid}_${m.id}`));
   const what = `${s.type} del ${longDate(s.date).toLowerCase()}${s.place ? ` (${s.place})` : ''}`;
   sheetReminder(`Recordatori: confirmeu si veniu al ${what}${s.rsvpBy ? `, abans del ${ddmm(s.rsvpBy)}` : ''}.`, pending,
-    m => `Hola ${m.name.split(',').pop().trim()}! Recorda confirmar si vens al ${what}${s.rsvpBy ? ` abans del ${ddmm(s.rsvpBy)}` : ''}. Respon aquí: ${appUrl()}`);
+    m => `Hola ${m.name.split(',').pop().trim()}! Recorda confirmar si vens al ${what}${s.rsvpBy ? ` abans del ${ddmm(s.rsvpBy)}` : ''}. Respon aquí: ${appUrl()}`,
+    { kind: 'rsvp', ref: sid, title: `Encara no has dit si vens al ${what}${s.rsvpBy ? ` (fins al ${ddmm(s.rsvpBy)})` : ''}.` });
 }
 function remindPoll(id) {
   const p = S.polls.get(id);
   if (!p) return;
   const pending = pollExpected(p).filter(m => !S.pollVotes.get(`${id}_${m.id}`));
   sheetReminder(`Recordatori: responeu l’enquesta «${p.title}»${p.closesAt ? ` abans del ${ddmm(p.closesAt)}` : ''}.`, pending,
-    m => `Hola ${m.name.split(',').pop().trim()}! Tens pendent l’enquesta «${p.title}»${p.closesAt ? ` (fins al ${ddmm(p.closesAt)})` : ''}. Respon-la aquí, a Tauler › Enquestes: ${appUrl()}`);
+    m => `Hola ${m.name.split(',').pop().trim()}! Tens pendent l’enquesta «${p.title}»${p.closesAt ? ` (fins al ${ddmm(p.closesAt)})` : ''}. Respon-la aquí, a Tauler › Enquestes: ${appUrl()}`,
+    { kind: 'poll', ref: id, title: `Tens pendent l’enquesta «${p.title}»${p.closesAt ? ` (fins al ${ddmm(p.closesAt)})` : ''}.` });
+}
+function remindTrip(id) {
+  const t = S.trips.get(id);
+  if (!t) return;
+  const pending = tripPeople(t).filter(m => !signupOf(t, m.id));
+  sheetReminder(`Recordatori: digueu si veniu a «${t.title}»${t.deadline ? ` abans del ${ddmm(t.deadline)}` : ''}, encara que no hi pugueu anar.`, pending,
+    m => `Hola ${m.name.split(',').pop().trim()}! Encara no has dit si vens a «${t.title}»${t.deadline ? ` (fins al ${ddmm(t.deadline)})` : ''}. Respon aquí, a Tauler › Sortides: ${appUrl()}`,
+    { kind: 'trip', ref: id, title: `Encara no has dit si vens a «${t.title}»${t.deadline ? ` (fins al ${ddmm(t.deadline)})` : ''}. Cal respondre encara que no hi vagis.` });
 }
 
 /* ---------- Cerca ---------- */
@@ -587,7 +712,7 @@ function searchAll(q) {
   const has = (...xs) => xs.some(x => x && normText(x).includes(n));
   const out = [];
   const add = (group, items) => { if (items.length) out.push({ group, items: items.slice(0, SR_MAX), more: Math.max(0, items.length - SR_MAX) }); };
-  add('Persones', membersOf(null, true).filter(m => has(m.name, fullName(m.name))).sort((a, b) => (a.active === false) - (b.active === false) || byName(a, b))
+  add('Persones', membersOf(null, true).filter(m => has(m.name, fullName(m.name))).sort((a, b) => Number(a.active === false) - Number(b.active === false) || byName(a, b))
     .map(m => ({ t: m.name, s: `${SEC[m.section].name}${m.part ? ` ${m.part}` : ''}${m.active === false ? ' · inactiu' : ''}`, act: `data-act="member-stats" data-mid="${esc(m.id)}"` })));
   const ss = allSessions().filter(s => has(s.type, s.place, s.note, prodNames(s), longDate(s.date), ddmm(s.date), `${ddmm(s.date)}/${s.date.slice(0, 4)}`));
   add('Sessions', [...ss.filter(s => s.date >= TODAY), ...ss.filter(s => s.date < TODAY).reverse()]

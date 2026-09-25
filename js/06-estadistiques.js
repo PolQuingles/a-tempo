@@ -1,4 +1,4 @@
-// A Tempo · 06-estadistiques.js — Assistència › Estadístiques i Risc, i la llista de concert.
+// A Tempo · 06-estadistiques.js — Assistència › Estadístiques i Risc, la llista de concert i la meva assistència.
 // Els fitxers de js/ són scripts clàssics que comparteixen l'àmbit global i es carreguen en ordre (vegeu index.html).
 'use strict';
 
@@ -332,5 +332,69 @@ function sheetConcertList(pid) {
         toast('Llista desada com a definitiva'); sheetConcertList(pid);
       });
     },
+  });
+}
+
+/* ---------- Singer: my attendance ---------- */
+function myProdSummary(me, pid) {
+  const prod = S.productions.get(pid);
+  if (!prod) return null;
+  const st = computeStats({ kind: 'prod', id: pid, name: prod.name }, me.section);
+  const r = st.rows.find(x => x.m.id === me.id);
+  return { prod, r, rs: ruleStatus(pid, me), counted: r ? r.P + r.R + r.FJ + r.FNJ : 0 };
+}
+function ruleSentence(rs) {
+  if (!rs) return '';
+  const min = minAttendance();
+  if (rs.status === 'ok') return `<span class="rsvp yes">Compleixes la norma del ${min}%</span>`;
+  if (rs.status === 'risk') return `<span class="rsvp none" style="background:var(--fj-soft);color:var(--fj-ink)">Per sota del ${min}%</span> <span class="muted" style="font-size:calc(13px*var(--ts))">Encara hi pots arribar: si vens als ${rs.remaining} assajos que queden, arribaràs al ${pct(rs.best)}.</span>`;
+  return `<span class="rsvp no">No arribes al ${min}%</span> <span class="muted" style="font-size:calc(13px*var(--ts))">Parla amb el teu ${V.leader}.</span>`;
+}
+/** «Et pots permetre 2 faltes més abans del concert del 12 d’oct.»: quantes faltes queden fins a no arribar a la norma. */
+function normHint(me, pid) {
+  const rs = ruleStatus(pid, me);
+  if (!rs || !rs.remaining) return '';
+  const min = minAttendance() / 100;
+  const k = Math.floor(rs.att + rs.remaining - min * (rs.att + rs.abs + rs.remaining) + 1e-9);
+  const show = allSessions(pid).find(s => isShow(s) && s.date >= TODAY);
+  const when = show ? `${V.sh.el} del ${shortDate(show.date)}` : 'el final de la producció';
+  if (k < 0 || rs.status === 'out') return `<p class="norm-hint out">Ja no arribes al ${minAttendance()}% dels assajos per fer ${esc(when)}. Parla amb el teu ${V.leader}.</p>`;
+  if (k >= rs.remaining) return `<p class="norm-hint ok">Ja tens assegurat el ${minAttendance()}% per fer ${esc(when)}.</p>`;
+  if (k === 0) return `<p class="norm-hint zero">No et pots permetre <b>cap falta més</b> si vols fer ${esc(when)}: queden ${rs.remaining} assajos.</p>`;
+  return `<p class="norm-hint">Et pots permetre <b>${k} ${k === 1 ? 'falta' : 'faltes'} més</b> ${show ? `abans ${V.sh.del} del ${esc(shortDate(show.date))}` : 'fins al final de la producció'} (queden ${rs.remaining} assajos).</p>`;
+}
+function myAttendanceCard(me) {
+  const x = myProdSummary(me, currentProductionId());
+  if (!x) return '';
+  const { prod, r, rs, counted } = x;
+  const dots = (r?.hist || []).map(({ s, mk }) => `<i class="${mk ? 's-' + mk.s : ''}" title="${ddmm(s.date)} · ${mk ? STATUS[mk.s].label : 'Sense llista'}"></i>`).join('');
+  return `<div class="section-title prod-tone" style="--ph:${prodHue(prod)}"><h2 class="h2">La meva assistència</h2><span class="eyebrow"><i class="pdot"></i>${esc(prod.name)}</span></div>
+    <div class="panel my-att prod-tone tinted" style="--ph:${prodHue(prod)}">
+      ${counted ? `<div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span class="big">${Math.round(rate(r) * 100)}<small>%</small></span>
+        <span class="muted" style="font-size:calc(13px*var(--ts))">${r.P + r.R} de ${counted} assajos${r.R ? ` · ${r.R} retards` : ''}${r.FJ ? ` · ${r.FJ} just.` : ''}${r.FNJ ? ` · ${r.FNJ} no just.` : ''}</span></div>
+        ${normHint(me, prod.id) || `<div>${ruleSentence(rs)}</div>`}
+        <div class="dots" aria-label="Sessió a sessió">${dots}</div>`
+      : `<span class="muted" style="font-size:calc(13.5px*var(--ts))">Encara no hi ha cap llista passada en aquesta producció.</span>`}
+      <button class="btn btn-sm" data-act="my-att" style="justify-self:start">Totes les produccions</button>
+    </div>`;
+}
+function sheetMyAttendance() {
+  const me = S.members.get(myMemberId());
+  if (!me) return;
+  const { season } = seasonCfg();
+  const sr = computeStats({ kind: 'range', from: season.from, to: season.to, name: season.name }, me.section).rows.find(x => x.m.id === me.id);
+  const sc = sr ? sr.P + sr.R + sr.FJ + sr.FNJ : 0;
+  const rows = productionsSorted().map(p => myProdSummary(me, p.id)).filter(x => x && x.counted);
+  openSheet({
+    title: 'La meva assistència',
+    body: `<div class="kpis" style="grid-template-columns:repeat(2,1fr)">
+        <div class="kpi"><div class="kpi-v">${sc ? kpiPct(rate(sr)) : '—'}</div><div class="kpi-l">${esc(season.name)}</div></div>
+        <div class="kpi"><div class="kpi-v">${sr ? sr.min : 0}<small>min</small></div><div class="kpi-l">Retard acumulat</div></div>
+      </div>
+      ${rows.length ? `<ul class="mini-list" style="max-height:none;margin-top:14px">${rows.map(({ prod, r, rs, counted }) => `<li style="display:grid;gap:4px;padding:10px 12px">
+        <span style="display:flex;justify-content:space-between;gap:8px"><b>${esc(prod.name)}</b><span class="mono">${pct(rate(r))}</span></span>
+        <span class="m">${r.P + r.R} de ${counted} · ${r.FJ} just. · ${r.FNJ} no just.</span><span>${ruleSentence(rs)}</span></li>`).join('')}</ul>`
+        : '<p class="muted">Encara no hi ha llistes passades.</p>'}
+      <p class="muted" style="font-size:calc(13px*var(--ts))">Només tu i l’equip ${V.del} veieu aquestes dades. Si hi ha algun error, parla amb el teu ${V.leader}.</p>`,
   });
 }

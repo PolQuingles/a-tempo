@@ -206,12 +206,14 @@ function concertPeople(s, onlyYes) {
   return stageMembers(s).filter(m => !onlyYes || !s.rsvp || S.rsvp.get(`${s.id}_${m.id}`)?.answer === 'yes')
     .sort((a, b) => secIdx(a.section) - secIdx(b.section) || (a.part || '').localeCompare(b.part || '') || byName(a, b));
 }
-const PART_COLS = [['sec', 'Corda i veu', true], ['phone', 'Telèfon', false], ['emerg', 'Contacte d’emergència', false], ['size', 'Talla', false], ['sign', 'Signatura', false]];
+const PART_COLS = [['sec', 'Corda i veu', true], ['phone', 'Telèfon', false], ['emerg', 'Contacte d’emergència', false], ['size', 'Talla', false], ['bus', 'Autocar', false], ['diet', 'Al·lèrgies', false], ['sign', 'Signatura', false]];
 function participantRows(s, onlyYes, cols) {
   const head = ['Núm.', 'Nom i cognoms', ...PART_COLS.filter(([k]) => cols.has(k)).map(([, l]) => l)];
   const rows = concertPeople(s, onlyYes).map((m, i) => {
     const p = profileOf(m.id);
-    const cell = { sec: `${SEC[m.section].name}${m.part ? ` ${m.part}` : ''}`, phone: phoneOf(m), emerg: [p.emergencyName, p.emergencyPhone].filter(Boolean).join(' · '), size: p.size || '', sign: '' };
+    const a = S.rsvp.get(`${s.id}_${m.id}`);
+    const cell = { sec: `${SEC[m.section].name}${m.part ? ` ${m.part}` : ''}`, phone: phoneOf(m), emerg: [p.emergencyName, p.emergencyPhone].filter(Boolean).join(' · '), size: p.size || '',
+      bus: a?.transport === 'bus' ? 'Sí' : a?.transport === 'own' ? 'Pel seu compte' : '', diet: p.diet || '', sign: '' };
     return [i + 1, fullName(m.name), ...PART_COLS.filter(([k]) => cols.has(k)).map(([k]) => cell[k])];
   });
   return { head, rows };
@@ -230,8 +232,8 @@ async function sheetParticipants(sid) {
       ${s.rsvp ? `<div class="field"><span>Qui hi surt</span><div class="pickers" id="pt-who">
         <button type="button" class="pick" data-k="yes" aria-pressed="true">Els que han confirmat</button>
         <button type="button" class="pick" data-k="all" aria-pressed="false">Tots menys els que no hi van</button></div></div>` : ''}
-      <div class="field" style="margin-top:10px"><span>Columnes</span><div class="pickers" id="pt-cols">${PART_COLS.map(([k, l]) => `<button type="button" class="pick" data-k="${k}" aria-pressed="${cols.has(k)}">${l}</button>`).join('')}</div>
-        <small>El telèfon, la talla i el contacte d’emergència els omple cadascú a «La meva fitxa». Per al teatre o l’assegurança.</small></div>
+      <div class="field" style="margin-top:10px"><span>Columnes</span><div class="pickers" id="pt-cols">${PART_COLS.filter(([k]) => k !== 'bus' || s.bus).map(([k, l]) => `<button type="button" class="pick" data-k="${k}" aria-pressed="${cols.has(k)}">${l}</button>`).join('')}</div>
+        <small>El telèfon, la talla, el contacte d’emergència i les al·lèrgies els omple cadascú a «La meva fitxa». Per al teatre, l’assegurança o l’autocar.</small></div>
       <p class="muted" id="pt-n" style="margin:12px 0 0;font-size:calc(13.5px*var(--ts))"></p>`,
     foot: `<span class="spacer"></span><button class="btn" id="pt-xls">Excel</button><button class="btn btn-primary" id="pt-pdf">PDF</button>`,
     onMount: el => {

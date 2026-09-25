@@ -6,7 +6,7 @@
 <title>A Tempo</title>
 <meta name="description" content="Assistència, calendari i avisos per a cors, orquestres i altres agrupacions.">
 <meta name="robots" content="noindex, nofollow">
-<meta name="app-version" content="2f773bd72d">
+<meta name="app-version" content="1e89436bff">
 <meta name="theme-color" content="#4C2582">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -18,11 +18,11 @@
 <script>
 // Abans de pintar: tema triat i, si ja se sap de quina agrupació és qui entra, la seva icona i el seu nom.
 (function(){try{
-  // L'app es deia «cor-present»: el que hi havia desat al mòbil es copia a les claus noves.
-  if(!localStorage.getItem('atempo:migrat')){
-    var ks=[];for(var i=0;i<localStorage.length;i++){var kk=localStorage.key(i);if(kk&&kk.indexOf('corpresent:')===0)ks.push(kk);}
-    for(var j=0;j<ks.length;j++){var nk='atempo:'+ks[j].slice(11);if(localStorage.getItem(nk)==null)localStorage.setItem(nk,localStorage.getItem(ks[j]));}
-    localStorage.setItem('atempo:migrat','1');
+  // L'app es deia «cor-present»: les claus d'aquell nom (ja copiades a les noves el setembre del 2026) s'esborren.
+  if(!localStorage.getItem('atempo:net')){
+    var ks=[];for(var i=0;i<localStorage.length;i++){var kk=localStorage.key(i);if(kk&&(kk.indexOf('corpresent:')===0||kk==='atempo:migrat'))ks.push(kk);}
+    for(var j=0;j<ks.length;j++)localStorage.removeItem(ks[j]);
+    localStorage.setItem('atempo:net','1');
   }
   var t=localStorage.getItem('atempo:tema');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);
   var tx=localStorage.getItem('atempo:text');if(tx==='gran'||tx==='molt')document.documentElement.setAttribute('data-text',tx);
@@ -38,7 +38,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,500..700;1,6..96,500..700&family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="css/app.css?v=fe318f5386">
+<link rel="stylesheet" href="css/app.css?v=99bc14511a">
 </head>
 <body>
 
@@ -68,29 +68,32 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="config.js?v=666ce52d45"></script>
 <script src="js/00-errors.js?v=739f456eee"></script>
-<script src="js/01-base.js?v=4b14c8423e"></script>
-<script src="js/02-dades.js?v=241762059a"></script>
-<script src="js/03-pantalla.js?v=a933f15a1e"></script>
-<script src="js/04-llista.js?v=d06277e3aa"></script>
-<script src="js/05-calendari.js?v=d4b5efa1ad"></script>
-<script src="js/06-estadistiques.js?v=08d752533f"></script>
-<script src="js/07-gestio.js?v=7564d627aa"></script>
-<script src="js/08-tauler.js?v=20506a99d4"></script>
-<script src="js/09-classes.js?v=dff63a7ada"></script>
-<script src="js/10-inici.js?v=46bcb2f85f"></script>
-<script src="js/11-fitxes.js?v=28837cae61"></script>
-<script src="js/12-persones.js?v=a13509ed3d"></script>
-<script src="js/13-avisos-mobil.js?v=33f86d0f8f"></script>
-<script src="js/14-eines.js?v=7160f49b9a"></script>
-<script src="js/15-copies.js?v=64cfe35f8c"></script>
-<script src="js/16-agrupacions.js?v=b12e8afe46"></script>
+<script src="js/01-base.js?v=7545b08983"></script>
+<script src="js/02-dades.js?v=be34eccaea"></script>
+<script src="js/03-pantalla.js?v=d8a997d969"></script>
+<script src="js/04-llista.js?v=631fb27297"></script>
+<script src="js/05-calendari.js?v=036d9263da"></script>
+<script src="js/06-estadistiques.js?v=f979ba3876"></script>
+<script src="js/07-gestio.js?v=bc4cf6c70f"></script>
+<script src="js/08-tauler.js?v=453f642273"></script>
+<script src="js/09-classes.js?v=a007a75b2d"></script>
+<script src="js/09b-classes-horari.js?v=ed30673848"></script>
+<script src="js/09c-classes-fitxes.js?v=1c6d25a7cc"></script>
+<script src="js/10-inici.js?v=fd7538a918"></script>
+<script src="js/11-fitxes.js?v=0c941f2944"></script>
+<script src="js/12-persones.js?v=7e22c78f54"></script>
+<script src="js/13-avisos-mobil.js?v=3b5df93931"></script>
+<script src="js/14-eines.js?v=da40e4d0f9"></script>
+<script src="js/15-copies.js?v=66ca134814"></script>
+<script src="js/16-agrupacions.js?v=08cea47090"></script>
 <script src="js/17-rutes.js?v=8af2b87fcd"></script>
-<script src="js/18-repertori.js?v=a4d9b8bda0"></script>
-<script src="js/19-concerts.js?v=139ba69554"></script>
-<script src="js/20-sortides.js?v=50beb08c89"></script>
-<script src="js/21-missatges.js?v=b5f8123972"></script>
-<script src="js/22-secretaria.js?v=9ab9f12f84"></script>
-<script src="js/23-accions.js?v=3da775d313"></script>
-<script src="js/24-arrencada.js?v=ff3b9d6c6f"></script>
+<script src="js/18-repertori.js?v=8971f86caf"></script>
+<script src="js/19-concerts.js?v=e87c42bedc"></script>
+<script src="js/20-sortides.js?v=df7672a942"></script>
+<script src="js/21-missatges.js?v=b8b34625db"></script>
+<script src="js/21b-converses.js?v=8c68131843"></script>
+<script src="js/22-secretaria.js?v=b05dc6f444"></script>
+<script src="js/23-accions.js?v=cee8172969"></script>
+<script src="js/24-arrencada.js?v=4f0ef4edc6"></script>
 </body>
 </html>

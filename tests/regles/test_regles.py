@@ -237,9 +237,10 @@ expect("C8 cap de corda esborra config/main", commit([dele(f"cors/{F}/config/mai
 expect("C8b cap de corda edita config/main", commit([upd(f"cors/{F}/config/main", {"minAttendance": 75}, ["minAttendance"])], T["leader"]), True)
 expect("C9 admin esborra config/main", commit([dele(f"cors/{F}/config/main")], T["pol"]), False)
 expect("C9b admin esborra un tros de fitxer", commit([dele(f"cors/{F}/config/fitxer_x_0")], T["pol"]), True)
-expect("C10 Palau llegeix membres", lst(f"cors/{F}/members", T["palau"]), True)
-expect("C10b Palau escriu membres", commit([upd(f"cors/{F}/members/m9", {"name": "X"})], T["palau"]), True)
-expect("C10c Palau passa llista", commit([upd(f"cors/{F}/attendance/s1_S", {"sessionId": "s1", "section": "S", "marks": {"m1": {"s": "R"}}})], T["palau"]), True)
+# «palau» era l'antic rol únic de l'equip: ja no dona cap permís d'edició (Ajustos › Restes de versions antigues el passa a Gerència).
+expect("C10 el rol antic «palau» llegeix membres (té fitxa)", lst(f"cors/{F}/members", T["palau"]), True)
+expect("C10b el rol antic «palau» ja no escriu membres", commit([upd(f"cors/{F}/members/m9", {"name": "X"})], T["palau"]), False)
+expect("C10c el rol antic «palau» ja no passa llista", commit([upd(f"cors/{F}/attendance/s1_S", {"sessionId": "s1", "section": "S", "marks": {"m1": {"s": "R"}}})], T["palau"]), False)
 expect("C10d Palau dona accés a algú", commit([upd(f"cors/{F}/staff/y@exemple.cat", {"email": "y@exemple.cat", "role": "singer"})], T["palau"]), False)
 expect("C10e gerencia llegeix membres", lst(f"cors/{F}/members", T["ger"]), True)
 expect("C10f gerencia passa llista", commit([upd(f"cors/{F}/attendance/s1_S", {"sessionId": "s1", "section": "S", "marks": {"m1": {"s": "P"}}})], T["ger"]), True)
@@ -504,6 +505,66 @@ expect("O29 el cantaire respon els consentiments", commit([upd(f"cors/{F}/profil
 expect("O30 un consentiment amb un valor estrany", commit([upd(f"cors/{F}/profiles/m1", {**PROF, "imageOk": "potser"})], T["singer"]), False)
 for col in ["messages", "memberNotes", "memberDocs", "memberFiles"]:
     expect(f"O31 el compte de servei llegeix {col}", lst(f"cors/{F}/{col}", T["service"]), True)
+
+print("P. Arxiu de l'assistència, converses, recordatoris, al·lèrgies i restes antigues")
+ARCH = {"from": "2026-08-01", "to": "2026-12-31", "docs": {"s1_S": {"sessionId": "s1", "section": "S", "marks": {"m1": {"s": "P"}}, "date": "2026-09-20"}}, "n": 1, "builtAt": now, "by": "leader@exemple.cat"}
+expect("P1 un cap de corda arxiva un trimestre", commit([upd(f"cors/{F}/attArchive/2026-08-01_2026-12-31", ARCH)], T["leader"]), True)
+expect("P2 un cantaire no el pot arxivar", commit([upd(f"cors/{F}/attArchive/2026-08-01_2026-12-31", ARCH)], T["singer"]), False)
+expect("P3 un cantaire el llegeix", lst(f"cors/{F}/attArchive", T["singer"]), True)
+expect("P3b una altra agrupació no el llegeix", lst(f"cors/{F}/attArchive", T["orq"]), False)
+expect("P3c el compte de servei el llegeix", lst(f"cors/{F}/attArchive", T["service"]), True)
+expect("P4 un cap de corda no l'esborra", commit([dele(f"cors/{F}/attArchive/2026-08-01_2026-12-31")], T["leader"]), False)
+TH = {"id": "t1", "memberId": "m1", "memberName": "Cantaire U", "section": "S", "toRole": "secretaria", "toEmail": "", "toName": "Secretaria", "subject": "Al·lèrgies", "ref": "",
+      "msgs": [{"by": "singer@exemple.cat", "name": "Cantaire U", "side": "m", "text": "Soc celíaca", "at": now}], "lastAt": now, "lastSide": "m", "readM": now, "readS": "", "createdAt": now}
+expect("P5 un cantaire escriu a secretaria", commit([upd(f"cors/{F}/threads/t1", TH)], T["singer"]), True)
+expect("P5b en nom d'un altre cantaire", commit([upd(f"cors/{F}/threads/t2", {**TH, "id": "t2", "memberId": "m2", "section": "T"})], T["singer"]), False)
+expect("P5c al cap d'una altra corda", commit([upd(f"cors/{F}/threads/t3", {**TH, "id": "t3", "toRole": "leader", "section": "T"})], T["singer"]), False)
+expect("P5d amb un missatge que no és seu", commit([upd(f"cors/{F}/threads/t4", {**TH, "id": "t4", "msgs": [{**TH["msgs"][0], "by": "pol@exemple.cat"}]})], T["singer"]), False)
+expect("P6 secretaria la llegeix", get(f"cors/{F}/threads/t1", T["sec"]), True)
+expect("P6b gerència no la llegeix", get(f"cors/{F}/threads/t1", T["ger"]), False)
+expect("P6c un cap de corda no la llegeix", get(f"cors/{F}/threads/t1", T["leader"]), False)
+expect("P6d l'administració no llegeix les converses dels altres", get(f"cors/{F}/threads/t1", T["pol"]), False)
+expect("P7 secretaria busca les seves converses", qry(f"cors/{F}", "threads", [("toRole", "EQUAL", "secretaria")], T["sec"]), True)
+expect("P7b gerència busca les de secretaria", qry(f"cors/{F}", "threads", [("toRole", "EQUAL", "secretaria")], T["ger"]), False)
+expect("P7c el cantaire busca les seves", qry(f"cors/{F}", "threads", [("memberId", "EQUAL", "m1")], T["singer"]), True)
+expect("P7d el cantaire busca les d'un altre", qry(f"cors/{F}", "threads", [("memberId", "EQUAL", "m2")], T["singer"]), False)
+expect("P7e un cap de corda busca les de la seva corda", qry(f"cors/{F}", "threads", [("toRole", "EQUAL", "leader"), ("section", "EQUAL", "T")], T["leader"]), True)
+expect("P7f un cap de corda busca les d'una altra corda", qry(f"cors/{F}", "threads", [("toRole", "EQUAL", "leader"), ("section", "EQUAL", "S")], T["leader"]), False)
+REPLY = {**TH, "msgs": TH["msgs"] + [{"by": "sec@exemple.cat", "name": "Secretaria", "side": "s", "text": "Apuntat!", "at": now}], "lastSide": "s", "readS": now}
+expect("P8 secretaria hi respon", commit([upd(f"cors/{F}/threads/t1", REPLY)], T["sec"]), True)
+expect("P8b secretaria canvia de qui és", commit([upd(f"cors/{F}/threads/t1", {**REPLY, "memberId": "m2"})], T["sec"]), False)
+expect("P8c es treuen missatges", commit([upd(f"cors/{F}/threads/t1", {**REPLY, "msgs": []})], T["singer"]), False)
+expect("P8d el cantaire la marca com a llegida", commit([upd(f"cors/{F}/threads/t1", {"readM": now}, ["readM"])], T["singer"]), True)
+TD = {**TH, "id": "t5", "toRole": "", "toEmail": "dir@exemple.cat", "toName": "Director"}
+expect("P9 un cantaire respon a qui ha escrit un anunci", commit([upd(f"cors/{F}/threads/t5", TD)], T["singer"]), True)
+expect("P9b el director la llegeix", get(f"cors/{F}/threads/t5", T["dir"]), True)
+expect("P9c el director busca les seves", qry(f"cors/{F}", "threads", [("toEmail", "EQUAL", "dir@exemple.cat")], T["dir"]), True)
+expect("P9d gerència busca les del director", qry(f"cors/{F}", "threads", [("toEmail", "EQUAL", "dir@exemple.cat")], T["ger"]), False)
+expect("P9e el compte de servei les llegeix (avisos)", qry(f"cors/{F}", "threads", [("lastAt", "GREATER_THAN_OR_EQUAL", now)], T["service"]), True)
+ND = {"id": "n1", "kind": "poll", "ref": "q1", "title": "Tens pendent l'enquesta", "memberIds": ["m1", "m2"], "by": "leader@exemple.cat", "byName": "Lluc", "createdAt": now}
+expect("P10 un cap de corda envia un recordatori", commit([upd(f"cors/{F}/nudges/n1", ND)], T["leader"]), True)
+expect("P10b en nom d'un altre", commit([upd(f"cors/{F}/nudges/n2", {**ND, "by": "pol@exemple.cat"})], T["leader"]), False)
+expect("P10c d'un tipus desconegut", commit([upd(f"cors/{F}/nudges/n3", {**ND, "kind": "altre"})], T["leader"]), False)
+expect("P10d un cantaire n'envia", commit([upd(f"cors/{F}/nudges/n4", {**ND, "by": "singer@exemple.cat"})], T["singer"]), False)
+expect("P10e un cantaire els llegeix", lst(f"cors/{F}/nudges", T["singer"]), False)
+expect("P10f el compte de servei els llegeix", lst(f"cors/{F}/nudges", T["service"]), True)
+expect("P11 el cantaire posa les seves al·lèrgies", commit([upd(f"cors/{F}/profiles/m1", {**PROF, "diet": "Celíaca"})], T["singer"]), True)
+expect("P11b unes al·lèrgies massa llargues", commit([upd(f"cors/{F}/profiles/m1", {**PROF, "diet": "x" * 201})], T["singer"]), False)
+seed(f"cors/{F}/memberMarks/m1", {"marks": {"s1": {"s": "P"}}})
+seed(f"cors/{F}/secrets/members", {"m1": "SINGERKEY_aaaaaaaaaaaaaaaaaaa"})
+expect("P12 el cantaire ja no llegeix la còpia antiga de les seves marques", get(f"cors/{F}/memberMarks/m1", T["singer"]), False)
+expect("P12b un cap de corda no la llegeix", lst(f"cors/{F}/memberMarks", T["leader"]), False)
+expect("P12c l'administració la llegeix per netejar-la", lst(f"cors/{F}/memberMarks", T["pol"]), True)
+expect("P12d un cap de corda no llegeix les claus antigues", get(f"cors/{F}/secrets/members", T["leader"]), False)
+expect("P12e l'administració no hi pot escriure", commit([upd(f"cors/{F}/secrets/members", {"m2": "x"})], T["pol"]), False)
+expect("P12f l'administració esborra les restes", commit([dele(f"cors/{F}/memberMarks/m1"), dele(f"cors/{F}/secrets/members")], T["pol"]), True)
+expect("P13 un cap de corda no esborra l'arxiu", commit([dele(f"cors/{F}/attArchive/2026-08-01_2026-12-31")], T["pau"]), False)
+expect("P13b l'administració sí", commit([dele(f"cors/{F}/attArchive/2026-08-01_2026-12-31")], T["pol"]), True)
+import re as _re
+_v = _re.search(r"match /reglesVersio/\{v\} \{\s*allow get: if v == '([^']*)'", open(RULES).read()).group(1) if RULES else None
+if _v:
+    expect("P14 la versió de les regles respon sense sessió (no hi ha el document)", get(f"reglesVersio/{_v}", None), "404")
+    expect("P14b una altra versió es denega", get("reglesVersio/000000000000", None), False)
 
 print("M. Registre d'errors")
 ERR = {"kind": "error", "msg": "TypeError: x is undefined", "where": "04-llista.js:10:5", "at": now, "app": "abc123", "gid": F, "route": "inici", "ua": "Mozilla/5.0", "online": True}

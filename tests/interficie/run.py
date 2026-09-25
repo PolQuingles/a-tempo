@@ -2,8 +2,8 @@
 
 Per a cada perfil (administració, cap de corda, cantaire, direcció sense fitxa, professor de cant, gerència) i mida
 (mòbil petit, mòbil, ordinador) recorre totes les pantalles i comprova que no hi ha errors ni res que surti de la
-pantalla. També comprova el botó «enrere», els enllaços directes a una pantalla, la versió d'ordinador, el registre
-d'errors i que l'app s'obre sense xarxa.
+pantalla. També comprova el botó «enrere», els enllaços directes a una pantalla, la versió d'ordinador, la vista prèvia
+de cada rol, les converses i els recordatoris, l'arxiu de l'assistència, el registre d'errors i que l'app s'obre sense xarxa.
 
     pip install playwright && python -m playwright install chromium
     python3 tests/interficie/run.py
@@ -84,6 +84,16 @@ def open_app(browser, base, user, opts, route=""):
         page.click('.sheet [data-act="sheet-close"]')
         page.wait_for_timeout(400)
     return ctx, page, errors
+
+
+def switch_user(page, base, user):
+    """Una altra persona al mateix navegador: les dades (la base de dades falsa) es conserven."""
+    page.goto(f"{base}/index.html?u={user}")
+    page.wait_for_function(READY, timeout=20000)
+    page.wait_for_timeout(900)
+    if page.locator(".sheet").count():
+        page.click('.sheet [data-act="sheet-close"]')
+        page.wait_for_timeout(400)
 
 
 def screen(page):
@@ -408,6 +418,183 @@ def main():
         ctx.close()
         ctx, page, errors = open_app(browser, base, "pol", MOBILE)
         check(page.locator(".tabs .tab-extra").is_hidden(), "al mòbil, Gestió continua al menú del compte")
+        ctx.close()
+
+        print("Gestió › Personal: el desplegable dels rols i les llistes de la plantilla")
+        ctx, page, errors = open_app(browser, base, "pol", MOBILE)
+        check(page.evaluate("S.staff.size === 0 && !S.staffReady"), "a Inici encara no es llegeix el personal (només quan s'obre Gestió)")
+        page.evaluate("ui.tab = 'gestio'; ui.manage = 'personal'; ui.people = 'singer'; render()")
+        page.wait_for_function("S.staffReady && S.staff.size === 6", timeout=5000)
+        page.wait_for_timeout(300)
+        opts = page.evaluate("[...document.querySelectorAll('#people-menu option')].map(o => o.value)")
+        check(page.locator("select#people-menu").count() == 1 and opts[:2] == ["singer", "access"] and {"director", "gerencia", "secretaria", "leader", "voice"} <= set(opts), "els rols són en un desplegable", str(opts))
+        tabs = page.evaluate("[...document.querySelectorAll('[data-act=\"cant-tab\"]')].map(b => b.textContent)")
+        check(tabs == ["Plantilla", "Altes i baixes", "Documents", "Quotes"], "dins dels cantaires: Plantilla, Altes i baixes, Documents i Quotes", str(tabs))
+        page.select_option("#people-menu", "director"); page.wait_for_timeout(300)
+        check("Dídac Director" in page.inner_text("#view") and page.locator('[data-act="cant-tab"]').count() == 0, "triar Direcció mostra qui en fa")
+        page.select_option("#people-menu", "singer"); page.wait_for_timeout(300)
+        page.click('[data-act="cant-tab"][data-k="quotes"]'); page.wait_for_timeout(600)
+        check("han pagat" in page.inner_text("#view"), "Quotes s'obre dins dels cantaires")
+        check(not errors, "sense errors al menú de Personal", "; ".join(errors[:3]))
+        ctx.close()
+
+        print("Mira l'app com…")
+        ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/gestio/personal")
+        page.wait_for_function("S.staffReady", timeout=5000)
+        page.click('[data-act="preview-on"]'); page.wait_for_timeout(400)
+        roles = page.evaluate("[...document.querySelectorAll('#pv-role .pick')].map(b => b.dataset.k)")
+        check(roles == ["singer", "leader", "director", "gerencia", "secretaria", "voice"], "es pot mirar com cada rol", str(roles))
+        page.click('#pv-role .pick[data-k="director"]'); page.wait_for_timeout(200)
+        page.click("#pv-ok"); page.wait_for_timeout(500)
+        r = page.evaluate("({ edit: canEdit(), admin: isAdmin(), banner: document.querySelector('.preview-banner')?.innerText || '', ro: document.body.classList.contains('ro') })")
+        check(r["edit"] and not r["admin"] and "Direcció" in r["banner"] and "Dídac" in r["banner"], "com la direcció: pot editar, però no administrar", str(r))
+        before = page.evaluate("firebase.firestore().doc(`cors/${GID}/announcements/n1`).get().then(d => JSON.stringify(d.data()))")
+        page.evaluate("persist('announcements', 'n1', { ...S.announcements.get('n1'), title: 'Canviat a la vista prèvia' })")
+        page.evaluate("db.doc('announcements/n1').set({ title: 'x' }).catch(() => {})")
+        page.wait_for_timeout(700)
+        after = page.evaluate("firebase.firestore().doc(`cors/${GID}/announcements/n1`).get().then(d => JSON.stringify(d.data()))")
+        check(before == after and "Vista prèvia" in page.inner_text("#toast-root"), "a la vista prèvia no es desa res", after[:80])
+        with page.expect_navigation(timeout=10000):
+            page.click('[data-act="preview-off"]')
+        page.wait_for_function(READY, timeout=20000)
+        page.wait_for_timeout(400)
+        check(page.evaluate("PREVIEW === null && isAdmin()"), "en sortir-ne, tot torna a ser com abans")
+        r = page.evaluate("""() => { startPreview({ roles: ['voice'], email: 'prof@exemple.cat', name: 'Prat, Berta', label: 'Professor de cant' });
+          const out = { teach: teachesClasses(), edit: canEdit(), tabs: tabsForRole() }; stopPreview();
+          const anna = previewPeople('singer').find(x => x.label.startsWith('Anna'));
+          startPreview({ ...anna.person, label: 'Cantaire' }); out.singerEdit = canEdit(); out.me = myId(); out.gestio = !!document.querySelector('.tabs .tab-extra');
+          stopPreview(); out.back = ui.tab === 'gestio' && isAdmin(); return out; }""")
+        check(r["teach"] and not r["edit"] and "classes" in r["tabs"], "com el professor de cant: porta les classes i no edita res més", str(r))
+        check(not r["singerEdit"] and r["me"] and not r["gestio"], "com un cantaire: veu el seu espai i no Gestió", str(r))
+        check(r["back"], "i se'n torna a Gestió", str(r))
+        check(not errors, "sense errors a la vista prèvia", "; ".join(errors[:3]))
+        ctx.close()
+
+        print("Converses privades i recordatoris per l'app")
+        ctx, page, errors = open_app(browser, base, "singer", MOBILE)
+        r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          out.targets = threadTargets().map(t => t.k);
+          sheetThreadNew(); await s(300);
+          document.querySelector('#th-to .pick[data-i="1"]').click();
+          document.querySelector('#th-subject').value = 'Al·lèrgies';
+          document.querySelector('#th-text').value = 'Soc celíaca.';
+          document.querySelector('#th-send').click(); await s(500);
+          out.sent = [...S.threads.values()].some(t => t.toRole === 'gerencia' && t.msgs[0].text === 'Soc celíaca.');
+          ui.tab = 'tauler'; ui.board = 'anuncis'; render(); await s(200);
+          out.replyBtn = !!document.querySelector('#view [data-act="reply"][data-ref="ann:n1"]');
+          return out; }""")
+        check(r["targets"] == ["director", "gerencia", "t:prof@exemple.cat", "admin"], "un cantaire pot escriure a la direcció, la gerència, el seu professor de cant o l'administració", str(r))
+        check(r["sent"], "el missatge queda desat", str(r))
+        check(r["replyBtn"], "es pot respondre a qui ha escrit un anunci", str(r))
+        switch_user(page, base, "ger")
+        page.wait_for_timeout(300)
+        r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          out.todo = todoItems().some(x => x.icon === 'thread');
+          const t = [...S.threads.values()][0]; sheetThread(t.id); await s(500);
+          out.read = !!(await firebase.firestore().doc(`cors/${GID}/threads/${t.id}`).get()).data().readS;
+          document.querySelector('#th-text').value = 'Apuntat, gràcies!'; document.querySelector('#th-send').click(); await s(500);
+          out.reply = (await firebase.firestore().doc(`cors/${GID}/threads/${t.id}`).get()).data().msgs.length === 2;
+          return out; }""")
+        check(r["todo"], "a la gerència li surt a «Per fer»", str(r))
+        check(r["read"] and r["reply"], "la gerència la llegeix i hi respon", str(r))
+        check(not errors, "sense errors a les converses de l'equip", "; ".join(errors[:3]))
+        switch_user(page, base, "singer")
+        page.wait_for_timeout(300)
+        check(page.evaluate("unreadThreads().length === 1 && todoItems().some(x => x.icon === 'thread')"), "el cantaire veu que li han respost")
+        ctx.close()
+        ctx, page, errors = open_app(browser, base, "pol", MOBILE)
+        r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms));
+          remindPoll('q1'); await s(400); document.querySelector('#rm-push').click(); await s(500);
+          const n = (await firebase.firestore().collection(`cors/${GID}/nudges`).get()).docs.map(d => d.data());
+          return { n: n.length, ids: n[0]?.memberIds.length, kind: n[0]?.kind }; }""")
+        check(r["n"] == 1 and r["kind"] == "poll" and r["ids"] == 15, "«Recorda-ho» envia un avís al mòbil de qui encara no ha respost l'enquesta", str(r))
+        check(not errors, "sense errors als recordatoris", "; ".join(errors[:3]))
+        ctx.close()
+
+        print("Anuncis llargs, sortides amb preguntes, convocatòries amb autocar i voluntaris, pla per blocs i la setmana")
+        ctx, page, errors = open_app(browser, base, "pol", MOBILE)
+        r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          const body = 'RESUM ASSAJOS\\nDilluns vam treballar:\\n* Nº 2 Banish sorrow\\n* Nº 4 When monarchs unite\\n\\n' + 'Text llarg. '.repeat(80);
+          S.announcements.set('n2', { id: 'n2', title: 'Informacions de la setmana', body, author: 'Pablo', by: 'dir@exemple.cat', createdAt: new Date().toISOString(),
+            files: [{ id: 'f1', title: 'Formulari del cap de setmana', url: 'https://example.com/form' }] });
+          persist('announcements', 'n2', S.announcements.get('n2'), 10);
+          ui.tab = 'tauler'; ui.board = 'anuncis'; render(); await s(300);
+          const card = document.querySelector('[data-ann="n2"]');
+          out.rich = !!card.querySelector('.rich h4') && card.querySelectorAll('.rich li').length === 2 && !!card.querySelector('[data-act="ann-read"]') && !!card.querySelector('.attach a');
+          const t = clone(S.trips.get('t1')); t.questions = [{ id: 'q', label: 'Dinaràs dissabte?', options: ['Sí', 'No'] }]; saveTrip(t);
+          updateSession('s6', { bus: true, tasks: [{ id: 'k1', label: 'Carregar el material', need: 4 }], info: { steps: [{ time: '17:30', what: 'Recollida de material', where: 'Espai Palau' }, { time: '18:00', what: 'Sortida de l’autocar', where: 'Trafalgar amb Ortigosa' }] } });
+          updateSession('s5', { plan: { items: [{ id: 'h1', kind: 'head', time: '20:30', title: 'Parcial', who: 'S,C', where: 'Auditori', lead: 'Mateo i Paul' }, { id: 'i1', kind: '', title: 'Nº 16', mins: 20 },
+            { id: 'h2', kind: 'head', time: '20:30', title: 'Parcial', who: 'T,B', where: 'Aula 1 PP', lead: 'Pablo' }, { id: 'i2', kind: '', title: 'Nº 20', mins: 20 },
+            { id: 'b1', kind: 'break', time: '21:30', mins: 15 }, { id: 'h3', kind: 'head', time: '21:45', title: 'Tutti' }, { id: 'i3', kind: '', title: 'Nº 14' }] } });
+          flushAll(); await s(500);
+          out.steps = fitxaHtml(sessionById('s6')).includes('Horari del dia') && fitxaHtml(sessionById('s6')).includes('Recollida de material');
+          return out; }""")
+        check(r["rich"], "un anunci llarg té format, adjunts i «Llegeix-lo sencer»", str(r))
+        check(r["steps"], "la fitxa del concert porta l'horari del dia", str(r))
+        check(not errors, "sense errors en preparar-ho", "; ".join(errors[:3]))
+        switch_user(page, base, "singer")
+        r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          sheetTripSignup('t1'); await s(300);
+          document.querySelector('.pickers[data-q="q"] .pick[data-v="Sí"]').click(); document.querySelector('#ts-ok').click(); await s(300); flushAll(); await s(300);
+          out.trip = S.tripSignups.get(`t1_${myMemberId()}`)?.answers?.q === 'Sí';
+          sheetMyProfile(); await s(400); document.querySelector('#pf-diet').value = 'Celíaca'; document.querySelector('#pf-save').click(); await s(400);
+          out.diet = (await firebase.firestore().doc(`cors/${GID}/profiles/${myMemberId()}`).get()).data()?.diet === 'Celíaca';
+          rsvpAnswer('s6', 'yes'); await s(200);
+          ui.tab = 'avisos'; render(); await s(200);
+          const bus = document.querySelector('[data-act="rsvp-bus"][data-k="bus"]');
+          out.busAsked = !!bus; bus?.click(); await s(200);
+          document.querySelector('[data-act="rsvp-task"][data-k="k1"]')?.click(); await s(200); flushAll(); await s(300);
+          const a = S.rsvp.get(`s6_${myMemberId()}`);
+          out.bus = a?.transport === 'bus'; out.task = (a?.tasks || []).includes('k1');
+          const plan = planHtml(sessionById('s5'), false, 'S');
+          out.plan = plan.includes('Auditori') && !plan.includes('Aula 1 PP') && plan.includes('Tutti') && plan.includes('Mostra tot el pla');
+          sheetWeek(); await s(300);
+          const wk = document.querySelector('.sheet .week')?.innerText || '';
+          out.week = wk.includes('QUÈ FAREM') || wk.includes('Què farem');
+          out.weekPlan = wk.includes('Gloria');
+          return out; }""")
+        for k, label in [("trip", "el cantaire respon les preguntes de la sortida"), ("diet", "el cantaire posa les seves al·lèrgies a la fitxa"),
+                         ("busAsked", "en confirmar un concert amb autocar, es pregunta com hi va"), ("bus", "i queda desat que va amb l'autocar"),
+                         ("task", "el cantaire s'apunta de voluntari a carregar el material"), ("plan", "el cantaire veu el seu parcial (i pot veure tot el pla)"),
+                         ("week", "«La setmana» es pot obrir"), ("weekPlan", "«La setmana» porta el pla dels pròxims assajos")]:
+            check(r.get(k), label, str(r))
+        check(not errors, "sense errors al cantaire", "; ".join(errors[:3]))
+        switch_user(page, base, "pol")
+        r = page.evaluate("""async () => { const out = {};
+          await loadProfiles();
+          const rows = tripRows(S.trips.get('t1'));
+          out.tripXls = rows[0].includes('Dinaràs dissabte?') && rows[0].includes('Al·lèrgies i intoleràncies') && rows.some(x => x.includes('Celíaca') && x.includes('Sí'));
+          out.tasks = taskPeople(sessionById('s6'), 'k1').length === 1 && rsvpPanel(sessionById('s6')).includes('Autocar: <b>1</b>');
+          return out; }""")
+        check(r["tripXls"], "l'Excel de la sortida porta les respostes i les al·lèrgies", str(r))
+        check(r["tasks"], "l'equip veu qui va amb autocar i qui s'ha apuntat de voluntari", str(r))
+        check(not errors, "sense errors a l'equip", "; ".join(errors[:3]))
+        ctx.close()
+
+        print("Arxiu de l'assistència per trimestres")
+        ctx, page, errors = open_app(browser, base, "pol", MOBILE)
+        page.wait_for_function("SYNC.mode.attendance === 'full' && SYNC.got.attendance != null", timeout=10000)
+        r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          const cur = [...S.attendance.keys()].find(k => k.startsWith('s0_'));
+          out.before = S.attendance.has('v0_T');
+          await archiveTerms(); await s(1200);
+          out.cut = archCut(); out.ids = (S.config.attArchive || {}).ids || [];
+          out.old = !S.attendance.has('v0_T') && Object.keys(attDoc('v0', 'T')?.marks || {}).length === 4;
+          out.cur = S.attendance.has(cur) && !!S.attendance.get(cur).date;
+          const first = (await firebase.firestore().doc(`cors/${GID}/attArchive/${out.ids[0]}`).get()).data();
+          out.inArchive = !!first.docs.v0_T && first.docs.v0_T.date === sessionById('v0').date;
+          const m = membersOf('T')[0]; setMark(sessionById('v0'), m, { s: 'FJ', note: 'Correcció' }); flushAll(); await s(600);
+          const again = (await firebase.firestore().doc(`cors/${GID}/attArchive/${out.ids[0]}`).get()).data();
+          out.fixed = again.docs.v0_T.marks[m.id].s === 'FJ' && effMark(sessionById('v0'), m).s === 'FJ';
+          out.stats = computeStats({ kind: 'prod', id: 'p0', name: 'Temporada passada' }).counted.length === 3;
+          return out; }""")
+        check(r["before"] and r["cut"] and r["cut"] >= page.evaluate("sessionById('v2').date"), "els trimestres acabats s'arxiven", str(r))
+        check(r["old"], "les llistes arxivades es llegeixen de l'arxiu", str(r))
+        check(r["cur"], "les d'ara continuen sent llistes normals (amb la data)", str(r))
+        check(r["inArchive"], "l'arxiu té cada llista amb la data de la sessió", str(r))
+        check(r["fixed"], "corregir una llista arxivada també corregeix l'arxiu", str(r))
+        check(r["stats"], "les estadístiques d'una temporada arxivada surten igual", str(r))
+        check(not errors, "sense errors a l'arxiu", "; ".join(errors[:3]))
         ctx.close()
 
         print("Registre d'errors")

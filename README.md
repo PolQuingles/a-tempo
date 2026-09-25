@@ -10,7 +10,7 @@ Assistència, calendari i avisos per a cors, orquestres, bandes, cobles i altres
 - `firestore.rules` — regles de seguretat de Firestore
 - `demo.json` — dades d'exemple
 - `app.webmanifest`, `app/` — identitat de la plataforma (quan encara no se sap de quina agrupació és qui entra)
-- `tests/` — proves automàtiques (regles i interfície) · `tools/stamp.py` — empremtes dels fitxers
+- `tests/` — proves automàtiques (regles, interfície i lògica) · `tools/stamp.py` — empremtes dels fitxers i de les regles · `tsconfig.json`, `tools/tipus.d.ts` — revisió de tipus
 - `firebase.json`, `.firebaserc` — Firebase Hosting i l'emulador de les proves
 
 ## Agrupacions
@@ -25,13 +25,13 @@ Assistència, calendari i avisos per a cors, orquestres, bandes, cobles i altres
 
 Una pestanya per feina, cinc com a màxim:
 
-- **Inici**: la sessió d'avui (amb **Passa llista** per a qui edita), **Per fer** (tot el que espera una resposta: avisos d'absència per acceptar, llistes per acabar, canvis d'hora, avisos de classes, convocatòries i enquestes per respondre, anuncis nous), la **Gestió** per a qui edita (Avisos, Personal, Produccions, Ajustos), **Properament** i, per a la plantilla, la seva assistència i els seus avisos. L'únic número vermell de la barra és el d'Inici.
+- **Inici**: la sessió d'avui (amb **Passa llista** per a qui edita), **Per fer** (tot el que espera una resposta: avisos d'absència per acceptar, llistes per acabar, canvis d'hora, avisos de classes, convocatòries, enquestes i sortides per respondre, converses amb resposta nova, anuncis nous), **Missatges** (i **Converses**), **Properament** (amb **La setmana**) i, per a la plantilla, la seva assistència i els seus avisos. L'únic número vermell de la barra és el d'Inici.
 - **Assistència**: Llista (passar llista), Estadístiques (per producció, trimestre o temporada) i Risc (la norma).
 - **Calendari**: les sessions i, per a qui en fa o en dona, les seves classes.
 - **Tauler**: anuncis, materials, documents i enquestes.
 - **Classes de cant**, si l'agrupació en fa.
 
-El **compte** és a les inicials, a dalt a la dreta: calendari al mòbil, avisos, agrupacions, aparença, manual i tancar la sessió. **Personal** reuneix tota la gent: la plantilla per seccions, qui té accés i els rols, amb les eines d'accés (donar-ne, invitar, comprovar correus). **Ajustos** queda per a l'agrupació, en blocs plegables.
+El **compte** és a les inicials, a dalt a la dreta: Gestió (per a qui edita), converses, la setmana, la meva fitxa, calendari al mòbil, avisos, agrupacions, aparença, manual i tancar la sessió. **Personal** reuneix tota la gent: un desplegable tria el rol (plantilla, amb accés, administració, direcció, gerència, secretaria, caps de corda, professorat) i, dins de la plantilla, hi ha Plantilla, Altes i baixes, Documents i Quotes; a dalt, les eines d'accés (donar-ne, invitar, comprovar correus, **Mira l'app com…**). **Ajustos** queda per a l'agrupació, en blocs plegables.
 
 ## Aspecte
 
@@ -57,7 +57,9 @@ Cada persona té un o més rols (`roles` a la seva fitxa):
 - **Professor de cant** (`voice`): porta les classes i prou.
 - **Membre de la plantilla** (cantaire, músic): veu tota l'app en mode lectura i té el seu espai personal.
 
-A **Gestió › Personal** hi ha tothom, rol per rol: el menú de dalt tria el rol i a sota hi surt qui el té (la plantilla, per seccions). Les fitxes antigues amb el rol únic `palau` (l'antic equip tècnic) es llegeixen com a gerència.
+A **Gestió › Personal** hi ha tothom, rol per rol: el desplegable de dalt tria el rol i a sota hi surt qui el té (la plantilla, per seccions).
+
+**Mira l'app com…** (administració): tria un rol (cantaire, cap de corda, direcció, gerència, secretaria o professor de cant) i una persona que el tingui (o una de genèrica), i l'app es veu tal com la veu ella. `PREVIEW` = { roles, memberId, section, email, name }; `ME()` torna aquesta fitxa en lloc de la pròpia, i els permisos de pantalla (`canEdit`, `teachesClasses`, `canWriteAll`, `canDocs`…) la fan servir. No es desa res: `persist()` no escriu, i mentre dura la vista prèvia `fs` és un embolcall que rebutja qualsevol escriptura; en sortir-ne, si s'hi ha tocat res, l'app es recarrega.
 
 Qui també és de la plantilla (per exemple, un cap de corda que canta) té, a més, «El meu espai», amb la seva assistència i els seus avisos d'absència. Cada persona té l'índex de les seves agrupacions a `staffIndex/<correu>/agrupacions/`.
 
@@ -79,10 +81,12 @@ S'activen a Ajustos (`config/main.classesOn`) quan l'agrupació fa classes indiv
 ## Repertori, concerts, sortides i fitxes
 
 - `works/<id>`: una obra del repertori (compositor, durada, formació, notes), enllaçada a produccions (`prods`), amb `roles` (solos i petits grups: nom i `memberIds`) i `materials` (partitures i àudios per corda i veu, fitxer o enllaç). Tauler › Repertori; els materials de producció d'abans surten a «Altres materials».
-- Pla d'assaig: `session.plan` = { items: [{ work | title, bars, who, note }], text, after } dins de la sessió (a la producció). Es veu a Inici, al Calendari i a la fitxa de la sessió; qui hi va faltar el veu a Inici.
+- Pla d'assaig: `session.plan` = { items, text, after } dins de la sessió (a la producció). Cada element és una obra { work | title, bars, who, mins, note }, un bloc { kind: 'head', time, title, who ('S,C'), where, lead } (un parcial a una aula amb qui el porta, o el tutti) o una pausa { kind: 'break', time, mins }. Cadascú hi veu primer el que li toca (`planForMe`) i pot veure'l sencer. Es veu a Inici, al Calendari, a la fitxa de la sessió i a **La setmana**; qui hi va faltar el veu a Inici.
+- Fitxa de la sessió: `info` = { call, dress, meet, bring, extra, steps: [{ time, what, where }] } (l'**horari del dia**: recollida de material, trobada, autocar, prova de so, concert, tornada). A les convocatòries, `bus: true` fa que qui confirma digui si va amb l'autocar (`rsvp.transport` = bus | own), i `tasks` = [{ id, label, need }] són feines per a voluntaris (carregar material…) a què cadascú s'apunta (`rsvp.tasks`).
+- **La setmana** (`sheetWeek`, a Inici i al compte): el que abans era el correu setmanal, fet sol amb el que hi ha a l'app: què farem els pròxims deu dies (hores, aules, horari del dia i pla, només el que toca a cadascú), les classes, el que cal respondre, el que és nou al tauler i què es va fer la setmana passada. Es pot copiar o imprimir.
 - Concerts: equilibri de veus segons les confirmacions (`rsvp`) i el mínim de cada corda (`config/main.voiceMin`); col·locació a `session.seating` = { rows: [[memberId…]] } (fila 1 = davant, vist des de la direcció); llista de participants en PDF (s'imprimeix des del navegador) o Excel (CSV amb punt i coma).
-- `trips/<id>` (sortides i gires, amb `transports` i `rooms`) i `tripSignups/<sortida>_<membre>` (cadascú hi diu si hi va; el transport i l'habitació els posa l'equip, i les regles no deixen que cadascú se'ls canviï).
-- `profiles/<membre>`: la fitxa que omple cadascú (telèfon, talla, contacte d'emergència); només la llegeixen la persona i l'equip.
+- `trips/<id>` (sortides i gires, amb `transports`, `rooms` i `questions`: preguntes pròpies com els àpats o l'autocar) i `tripSignups/<sortida>_<membre>` (cadascú hi diu si hi va i respon les preguntes a `answers`; el transport i l'habitació els posa l'equip, i les regles no deixen que cadascú se'ls canviï). L'Excel i el PDF porten les respostes i les al·lèrgies.
+- `profiles/<membre>`: la fitxa que omple cadascú (telèfon, talla, contacte d'emergència, al·lèrgies i intoleràncies `diet`); només la llegeixen la persona i l'equip.
 - Certificats d'assistència (PDF) des de les estadístiques d'una persona, i memòria de la temporada (PDF, Excel o text) des de Gestió › Produccions.
 - Classes: `students/<membre>` (objectius i repertori de l'alumne, del professorat), enregistraments de classe a `classFiles/<id>_<n>` (a trossos, amb `memberId`: només el professorat i l'alumne) enllaçats des de la nota (`classNotes.file`, `where: 'classFiles'`), vista de setmana i horari per imprimir.
 - Partitures al mòbil: «Desa’ls al mòbil» guarda els fitxers a Cache Storage (`atempo-fitxers`, que el treballador de servei no esborra mai) i `loadFile` els busca primer allà.
@@ -90,6 +94,9 @@ S'activen a Ajustos (`config/main.classesOn`) quan l'agrupació fa classes indiv
 
 ## Missatges, seguiment i secretaria
 
+- **Anuncis** (`announcements/<id>`): text llarg amb format senzill (`richText`: paràgrafs, llistes amb «-», títols en MAJÚSCULES, **negreta** i enllaços), adjunts (`files`: fitxers pujats o enllaços) i `by` (el correu de qui l'ha escrit, per poder-li respondre). Els llargs es retallen al Tauler amb «Llegeix-lo sencer».
+- **Converses** (`threads/<id>`, 21b-converses): cada persona de la plantilla pot escriure a la direcció, la gerència, la secretaria, el seu cap de corda, el seu professor de cant o l'administració, i respondre qualsevol anunci o missatge a qui l'ha escrit. Una conversa és un sol document { memberId, section, toRole | toEmail, subject, ref, msgs: [{ by, name, side: m | s, text, at }], lastAt, lastSide, readM, readS }. Només la llegeixen la persona i qui té aquell rol (els caps de corda, de la seva corda) o aquell correu; ni l'administració no veu les dels altres. `config/main.teamRoles` (el desa l'administració en obrir Personal) diu quins rols hi ha. Arriben al mòbil (tipus «missatges»).
+- **Recordatoris** (`nudges/<id>` = { kind: poll | rsvp | trip, ref, title, memberIds, by }): «Recorda-ho» d'una enquesta, una convocatòria o una sortida envia un avís al mòbil només a qui encara no ha respost; el WhatsApp i el text per copiar queden plegats per a qui encara no té l'app. Les enquestes poden deixar escriure un comentari (`allowNote`, `pollVotes.note`).
 - `messages/<id>` = { to: ['*'] o [corda…], title, body, by, byName, byRole, createdAt }: missatges dins l'app. Els caps de corda només escriuen a la seva corda; administració, direcció, gerència i secretaria, a tothom o a les cordes que triïn. Les regles només deixen llegir cada missatge a la seva corda (i a l'equip): els cantaires fan dues consultes (`to` conté '*' i `to` conté la seva corda). Arriben com a avís al mòbil (tipus «missatges»). Es guarden els dels últims 120 dies a l'app.
 - `memberNotes/<id>` = { memberId, section, text, by, at }: notes de seguiment, només per a la direcció, l'administració i el cap de corda de la seva corda (que les consulta amb `section`).
 - `members.joined` (data d'alta) i `members.history` = [{ date, kind: alta | baixa | retorn, note }]: Personal › Altes i baixes, amb l'antiguitat.
@@ -102,20 +109,24 @@ Llegeixen amb el compte de servei (secret `SERVICE_REFRESH_TOKEN`), que pot lleg
 
 - **Calendari** (cada 3 hores): el calendari subscrit de cada agrupació que el té activat (`calendari.ics` per a la primera i `calendaris/<agrupació>.ics` per a la resta) i la seva identitat a `marca/<agrupació>/`.
 - **Còpia de seguretat** (cada nit): totes les dades de cada agrupació al repositori privat de còpies.
-- **Avisos al mòbil** (cada mitja hora): anuncis, convocatòries, enquestes, material nou, respostes als avisos d'absència i avisos als caps de secció, llegint només el que cal.
-- **Vigilància** (cada hora): que l'app s'obre a cada adreça (`APP_URLS`, variable del repositori; per defecte la de GitHub Pages) i que hi carrega el codi, que GitHub Pages continua activat i si algú ha tingut errors a l'app l'última hora. Si hi ha res, avisa al mòbil l'administració de la primera agrupació i la tasca acaba amb error (GitHub n'envia un correu). Un mateix problema es torna a avisar com a molt cada sis hores.
+- **Avisos al mòbil** (cada mitja hora): anuncis, missatges i converses, canvis al calendari (una sessió que canvia de dia, d'hora o de lloc, una de nova i una d'anul·lada, només a qui hi és convocat; si n'hi ha més de vuit alhora, un sol avís), convocatòries, enquestes i sortides noves i les que es tanquen demà, els recordatoris de l'equip, material nou, respostes als avisos d'absència i avisos als caps de secció, llegint només el que cal. La norma d'assistència és a `.github/scripts/norma.py` (la mateixa que `ruleStatus` de l'app: vegeu *Proves*).
+- **Vigilància** (cada hora): que l'app s'obre a cada adreça (`APP_URLS`, variable del repositori; per defecte la de GitHub Pages) i que hi carrega el codi, que la versió publicada és la del repositori (amb 40 minuts de marge), que les regles publicades a Firebase són les del repositori (vegeu *Regles*), que GitHub Pages continua activat i si algú ha tingut errors a l'app l'última hora. Si hi ha res, avisa al mòbil l'administració de la primera agrupació i la tasca acaba amb error (GitHub n'envia un correu). Un mateix problema es torna a avisar com a molt cada sis hores.
 - **Proves** (a cada canvi i a cada petició de canvi): vegeu *Proves*.
 - **Publica a Firebase Hosting** (quan les proves de `main` passen i després de cada «Calendari»): vegeu *Allotjament*.
+- **Publica les regles** (quan les proves de `main` passen): vegeu *Regles*.
 
 ## Arquitectura
 
 L'app és estàtica: HTML, CSS i JavaScript sense cap pas de compilació, amb les dades a Firestore.
 
-- `js/` són **scripts clàssics** que comparteixen l'àmbit global i es carreguen **en ordre** (l'ordre dels `<script>` d'`index.html` importa: el codi que s'executa en carregar un fitxer només pot fer servir el que ja han definit els anteriors). Cada fitxer comença dient què hi ha: `00-errors` (registre d'errors, el primer de tots), `01-base` (constants, estat, utilitats), `02-dades` (Firestore), `03-pantalla` (pintar), `04-llista` … `10-inici` (una per pantalla), `11-fitxes` (finestres), `12-persones`, `13-avisos-mobil`, `14-eines`, `15-copies`, `16-agrupacions`, `17-rutes`, `18-repertori` (obres, pla d'assaig, reproductor d'estudi, partitures desades), `19-concerts` (equilibri de veus, col·locació, llistes, certificats, memòria, imprimir), `20-sortides` (sortides i gires, fitxa pròpia), `21-missatges` (missatges dins l'app i notes de seguiment), `22-secretaria` (altes i baixes, documents per persona, quotes, exportar la plantilla), `23-accions` (clics i formularis) i `24-arrencada` (`init()`).
+- `js/` són **scripts clàssics** que comparteixen l'àmbit global i es carreguen **en ordre** (l'ordre dels `<script>` d'`index.html` importa: el codi que s'executa en carregar un fitxer només pot fer servir el que ja han definit els anteriors). Cada fitxer comença dient què hi ha: `00-errors` (registre d'errors, el primer de tots), `01-base` (constants, estat, utilitats), `02-dades` (Firestore, lectures per canvis i arxiu de l'assistència), `03-pantalla` (pintar), `04-llista` … `10-inici` (una per pantalla; les classes són `09-classes` (la pantalla), `09b-classes-horari` (horari fix, importador, dates, imprimir) i `09c-classes-fitxes` (finestres i fitxa de l'alumne); `10-inici` porta també **La setmana**), `11-fitxes` (finestres), `12-persones`, `13-avisos-mobil`, `14-eines`, `15-copies`, `16-agrupacions`, `17-rutes`, `18-repertori` (obres, pla d'assaig, reproductor d'estudi, partitures desades), `19-concerts` (equilibri de veus, col·locació, llistes, certificats, memòria, imprimir), `20-sortides` (sortides i gires, fitxa pròpia), `21-missatges` (missatges dins l'app i notes de seguiment), `21b-converses` (converses privades i respostes), `22-secretaria` (altes i baixes, documents per persona, quotes, exportar la plantilla), `23-accions` (clics i formularis) i `24-arrencada` (`init()`).
 - **Empremtes**: cada fitxer s'enllaça amb `?v=<empremta del contingut>`. Després de canviar qualsevol fitxer de `js/`, `css/` o `config.js`, cal executar `python3 tools/stamp.py`, que també posa la versió a `index.html` (`<meta name="app-version">`) i la llista de fitxers a `sw.js`. Les proves fallen si no s'ha fet.
 - **Rutes**: cada pantalla té la seva adreça (`#/inici`, `#/assistencia/estadistiques`, `#/gestio/personal`, `#/classes/<professor>`…). El botó «enrere» del mòbil torna a la pantalla d'abans i tanca la finestra que hi hagi oberta. Els enllaços amb una ruta obren aquella pantalla (si la persona hi té accés).
 - **Sense cobertura** (`sw.js`): la pàgina es demana sempre primer a la xarxa i, si no n'hi ha o tarda més de quatre segons, s'obre la darrera desada. Els fitxers amb empremta es desen i no es tornen a baixar; les dades no passen pel treballador de servei (Firestore ja en guarda una còpia al mòbil).
-- **Lectures** (el pla gratuït de Firebase en dona 50.000 al dia, per a totes les agrupacions juntes): la plantilla, les produccions, les llistes i les classes porten `syncAt` (l'hora del servidor) a cada canvi. Cada mòbil guarda el que ja té i, en obrir l'app, només demana el que ha canviat des del darrer canvi que coneix. Qui esborra una fitxa o una producció canvia `config/main.syncEpoch`, i la resta de mòbils tornen a baixar aquella col·lecció sencera; un dia de classe esborrat queda com a `deleted: true`. La primera vegada, un cop per setmana i si el mòbil no té res desat, es baixa tot. Els aparells amb avisos (`push`) només es llegeixen en obrir «Qui ha entrat».
+- **Lectures** (el pla gratuït de Firebase en dona 50.000 al dia, per a totes les agrupacions juntes):
+  - La plantilla, les produccions, les llistes, les classes, el repertori, els anuncis, les enquestes i les sortides (i, per a l'equip, les respostes a convocatòries i enquestes de tothom) porten `syncAt` (l'hora del servidor) a cada canvi. Cada mòbil guarda el que ja té i, en obrir l'app, només demana el que ha canviat des del darrer canvi que coneix. Qui esborra una fitxa, una producció, un anunci, una enquesta o una sortida canvia `config/main.syncEpoch`, i la resta de mòbils tornen a baixar aquella col·lecció sencera; un dia de classe esborrat queda com a `deleted: true`. La primera vegada, un cop per setmana i si el mòbil no té res desat, es baixa tot.
+  - **Arxiu de l'assistència**: quan un tros de temporada (gener–març, abril–juliol, agost–desembre) fa dues setmanes que s'ha acabat, qui edita en desa totes les llistes en un sol document, `attArchive/<del>_<al>`, i `config/main.attArchive.cut` passa a ser l'últim dia arxivat. Aleshores cada mòbil llegeix cada tros arxivat d'una sola lectura i, de les llistes, només les posteriors (camp `date`, que porta cada llista). `attDoc` busca primer la llista viva i després l'arxiu; corregir una llista arxivada la desa a tots dos llocs. Les llistes no s'esborren (la còpia diària i els avisos les continuen tenint).
+  - Les dades de Gestió es llegeixen només quan s'obre: el personal (`staff`, `ensureStaff`) i, com abans, els documents, les quotes, les fitxes i els aparells amb avisos (`push`, a «Qui ha entrat»). L'horari fix del professorat (`classPlan`) només el llegeixen el professorat i l'administració.
 - **Text i icones**: cada mida de lletra és `calc(N px * var(--ts))`; «Aparença › Mida del text» (`atempo:text`, aplicada abans de pintar) la multiplica per 1,15 o 1,3. El text de lectura fa com a mínim 13 px i les etiquetes 12 px; la barra de pestanyes i les caselles denses no creixen. Les icones tenen tres mides (16, 20 i 22 px) i dos gruixos (2 i 1,75).
 - **Desfés**: `undoable(missatge, desfer, commit)` esborra al moment i ofereix «Desfés» uns segons; el que no es pot desfer (esborrar fitxers pujats) es fa en acabar l'estona o en tancar l'app. Es continua demanant confirmació per esborrar una producció, una fitxa, l'accés d'algú o dades en bloc.
 - **Cerca**: `searchAll(q)` (14-eines) sobre el que ja hi ha a la memòria, sense lectures; lupa de la barra, «/» o Cmd/Ctrl+K.
@@ -127,9 +138,24 @@ L'app és estàtica: HTML, CSS i JavaScript sense cap pas de compilació, amb le
 
 Viuen a `tests/` i GitHub les passa soles a cada canvi (`.github/workflows/proves.yml`):
 
-- **Regles de seguretat** (`tests/regles/test_regles.py`): 228 casos contra l'emulador de Firestore. En local: `npx firebase-tools emulators:exec --only firestore --project demo-cor "python3 tests/regles/test_regles.py firestore.rules"`.
+- **Revisió del codi** (`tsconfig.json`): TypeScript revisa el JavaScript de l'app sense compilar-lo i troba el que el navegador només trobaria en executar-se: noms que no existeixen, funcions definides dues vegades, crides amb massa arguments… (`npx -p typescript@5.6 tsc -p tsconfig.json`). `tools/tipus.d.ts` deixa oberts el DOM i Firebase.
+- **Lògica** (`tests/logica/`): els fitxers de l'app es carreguen sense navegador (`entorn.js`) i `proves.js` prova els percentatges, la norma d'assistència, l'importador d'horaris, les dates de les classes, l'arxiu de l'assistència, el text amb format i el pla d'assaig (`node tests/logica/run.js`).
+- **La norma, dues vegades** (`tests/logica/test_norma.py`): genera 400 agrupacions a l'atzar (baixes, produccions que algú no fa, sessions compartides, concerts, cordes no convocades, llistes buides, mínims diferents) i comprova que la norma de l'app i la dels avisos (`norma.py`) diuen exactament el mateix per a cada persona i producció.
+- **Regles de seguretat** (`tests/regles/test_regles.py`): més de 300 casos contra l'emulador de Firestore. En local: `npx firebase-tools emulators:exec --only firestore --project demo-cor "python3 tests/regles/test_regles.py firestore.rules"`.
 - **Interfície** (`tests/interficie/run.py`): l'app sencera en un Chromium sense pantalla, amb Firebase fals (`fake-firebase.js`) i dades inventades (`seed.py`). Recorre totes les pantalles amb sis perfils i tres mides, i comprova que no hi ha errors ni res que surti de la pantalla, el botó «enrere», els enllaços directes, les taules de l'ordinador, el registre d'errors i que s'obre sense xarxa. En local: `pip install playwright && python -m playwright install chromium && python3 tests/interficie/run.py`. Per mirar la còpia de proves a mà: `python3 tests/interficie/build.py` i obrir-la amb `?u=pol` (o `leader`, `singer`, `prof`, `dir`, `ger`).
 - **Estructura**: empremtes al dia i que els scripts de Python compilen.
+
+## Regles
+
+Les regles de seguretat (`firestore.rules`) es publiquen **soles** quan les proves de `main` passen (`.github/workflows/regles.yml`), si hi ha el secret `FIREBASE_SERVICE_ACCOUNT`. Primer comprova si ja hi són; si no, les publica amb `firebase-tools` i comprova que ja responen.
+
+Com se sap quines regles hi ha publicades: `tools/stamp.py` escriu l'empremta del fitxer a la regla `reglesVersio` (`allow get: if v == '<empremta>'`). Demanar `reglesVersio/<empremta>` sense entrar-hi torna «no existeix» si les regles publicades són aquestes, i «denegat» si són unes altres. Ho fan la vigilància (cada hora) i el mateix flux de publicació.
+
+La clau (un sol cop): a Google Cloud (projecte `cor-present`) › IAM › *Service accounts*, un compte amb els rols *Firebase Rules Admin*, *Firebase Hosting Admin* i *Service Usage Consumer*; *Keys › Add key › JSON*; desar-la al repositori com a secret `FIREBASE_SERVICE_ACCOUNT` (GitHub › Settings › Secrets and variables › Actions) i esborrar el fitxer. La mateixa clau serveix per a Firebase Hosting.
+
+Sense la clau, el flux avisa i les regles es publiquen a mà: Firebase › Firestore › Regles, enganxar-hi `firestore.rules` i *Publica*.
+
+**Restes de versions antigues** (Ajustos › Dades, administració): les dades dels enllaços personals d'abans del setembre del 2026 (`memberMarks`, `secrets`, les claus `claus/<clau>`) i el rol antic `palau` (passa a gerència). L'app ja no els fa servir; les regles només deixen que l'administració els miri i els esborri. Al mòbil, les claus `corpresent:*` s'esborren soles el primer cop que s'obre l'app.
 
 ## Allotjament
 
@@ -139,7 +165,7 @@ Per activar-lo (un sol cop):
 
 1. **Domini**: comprar-lo (p. ex. `a-tempo.cat`) en un registrador.
 2. **Firebase** › Hosting › *Get started*, i després *Add custom domain* amb el domini: Firebase dona els registres DNS que cal posar al registrador.
-3. **Clau de publicació**: a Google Cloud › IAM › *Service accounts*, un compte amb el rol *Firebase Hosting Admin* i una clau JSON; es desa al repositori com a secret `FIREBASE_SERVICE_ACCOUNT` (`gh secret set FIREBASE_SERVICE_ACCOUNT < clau.json`, i esborrar el fitxer).
+3. **Clau de publicació**: la mateixa de les regles (vegeu *Regles*): el secret `FIREBASE_SERVICE_ACCOUNT`.
 4. **Entrada amb Google al domini**: afegir el domini a Firebase › Authentication › *Authorized domains*, i `https://<domini>/__/auth/handler` als *Authorized redirect URIs* del client OAuth web (Google Cloud › Credentials). Després, posar el domini a `COR_OWN_DOMAINS` de `config.js`.
 5. **Vigilància**: posar les adreces a la variable del repositori `APP_URLS` (p. ex. `https://a-tempo.cat/,https://polquingles.github.io/a-tempo/`).
 

@@ -7,15 +7,15 @@ function sessionNav(cur, list, compact) {
   const idx = list.indexOf(cur);
   const prod = S.productions.get(cur.prodId);
   return `<div class="session prod-tone ${compact ? 'compact' : ''}" style="--ph:${prodHue(prod)}">
-      <button class="nav-arrow" data-act="sess-step" data-dir="-1" ${idx <= 0 || isLinkOnly() ? 'disabled' : ''} aria-label="Sessió anterior">${ICON.left}</button>
-      <button class="session-main" ${isLinkOnly() ? '' : 'data-act="sess-pick"'} aria-label="Canvia de sessió">
+      <button class="nav-arrow" data-act="sess-step" data-dir="-1" ${idx <= 0 ? 'disabled' : ''} aria-label="Sessió anterior">${ICON.left}</button>
+      <button class="session-main" data-act="sess-pick" aria-label="Canvia de sessió">
         <span class="session-prod"><i class="pdot"></i>${esc(prodNames(cur))}</span>
         <span class="session-date">${compact ? capz(fmtD(cur.date, { weekday: 'long', day: 'numeric', month: 'short' })) : longDate(cur.date)}</span>
         <span class="session-meta">${esc(cur.type || 'Assaig')}${cur.time ? ` · <span class="mono">${esc(timeRange(cur))}</span>` : ''}${cur.place ? ` · ${esc(cur.place)}` : ''}
           ${cur.date === TODAY ? '<span class="badge">Avui</span>' : ''}</span>
         ${cur.note ? `<span class="session-note">${esc(cur.note)}</span>` : ''}
       </button>
-      <button class="nav-arrow" data-act="sess-step" data-dir="1" ${idx >= list.length - 1 || isLinkOnly() ? 'disabled' : ''} aria-label="Sessió següent">${ICON.right}</button>
+      <button class="nav-arrow" data-act="sess-step" data-dir="1" ${idx >= list.length - 1 ? 'disabled' : ''} aria-label="Sessió següent">${ICON.right}</button>
     </div>`;
 }
 /** Whole choir for one session: who is expected (not on leave / outside the production) and how they did. */
@@ -44,8 +44,8 @@ function viewRisk() {
 }
 function viewRoll() {
   if (!ATT_TABS.some(([k]) => k === ui.att)) ui.att = 'llista';
-  if (!isLinkOnly() && ui.att === 'stats') return attTabs() + viewStats(true);
-  if (!isLinkOnly() && ui.att === 'risk') return attTabs() + viewRisk();
+  if (ui.att === 'stats') return attTabs() + viewStats(true);
+  if (ui.att === 'risk') return attTabs() + viewRisk();
   const list = allSessions();
   if (!S.members.size || !list.length) {
     const onboard = onboardingPanel();
@@ -56,13 +56,6 @@ function viewRoll() {
         <button class="btn btn-primary" data-act="tab" data-tab="gestio">Ves a Gestió</button>
         ${!S.members.size && !S.productions.size ? '<button class="btn" data-act="load-demo">Prova amb dades d’exemple</button>' : ''}
       </span>` : ''}</div>`;
-  }
-  if (isLinkOnly()) {
-    const sub = mySubs().sort((a, b) => a.until - b.until)[0];
-    const s = sub && list.find(x => x.id === sub.sessionId);
-    if (!s) return `<div class="empty"><p>Ara no tens cap llista per passar.</p><button class="btn" data-act="tab" data-tab="avisos">Torna als avisos</button></div>`;
-    ui.sessionId = s.id; ui.rollSec = ui.section = sub.section;
-    return viewRollSection(s, list, sub.section, {});
   }
   let cur = ui.sessionId && list.find(s => s.id === ui.sessionId);
   if (!cur) { cur = defaultSession(list); ui.sessionId = cur.id; }
@@ -130,6 +123,8 @@ function rsvpPanel(session) {
     <div class="panel rsvp-panel">
       <div class="rsvp-nums"><span><b style="color:var(--p)">${r.yes}</b><span>hi seran</span></span><span><b style="color:var(--fnj)">${r.no}</b><span>no hi seran</span></span><span><b style="color:var(--muted)">${r.none}</b><span>sense resposta</span></span></div>
       <div class="legend" style="margin:0">${SECTIONS.filter(x => r.bySec[x.id]).map(x => `<span><b>${esc(x.short)}</b> ${r.bySec[x.id].yes}✓ ${r.bySec[x.id].no}✗ ${r.bySec[x.id].none}?</span>`).join('')}</div>
+      ${session.bus ? (() => { const ys = [...S.rsvp.values()].filter(a => a.sessionId === session.id && a.answer === 'yes'); const bus = ys.filter(a => a.transport === 'bus').length, own = ys.filter(a => a.transport === 'own').length; return `<p class="m" style="margin:0">Autocar: <b>${bus}</b> · pel seu compte: <b>${own}</b>${ys.length - bus - own ? ` · sense dir-ho: ${ys.length - bus - own}` : ''}</p>`; })() : ''}
+      ${(session.tasks || []).length ? `<p class="m" style="margin:0">${session.tasks.map(t => `${esc(t.label)}: <b>${taskPeople(session, t.id).length}</b> de ${t.need || '?'}`).join(' · ')}</p>` : ''}
       <span style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-sm" data-act="rsvp-list" data-sid="${session.id}">Veure les respostes</button>${r.none && session.date >= TODAY ? `<button class="btn btn-sm btn-primary" data-act="rsvp-remind" data-sid="${session.id}">Recorda-ho als ${r.none} que falten</button>` : ''}</span>
     </div>`;
 }
@@ -152,7 +147,7 @@ function viewRollSection(cur, list, sec, pendingBySec) {
   const head = `<div class="ctx" id="ctx">
     ${sessionNav(cur, list, true)}
     <div class="secbar">
-      <button class="btn btn-sm btn-ghost back" ${isLinkOnly() ? 'data-act="tab" data-tab="avisos"' : 'data-act="close-sec"'} aria-label="Torna enrere">${ICON.left.replace('<svg', '<svg class="ic-sm" aria-hidden="true"')} ${V.Sections}</button>
+      <button class="btn btn-sm btn-ghost back" data-act="close-sec" aria-label="Torna enrere">${ICON.left.replace('<svg', '<svg class="ic-sm" aria-hidden="true"')} ${V.Sections}</button>
       <span class="secbar-t"><em>${esc(secShort(sec))}</em>${esc(SEC[sec].name)}</span>
       <span class="mono${on && rollDone(cur, sec) ? ' is-done' : ''}" id="secbar-count">${on ? (rollDone(cur, sec) ? doneCount(pr) : `${pr.done}/${pr.total}`) : ''}</span>
     </div>
@@ -187,7 +182,7 @@ function viewRollSection(cur, list, sec, pendingBySec) {
       <summary><span>De baixa o no fan la producció (${out.length})</span>${ICON.chev}</summary>
       <ul class="roster" style="margin-top:0">${out.map(m => rowHtml(cur, m)).join('')}</ul>
     </details>` : ''}
-  ${isLinkOnly() ? '' : `<button class="btn" data-act="close-sec" style="display:flex;margin:18px auto 0">Torna a totes les ${V.sections}</button>`}
+  <button class="btn" data-act="close-sec" style="display:flex;margin:18px auto 0">Torna a totes les ${V.sections}</button>
   ${canMark(cur, sec) ? '<p class="muted" style="font-size:calc(13px*var(--ts));text-align:center;margin-top:12px">Toca l’estat marcat una altra vegada per desmarcar-lo.</p>' : ''}`;
 }
 function subLine(cur, sec, leader) {

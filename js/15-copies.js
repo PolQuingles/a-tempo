@@ -13,7 +13,7 @@ function offerFile(filename, text, mime) {
 }
 function exportJSON() {
   const data = { app: 'a-tempo', version: 1, exportedAt: new Date().toISOString(), config: S.config,
-    members: [...S.members.values()], productions: [...S.productions.values()], attendance: Object.fromEntries(S.attendance), absences: [...S.absences.values()],
+    members: [...S.members.values()], productions: [...S.productions.values()], attendance: Object.fromEntries(allAttendance()), absences: [...S.absences.values()],
     rsvp: [...S.rsvp.values()], announcements: [...S.announcements.values()], polls: [...S.polls.values()], pollVotes: [...S.pollVotes.values()],
     classes: [...S.classes.values()], classReq: [...S.classReq.values()], works: [...S.works.values()], trips: [...S.trips.values()], tripSignups: [...S.tripSignups.values()] };
   const slug = (S.config.name || 'agrupacio').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -47,15 +47,20 @@ async function importJSON(file) {
 }
 function applyData(data, demo) {
   const incoming = { members: new Map(data.members.map(m => [m.id, m])), productions: new Map(data.productions.map(p => [p.id, p])), attendance: new Map(Object.entries(data.attendance || {})) };
+  // Cada llista porta la data de la seva sessió; l'arxiu per trimestres es torna a fer de nou a partir d'aquestes.
+  const dates = new Map(data.productions.flatMap(p => (p.sessions || []).map(s => [s.id, s.date])));
+  for (const [id, d] of incoming.attendance) { const date = dates.get(d.sessionId || id.slice(0, id.lastIndexOf('_'))); if (date) incoming.attendance.set(id, { ...d, date }); }
   // La identitat de l'agrupació (nom, tipus, seccions, imatge) no la canvia ni una còpia ni l'exemple.
   const keep = ['name', 'shortName', 'kind', 'sections', 'types', 'labels', 'brand', 'createdAt', 'icsOn', 'classesOn', 'teachers', 'shared', 'onboarded', 'documents'];
-  const cfg = Object.fromEntries(Object.entries(data.config || {}).filter(([k]) => !keep.includes(k) || (!demo && k === 'documents')));
+  const cfg = Object.fromEntries(Object.entries(data.config || {}).filter(([k]) => (!keep.includes(k) || (!demo && k === 'documents')) && k !== 'syncEpoch'));
+  cfg.attArchive = null;
   for (const col of COLS) {
     for (const id of [...S[col].keys()]) if (!incoming[col].has(id)) { S[col].delete(id); persist(col, id, null, 10); }
   }
   let i = 0;
   for (const col of COLS) for (const [id, v] of incoming[col]) { S[col].set(id, v); persist(col, id, v, 10 + (i++ % 40) * 15); }
   saveConfig({ ...cfg, demo });
+  for (const id of ARCH.by.keys()) db.doc(`attArchive/${id}`).delete().catch(() => {});
   bumpEpoch('all');
   ui.sessionId = null; ui.statsProd = null;
   render();
@@ -115,7 +120,8 @@ async function wipeAll(demo) {
   const paths = [...COLS, 'absences', ...CLASS_COLS].flatMap(col => [...S[col].keys()].map(id => [col, id]));
   let i = 0;
   for (const [col, id] of paths) { S[col].delete(id); persist(col, id, null, 10 + (i++ % 40) * 15); }
-  saveConfig({ demo: false });
+  saveConfig({ demo: false, attArchive: null });
+  for (const id of ARCH.by.keys()) db.doc(`attArchive/${id}`).delete().catch(() => {});
   bumpEpoch('all');
   ui.sessionId = null; ui.statsProd = null;
   ui.tab = 'gestio'; ui.manage = 'personal'; ui.people = 'singer';

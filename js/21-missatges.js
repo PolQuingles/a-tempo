@@ -10,8 +10,8 @@
 const LS_MSG = 'atempo:missatges-vist';
 const MSG_DAYS = 120;
 const WRITE_ALL = ['admin', 'director', 'gerencia', 'secretaria'];
-const canWriteAll = () => !PREVIEW && WRITE_ALL.some(r => hasRole(S.me, r));
-const myLeadSection = () => !PREVIEW && hasRole(S.me, 'leader') && S.me.section && SEC_MAP[S.me.section] ? S.me.section : null;
+const canWriteAll = () => WRITE_ALL.some(iHave);
+const myLeadSection = () => { const me = ME(); return hasRole(me, 'leader') && me.section && SEC_MAP[me.section] ? me.section : null; };
 const canMessage = () => canWriteAll() || !!myLeadSection();
 const mySectionNow = () => S.members.get(myMemberId())?.section || null;
 const msgTo = m => (m.to || []).includes('*') ? 'A tothom' : `A ${(m.to || []).map(x => SEC_MAP[x] ? SEC[x].name.toLowerCase() : x).join(', ')}`;
@@ -19,10 +19,10 @@ const msgTo = m => (m.to || []).includes('*') ? 'A tothom' : `A ${(m.to || []).m
 function messagesForMe(all) {
   const secs = [mySectionNow(), myLeadSection()].filter(Boolean);
   return [...S.messages.values()]
-    .filter(m => all || m.by === S.email || (m.to || []).includes('*') || (m.to || []).some(x => secs.includes(x)))
+    .filter(m => all || m.by === myEmail() || (m.to || []).includes('*') || (m.to || []).some(x => secs.includes(x)))
     .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
 }
-const unreadMessages = () => { const seen = lsGet(LS_MSG) || ''; return messagesForMe().filter(m => (m.createdAt || '') > seen && m.by !== S.email); };
+const unreadMessages = () => { const seen = lsGet(LS_MSG) || ''; return messagesForMe().filter(m => (m.createdAt || '') > seen && m.by !== myEmail()); };
 /** Es llegeixen quan ja se sap de quina corda és cadascú: l'equip, tots els recents; la resta, els seus (dues consultes). */
 let msgWatch = null;
 function watchMessages() {
@@ -40,26 +40,29 @@ function watchMessages() {
 }
 function msgCard(m, full) {
   const seen = lsGet(LS_MSG) || '';
-  const fresh = (m.createdAt || '') > seen && m.by !== S.email;
+  const fresh = (m.createdAt || '') > seen && m.by !== myEmail();
   const body = full || (m.body || '').length <= 180 ? m.body || '' : `${m.body.slice(0, 180)}…`;
   return `<article class="msg${fresh ? ' new' : ''}">
     <div class="msg-h"><b>${esc(m.byName || 'Equip')}</b><span class="m">${esc(m.byRole || '')}${m.byRole ? ' · ' : ''}${esc(msgTo(m))}</span><span class="mono m">${esc(m.createdAt ? `${ddmm(m.createdAt.slice(0, 10))} ${m.createdAt.slice(11, 16)}` : '')}</span></div>
     ${m.title ? `<b class="msg-t">${esc(m.title)}</b>` : ''}
-    <div class="msg-b">${linkify(body)}</div>
-    ${full && (m.by === S.email || isAdmin()) ? `<button class="btn btn-sm btn-ghost" data-act="msg-del" data-id="${esc(m.id)}">Esborra’l</button>` : ''}
+    <div class="msg-b rich">${richText(body)}</div>
+    ${canReply(m.by) || (full && (m.by === S.email || isAdmin())) ? `<div class="msg-acts">${canReply(m.by) ? `<button class="btn btn-sm" data-act="reply" data-ref="msg:${esc(m.id)}">Respon</button>` : ''}${full && (m.by === S.email || isAdmin()) ? `<button class="btn btn-sm btn-ghost" data-act="msg-del" data-id="${esc(m.id)}">Esborra’l</button>` : ''}</div>` : ''}
   </article>`;
 }
 /** A Inici: els últims missatges i el botó per escriure'n. */
 function messagesBlock() {
   const list = messagesForMe();
-  if (!list.length && !canMessage()) return '';
   const lead = myLeadSection();
+  const threads = S.threads.size;
+  if (!list.length && !canMessage() && !myId() && !threads) return '';
   const write = canWriteAll() ? '<button class="btn btn-sm btn-primary" data-act="write">Escriu</button>'
-    : lead ? `<button class="btn btn-sm btn-primary" data-act="msg-new">Missatge a la ${esc(V.section)}</button>` : '';
-  return `<div class="section-title"><h2 class="h2">Missatges</h2>${write}</div>
+    : lead ? `<button class="btn btn-sm btn-primary" data-act="msg-new">Missatge a la ${esc(V.section)}</button>`
+    : myId() && !PREVIEW ? '<button class="btn btn-sm btn-primary" data-act="thread-new">Escriu a l’equip</button>' : '';
+  const conv = threads || (myId() && (canWriteAll() || lead)) ? `<button class="btn btn-sm" data-act="threads">Converses${unreadThreads().length ? ` (${unreadThreads().length})` : ''}</button>` : '';
+  return `<div class="section-title"><h2 class="h2">Missatges</h2><span style="display:flex;gap:6px;flex-wrap:wrap">${conv}${write}</span></div>
     ${list.length ? `<div class="panel msgs">${list.slice(0, 3).map(m => msgCard(m)).join('')}
       ${list.length > 3 || list.some(m => (m.body || '').length > 180) ? `<div style="padding:4px 14px 12px"><button class="btn btn-sm btn-ghost" data-act="msg-list">Tots els missatges${list.length > 3 ? ` (${list.length})` : ''}</button></div>` : ''}</div>`
-      : `<p class="muted" style="margin:0 2px;font-size:calc(13px*var(--ts))">${lead && !canWriteAll() ? `Escriu a tota la ${esc(SEC[lead].name.toLowerCase())} des d’aquí: els arriba a l’app i al mòbil, sense correus ni WhatsApp.` : 'Escriu a tothom o a una corda des d’aquí: els arriba a l’app i al mòbil, sense correus ni WhatsApp.'}</p>`}`;
+      : `<p class="muted" style="margin:0 2px;font-size:calc(13px*var(--ts))">${lead && !canWriteAll() ? `Escriu a tota la ${esc(SEC[lead].name.toLowerCase())} des d’aquí: els arriba a l’app i al mòbil, sense correus ni WhatsApp.` : canMessage() ? 'Escriu a tothom o a una corda des d’aquí: els arriba a l’app i al mòbil, sense correus ni WhatsApp.' : 'Si tens un dubte o has d’avisar l’equip de res, escriu-los des d’aquí: només ho veuen ells.'}</p>`}`;
 }
 function sheetMessages() {
   let all = false;
@@ -89,6 +92,7 @@ function sheetWrite() {
       <button class="write-o" data-act="msg-new"><b>Un missatge</b><small>Arriba a l’app i al mòbil de tothom o de les ${esc(V.sections)} que triïs. Per a avisos del dia a dia.</small></button>
       <button class="write-o" data-act="ann-new"><b>Un anunci al tauler</b><small>Queda fixat al Tauler (també es pot adreçar a unes ${esc(V.sections)}), amb data de caducitat.</small></button>
       <button class="write-o" data-act="poll-new"><b>Una enquesta</b><small>Una pregunta amb opcions: disponibilitat, vestuari, sopar…</small></button>
+      <button class="write-o" data-act="trip-new"><b>Una sortida o un cap de setmana</b><small>Amb inscripció, preguntes (àpats, autocar…), transport i habitacions.</small></button>
     </div>`,
   });
 }
@@ -144,7 +148,7 @@ async function deleteMessage(id) {
 /* ---------- Notes de seguiment ---------- */
 // memberNotes/<id> = { id, memberId, section, text, by, byName, at }. Només les veuen la direcció, l'administració i els
 // caps de corda (els de la seva corda): afinació, actitud, progressos… La persona no les veu.
-const canTrackAll = () => !PREVIEW && (hasRole(S.me, 'admin') || hasRole(S.me, 'director'));
+const canTrackAll = () => iHave('admin') || iHave('director');
 const canTrack = m => !!m && (canTrackAll() || (myLeadSection() && myLeadSection() === m.section));
 async function trackBox(el, m) {
   const box = el.querySelector('#ms-track');

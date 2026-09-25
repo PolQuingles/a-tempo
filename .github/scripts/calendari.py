@@ -61,6 +61,9 @@ def ics(cfg, prods):
         info = s.get("info") or {}
         desc = [f"{label}: {info[k]}" for k, label in [("call", "Convocatòria"), ("dress", "Vestuari"), ("meet", "Punt de trobada"),
                                                        ("bring", "Cal portar"), ("extra", "Indicacions")] if info.get(k)]
+        steps = [x for x in info.get("steps") or [] if x.get("time") or x.get("what")]
+        if steps:
+            desc.append("Horari del dia:\n" + "\n".join(f"{x.get('time') or ''} {x.get('what') or ''}{' (' + x['where'] + ')' if x.get('where') else ''}".strip() for x in steps))
         desc.append(s.get("note") or "")
         if s.get("sections"):
             desc.append("Convocats: " + ", ".join(names.get(x, x) for x in s["sections"]))

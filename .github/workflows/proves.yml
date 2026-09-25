@@ -1,6 +1,7 @@
 name: Proves
 # A cada canvi: les regles de seguretat de Firestore (a l'emulador), la interfície sencera en un navegador
-# sense pantalla, i que les empremtes dels fitxers i els scripts estiguin bé.
+# sense pantalla, la revisió de tipus del codi (TypeScript) i les proves de la lògica, i que les empremtes dels
+# fitxers i els scripts estiguin bé.
 on:
   push:
     branches: [main]
@@ -45,6 +46,24 @@ jobs:
           python -m playwright install --with-deps chromium
       - name: Proves de la interfície
         run: python3 tests/interficie/run.py
+  codi:
+    name: Revisió del codi i lògica
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Tipus (TypeScript revisa el JavaScript de l'app)
+        run: npx --yes -p typescript@5.6 tsc -p tsconfig.json --pretty false
+      - name: Lògica (percentatges, norma, importador, dates de classe, arxiu…)
+        run: node tests/logica/run.js
+      - name: La norma de l'app i la dels avisos diuen el mateix
+        run: python3 tests/logica/test_norma.py
   estructura:
     name: Empremtes i scripts
     runs-on: ubuntu-latest
@@ -57,4 +76,4 @@ jobs:
       - name: Empremtes dels fitxers al dia
         run: python3 tools/stamp.py --check
       - name: Els scripts de Python compilen
-        run: python3 -m py_compile .github/scripts/*.py tools/*.py tests/regles/*.py tests/interficie/*.py
+        run: python3 -m py_compile .github/scripts/*.py tools/*.py tests/regles/*.py tests/interficie/*.py tests/logica/*.py

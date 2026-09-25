@@ -42,21 +42,35 @@ function accessPanel() {
     <div class="setting"><div><div class="t">${withAccount} de ${members.length} ${esc(V.members)} tenen accés · ${r.inApp.length} han entrat${r.never.length ? `, ${r.never.length} encara no` : ''}</div>
       <div class="s">Tothom entra pel mateix enllaç amb el seu correu, i només si és aquí. Si algú marxa, treu-li l’accés: el perd a l’instant, però no se n’esborra la fitxa ni les llistes.</div></div></div>
     <div class="access-acts"><button class="btn btn-sm btn-primary" data-act="staff-new">+ Persona</button><button class="btn btn-sm" data-act="staff-bulk">Enganxa una llista</button><button class="btn btn-sm" data-act="share-app">Enllaç de l’app</button>
-      <button class="btn btn-sm" data-act="who-in">Qui ha entrat</button><button class="btn btn-sm ${mailProblems().length ? 'btn-primary' : ''}" data-act="mail-check">Comprova els correus${mailProblems().length ? ` (${mailProblems().length})` : ''}</button><button class="btn btn-sm" data-act="preview-on">Mira-ho com un ${esc(V.member)}</button></div>
+      <button class="btn btn-sm" data-act="who-in">Qui ha entrat</button><button class="btn btn-sm ${mailProblems().length ? 'btn-primary' : ''}" data-act="mail-check">Comprova els correus${mailProblems().length ? ` (${mailProblems().length})` : ''}</button><button class="btn btn-sm" data-act="preview-on">Mira l’app com…</button></div>
   </div>`;
 }
-function managePeople() {
-  const extra = [['altes', 'Altes i baixes', 0], ...(canDocs() ? [['docs', 'Documents', 0], ['quotes', 'Quotes', 0]] : [])];
-  if (!ROLE_KEYS.includes(ui.people) && ui.people !== 'access' && !extra.some(([k]) => k === ui.people)) ui.people = 'singer';
-  const role = ui.people;
-  const chips = [['singer', rolePlural('singer'), roleCount('singer')], ...extra, ...(isAdmin() ? [['access', 'Amb accés', S.staff.size]] : []),
+/** El menú de Personal: un desplegable amb cada rol (i quants n'hi ha) i, dins de la plantilla, les seves quatre llistes. */
+const CANT_TABS = () => [['plantilla', 'Plantilla'], ['altes', 'Altes i baixes'], ...(canDocs() ? [['docs', 'Documents'], ['quotes', 'Quotes']] : [])];
+function peopleMenu(role) {
+  const opts = [['singer', rolePlural('singer'), roleCount('singer')], ...(isAdmin() ? [['access', 'Amb accés a l’app', S.staff.size]] : []),
     ...PEOPLE_MENU.filter(k => k !== 'singer').map(k => [k, rolePlural(k), roleCount(k)])];
-  const menu = `<div class="chips" id="people-menu" role="tablist" aria-label="Rols">${chips.map(([k, l, n]) =>
-    `<button class="chip" role="tab" aria-pressed="${role === k}" data-act="people-role" data-k="${k}">${esc(l)}${n ? ` · ${n}` : ''}</button>`).join('')}</div>`;
-  if (role === 'singer') return accessPanel() + menu + `<div class="sec-h" style="margin:4px 0 0"><span class="muted" style="font-size:calc(13px*var(--ts))">Tota la plantilla, amb l’antiguitat, la fitxa de cadascú${canDocs() ? ', els documents i la quota' : ''}.</span><button class="btn btn-sm" data-act="roster-export">Exporta a Excel</button></div>` + manageMembers();
-  if (role === 'altes') return accessPanel() + menu + manageHistory();
-  if (role === 'docs') return accessPanel() + menu + manageDocs();
-  if (role === 'quotes') return accessPanel() + menu + manageFees();
+  const sel = `<div class="filters people-filters"><label class="sel sel-big"><span class="sr">Mostra</span><select id="people-menu" data-pick="people-role">${opts.map(([k, l, n]) =>
+    `<option value="${k}" ${role === k ? 'selected' : ''}>${esc(l)}${S.staffReady || k === 'singer' ? ` · ${n}` : ''}</option>`).join('')}</select></label></div>`;
+  if (role !== 'singer') return sel;
+  const tabs = CANT_TABS();
+  return sel + `<div class="subtabs cant-tabs" role="tablist" aria-label="${esc(V.Members)}" style="grid-template-columns:repeat(${tabs.length},1fr)">${tabs.map(([k, l]) =>
+    `<button class="subtab" role="tab" aria-selected="${ui.cantTab === k}" data-act="cant-tab" data-k="${k}">${l}</button>`).join('')}</div>`;
+}
+function managePeople() {
+  ensureStaff();
+  // Abans, altes, documents i quotes eren al mateix menú que els rols.
+  if (['altes', 'docs', 'quotes'].includes(ui.people)) { ui.cantTab = ui.people; ui.people = 'singer'; }
+  if (!ROLE_KEYS.includes(ui.people) && ui.people !== 'access') ui.people = 'singer';
+  if (!CANT_TABS().some(([k]) => k === ui.cantTab)) ui.cantTab = 'plantilla';
+  const role = ui.people;
+  const menu = peopleMenu(role);
+  if (role === 'singer') {
+    if (ui.cantTab === 'altes') return accessPanel() + menu + manageHistory();
+    if (ui.cantTab === 'docs') return accessPanel() + menu + manageDocs();
+    if (ui.cantTab === 'quotes') return accessPanel() + menu + manageFees();
+    return accessPanel() + menu + `<div class="sec-h" style="margin:4px 0 0"><span class="muted" style="font-size:calc(13px*var(--ts))">Tota la plantilla, amb l’antiguitat i la fitxa de cadascú.</span><button class="btn btn-sm" data-act="roster-export">Exporta a Excel</button></div>` + manageMembers();
+  }
   if (role === 'access') {
     const people = peopleSorted();
     return `${accessPanel()}${menu}<p class="muted" style="margin:4px 2px 10px;font-size:calc(13px*var(--ts))">Tothom qui pot entrar a l’app, amb els seus rols. Toca una persona per canviar-li els rols, convidar-la o treure-li l’accés.</p>
@@ -261,14 +275,13 @@ async function deleteGroup(el) {
   const at = new Date().toISOString();
   try {
     const refs = [];
-    for (const col of ['members', 'productions', 'attendance', 'absences', 'subs', 'rsvp', 'announcements', 'polls', 'pollVotes', 'memberMarks', 'push', 'classes', 'classReq', 'classPlan', 'classNotes', 'classFiles', 'students', 'works', 'trips', 'tripSignups', 'profiles', 'messages', 'memberNotes', 'memberDocs', 'memberFiles', 'config']) {
+    for (const col of ['members', 'productions', 'attendance', 'attArchive', 'absences', 'subs', 'rsvp', 'announcements', 'polls', 'pollVotes', 'push', 'classes', 'classReq', 'classPlan', 'classNotes', 'classFiles', 'classIcs', 'students', 'works', 'trips', 'tripSignups', 'profiles', 'messages', 'threads', 'nudges', 'memberNotes', 'memberDocs', 'memberFiles', 'config']) {
       say('Preparant…');
       const snap = await db.collection(col).get();
       for (const d of snap.docs) if (!(col === 'config' && d.id === 'main')) refs.push(d.ref);
     }
-    for (const k of Object.values(S.secrets || {})) if (typeof k === 'string' && SECRET_RE.test(k)) refs.push(fs.doc(`claus/${k}`));
-    refs.push(db.doc('secrets/main'), db.doc('secrets/members'));
-    for (const e of S.staff.keys()) if (e !== S.me.email) refs.push(fs.doc(`staffIndex/${e}/agrupacions/${GID}`), db.doc(`staff/${e}`));
+    const staffSnap = await db.collection('staff').get();
+    for (const d of staffSnap.docs) if (d.id !== S.me.email) refs.push(fs.doc(`staffIndex/${d.id}/agrupacions/${GID}`), d.ref);
     for (let i = 0; i < refs.length; i += 400) {
       const b = fs.batch();
       refs.slice(i, i + 400).forEach(r => b.delete(r));
@@ -380,10 +393,64 @@ function manageConfig() {
     <div class="setting"><div><div class="t">Còpia de seguretat</div><div class="s">Descarrega ${esc(V.members)}, produccions, llistes i avisos en un fitxer JSON. A més, cada nit se’n guarda una còpia automàtica.</div></div><button class="btn btn-sm" data-act="export-json">Exporta</button></div>
     ${isAdmin() ? `<div class="setting"><div><div class="t">Restaura una còpia</div><div class="s">Substitueix totes les dades actuals per les del fitxer.</div></div>
       <label class="btn btn-sm" for="import-file">Importa…</label><input id="import-file" type="file" accept="application/json,.json" class="sr" data-bind="import"></div>
+    <div class="setting"><div><div class="t">Restes de versions antigues</div><div class="s">Les dades dels enllaços personals d’abans (ja no serveixen) i el rol antic «Treballador del Palau».</div></div><button class="btn btn-sm" data-act="legacy-clean">Revisa-ho</button></div>
     <div class="setting"><div><div class="t">Esborra les dades</div><div class="s">Elimina ${esc(V.members)}, produccions, llistes i avisos, però manté l’agrupació i les persones amb accés. No es pot desfer.</div></div><button class="btn btn-sm btn-danger-ghost" data-act="wipe-all">Esborra</button></div>
     ${GID !== FOUNDER && canManageGroup() ? `<div class="setting"><div><div class="t">Esborra l’agrupació</div><div class="s">Ho elimina tot, persones incloses, i l’agrupació desapareix. No es pot desfer.</div></div><button class="btn btn-sm btn-danger-ghost" data-act="group-delete">Esborra-la</button></div>` : ''}` : ''}
   </div>
   </div>`;
+}
+/* ---------- Restes de versions antigues ---------- */
+// Fins al setembre del 2026 cada cantaire podia tenir un enllaç personal: la clau era a secrets/members (i a claus/<clau>)
+// i les seves marques es copiaven a memberMarks/<membre>. L'equip tècnic tenia un sol rol, «palau». Res d'això no es fa
+// servir: aquí es veu què en queda i es pot esborrar (hi ha la còpia de cada nit, per si de cas).
+async function legacyScan() {
+  const out = { marks: [], keys: [], secrets: [], palau: [], label: !!(S.config.labels && 'palau' in S.config.labels) };
+  const get = async f => { try { return await f(); } catch { return null; } };
+  const marks = await get(() => db.collection('memberMarks').get());
+  if (marks) out.marks = marks.docs.map(d => d.ref);
+  for (const id of ['main', 'members']) {
+    const d = await get(() => db.doc(`secrets/${id}`).get());
+    if (!d || !d.exists) continue;
+    out.secrets.push(d.ref);
+    for (const v of Object.values(d.data() || {})) if (typeof v === 'string' && SECRET_RE.test(v)) out.keys.push(v);
+  }
+  const staff = await get(() => db.collection('staff').get());
+  if (staff) out.palau = staff.docs.filter(d => { const x = d.data(); return (x.roles || [x.role]).includes('palau'); }).map(d => ({ ...d.data(), email: d.id }));
+  return out;
+}
+function sheetLegacyClean() {
+  openSheet({
+    title: 'Restes de versions antigues',
+    body: '<p id="lg-st" style="margin-top:0">Mirant què en queda…</p><ul class="mini-list" id="lg-list" style="max-height:none"></ul>',
+    foot: '<span class="spacer"></span><button class="btn" data-act="sheet-close">Tanca</button><button class="btn btn-primary" id="lg-go" disabled>Neteja-ho</button>',
+    onMount: async el => {
+      const r = await legacyScan();
+      const rows = [
+        [r.marks.length, `Còpies de marques dels enllaços personals (${r.marks.length})`],
+        [r.keys.length, `Claus d’enllaços antics (${r.keys.length})`],
+        [r.secrets.length, 'Llista de les claus dels enllaços'],
+        [r.palau.length, `Persones amb el rol antic «palau», que passarà a ser Gerència (${r.palau.length})`],
+        [r.label && canManageGroup(), 'El nom antic del rol («Treballador del Palau») a la configuració'],
+      ].filter(([n]) => n);
+      el.querySelector('#lg-list').innerHTML = rows.map(([, t]) => `<li><span>${esc(t)}</span></li>`).join('');
+      el.querySelector('#lg-st').textContent = rows.length ? 'Queda això, que ja no fa servir ningú:' : 'No en queda res: ja està tot net.';
+      const go = el.querySelector('#lg-go');
+      go.disabled = !rows.length;
+      go.onclick = async () => {
+        go.disabled = true; go.textContent = 'Netejant…';
+        try {
+          for (const p of r.palau) {
+            const roles = [...new Set((p.roles || [p.role]).map(x => x === 'palau' ? 'gerencia' : x))];
+            await db.doc(`staff/${p.email}`).set({ ...p, roles, role: roles[0] });
+          }
+          const refs = [...r.marks, ...r.keys.map(k => fs.doc(`claus/${k}`)), ...r.secrets];
+          for (let i = 0; i < refs.length; i += 400) { const b = fs.batch(); refs.slice(i, i + 400).forEach(x => b.delete(x)); await b.commit(); }
+          if (r.label && canManageGroup()) { const labels = { ...S.config.labels }; delete labels.palau; saveConfig({ labels }); }
+          closeSheet(); toast('Restes antigues netejades');
+        } catch { go.disabled = false; go.textContent = 'Neteja-ho'; toast('No s’ha pogut acabar. Torna-ho a provar.'); }
+      };
+    },
+  });
 }
 /** Les inicials de la persona («Quingles, Pol» → PQ). */
 function personInitials(name) {
@@ -411,11 +478,14 @@ const ACCT_ICONS = {
   help: '<circle cx="12" cy="12" r="8.5"/><path d="M9.7 9.4a2.4 2.4 0 014.6.9c0 1.6-2.3 2.1-2.3 3.7"/><path d="M12 17v.2"/>',
   install: '<rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M12 7.5v7M9 11.5l3 3 3-3"/>',
   profile: '<rect x="3.5" y="5" width="17" height="14" rx="2.5"/><circle cx="9" cy="11" r="2.2"/><path d="M5.8 16.2a3.4 3.4 0 016.4 0M14 10h4M14 13.5h3"/>',
+  threads: '<path d="M4 5.5h11v8H8l-4 3.5z"/><path d="M15 9.5h5v8l-3-2.5h-6.5v-2"/>',
+  week: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4M7 14h2M11 14h2M15 14h2M7 17h2M11 17h2"/>',
 };
 /** Les finestres del menú. S'obren amb una fletxa per tornar-hi (vegeu openSheet). */
 const ACCT_SHEETS = {
   calendar: () => sheetCalendar(), classIcs: () => sheetClassIcs(), push: () => sheetPush(),
   groups: () => sheetGroups(), theme: () => sheetTheme(), help: () => sheetHelp(), profile: () => sheetMyProfile(), install: () => sheetInstall(),
+  threads: () => sheetThreads(), week: () => sheetWeek(),
 };
 function sheetAccount() {
   const name = accountName();
@@ -427,7 +497,8 @@ function sheetAccount() {
   const open = (k, t) => item(k, t, `data-act="acct-open" data-k="${k}"`);
   const groups = [
     canEdit() ? [item('gestio', 'Gestió', `data-act="manage" data-k="${pend ? 'avisos' : ROUTE_MANAGE[ui.manage] ? ui.manage : 'personal'}"`, pend)] : [],
-    [myId() && !PREVIEW && open('profile', 'La meva fitxa'), icsOn() && open('calendar', 'Calendari al mòbil'), clOn && open('classIcs', 'Les teves classes al calendari'), pushSupported() && open('push', 'Avisos al mòbil')],
+    [(myId() || S.threads.size) && item('threads', 'Converses', 'data-act="acct-open" data-k="threads"', unreadThreads().length), open('week', 'La setmana'),
+      myId() && !PREVIEW && open('profile', 'La meva fitxa'), icsOn() && open('calendar', 'Calendari al mòbil'), clOn && open('classIcs', 'Les teves classes al calendari'), pushSupported() && open('push', 'Avisos al mòbil')],
     [groupsVisible() && open('groups', 'Agrupacions'), open('theme', 'Aparença'), canInstall() && open('install', 'Instal·la l’app'), open('help', 'Com funciona')],
   ].map(g => g.filter(Boolean)).filter(g => g.length);
   openSheet({

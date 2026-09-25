@@ -56,7 +56,13 @@ async () => {
   if (ui.tab === 'gestio') {
     for (const k of ['avisos', 'personal', 'produccions', 'config']) { await cl(`[data-act="manage"][data-k="${k}"]`); chk('gestio/' + k); }
     await cl('[data-act="manage"][data-k="personal"]');
-    for (const b of [...document.querySelectorAll('#people-menu .chip')]) { b.click(); await s(250); chk('personal/' + b.dataset.k); }
+    // El desplegable dels rols i, dins de la plantilla, les seves llistes (altes i baixes, documents, quotes).
+    const sel = document.querySelector('#people-menu');
+    for (const v of sel ? [...sel.options].map(o => o.value) : []) {
+      const cur = document.querySelector('#people-menu');
+      cur.value = v; cur.dispatchEvent(new Event('change', { bubbles: true })); await s(250); chk('personal/' + v);
+      if (v === 'singer') for (const t of [...document.querySelectorAll('[data-act="cant-tab"]')].map(b => b.dataset.k)) { await cl(`[data-act="cant-tab"][data-k="${t}"]`); chk('plantilla/' + t); }
+    }
     await cl('[data-act="manage"][data-k="config"]');
     for (const b of [...document.querySelectorAll('.cfg-h')]) { b.click(); await s(120); }
     chk('ajustos/tot-obert');

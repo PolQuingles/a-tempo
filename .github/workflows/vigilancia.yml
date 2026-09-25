@@ -1,5 +1,6 @@
 name: Vigilància
-# Cada hora: que l'app s'obre, que GitHub Pages continua activat i si algú ha tingut errors a l'app.
+# Cada hora: que l'app s'obre, que la versió i les regles publicades són les del repositori, que GitHub Pages continua
+# activat i si algú ha tingut errors a l'app.
 # Si hi ha res, avisa al mòbil l'administració i la tasca acaba amb error (GitHub n'envia un correu).
 on:
   schedule:
@@ -15,6 +16,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 30
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
