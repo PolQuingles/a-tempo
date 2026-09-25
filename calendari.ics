@@ -183,21 +183,87 @@ UID:cj-oratori-05@a-tempo
 DTSTAMP:20260101T000000Z
 DTSTART;TZID=Europe/Madrid:20261104T203000
 DTEND;TZID=Europe/Madrid:20261104T223000
-SUMMARY:Assaig · Oratori de Nadal · J.S. Bach
+SUMMARY:Assaig · Oratori de Nadal · J.S. Bach + Concert de Sant Esteve
+END:VEVENT
+BEGIN:VEVENT
+UID:smugs6gttv7pq@a-tempo
+DTSTAMP:20260101T000000Z
+DTSTART;VALUE=DATE:20261105
+DTEND;VALUE=DATE:20261106
+SUMMARY:Assaig · 2a de Mahler · reforç de l’Orfeó Català
+DESCRIPTION:Assaig amb l’Orfeó Català · hora per confirmar
 END:VEVENT
 BEGIN:VEVENT
 UID:cj-oratori-06@a-tempo
 DTSTAMP:20260101T000000Z
 DTSTART;TZID=Europe/Madrid:20261109T203000
 DTEND;TZID=Europe/Madrid:20261109T223000
-SUMMARY:Assaig · Oratori de Nadal · J.S. Bach
+SUMMARY:Assaig · Oratori de Nadal · J.S. Bach + Concert de Sant Esteve
+END:VEVENT
+BEGIN:VEVENT
+UID:smugs6gttd93m@a-tempo
+DTSTAMP:20260101T000000Z
+DTSTART;TZID=Europe/Madrid:20261111T184000
+DTEND;TZID=Europe/Madrid:20261111T230000
+SUMMARY:Assaig amb orquestra · 2a de Mahler · reforç de l’Orfeó Catal
+ à
+LOCATION:L’Auditori
+DESCRIPTION:Horari del dia:\n18:40 Vocalització\n19:00 Assaig antepiano am
+ b L. Morlot (fins a les 19:45) (Sala 2)\n20:00 Assaig amb orquestra (fins 
+ a les 23:00)\nAmb l’OBC i Ludovic Morlot
 END:VEVENT
 BEGIN:VEVENT
 UID:cj-oratori-07@a-tempo
 DTSTAMP:20260101T000000Z
 DTSTART;TZID=Europe/Madrid:20261111T203000
 DTEND;TZID=Europe/Madrid:20261111T223000
-SUMMARY:Assaig · Oratori de Nadal · J.S. Bach
+SUMMARY:Assaig · Oratori de Nadal · J.S. Bach + Concert de Sant Esteve
+DESCRIPTION:Vindrà l’Anna Romaní
+END:VEVENT
+BEGIN:VEVENT
+UID:smugs6gtt8pdg@a-tempo
+DTSTAMP:20260101T000000Z
+DTSTART;TZID=Europe/Madrid:20261112T194000
+DTEND;TZID=Europe/Madrid:20261112T230000
+SUMMARY:Assaig general · 2a de Mahler · reforç de l’Orfeó Català
+LOCATION:L’Auditori
+DESCRIPTION:Horari del dia:\n19:40 Vocalització (Sala 3)\n20:00 Assaig gen
+ eral (fins a les 23:00) (L’Auditori)
+END:VEVENT
+BEGIN:VEVENT
+UID:smugs6gttnxhl@a-tempo
+DTSTAMP:20260101T000000Z
+DTSTART;TZID=Europe/Madrid:20261113T190000
+DTEND;TZID=Europe/Madrid:20261113T210000
+SUMMARY:Concert · 2a de Mahler · reforç de l’Orfeó Català
+LOCATION:L’Auditori
+DESCRIPTION:Convocatòria: 19:15\nHorari del dia:\n19:00 Comença el concer
+ t: l’orquestra sola (Blai Soler\, Cassandra)\n19:15 Concentració i voca
+ lització\, ja canviats (Sala 2)\n19:50 2a part (hora aproximada): actuaci
+ ó de l’Orfeó Català\nMahler 2 «Resurrecció» a la 2a part · OBC\, 
+ dir. Ludovic Morlot
+END:VEVENT
+BEGIN:VEVENT
+UID:smugs6gttbi52@a-tempo
+DTSTAMP:20260101T000000Z
+DTSTART;TZID=Europe/Madrid:20261114T190000
+DTEND;TZID=Europe/Madrid:20261114T210000
+SUMMARY:Concert · 2a de Mahler · reforç de l’Orfeó Català
+LOCATION:L’Auditori
+DESCRIPTION:Convocatòria: 19:15\nHorari del dia:\n19:00 Comença el concer
+ t: l’orquestra sola (Blai Soler\, Cassandra)\n19:15 Concentració i voca
+ lització\, ja canviats (Sala 4)\n19:50 2a part (hora aproximada): actuaci
+ ó de l’Orfeó Català\nMahler 2 «Resurrecció» a la 2a part · OBC\, 
+ dir. Ludovic Morlot
+END:VEVENT
+BEGIN:VEVENT
+UID:cj-santesteve-01@a-tempo
+DTSTAMP:20260101T000000Z
+DTSTART;TZID=Europe/Madrid:20261115T100000
+DTEND;TZID=Europe/Madrid:20261115T140000
+SUMMARY:Assaig · Concert de Sant Esteve + Oratori de Nadal · J.S. Bach
+LOCATION:Sala de concerts
+DESCRIPTION:Assaig d’escena de Sant Esteve + Bach
 END:VEVENT
 BEGIN:VEVENT
 UID:cj-oratori-08@a-tempo
@@ -211,14 +277,14 @@ UID:cj-oratori-09@a-tempo
 DTSTAMP:20260101T000000Z
 DTSTART;TZID=Europe/Madrid:20261118T203000
 DTEND;TZID=Europe/Madrid:20261118T223000
-SUMMARY:Assaig · Oratori de Nadal · J.S. Bach + Concert de Sant Esteve
+SUMMARY:Assaig · Oratori de Nadal · J.S. Bach
 END:VEVENT
 BEGIN:VEVENT
 UID:cj-oratori-10@a-tempo
 DTSTAMP:20260101T000000Z
 DTSTART;TZID=Europe/Madrid:20261123T203000
 DTEND;TZID=Europe/Madrid:20261123T223000
-SUMMARY:Assaig · Oratori de Nadal · J.S. Bach + Concert de Sant Esteve
+SUMMARY:Assaig · Oratori de Nadal · J.S. Bach
 END:VEVENT
 BEGIN:VEVENT
 UID:cj-oratori-11@a-tempo
@@ -232,21 +298,22 @@ UID:cj-oratori-12@a-tempo
 DTSTAMP:20260101T000000Z
 DTSTART;TZID=Europe/Madrid:20261130T203000
 DTEND;TZID=Europe/Madrid:20261130T223000
-SUMMARY:Assaig · Oratori de Nadal · J.S. Bach + Concert de Sant Esteve
+SUMMARY:Assaig · Concert de Sant Esteve
+DESCRIPTION:Assaig amb CN i OC
 END:VEVENT
 BEGIN:VEVENT
 UID:cj-oratori-13@a-tempo
 DTSTAMP:20260101T000000Z
 DTSTART;TZID=Europe/Madrid:20261202T203000
 DTEND;TZID=Europe/Madrid:20261202T223000
-SUMMARY:Assaig · Oratori de Nadal · J.S. Bach + Concert de Sant Esteve
+SUMMARY:Assaig · Oratori de Nadal · J.S. Bach
 END:VEVENT
 BEGIN:VEVENT
 UID:cj-oratori-14@a-tempo
 DTSTAMP:20260101T000000Z
 DTSTART;TZID=Europe/Madrid:20261209T203000
 DTEND;TZID=Europe/Madrid:20261209T223000
-SUMMARY:Assaig · Oratori de Nadal · J.S. Bach + Concert de Sant Esteve
+SUMMARY:Assaig · Oratori de Nadal · J.S. Bach
 END:VEVENT
 BEGIN:VEVENT
 UID:cj-oratori-15@a-tempo
@@ -255,13 +322,6 @@ DTSTART;TZID=Europe/Madrid:20261211T200000
 DTEND;TZID=Europe/Madrid:20261211T220000
 SUMMARY:Assaig · Oratori de Nadal · J.S. Bach
 DESCRIPTION:Amb el Cor de Cambra
-END:VEVENT
-BEGIN:VEVENT
-UID:cj-santesteve-01@a-tempo
-DTSTAMP:20260101T000000Z
-DTSTART;TZID=Europe/Madrid:20261213T100000
-DTEND;TZID=Europe/Madrid:20261213T140000
-SUMMARY:Assaig pregeneral · Concert de Sant Esteve
 END:VEVENT
 BEGIN:VEVENT
 UID:cj-oratori-16@a-tempo
