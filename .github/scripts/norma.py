@@ -6,9 +6,29 @@ mateix: tests/logica/test_norma.py genera molts casos a l'atzar i els passa per 
 Les dades tenen la forma de Firestore:
   · productions: {id: producció}, cadascuna amb sessions i excluded (qui no la fa);
   · sessions: {id: sessió}, amb prods = les produccions per a les quals compta (vegeu sessions_of);
-  · attendance: {<sessió>_<corda>: {marks: {membre: {s: P | R | FJ | FNJ | NP}}}};
+  · attendance: {<sessió>_<corda>: {marks: {membre: {s: P | R | FJ | FNJ | NP, min?: minuts de retard}}}};
   · el membre, amb section i leaves (baixes temporals {from, to}).
+
+Es compta en minuts, com a l'app: cada sessió hi pesa pel que dura, i un retard, pels minuts que s'hi ha estat.
 """
+import re
+
+
+def clock_mins(t):
+    return int(t[:-3]) * 60 + int(t[-2:]) if isinstance(t, str) and re.fullmatch(r"\d{1,2}:\d{2}", t) else None
+
+
+def session_mins(s):
+    """Minuts que dura una sessió: de l'hora d'inici a la de final; si no en té, dues hores."""
+    a, b = clock_mins(s.get("time")), clock_mins(s.get("end"))
+    return b - a if a is not None and b is not None and b > a else 120
+
+
+def late_mins(mk):
+    try:
+        return float(mk.get("min") or 0)
+    except (TypeError, ValueError):
+        return 0
 
 
 def convoked(s, section):
@@ -69,6 +89,7 @@ def rule_status(productions, sessions, attendance, pid, mid, m, today, min_frac,
     if mid in (productions[pid].get("excluded") or []):
         return None
     att = ab = remaining = 0
+    att_m = ab_m = rem_m = 0
     for s in sessions.values():
         if pid not in (s.get("prods") or []) or s.get("type") in rule_skip or not convoked(s, m.get("section")):
             continue
@@ -77,16 +98,21 @@ def rule_status(productions, sessions, attendance, pid, mid, m, today, min_frac,
         if not marked:
             if s["date"] >= today and not on_leave(m, s["date"]):
                 remaining += 1
+                rem_m += session_mins(s)
             continue
         if marked["s"] == "NP":
             continue
+        d = session_mins(s)
+        done_m = d if marked["s"] == "P" else d - min(d, late_mins(marked)) if marked["s"] == "R" else 0
         if marked["s"] in ("P", "R"):
             att += 1
         else:
             ab += 1
-    done = att + ab
-    if not done:
+        att_m += done_m
+        ab_m += d - done_m
+    if not att + ab:
         return None
-    cur, best = att / done, (att + remaining) / (done + remaining)
+    done = att_m + ab_m
+    cur, best = att_m / done, (att_m + rem_m) / (done + rem_m)
     return {"cur": cur, "best": best, "att": att, "ab": ab, "remaining": remaining,
             "status": "out" if best < min_frac else "risk" if cur < min_frac else "ok"}

@@ -180,7 +180,7 @@ function sheetClassPaste(preset) {
       </div>
       <label class="field" style="margin-top:10px"><span>Dies sense classe</span><input class="inp" id="cp-skip" type="text" placeholder="12/10, 8/12, 26/12">
         <small>Festius i vacances, separats per comes.</small></label>
-      <label class="toggle-row setting" style="margin-top:10px;padding:10px 0"><span><b>Desa-ho com a horari fix</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Així, el trimestre següent no caldrà tornar a enganxar la graella: només dir les dates.</span></span>
+      <label class="toggle-row setting" style="margin-top:10px;padding:10px 0"><span><b>Desa-ho com a horari fix</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Així, la propera vegada no caldrà tornar a enganxar la graella: només dir les dates.</span></span>
         <span class="switch"><input type="checkbox" id="cp-plan" checked><span></span></span></label>
       ${teachers.length ? `<label class="field" style="margin-top:10px"><span>${esc(V.Teacher)}</span><select class="inp" id="cp-who">${teachers.map(t => `<option value="${esc(t.key)}" ${t.key === mine ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></label>` : ''}
       <div id="cp-prev" style="margin-top:12px"></div>`,
@@ -241,7 +241,7 @@ function sheetClassPlan(who) {
   openSheet({
     title: `Horari fix${teacherName(who) ? ` · ${teacherName(who)}` : ''}`,
     wide: true,
-    body: `<p style="margin-top:0">L’hora de cada setmana de cada ${esc(V.member)}. Serveix per generar els dies de tot un trimestre sense haver de posar-los un per un. Els canvis d’un dia concret es fan al calendari i no toquen aquest horari.</p>
+    body: `<p style="margin-top:0">L’hora de cada setmana de cada ${esc(V.member)}. Serveix per generar tots els dies d’un període sense haver de posar-los un per un. Els canvis d’un dia concret es fan al calendari i no toquen aquest horari.</p>
       ${opts.length > 1 ? `<label class="field" style="margin-bottom:12px"><span>${esc(V.Teacher)}</span><select class="inp" id="pl-who">${opts.map(t => `<option value="${esc(t.key)}" ${t.key === who ? 'selected' : ''}>${esc(t.name)}${planRows(t.key).length ? ` · ${planRows(t.key).length} hores` : ''}</option>`).join('')}</select></label>` : ''}
       <div id="pl-rows" style="display:grid;gap:8px">${rows()}</div>
       <button type="button" class="btn btn-sm" id="pl-add" style="margin-top:10px">+ Afegeix una hora</button>

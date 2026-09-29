@@ -173,7 +173,6 @@ const actions = {
   'abs-cancel': el => { const a = S.absences.get(el.dataset.aid); if (!a) return; const b = clone(a); S.absences.delete(a.id); persist('absences', a.id, null, 10); render(); undoable(`Avís retirat: el teu ${V.leader} ja no el veu`, () => saveAbsence(b)); },
   'stats-scope': el => { ui.statsScope = el.dataset.k; saveUI(); render(); },
   'att': el => { ui.att = el.dataset.k; ui.rollSec = null; saveUI(); render(); window.scrollTo({ top: 0 }); },
-  'stats-term': el => { ui.statsTerm = +el.dataset.i; render(); },
   'load-demo': () => loadDemo(),
   'groups': () => sheetGroups(),
   'group-go': el => switchGroup(el.dataset.gid),
@@ -351,10 +350,8 @@ document.addEventListener('input', e => {
     clearTimeout(bindTimer);
     bindTimer = setTimeout(() => {
       const v = id => $('#' + id)?.value;
-      const { season, terms } = seasonCfg();
-      const nextSeason = { name: v('cfg-sname') || season.name, from: v('cfg-sfrom') || season.from, to: v('cfg-sto') || season.to };
-      const nextTerms = terms.map((t, i) => ({ name: t.name, from: v(`cfg-t${i}from`) || t.from, to: v(`cfg-t${i}to`) || t.to }));
-      saveConfig({ season: nextSeason, terms: nextTerms });
+      const { season } = seasonCfg();
+      saveConfig({ season: { name: v('cfg-sname') || season.name, from: v('cfg-sfrom') || season.from, to: v('cfg-sto') || season.to } });
     }, 600);
   } else if (kind === 'cfg-min') {
     clearTimeout(bindTimer);

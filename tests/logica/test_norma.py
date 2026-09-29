@@ -1,6 +1,6 @@
 """La norma d'assistència és escrita dues vegades: a l'app (js/02-dades.js › ruleStatus) i als avisos al mòbil
 (.github/scripts/norma.py). Aquesta prova genera molts casos a l'atzar (baixes, produccions que algú no fa, sessions
-compartides, concerts, cordes no convocades, llistes buides, diferents mínims…) i comprova que totes dues diuen
+compartides, concerts, cordes no convocades, llistes buides, diferents mínims, durades i minuts de retard…) i comprova que totes dues diuen
 exactament el mateix per a cada persona i producció.
 
     python3 tests/logica/test_norma.py            # amb Node (com a les proves automàtiques)
@@ -36,6 +36,11 @@ def cases(n, seed):
             sessions = []
             for k in range(rnd.randint(1, 9)):
                 s = {"id": f"p{j}s{k}", "date": day(rnd.randint(-25, 20)), "type": rnd.choice(TYPES)}
+                if rnd.random() < .8:   # l'hora: de vegades sense final, o amb un final absurd
+                    h = rnd.randint(9, 20)
+                    s["time"] = f"{h:02d}:{rnd.choice([0, 15, 30, 45]):02d}"
+                    if rnd.random() < .8:
+                        s["end"] = f"{min(23, h + rnd.randint(-1, 4)):02d}:{rnd.choice([0, 30]):02d}"
                 if rnd.random() < .25:
                     s["sections"] = rnd.sample(SECS, rnd.randint(1, 3))
                 if rnd.random() < .2:
@@ -50,6 +55,9 @@ def cases(n, seed):
                     continue
                 for sec in SECS:
                     ms = {m["id"]: {"s": rnd.choice(MARKS)} for m in members if m["section"] == sec and rnd.random() < .85}
+                    for mk in ms.values():   # retards amb minuts, sense, o més llargs que la sessió
+                        if mk["s"] == "R" and rnd.random() < .8:
+                            mk["min"] = rnd.choice([5, 10, 15, 30, 45, 90, 400])
                     if ms or rnd.random() < .1:   # també alguna llista buida
                         attendance[f"{s['id']}_{sec}"] = {"sessionId": s["id"], "section": sec, "marks": ms}
         config = {}

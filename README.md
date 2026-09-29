@@ -26,7 +26,7 @@ Assistència, calendari i avisos per a cors, orquestres, bandes, cobles i altres
 Una pestanya per feina, cinc com a màxim:
 
 - **Inici**: la sessió d'avui (amb **Passa llista** per a qui edita), **Per fer** (tot el que espera una resposta: avisos d'absència per acceptar, llistes per acabar, canvis d'hora, avisos de classes, convocatòries, enquestes i sortides per respondre, converses amb resposta nova, anuncis nous), **Missatges** (i **Converses**), **Properament** (amb **La setmana**) i, per a la plantilla, la seva assistència i els seus avisos. L'únic número vermell de la barra és el d'Inici.
-- **Assistència**: Llista (passar llista), Estadístiques (per producció, trimestre o temporada) i Risc (la norma).
+- **Assistència**: Llista (passar llista), Estadístiques (per producció o temporada, comptades en minuts: un retard compta pels minuts que s’hi ha estat) i Risc (la norma).
 - **Calendari**: les sessions i, per a qui en fa o en dona, les seves classes.
 - **Tauler**: anuncis, materials, documents i enquestes.
 - **Classes de cant**, si l'agrupació en fa.

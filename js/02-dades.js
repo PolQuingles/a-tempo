@@ -396,35 +396,41 @@ function currentProductionId() {
   const withData = ps.filter(p => allSessions(p.id).some(s => SECTIONS.some(x => hasData(s, x.id))));
   return (withData.pop() || ps[0])?.id || null;
 }
-const emptyCounts = () => ({ P: 0, R: 0, FJ: 0, FNJ: 0, NP: 0, min: 0 });
-const rate = c => { const d = c.P + c.R + c.FJ + c.FNJ; return d ? (c.P + c.R) / d : null; };
+// mAll = minuts de les sessions on se l'esperava; mDone = minuts que hi ha estat (un retard hi resta els minuts que ha fet tard).
+const emptyCounts = () => ({ P: 0, R: 0, FJ: 0, FNJ: 0, NP: 0, min: 0, mAll: 0, mDone: 0 });
+const clockMins = t => /^\d{1,2}:\d{2}$/.test(t || '') ? +t.slice(0, -3) * 60 + +t.slice(-2) : null;
+/** Minuts que dura una sessió: de l'hora d'inici a la de final; si no en té, dues hores (com al calendari). */
+function sessionMins(s) {
+  const a = clockMins(s.time), b = clockMins(s.end);
+  return a != null && b != null && b > a ? b - a : 120;
+}
+/** Minuts que compten d'una marca: els que dura la sessió i els que hi ha estat. «No fa» no hi compta. */
+function markMins(s, mk) {
+  if (!mk || mk.s === 'NP') return null;
+  const all = sessionMins(s);
+  return { all, done: mk.s === 'P' ? all : mk.s === 'R' ? all - Math.min(all, +mk.min || 0) : 0 };
+}
+/** Suma una marca als comptadors. */
+function countMark(c, s, mk) {
+  c[mk.s]++;
+  if (mk.s === 'R') c.min += +mk.min || 0;
+  const mm = markMins(s, mk);
+  if (mm) { c.mAll += mm.all; c.mDone += mm.done; }
+}
+// L'assistència es compta en minuts: un retard de 30′ en un assaig de 3 h compta com 2 h 30′ de les 3 h.
+const rate = c => c.mAll ? c.mDone / c.mAll : null;
 const punctuality = c => { const d = c.P + c.R; return d ? c.P / d : null; };
 
-/* ---------- Season and terms ---------- */
+/* ---------- Season ---------- */
 function seasonCfg() {
   const d = new Date(), y = d.getMonth() >= 7 ? d.getFullYear() : d.getFullYear() - 1;
   const season = { name: `Temporada ${y}-${String(y + 1).slice(2)}`, from: `${y}-09-01`, to: `${y + 1}-07-31`, ...(S.config.season || {}) };
-  const defTerms = [
-    { name: '1r trimestre', from: `${y}-09-01`, to: `${y}-12-31` },
-    { name: '2n trimestre', from: `${y + 1}-01-01`, to: `${y + 1}-03-31` },
-    { name: '3r trimestre', from: `${y + 1}-04-01`, to: `${y + 1}-07-31` },
-  ];
-  const terms = defTerms.map((t, i) => ({ ...t, ...((S.config.terms || [])[i] || {}) }));
-  return { season, terms };
+  return { season };
 }
-function currentTermIdx() {
-  const { terms } = seasonCfg();
-  const i = terms.findIndex(t => t.from <= TODAY && t.to >= TODAY);
-  return i < 0 ? 0 : i;
-}
+/** El període de les estadístiques: una producció o tota la temporada. */
 function currentScope() {
-  const { season, terms } = seasonCfg();
-  if (ui.statsScope === 'season') return { kind: 'range', from: season.from, to: season.to, name: season.name };
-  if (ui.statsScope === 'term') {
-    if (ui.statsTerm == null || !terms[ui.statsTerm]) ui.statsTerm = currentTermIdx();
-    const t = terms[ui.statsTerm];
-    return { kind: 'range', from: t.from, to: t.to, name: t.name };
-  }
+  const { season } = seasonCfg();
+  if (ui.statsScope !== 'prod') return { kind: 'range', from: season.from, to: season.to, name: season.name };
   if (!ui.statsProd || !S.productions.has(ui.statsProd)) ui.statsProd = currentProductionId();
   const p = S.productions.get(ui.statsProd);
   return p ? { kind: 'prod', id: p.id, name: p.name } : null;
@@ -449,8 +455,7 @@ function computeStats(scope, secFilter) {
       rec.hist.push({ s, mk });
       if (!mk) continue;
       any = true;
-      c[mk.s]++; tot[mk.s]++; rec[mk.s]++; bySec[m.section][mk.s]++;
-      if (mk.s === 'R') { const mn = +mk.min || 0; c.min += mn; tot.min += mn; rec.min += mn; bySec[m.section].min += mn; }
+      for (const x of [c, tot, rec, bySec[m.section]]) countMark(x, s, mk);
       if (mk.note) rec.notes.push({ s, mk });
     }
     if (any) bySession.push({ s, c });
@@ -462,22 +467,25 @@ function computeStats(scope, secFilter) {
 /* ---------- Norma: assistència mínima per fer el concert ---------- */
 // RULE_SKIP (concerts, actuacions i «Altres») depèn del tipus d'agrupació: vegeu applyGroupConfig.
 const minAttendance = () => Math.min(100, Math.max(1, +S.config.minAttendance || 80));
-/** status: ok | risk (below now, can still reach it) | out (cannot reach it any more) | null (no data / not in it) */
+/** status: ok | risk (below now, can still reach it) | out (cannot reach it any more) | null (no data / not in it).
+ *  Es compta en minuts, com les estadístiques: att/abs/remaining són assajos, i attM/absM/remM, els minuts. */
 function ruleStatus(prodId, member) {
   if (!prodId || isExcluded(prodId, member.id)) return null;
   const min = minAttendance() / 100;
-  let att = 0, abs = 0, remaining = 0;
+  let att = 0, abs = 0, remaining = 0, attM = 0, absM = 0, remM = 0;
   for (const s of allSessions(prodId)) {
     if (RULE_SKIP.has(s.type) || !convoked(s, member.section)) continue;
     const marked = s.date <= TODAY && hasData(s, member.section) ? effMark(s, member, prodId) : null;
-    if (!marked) { if (s.date >= TODAY && !onLeave(member, s.date)) remaining++; continue; }
-    if (marked.s === 'NP') continue;
+    if (!marked) { if (s.date >= TODAY && !onLeave(member, s.date)) { remaining++; remM += sessionMins(s); } continue; }
+    const mm = markMins(s, marked);
+    if (!mm) continue;
     if (marked.s === 'P' || marked.s === 'R') att++; else abs++;
+    attM += mm.done; absM += mm.all - mm.done;
   }
-  const done = att + abs;
-  if (!done) return null;
-  const cur = att / done, best = (att + remaining) / (done + remaining);
-  return { cur, best, att, abs, remaining, status: best < min ? 'out' : cur < min ? 'risk' : 'ok' };
+  if (!(att + abs)) return null;
+  const done = attM + absM;
+  const cur = attM / done, best = (attM + remM) / (done + remM);
+  return { cur, best, att, abs, remaining, attM, absM, remM, status: best < min ? 'out' : cur < min ? 'risk' : 'ok' };
 }
 
 /* ---------- Arxiu de l'assistència per trimestres ---------- */

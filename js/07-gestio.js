@@ -310,7 +310,7 @@ const icsOn = () => S.config.icsOn != null ? !!S.config.icsOn : GID === FOUNDER;
 const cfgOpen = k => !!(ui.cfgOpen && ui.cfgOpen[k]) || (k === 'seccions' && CFG_DIRTY);
 const cfgHead = (k, title, summary) => `<button class="cfg-h" data-act="cfg-block" data-k="${k}" aria-expanded="${cfgOpen(k)}"><span><b>${title}</b><small>${summary}</small></span>${ICON.chev}</button>`;
 function manageConfig() {
-  const { season, terms } = seasonCfg();
+  const { season } = seasonCfg();
   const brand = S.config.brand || {};
   if (!CFG_DIRTY || !CFG_SECTIONS) CFG_SECTIONS = SECTIONS.map(x => ({ ...x }));
   const used = groupFileBytes(), quota = fileQuotaMB();
@@ -377,13 +377,11 @@ function manageConfig() {
       <span class="vmin">${SECTIONS.map(x => `<label><span>${esc(x.short)}</span><input class="inp" id="cfg-vmin-${esc(x.id)}" type="number" inputmode="numeric" min="0" max="200" value="${+voiceMin()[x.id] || ''}" data-bind="cfg-vmin" data-sec="${esc(x.id)}" aria-label="${esc(x.name)}"></label>`).join('')}</span>
     </div>
   </div>
-  ${cfgHead('temporada', `Temporada i trimestres`, `${esc(season.name)} · ${terms.length} trimestres`)}
+  ${cfgHead('temporada', `Temporada`, `${esc(season.name)} · ${ddmm(season.from)}–${ddmm(season.to)}`)}
   <div class="panel cfg-p"${cfgOpen('temporada') ? '' : ' hidden'} style="padding:14px;display:grid;gap:12px">
     <label class="field"><span>Nom de la temporada</span><input class="inp" id="cfg-sname" type="text" maxlength="40" value="${esc(season.name)}" data-bind="cfg-period"></label>
     <div class="row3"><label class="field"><span>Inici</span><input class="inp" id="cfg-sfrom" type="date" value="${season.from}" data-bind="cfg-period"></label>
       <label class="field"><span>Final</span><input class="inp" id="cfg-sto" type="date" value="${season.to}" data-bind="cfg-period"></label></div>
-    ${terms.map((t, i) => `<div class="row3"><label class="field"><span>${esc(t.name)} · inici</span><input class="inp" id="cfg-t${i}from" type="date" value="${t.from}" data-bind="cfg-period"></label>
-      <label class="field"><span>final</span><input class="inp" id="cfg-t${i}to" type="date" value="${t.to}" data-bind="cfg-period"></label></div>`).join('')}
   </div>
   ${cfgHead('dades', `Dades`, `${fmtSize(used)} de ${quota} MB · còpia cada nit`)}
   <div class="panel cfg-p"${cfgOpen('dades') ? '' : ' hidden'}>

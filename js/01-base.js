@@ -200,7 +200,7 @@ const S = {
 const ui = {
   tab: 'avisos', section: '', sessionId: null, rollSec: null,
   calProd: 'all', calPast: false,
-  statsScope: 'prod', statsProd: null, statsTerm: null, statsSec: '', statsSort: 'pct',
+  statsScope: 'prod', statsProd: null, statsSec: '', statsSort: 'pct',
   manage: 'personal', people: 'singer', cantTab: 'plantilla', absFilter: 'pending',
   clWho: null, clMonth: null, clDay: null,
 };
@@ -214,6 +214,7 @@ function lsGet(base) {
 function lsSet(base, v) { try { v == null ? localStorage.removeItem(lsKey(base)) : localStorage.setItem(lsKey(base), v); } catch {} }
 function loadUI() {
   try { Object.assign(ui, JSON.parse(lsGet(LS_UI) || '{}')); } catch {}
+  if (ui.statsScope === 'term') ui.statsScope = 'season';   // els trimestres ja no hi són
   ui.sessionId = null;
   ui.clWho = null;   // les classes comencen sempre pel quadre del professorat
 }
