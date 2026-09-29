@@ -276,8 +276,8 @@ function certificateHtml({ m, from, to, label, signer, role, place }) {
 function sheetCertificate(mid) {
   const m = S.members.get(mid);
   if (!m) return;
-  const { season, terms } = seasonCfg();
-  const periods = [['season', season.name || 'Temporada', season.from, season.to], ...terms.map((t, i) => [`t${i}`, t.name, t.from, t.to]),
+  const { season } = seasonCfg();
+  const periods = [['season', season.name || 'Temporada', season.from, season.to],
     ...productionsSorted().filter(p => allSessions(p.id).length).map(p => { const ss = allSessions(p.id); return [`p${p.id}`, p.name, ss[0].date, ss[ss.length - 1].date]; })];
   const roleName = S.me ? rolesText(S.me).split(' · ')[0] : '';
   openSheet({
@@ -292,7 +292,7 @@ function sheetCertificate(mid) {
       <div class="cert-prev" id="ce-prev"></div>`,
     foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Tanca</button><button class="btn btn-primary" id="ce-pdf">PDF</button>`,
     onMount: el => {
-      const opts = () => { const [k, label, from, to] = periods.find(p => p[0] === el.querySelector('#ce-per').value); return { m, from, to, label: k === 'season' ? `la ${label.toLowerCase().startsWith('temporada') ? label.toLowerCase() : `temporada ${label}`}` : k.startsWith('t') ? `el ${label}` : `la producció «${label}»`, signer: el.querySelector('#ce-who').value.trim(), role: el.querySelector('#ce-role').value.trim(), place: el.querySelector('#ce-place').value.trim() }; };
+      const opts = () => { const [k, label, from, to] = periods.find(p => p[0] === el.querySelector('#ce-per').value); return { m, from, to, label: k === 'season' ? `la ${label.toLowerCase().startsWith('temporada') ? label.toLowerCase() : `temporada ${label}`}` : `la producció «${label}»`, signer: el.querySelector('#ce-who').value.trim(), role: el.querySelector('#ce-role').value.trim(), place: el.querySelector('#ce-place').value.trim() }; };
       const prev = () => { el.querySelector('#ce-prev').innerHTML = certificateHtml(opts()); };
       prev();
       el.querySelectorAll('#ce-per, #ce-who, #ce-role, #ce-place').forEach(x => x.addEventListener('input', prev));

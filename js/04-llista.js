@@ -29,8 +29,7 @@ function dayStats(cur) {
       if (mk && mk.s === 'NP') { out++; continue; }
       expected++;
       if (!mk) { c.none++; continue; }
-      c[mk.s]++;
-      if (mk.s === 'R') c.min += +mk.min || 0;
+      countMark(c, cur, mk);
     }
   }
   return { c, expected, out };
@@ -195,7 +194,7 @@ function subLine(cur, sec, leader) {
 }
 function countsFor(session, members) {
   const c = { ...emptyCounts(), none: 0 };
-  for (const m of members) { const mk = effMark(session, m); if (mk) { c[mk.s]++; if (mk.s === 'R') c.min += +mk.min || 0; } else c.none++; }
+  for (const m of members) { const mk = effMark(session, m); if (mk) countMark(c, session, mk); else c.none++; }
   return c;
 }
 function tallyInner(c, pendingInRoll) {

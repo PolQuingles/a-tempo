@@ -24,12 +24,39 @@ function escenari({ members = [], productions = [], attendance = {}, config = {}
 const marks = (sid, sec, m) => ({ [`${sid}_${sec}`]: { sessionId: sid, section: sec, marks: Object.fromEntries(Object.entries(m).map(([k, s]) => [k, { s }])) } });
 
 /* ---------- Percentatges ---------- */
-prova('rate i punctuality: presents i retards sobre les sessions que compten (el «no fa» no compta)', () => {
-  const c = { P: 3, R: 1, FJ: 1, FNJ: 1, NP: 5, min: 0 };
-  prop(rate(c), 4 / 6, 'assistència');
+prova('rate i punctuality: minuts fets sobre els minuts convocats (el «no fa» no compta)', () => {
+  const c = emptyCounts(), s = { time: '19:00', end: '21:00' };
+  for (const mk of [{ s: 'P' }, { s: 'P' }, { s: 'P' }, { s: 'R' }, { s: 'FJ' }, { s: 'FNJ' }, { s: 'NP' }, { s: 'NP' }]) countMark(c, s, mk);
+  prop(rate(c), 4 / 6, 'un retard sense minuts compta sencer');
   prop(punctuality(c), 3 / 4, 'puntualitat');
   igual(rate(emptyCounts()), null, 'sense dades');
   igual(pct(2 / 3), '67%'); igual(pct(null), '—'); igual(pct(1), '100%');
+});
+prova('assistència en minuts: un retard compta pels minuts que s’hi ha estat, i cada sessió pel que dura', () => {
+  igual(sessionMins({ time: '18:30', end: '21:30' }), 180, 'de l’inici al final');
+  igual(sessionMins({ time: '18:30' }), 120, 'sense final, dues hores');
+  igual(sessionMins({}), 120, 'sense hora');
+  igual(sessionMins({ time: '21:00', end: '20:00' }), 120, 'un final abans de l’inici no val');
+  const c = emptyCounts();
+  countMark(c, { time: '19:00', end: '22:00' }, { s: 'R', min: 30 });   // 2 h 30′ de 3 h
+  countMark(c, { time: '19:00', end: '21:00' }, { s: 'P' });            // 2 h de 2 h
+  countMark(c, { time: '19:00', end: '20:00' }, { s: 'FNJ' });          // 0 d’1 h
+  prop(rate(c), (150 + 120) / (180 + 120 + 60), 'minuts');
+  igual(c.min, 30, 'minuts de retard');
+  const d = emptyCounts();
+  countMark(d, { time: '19:00', end: '20:00' }, { s: 'R', min: 400 });
+  igual(rate(d), 0, 'un retard més llarg que la sessió no resta més del que dura');
+  escenari({
+    members: [{ id: 'a', name: 'Puig, Anna', section: 'S' }],
+    productions: [{ id: 'p', name: 'Tardor', start: D(-30), end: D(30), sessions: [
+      { id: 's1', date: D(-10), type: 'Assaig', time: '19:00', end: '22:00' }, { id: 's2', date: D(-5), type: 'Assaig', time: '19:00', end: '22:00' },
+      { id: 's3', date: D(3), type: 'Assaig', time: '19:00', end: '22:00' }] }],
+    attendance: { ...marks('s1', 'S', { a: 'P' }), s2_S: { sessionId: 's2', section: 'S', marks: { a: { s: 'R', min: 90 } } } },
+  });
+  const r = ruleStatus('p', S.members.get('a'));
+  prop(r.cur, 270 / 360, 'la norma també va en minuts');
+  prop(r.best, 450 / 540, 'si ve al que queda');
+  igual([r.att, r.abs, r.remaining], [2, 0, 1], 'i els assajos, en nombre');
 });
 prova('computeStats: compta per persona, per corda i per sessió, i salta les sessions sense llista', () => {
   escenari({

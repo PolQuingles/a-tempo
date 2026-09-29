@@ -149,9 +149,78 @@ async function loadFile(f) {
   fileUrls.set(f.id, url);
   return url;
 }
+/* ---------- Visor de PDF dins l'app ----------
+ * Al mòbil, obrir un PDF en una pestanya nova falla sovint: a l'iPhone, amb l'app a la pantalla d'inici, la pestanya
+ * nova no pot llegir el fitxer i surt en blanc o mig pintat, i el Chrome d'Android no té visor i només el descarrega.
+ * Per això els PDF es pinten aquí mateix amb PDF.js, pàgina a pàgina i només les que es veuen (un PDF llarg no omple la memòria). */
+const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+let pdfjsReady = null;
+function loadPdfjs() {
+  if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  if (!pdfjsReady) pdfjsReady = new Promise((ok, ko) => {
+    const s = document.createElement('script');
+    s.src = PDFJS + 'pdf.min.js';
+    s.onload = () => { const lib = /** @type {any} */ (window).pdfjsLib; if (!lib) return ko(new Error('pdfjs')); lib.GlobalWorkerOptions.workerSrc = PDFJS + 'pdf.worker.min.js'; ok(lib); };
+    s.onerror = () => { pdfjsReady = null; s.remove(); ko(new Error('pdfjs')); };
+    document.head.appendChild(s);
+  });
+  return pdfjsReady;
+}
+const PDF_ZOOMS = [1, 1.5, 2, 3];
+const pdfViewerHtml = () => `<div class="pdfv">
+    <div class="pdfv-bar"><button type="button" class="btn btn-sm pdfv-b" data-z="-1" aria-label="Redueix" disabled>−</button><span class="pdfv-z mono" aria-live="polite">100%</span><button type="button" class="btn btn-sm pdfv-b" data-z="1" aria-label="Amplia">+</button><span class="pdfv-n muted"></span></div>
+    <div class="pdfv-pages"><p class="muted" style="margin:0">Preparant el PDF…</p></div></div>`;
+/** Pinta el PDF de `url` dins del visor de `box`. Llança un error si no es pot (llavors queden els botons d'obrir i desar). */
+async function bindPdfViewer(box, url) {
+  const wrap = box.querySelector('.pdfv-pages');
+  const lib = await loadPdfjs();
+  const doc = await lib.getDocument({ url, isEvalSupported: false }).promise;
+  if (!wrap.isConnected) { doc.destroy(); return; }
+  const pages = [];
+  for (let i = 1; i <= doc.numPages; i++) pages.push(await doc.getPage(i));
+  box.querySelector('.pdfv-n').textContent = doc.numPages === 1 ? '1 pàgina' : `${doc.numPages} pàgines`;
+  let zi = 0, gen = 0;
+  const shown = new Map();   // pàgina → la tasca de pintar-la
+  const io = new IntersectionObserver(es => es.forEach(e => (e.isIntersecting ? draw : drop)(+e.target.dataset.i)), { rootMargin: '800px 0px' });
+  const width = () => Math.max(200, wrap.clientWidth) * PDF_ZOOMS[zi];
+  const draw = i => {
+    const holder = wrap.children[i];
+    if (!holder || shown.has(i)) return;
+    const page = pages[i], w = width(), v1 = page.getViewport({ scale: 1 });
+    // Com a molt 2 píxels per punt i 12 milions de píxels per pàgina (l'iPhone no pinta llenços més grans).
+    let scale = (w / v1.width) * Math.min(2, window.devicePixelRatio || 1);
+    scale = Math.min(scale, Math.sqrt(12e6 / (v1.width * v1.height)));
+    const vp = page.getViewport({ scale }), canvas = document.createElement('canvas');
+    canvas.width = Math.floor(vp.width); canvas.height = Math.floor(vp.height);
+    const task = page.render({ canvasContext: canvas.getContext('2d'), viewport: vp });
+    shown.set(i, task);
+    task.promise.then(() => { if (shown.get(i) === task) holder.replaceChildren(canvas); }).catch(() => {});
+  };
+  const drop = i => { const task = shown.get(i); if (!task) return; task.cancel(); shown.delete(i); wrap.children[i]?.replaceChildren(); };
+  const layout = () => {
+    const my = ++gen;
+    for (const i of [...shown.keys()]) drop(i);
+    io.disconnect();
+    const w = width();
+    wrap.innerHTML = pages.map((p, i) => { const v = p.getViewport({ scale: 1 }); return `<div class="pdfv-p" data-i="${i}" style="width:${Math.round(w)}px;height:${Math.round(w * v.height / v.width)}px" aria-label="Pàgina ${i + 1}"></div>`; }).join('');
+    if (my === gen) [...wrap.children].forEach(el => io.observe(el));
+    box.querySelector('.pdfv-z').textContent = `${Math.round(PDF_ZOOMS[zi] * 100)}%`;
+    box.querySelectorAll('.pdfv-b').forEach(b => { b.disabled = +b.dataset.z < 0 ? zi === 0 : zi === PDF_ZOOMS.length - 1; });
+  };
+  box.querySelectorAll('.pdfv-b').forEach(b => b.addEventListener('click', () => {
+    const at = wrap.scrollLeft / Math.max(1, wrap.scrollWidth);
+    zi = Math.min(PDF_ZOOMS.length - 1, Math.max(0, zi + +b.dataset.z)); layout();
+    wrap.scrollLeft = at * wrap.scrollWidth;
+  }));
+  // Quan es tanca la fitxa, s'allibera tot.
+  const mo = new MutationObserver(() => { if (!wrap.isConnected) { mo.disconnect(); io.disconnect(); for (const i of [...shown.keys()]) drop(i); doc.destroy(); } });
+  mo.observe(document.body, { childList: true, subtree: true });
+  layout();
+}
 function sheetOpenFile(f, title) {
   const kind = fileKind(f);
   openSheet({
+    wide: kind === 'PDF',
     title: title || f.name,
     body: `<div id="fo-body"><p class="muted" style="margin:0">Carregant el fitxer (${esc(kind)} · ${fmtSize(f.size)})…</p></div>`,
     onMount: async el => {
@@ -161,13 +230,20 @@ function sheetOpenFile(f, title) {
         if (!box.isConnected) return;
         const media = kind === 'Àudio' ? studyPlayer(url)
           : kind === 'Imatge' ? `<img src="${url}" alt="" style="display:block;width:100%;border-radius:12px">`
-          : kind === 'Vídeo' ? `<video src="${url}" controls playsinline preload="metadata" style="display:block;width:100%;border-radius:12px;background:#000"></video>` : '';
+          : kind === 'Vídeo' ? `<video src="${url}" controls playsinline preload="metadata" style="display:block;width:100%;border-radius:12px;background:#000"></video>`
+          : kind === 'PDF' ? pdfViewerHtml() : '';
         const kept = offlineSaved().has(f.id);
-        box.innerHTML = `${media}
-          <p class="muted" style="margin:${media ? '12px' : '0'} 0 14px;font-size:calc(13px*var(--ts));overflow-wrap:anywhere">${esc(f.name)} · ${esc(kind)} · ${fmtSize(f.size)}${kept ? ' · desat al mòbil' : ''}</p>
-          <div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn btn-primary" href="${url}" target="_blank" rel="noopener">Obre</a><a class="btn" href="${url}" download="${esc(f.name)}">Desa al dispositiu</a>
-            ${!f.where && 'caches' in window ? `<button class="btn" id="fo-keep">${kept ? 'Treu-lo del mòbil' : 'Tenir-lo sense cobertura'}</button>` : ''}</div>`;
+        // Un PDF es llegeix aquí mateix: els botons van a dalt (sota d'una partitura llarga no es veurien) i «Obre» és secundari.
+        const pdf = kind === 'PDF';
+        const info = `<p class="muted" style="margin:${media && !pdf ? '12px' : '0'} 0 ${pdf ? '10px' : '14px'};font-size:calc(13px*var(--ts));overflow-wrap:anywhere">${esc(f.name)} · ${esc(kind)} · ${fmtSize(f.size)}${kept ? ' · desat al mòbil' : ''}</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap${pdf ? ';margin-bottom:14px' : ''}"><a class="btn${pdf ? ' btn-sm' : ' btn-primary'}" href="${url}" target="_blank" rel="noopener">${pdf ? 'Obre a part' : 'Obre'}</a><a class="btn${pdf ? ' btn-sm' : ''}" href="${url}" download="${esc(f.name)}">Desa al dispositiu</a>
+            ${!f.where && 'caches' in window ? `<button class="btn${pdf ? ' btn-sm' : ''}" id="fo-keep">${kept ? 'Treu-lo del mòbil' : 'Tenir-lo sense cobertura'}</button>` : ''}</div>`;
+        box.innerHTML = pdf ? info + media : media + info;
         bindStudyPlayer(box);
+        if (kind === 'PDF') bindPdfViewer(box, url).catch(() => {
+          const v = box.querySelector('.pdfv');
+          if (v) v.innerHTML = `<p class="muted" style="margin:0">No s’ha pogut mostrar el PDF aquí${navigator.onLine ? '' : ' (sense connexió)'}. Obre’l o desa’l amb els botons de sota.</p>`;
+        });
         box.querySelector('#fo-keep')?.addEventListener('click', async e => {
           try {
             if (offlineSaved().has(f.id)) { (await caches.open(OFFLINE)).delete(offlineReq(f.id)); offlineMark(f.id, false); e.target.textContent = 'Tenir-lo sense cobertura'; toast('Tret del mòbil'); }

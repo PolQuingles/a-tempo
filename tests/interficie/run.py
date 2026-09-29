@@ -8,7 +8,7 @@ de cada rol, les converses i els recordatoris, l'arxiu de l'assistència, el reg
     pip install playwright && python -m playwright install chromium
     python3 tests/interficie/run.py
 """
-import functools, http.server, os, sys, tempfile, threading
+import functools, http.server, json, os, sys, tempfile, threading
 
 from playwright.sync_api import sync_playwright
 
@@ -47,6 +47,27 @@ DELTA_JS = """async () => {
   return out;
 }"""
 FAILS, PASSES = [], [0]
+
+
+def _test_pdf(n=2):
+    """Un PDF petit de n pàgines, fet a mà, per provar el visor."""
+    objs = ["<< /Type /Catalog /Pages 2 0 R >>",
+            "<< /Type /Pages /Kids [%s] /Count %d >>" % (" ".join(f"{3 + 2 * i} 0 R" for i in range(n)), n)]
+    for i in range(n):
+        c = f"BT /F1 48 Tf 72 700 Td (Pagina {i + 1}) Tj ET"
+        objs.append(f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents {4 + 2 * i} 0 R /Resources << /Font << /F1 {3 + 2 * n} 0 R >> >> >>")
+        objs.append(f"<< /Length {len(c)} >>\nstream\n{c}\nendstream")
+    objs.append("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
+    out, offs = "%PDF-1.4\n", []
+    for i, o in enumerate(objs):
+        offs.append(len(out))
+        out += f"{i + 1} 0 obj\n{o}\nendobj\n"
+    x = len(out)
+    out += f"xref\n0 {len(objs) + 1}\n0000000000 65535 f \n" + "".join(f"{o:010d} 00000 n \n" for o in offs)
+    return out + f"trailer\n<< /Size {len(objs) + 1} /Root 1 0 R >>\nstartxref\n{x}\n%%EOF\n"
+
+
+TEST_PDF = _test_pdf()
 
 
 def check(cond, name, detail=""):
@@ -521,6 +542,37 @@ def main():
           const t = document.querySelector('#pb-text'); t.value = 'Nou Cantaire nou@exemple.cat'; t.dispatchEvent(new Event('input')); await s(400);
           return { title: document.querySelector('.sheet-h .h2')?.textContent, roles: !!document.querySelector('#pb-role'), note: document.querySelector('#pb-prev').innerText.includes('administració') }; }""")
         check(r["title"] == "Afegeix persones" and not r["roles"] and r["note"], "la direcció afegeix noms a la plantilla, però no dona accessos", str(r))
+        ctx.close()
+
+        print("Estadístiques en minuts, sense trimestres, i PDF dins l'app")
+        ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/assistencia/estadistiques")
+        r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          out.seg = [...document.querySelectorAll('.filters .seg3 button')].map(b => b.textContent).join() === 'Producció,Temporada';
+          // Una sessió de 3 h amb un retard de 45′: compta 2 h 15′ de 3 h.
+          const p = [...S.productions.values()].find(p => allSessions(p.id).some(x => x.date <= TODAY));
+          const x = allSessions(p.id).find(x => x.date <= TODAY), m = membersOf('S').find(m => convoked(x, 'S'));
+          p.sessions.find(y => y.id === x.id).time = '18:00'; p.sessions.find(y => y.id === x.id).end = '21:00';
+          const one = computeStats({ kind: 'range', from: x.date, to: x.date, name: '' }, 'S').rows.find(r => r.m.id === m.id);
+          setMark(x, m, { s: 'R', min: 45 });
+          const two = computeStats({ kind: 'range', from: x.date, to: x.date, name: '' }, 'S').rows.find(r => r.m.id === m.id);
+          out.minutes = one && two && Math.abs(rate(two) - 135 / 180) < 1e-9;
+          // Un PDF de dues pàgines s'obre a la mateixa fitxa, sense sortir de l'app.
+          const pdf = %s;
+          const f = { id: 'fpdf', name: 'Partitura.pdf', type: 'application/pdf', size: pdf.length, chunks: 1 };
+          fileUrls.set(f.id, URL.createObjectURL(new Blob([pdf], { type: 'application/pdf' })));
+          sheetOpenFile(f, 'Partitura');
+          for (let i = 0; i < 80 && !document.querySelector('.pdfv canvas'); i++) await s(250);
+          out.pdf = !!document.querySelector('.pdfv canvas') && document.querySelector('.pdfv-n')?.textContent === '2 pàgines';
+          document.querySelector('.pdfv-b[data-z="1"]').click(); await s(300);
+          const w = document.querySelector('.pdfv-pages');
+          out.zoom = w.scrollWidth > w.clientWidth && document.documentElement.scrollWidth <= innerWidth;
+          return out; }""" % json.dumps(TEST_PDF))
+        for k, label in [("seg", "estadístiques per producció o per temporada (sense trimestres)"),
+                         ("minutes", "un retard compta pels minuts que s'hi ha estat"),
+                         ("pdf", "un PDF es veu dins de l'app, pàgina a pàgina"),
+                         ("zoom", "ampliat, el PDF es desplaça de costat sense eixamplar la pantalla")]:
+            check(r.get(k), label, str(r))
+        check(not errors, "sense errors a les estadístiques i al visor de PDF", "; ".join(errors[:3]))
         ctx.close()
 
         print("Mira l'app com…")

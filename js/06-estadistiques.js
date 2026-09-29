@@ -11,17 +11,14 @@ function viewStats(inBoard) {
   if (!prods.length) return `${inBoard ? '' : `<div class="page-head">${title('Estadístiques')}</div>`}<div class="empty">${staffSvg()}<p>Quan hi hagi produccions amb llistes passades, veuràs aquí l’assistència.</p></div>`;
   // Dins d'Assistència l'abast és un selector petit, perquè no s'apilin dues files de pestanyes.
   const scopeTabs = inBoard
-    ? `<div class="scope-row"><span class="seg3 scope-seg" role="radiogroup" aria-label="Període">${[['prod', 'Producció'], ['term', 'Trimestre'], ['season', 'Temporada']].map(([k, l]) => `<button type="button" role="radio" aria-checked="${ui.statsScope === k}" data-act="stats-scope" data-k="${k}">${l}</button>`).join('')}</span></div>`
-    : `<div class="subtabs" role="tablist" style="margin-bottom:10px;grid-template-columns:repeat(4,1fr)">${[['prod', 'Producció'], ['term', 'Trimestre'], ['season', 'Temporada'], ['risk', 'Risc']].map(([k, l]) => `<button class="subtab" role="tab" aria-selected="${ui.statsScope === k}" data-act="stats-scope" data-k="${k}" style="font-size:12.5px">${l}</button>`).join('')}</div>`;
+    ? `<div class="scope-row"><span class="seg3 scope-seg" role="radiogroup" aria-label="Període">${[['prod', 'Producció'], ['season', 'Temporada']].map(([k, l]) => `<button type="button" role="radio" aria-checked="${ui.statsScope === k}" data-act="stats-scope" data-k="${k}">${l}</button>`).join('')}</span></div>`
+    : `<div class="subtabs" role="tablist" style="margin-bottom:10px;grid-template-columns:repeat(3,1fr)">${[['prod', 'Producció'], ['season', 'Temporada'], ['risk', 'Risc']].map(([k, l]) => `<button class="subtab" role="tab" aria-selected="${ui.statsScope === k}" data-act="stats-scope" data-k="${k}" style="font-size:12.5px">${l}</button>`).join('')}</div>`;
   if (ui.statsScope === 'risk') return `<div class="page-head${inBoard ? ' in-board' : ''}"><div><div class="eyebrow">Estadístiques</div>${title(`Norma del ${minAttendance()}%`)}</div></div>` + scopeTabs + riskView();
   const scope = currentScope();
-  const { terms } = seasonCfg();
   const st = computeStats(scope, ui.statsSec);
   const choice = ui.statsScope === 'prod'
     ? `<div class="chips" role="group" aria-label="Producció">${prods.map(p => `<button class="chip" aria-pressed="${p.id === scope.id}" data-act="stats-prod" data-id="${p.id}"><i class="pdot prod-tone" style="--ph:${prodHue(p)}"></i>${esc(p.name)}</button>`).join('')}</div>`
-    : ui.statsScope === 'term'
-      ? `<div class="chips" role="group" aria-label="Trimestre">${terms.map((t, i) => `<button class="chip" aria-pressed="${i === ui.statsTerm}" data-act="stats-term" data-i="${i}">${esc(t.name)}</button>`).join('')}</div>`
-      : '';
+    : '';
   const secChips = `<div class="chips" role="group" aria-label="${V.Section}" style="padding-bottom:4px">
     <button class="chip" aria-pressed="${!ui.statsSec}" data-act="stats-sec" data-sec="">${capz(V.tot)}</button>
     ${SECTIONS.map(x => `<button class="chip" aria-pressed="${ui.statsSec === x.id}" data-act="stats-sec" data-sec="${x.id}">${esc(x.name)}</button>`).join('')}</div>`;
@@ -29,12 +26,11 @@ function viewStats(inBoard) {
   const tone = scope.kind === 'prod' ? ` prod-tone tinted" style="--ph:${prodHue(S.productions.get(scope.id))}` : '';
   const head = `<div class="page-head${inBoard ? ' in-board' : ''}${tone}"><div><div class="eyebrow">${scope.kind === 'prod' ? '<i class="pdot"></i>Producció' : 'Estadístiques'}</div>${title(esc(scope.name))}${sub}</div>
     <button class="btn btn-sm" data-act="export-csv">Exporta CSV</button></div>`;
-  // Dins d'Assistència: una sola fila de filtres (període, producció o trimestre, i secció) sobre el títol.
+  // Dins d'Assistència: una sola fila de filtres (període, producció i secció) sobre el títol.
   const selProd = `<label class="sel"><span class="sr">Producció</span><select data-pick="stats-prod">${prods.map(p => `<option value="${p.id}" ${p.id === scope.id ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select></label>`;
-  const selTerm = `<label class="sel"><span class="sr">Trimestre</span><select data-pick="stats-term">${terms.map((t, i) => `<option value="${i}" ${i === ui.statsTerm ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></label>`;
   const selSec = `<label class="sel"><span class="sr">${esc(V.Section)}</span><select data-pick="stats-sec"><option value="">${esc(capz(V.tot))}</option>${SECTIONS.map(x => `<option value="${x.id}" ${ui.statsSec === x.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>`;
-  const filters = `<div class="filters"><span class="seg3" role="radiogroup" aria-label="Període">${[['prod', 'Producció'], ['term', 'Trimestre'], ['season', 'Temporada']].map(([k, l]) => `<button type="button" role="radio" aria-checked="${ui.statsScope === k}" data-act="stats-scope" data-k="${k}">${l}</button>`).join('')}</span>
-    ${ui.statsScope === 'prod' ? selProd : ui.statsScope === 'term' ? selTerm : ''}${selSec}</div>`;
+  const filters = `<div class="filters"><span class="seg3" role="radiogroup" aria-label="Període">${[['prod', 'Producció'], ['season', 'Temporada']].map(([k, l]) => `<button type="button" role="radio" aria-checked="${ui.statsScope === k}" data-act="stats-scope" data-k="${k}">${l}</button>`).join('')}</span>
+    ${ui.statsScope === 'prod' ? selProd : ''}${selSec}</div>`;
   const top = inBoard ? filters + head : head + scopeTabs + choice + secChips;
 
   if (!st.counted.length) {
@@ -48,7 +44,7 @@ function viewStats(inBoard) {
     <div class="kpi"><div class="kpi-v">${t.min}<small>min</small></div><div class="kpi-l">Retard acumulat · ${t.R} retards</div></div>
     <div class="kpi ${t.FNJ ? 'alert' : ''}"><div class="kpi-v">${t.FNJ}</div><div class="kpi-l">Faltes no justificades · ${t.FJ} just.</div></div>
   </div>
-  <p class="muted" style="font-size:calc(13px*var(--ts));margin:10px 2px 0">${st.counted.length} de ${st.all.length} sessions amb llista · Assistència = presents i retards sobre convocats (sense comptar «no fa» ni baixes).</p>`;
+  <p class="muted" style="font-size:calc(13px*var(--ts));margin:10px 2px 0">${st.counted.length} de ${st.all.length} sessions amb llista · Assistència = minuts d’assaig fets sobre els convocats: un retard compta pels minuts que s’hi ha estat (sense comptar «no fa» ni baixes).</p>`;
 
   const dist = `<div class="panel" style="padding:14px;margin-top:14px">${stackBar(t)}<div class="legend">${ORDER.map(k => `<span><i class="i-${k}"></i>${STATUS[k].label} <b>${t[k]}</b></span>`).join('')}</div></div>`;
 
@@ -138,11 +134,11 @@ function riskProductions() {
   const cur = currentProductionId();
   return productionsSorted().filter(p => p.id === cur || allSessions(p.id).some(s => s.date >= TODAY));
 }
-/** How many of the remaining rehearsals they must attend to reach the minimum. */
+/** How many of the remaining rehearsals they must attend to reach the minimum (en minuts, amb la durada mitjana dels que queden). */
 function needed(rs) {
-  const min = minAttendance() / 100;
-  const total = rs.att + rs.abs + rs.remaining;
-  return Math.max(0, Math.ceil(min * total - rs.att - 1e-9));
+  if (!rs.remaining) return 0;
+  const min = minAttendance() / 100, avg = rs.remM / rs.remaining;
+  return Math.min(rs.remaining, Math.max(0, Math.ceil((min * (rs.attM + rs.absM + rs.remM) - rs.attM) / avg - 1e-9)));
 }
 function riskLine(rs) {
   if (rs.status === 'out') return `No hi arriba: encara que vingui a tot, es queda al ${pct(rs.best)}.`;
@@ -354,8 +350,8 @@ function ruleSentence(rs) {
 function normHint(me, pid) {
   const rs = ruleStatus(pid, me);
   if (!rs || !rs.remaining) return '';
-  const min = minAttendance() / 100;
-  const k = Math.floor(rs.att + rs.remaining - min * (rs.att + rs.abs + rs.remaining) + 1e-9);
+  const min = minAttendance() / 100, avg = rs.remM / rs.remaining;
+  const k = Math.floor((rs.attM + rs.remM - min * (rs.attM + rs.absM + rs.remM)) / avg + 1e-9);
   const show = allSessions(pid).find(s => isShow(s) && s.date >= TODAY);
   const when = show ? `${V.sh.el} del ${shortDate(show.date)}` : 'el final de la producció';
   if (k < 0 || rs.status === 'out') return `<p class="norm-hint out">Ja no arribes al ${minAttendance()}% dels assajos per fer ${esc(when)}. Parla amb el teu ${V.leader}.</p>`;

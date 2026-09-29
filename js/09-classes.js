@@ -233,7 +233,7 @@ function classTeacherSpace(who) {
         </button>`;
       }).join('')}</div>` : ''}
     ${teach ? `<div class="panel" style="margin-top:14px">
-      <div class="setting"><div><div class="t">Horari fix</div><div class="s">L’hora de cada setmana de cada ${esc(V.member)}: serveix per generar els dies d’un trimestre sencer de cop.</div></div>
+      <div class="setting"><div><div class="t">Horari fix</div><div class="s">L’hora de cada setmana de cada ${esc(V.member)}: serveix per generar tots els dies d’un període de cop.</div></div>
         <button class="btn btn-sm" data-act="cl-plan" data-k="${esc(who)}">${planRows(who).length ? `Obre’l (${planRows(who).length} hores)` : 'Fes-lo'}</button></div>
       <div class="setting"><div><div class="t">Assistència del curs</div><div class="s">Qui ha vingut a classe i qui no, de tot el curs.</div></div>
         <button class="btn btn-sm" data-act="cl-stats">Mira-la</button></div>

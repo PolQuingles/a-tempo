@@ -3,8 +3,8 @@
 // (o tarda massa, com a moltes sales d'assaig), s'obre la darrera que es va desar. El codi i els estils porten
 // ?v=<empremta> a l'adreça: no canvien mai, i es desen i es reaprofiten. Les dades no passen per aquí: Firestore
 // ja en guarda una còpia al mòbil. VERSION i SHELL els escriu tools/stamp.py.
-const VERSION = '85b924315b';
-const SHELL = ['./', 'index.html', 'app.webmanifest', 'app/icon-192.png', 'app/icon-180.png', 'app/favicon-48.png', 'css/app.css?v=99bc14511a', 'config.js?v=666ce52d45', 'js/00-errors.js?v=739f456eee', 'js/01-base.js?v=7545b08983', 'js/02-dades.js?v=be34eccaea', 'js/03-pantalla.js?v=d8a997d969', 'js/04-llista.js?v=2e8acd28ed', 'js/05-calendari.js?v=036d9263da', 'js/06-estadistiques.js?v=f979ba3876', 'js/07-gestio.js?v=75722faff9', 'js/08-tauler.js?v=453f642273', 'js/09-classes.js?v=a007a75b2d', 'js/09b-classes-horari.js?v=ed30673848', 'js/09c-classes-fitxes.js?v=1c6d25a7cc', 'js/10-inici.js?v=fd7538a918', 'js/11-fitxes.js?v=90e0a175ef', 'js/12-persones.js?v=a3ca3e864f', 'js/13-avisos-mobil.js?v=3b5df93931', 'js/14-eines.js?v=2e91ac6e88', 'js/15-copies.js?v=66ca134814', 'js/16-agrupacions.js?v=08cea47090', 'js/17-rutes.js?v=8af2b87fcd', 'js/18-repertori.js?v=8971f86caf', 'js/19-concerts.js?v=e87c42bedc', 'js/20-sortides.js?v=df7672a942', 'js/21-missatges.js?v=b8b34625db', 'js/21b-converses.js?v=8c68131843', 'js/22-secretaria.js?v=b05dc6f444', 'js/23-accions.js?v=63ae2f119d', 'js/24-arrencada.js?v=4f0ef4edc6'];
+const VERSION = '8624b2cb02';
+const SHELL = ['./', 'index.html', 'app.webmanifest', 'app/icon-192.png', 'app/icon-180.png', 'app/favicon-48.png', 'css/app.css?v=a06d8ed496', 'config.js?v=666ce52d45', 'js/00-errors.js?v=739f456eee', 'js/01-base.js?v=ce1d0ad629', 'js/02-dades.js?v=58ab2345e7', 'js/03-pantalla.js?v=d8a997d969', 'js/04-llista.js?v=537af8a0bd', 'js/05-calendari.js?v=4f22309d74', 'js/06-estadistiques.js?v=f31b122110', 'js/07-gestio.js?v=d66fdd16e4', 'js/08-tauler.js?v=e2ddf6cb06', 'js/09-classes.js?v=5048bf6e7c', 'js/09b-classes-horari.js?v=535dc80cd3', 'js/09c-classes-fitxes.js?v=1c6d25a7cc', 'js/10-inici.js?v=fd7538a918', 'js/11-fitxes.js?v=90e0a175ef', 'js/12-persones.js?v=a3ca3e864f', 'js/13-avisos-mobil.js?v=3b5df93931', 'js/14-eines.js?v=c444432129', 'js/15-copies.js?v=66ca134814', 'js/16-agrupacions.js?v=08cea47090', 'js/17-rutes.js?v=8af2b87fcd', 'js/18-repertori.js?v=8971f86caf', 'js/19-concerts.js?v=f9be7d8acb', 'js/20-sortides.js?v=df7672a942', 'js/21-missatges.js?v=b8b34625db', 'js/21b-converses.js?v=8c68131843', 'js/22-secretaria.js?v=b05dc6f444', 'js/23-accions.js?v=ed3675d270', 'js/24-arrencada.js?v=4f0ef4edc6'];
 const CDN = [
   'https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js',
   'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js',
@@ -66,6 +66,7 @@ self.addEventListener('fetch', e => {
     return e.respondWith(staleWhileRevalidate(req));
   }
   if (url.href.startsWith('https://www.gstatic.com/firebasejs/')) return e.respondWith(fromCacheFirst(req, CACHE));
+  if (url.href.startsWith('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/')) return e.respondWith(fromCacheFirst(req, CACHE));   // el visor de PDF, també sense cobertura
   if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') return e.respondWith(staleWhileRevalidate(req));
   // La resta (Firestore, l'entrada amb Google…) no es toca.
 });
