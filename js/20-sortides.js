@@ -237,7 +237,7 @@ async function sheetMyProfile() {
   try { const d = await db.doc(`profiles/${mid}`).get(); if (d.exists) p = d.data(); } catch {}
   openSheet({
     title: 'La meva fitxa',
-    body: `<div class="kv">
+    body: `${choiceBox(mid, true)}<div class="kv">
       <label class="field"><span>Telèfon</span><input class="inp" id="pf-phone" type="tel" maxlength="20" autocomplete="tel" value="${esc(p.phone || S.members.get(mid)?.phone || '')}"></label>
       <div class="field"><span>Talla de vestuari</span><div class="pickers" id="pf-size">${SIZES.map(z => `<button type="button" class="pick" data-k="${z}" aria-pressed="${p.size === z}">${z}</button>`).join('')}</div></div>
       <div class="row2"><label class="field"><span>Contacte d’emergència</span><input class="inp" id="pf-en" maxlength="60" value="${esc(p.emergencyName || '')}" placeholder="Nom (i qui és: mare, parella…)"></label>
@@ -278,6 +278,8 @@ async function sheetMyProfile() {
 async function profileBox(el, mid) {
   const box = el.querySelector('#me-profile');
   if (!box || !canEdit()) return;
+  // Si cadascú tria les produccions, les que farà (i l'equip les hi pot canviar).
+  if (choicesOn()) box.insertAdjacentHTML('afterend', choiceBox(mid, false));
   let p = null;
   try { const d = await db.doc(`profiles/${mid}`).get(); p = d.exists ? d.data() : null; } catch {}
   if (!box.isConnected) return;

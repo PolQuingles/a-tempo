@@ -20,7 +20,7 @@ if (i > 0) {
   const out = run('norma', `CASES.map(c => {
     S.config = { minAttendance: 80, ...c.config }; applyGroupConfig();
     S.members = new Map(c.members.map(m => [m.id, m])); S.productions = new Map(c.productions.map(p => [p.id, p]));
-    S.attendance = new Map(Object.entries(c.attendance)); ARCH.docs = new Map();
+    S.attendance = new Map(Object.entries(c.attendance)); ARCH.docs = new Map(); S.prodChoice = new Map(Object.entries(c.choices || {}));
     return c.checks.map(([pid, mid]) => { const r = ruleStatus(pid, S.members.get(mid)); return r && { status: r.status, att: r.att, abs: r.abs, remaining: r.remaining, cur: r.cur, best: r.best }; });
   })`);
   // Escriptura síncrona: amb una sortida llarga cap a un tub, process.exit() la tallaria.

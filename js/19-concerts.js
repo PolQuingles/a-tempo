@@ -317,8 +317,9 @@ async function seasonFigures() {
   const active = membersOf(null).length, inactive = membersOf(null, true).filter(m => m.active === false).length;
   const leaves = membersOf(null, true).filter(m => (m.leaves || []).some(l => l.from <= to && (!l.to || l.to >= from))).length;
   const st = computeStats({ kind: 'range', from, to: TODAY < to ? TODAY : to, name: season.name }, '');
-  const sum = st.rows.reduce((c, r) => { for (const k of ['P', 'R', 'FJ', 'FNJ', 'min']) c[k] += r[k] || 0; return c; }, { P: 0, R: 0, FJ: 0, FNJ: 0, min: 0 });
-  const bySec = SECTIONS.map(x => { const rs = st.rows.filter(r => r.m.section === x.id); const c = rs.reduce((a, r) => { for (const k of ['P', 'R', 'FJ', 'FNJ']) a[k] += r[k] || 0; return a; }, { P: 0, R: 0, FJ: 0, FNJ: 0 }); return { x, n: membersOf(x.id).length, rate: rate(c) }; });
+  // Els totals ja els fa computeStats, en minuts (vegeu countMark).
+  const sum = st.tot;
+  const bySec = SECTIONS.map(x => ({ x, n: membersOf(x.id).length, rate: rate(st.bySec[x.id]) }));
   const types = {};
   for (const s of done) types[s.type || 'Assaig'] = (types[s.type || 'Assaig'] || 0) + 1;
   let classes = null;

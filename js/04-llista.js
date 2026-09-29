@@ -35,7 +35,7 @@ function dayStats(cur) {
   return { c, expected, out };
 }
 const ATT_TABS = [['llista', 'Llista'], ['stats', 'Estadístiques'], ['risk', 'Risc']];
-const attTabs = () => `<div class="subtabs att-tabs" role="tablist" style="grid-template-columns:repeat(3,1fr)">${ATT_TABS.map(([k, l]) => `<button class="subtab" role="tab" aria-selected="${ui.att === k}" data-act="att" data-k="${k}">${l}</button>`).join('')}</div>`;
+const attTabs = () => attHidden() ? '' : `<div class="subtabs att-tabs" role="tablist" style="grid-template-columns:repeat(3,1fr)">${ATT_TABS.map(([k, l]) => `<button class="subtab" role="tab" aria-selected="${ui.att === k}" data-act="att" data-k="${k}">${l}</button>`).join('')}</div>`;
 /** La norma d'assistència de totes les produccions en curs: qui no pot fer el concert i qui està en risc. */
 function viewRisk() {
   if (!productionsSorted().length) return `<div class="empty">${staffSvg()}<p>Quan hi hagi produccions amb llistes passades, veuràs aquí qui compleix la norma.</p></div>`;
@@ -43,8 +43,13 @@ function viewRisk() {
 }
 function viewRoll() {
   if (!ATT_TABS.some(([k]) => k === ui.att)) ui.att = 'llista';
+  // Llistes privades: un substitut només hi ve a passar la seva llista, sense estadístiques ni risc de ningú.
+  if (attHidden()) { ui.att = 'llista'; return subListWaiting() ? '<div class="empty"><p>Carregant la llista…</p></div>' : viewRollBody(); }
   if (ui.att === 'stats') return attTabs() + viewStats(true);
   if (ui.att === 'risk') return attTabs() + viewRisk();
+  return viewRollBody();
+}
+function viewRollBody() {
   const list = allSessions();
   if (!S.members.size || !list.length) {
     const onboard = onboardingPanel();

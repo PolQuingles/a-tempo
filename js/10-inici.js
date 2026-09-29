@@ -100,6 +100,7 @@ function todoItems() {
   if (me) {
     const conv = openConvocations(me).filter(s => !S.rsvp.get(`${s.id}_${me.id}`));
     for (const s of conv) out.push({ icon: 'conv', conv: s, n: 1 });
+    if (choicesPending(me.id)) { const s = choiceSummary(me.id); out.push({ icon: 'conv', t: 'Digues quines produccions faràs', s: `${s.none} de ${s.total} per dir · cal fer-ne com a mínim el ${s.min}%`, btn: 'Tria-les', act: `data-act="choice-open" data-mid="${esc(me.id)}"`, n: 1 }); }
     const polls = openPolls().filter(p => !S.pollVotes.get(`${p.id}_${me.id}`));
     if (polls.length) out.push({ icon: 'poll', t: `${polls.length === 1 ? '1 enquesta' : `${polls.length} enquestes`} per respondre`, s: esc(polls[0].title || ''), btn: 'Respon', act: 'data-act="board-polls"', n: polls.length });
   }

@@ -245,6 +245,9 @@ function subscribe() {
   big('classes', () => db.collection('classes').where('date', '>=', CLASS_FROM));
   big('works', () => db.collection('works'));
   big('attendance', () => archCut() ? db.collection('attendance').where('date', '>', archCut()) : db.collection('attendance'), e => { markLoaded('attendance'); onDbError(e); });
+  // Amb les llistes privades, qui no passa llista només en llegeix la seva còpia (vegeu 22b-tries).
+  const attDone = BIG.get('attendance').done;
+  BIG.get('attendance').done = () => { attDone(); mirrorPending(); };
   for (const col of ['announcements', 'polls', 'trips']) big(col, () => db.collection(col));
   if (staff) for (const col of ['rsvp', 'pollVotes']) big(col, () => db.collection(col));
   else for (const col of ['rsvp', 'pollVotes']) mine(col).onSnapshot(onCol(col), () => markLoaded(col));
@@ -265,13 +268,21 @@ function subscribe() {
     grab(db.collection('classReq').where('open', '==', true), m => { openOnes = m; });
   }
   mine('tripSignups').onSnapshot(onCol('tripSignups'), () => markLoaded('tripSignups'));
-  for (const col of ['absences', 'subs']) mine(col).onSnapshot(onCol(col), e => { markLoaded(col); if (staff) onDbError(e); });
+  for (const col of ['absences', 'subs']) mine(col).onSnapshot(snap => { onCol(col)(snap); if (col === 'subs') syncSubLists(); }, e => { markLoaded(col); if (staff) onDbError(e); });
   db.doc('config/main').onSnapshot(snap => {
     if (!isDirty('config/main')) S.config = { name: '', alertFNJ: 3, minAttendance: 80, demo: false, ...(snap.exists ? snap.data() : {}) };
     applyGroupConfig();
-    watchArchive();
+    // Si les llistes passen a ser privades (o deixen de ser-ho), qui no les passa torna a començar: llegeix unes altres dades.
+    const priv = !staff && attPrivate();
+    if (SYNC.started && priv !== SYNC.priv) { location.reload(); return; }
+    if (!priv) watchArchive();
+    watchChoices();
     // Les col·leccions grans comencen quan ja se sap si algú n'ha esborrat res (syncEpoch).
-    if (!SYNC.started) { SYNC.started = true; syncLoad(); for (const col of BIG.keys()) syncCol(col); }
+    if (!SYNC.started) {
+      SYNC.started = true; SYNC.priv = priv; syncLoad();
+      if (priv) { BIG.delete('attendance'); watchMyMarks(() => { markLoaded('attendance'); if (S.ready) scheduleRender(); }); }
+      for (const col of BIG.keys()) syncCol(col);
+    }
     else checkEpochs();
     markLoaded('config');
     if (S.ready) scheduleRender();
@@ -341,7 +352,8 @@ const attKey = (sid, sec) => `${sid}_${sec}`;
 const attDoc = (sid, sec) => S.attendance.get(attKey(sid, sec)) || ARCH.docs.get(attKey(sid, sec));
 /** Totes les llistes, les arxivades i les vives (per a les còpies i per mirar tota la història d'algú). */
 const allAttendance = () => new Map([...ARCH.docs, ...S.attendance]);
-const isExcluded = (prodId, mid) => !!(S.productions.get(prodId)?.excluded || []).includes(mid);
+// Fora d'una producció: l'hi ha tret l'equip o, si cadascú tria les seves produccions, ha dit que no la farà (22b-tries).
+const isExcluded = (prodId, mid) => !!(S.productions.get(prodId)?.excluded || []).includes(mid) || choseNo(mid, prodId);
 const convoked = (s, sec) => !s.sections || !s.sections.length || s.sections.includes(sec);
 const onLeave = (m, date) => (m.leaves || []).find(l => l.from && l.from <= date && (!l.to || l.to >= date));
 /** Out of the roll for this session: on leave, or not doing any of its productions. */
@@ -591,6 +603,9 @@ function setMark(session, member, patch) {
 }
 /** Desa una llista. Si és d'un trimestre arxivat, també la corregeix a l'arxiu (que és d'on la llegeix tothom). */
 function saveAttendance(key, doc) {
+  // Llistes privades: les còpies de cadascú les escriu l'equip; si la passa un substitut, ho farà l'equip després.
+  if (attPrivate() && !canEdit()) doc.unmirrored = true;
+  else mirrorSaved(attDoc(doc.sessionId, doc.section), doc);
   S.attendance.set(key, doc);
   persist('attendance', key, doc);
   const arch = !PREVIEW && doc.date && doc.date <= archCut() ? archiveOf(doc.date) : null;

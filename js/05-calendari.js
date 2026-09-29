@@ -120,7 +120,8 @@ function calMonthView() {
 }
 function calRow(s, underProd, tone) {
   let marks;
-  if (SECTIONS.length <= 5) {
+  if (attHidden()) marks = '';   // llistes privades: ni com van les llistes ni el percentatge de la sessió
+  else if (SECTIONS.length <= 5) {
     marks = SECTIONS.map(x => {
       if (!convoked(s, x.id)) return `<span class="vm off${x.short.length > 1 ? ' long' : ''}" title="${esc(x.name)}: no convocats">${esc(x.short)}</span>`;
       const pr = progress(s, x.id);
@@ -135,10 +136,10 @@ function calRow(s, underProd, tone) {
     marks = `<span class="vm-sum ${!any ? '' : full === on.length ? 'full' : 'part'}" title="Llistes completes">${full}/${on.length}</span>`;
   }
   const c = emptyCounts();
-  for (const x of SECTIONS) if (convoked(s, x.id) && hasData(s, x.id)) for (const m of membersOf(x.id)) { const mk = effMark(s, m); if (mk) countMark(c, s, mk); }
+  if (!attHidden()) for (const x of SECTIONS) if (convoked(s, x.id) && hasData(s, x.id)) for (const m of membersOf(x.id)) { const mk = effMark(s, m); if (mk) countMark(c, s, mk); }
   const r = rate(c);
   const rv = s.rsvp && canEdit() ? rsvpCounts(s) : null;
-  const right = `<span class="cal-right"><span class="vmarks" aria-label="Llista per ${V.sections}">${marks}</span>${r != null ? `<span class="cal-pct">${pct(r)}</span>` : rv ? `<span class="cal-badge" title="Confirmacions">${rv.yes}✓ ${rv.no}✗ ${rv.none}?</span>` : ''}</span>`;
+  const right = `<span class="cal-right">${marks ? `<span class="vmarks" aria-label="Llista per ${V.sections}">${marks}</span>` : ''}${r != null ? `<span class="cal-pct">${pct(r)}</span>` : rv ? `<span class="cal-badge" title="Confirmacions">${rv.yes}✓ ${rv.no}✗ ${rv.none}?</span>` : ''}</span>`;
   const other = sessionProds(s).filter(id => id !== underProd).map(id => S.productions.get(id)?.name).filter(Boolean);
   const cls = [s.date === TODAY ? 'is-today' : '', s.date < TODAY ? 'is-past' : '', isShow(s) ? 'type-concert' : ''].join(' ');
   return `<li class="cal-row ${cls}${tone ? ' prod-tone' : ''}" data-date="${s.date}"${tone ? ` style="--ph:${prodHue(S.productions.get(s.prodId))}"` : ''}>

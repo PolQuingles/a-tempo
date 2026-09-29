@@ -58,6 +58,44 @@ prova('assistència en minuts: un retard compta pels minuts que s’hi ha estat,
   prop(r.best, 450 / 540, 'si ve al que queda');
   igual([r.att, r.abs, r.remaining], [2, 0, 1], 'i els assajos, en nombre');
 });
+prova('tria de produccions: qui diu que no, no la fa; el mínim només es pot incomplir dient que no', () => {
+  const ps = [['a', -40], ['b', 10], ['c', 40], ['d', 80], ['e', 120]].map(([id, off]) => ({ id, name: id.toUpperCase(), start: D(off), end: D(off + 7),
+    sessions: [{ id: id + '1', date: D(off), type: 'Assaig' }, { id: id + '2', date: D(off + 7), type: 'Concert' }] }));
+  escenari({ members: [{ id: 'm', name: 'Puig, Anna', section: 'S' }, { id: 'n', name: 'Vila, Pere', section: 'T' }], productions: ps });
+  S.config.season = { name: 'T', from: D(-60), to: D(200) };
+  S.prodChoice = new Map([['m', { memberId: 'm', prods: { c: 'no', d: 'no' } }]]);
+  igual(isExcluded('c', 'm'), false, 'amb l’opció desactivada, les tries no compten');
+  S.config.prodChoice = true;
+  igual(isExcluded('c', 'm'), true, 'ha dit que no');
+  igual(isExcluded('b', 'm'), false, 'no ha dit res: la fa');
+  igual(isOut(allSessions('c')[0], S.members.get('m')), true, 'no hi està convocada');
+  const s = choiceSummary('m');
+  igual([s.total, s.yes, s.no, s.none], [5, 1, 2, 2], 'la que ja ha començat (A) compta que la fa');
+  igual(s.ok, true, '3 de 5 = 60%');
+  igual(choiceSummary('m', { c: 'no', d: 'no', e: 'no' }).ok, false, 'dient que no a una més, no hi arriba');
+  igual(choiceSummary('m', { c: 'no', d: 'no', e: 'no' }).need, 3, 'en necessita 3');
+  S.config.prodChoiceMin = 40;
+  igual(choiceSummary('m', { c: 'no', d: 'no', e: 'no' }).ok, true, 'amb un mínim del 40%, sí');
+  igual(choicesPending('m'), true, 'B i E encara per dir');
+  igual(choicesPending('n'), true);
+  S.prodChoice.set('n', { memberId: 'n', prods: { b: 'yes', c: 'yes', d: 'yes', e: 'no' } });
+  igual(choicesPending('n'), false, 'ho ha dit tot (A ja ha començat)');
+  S.productions.get('d').excluded = ['m'];
+  igual(choiceSummary('m').total, 4, 'la que li ha tret l’equip no compta');
+  delete S.config.prodChoice; delete S.config.prodChoiceMin; S.prodChoice = new Map();
+});
+prova('llistes privades: les còpies de cadascú només es tornen a escriure per a qui ha canviat', () => {
+  const prev = { sessionId: 's', marks: { a: { s: 'P' }, b: { s: 'R', min: 10 }, c: { s: 'FJ', note: 'metge' } } };
+  const next = { sessionId: 's', marks: { a: { s: 'P' }, b: { s: 'R', min: 15 }, d: { s: 'FNJ' } } };
+  igual(mirrorDiff(prev, next).map(([m, mk]) => [m, mk && mk.s]), [['b', 'R'], ['c', null], ['d', 'FNJ']]);
+  igual(mirrorDiff(null, { marks: { a: { s: 'P' } } }).length, 1, 'llista nova');
+  igual(mirrorMark({ s: 'R', min: 5, note: '', auto: true }), { s: 'R', min: 5 }, 'només la marca, els minuts i la nota');
+  S.config.attPrivate = true; S.role = 'read';
+  igual(attHidden(), true, 'un cantaire no veu les llistes');
+  S.role = 'edit';
+  igual(attHidden(), false, 'qui passa llista, sí');
+  delete S.config.attPrivate;
+});
 prova('computeStats: compta per persona, per corda i per sessió, i salta les sessions sense llista', () => {
   escenari({
     members: [{ id: 'a', name: 'Puig, Anna', section: 'S' }, { id: 'b', name: 'Bosch, Marc', section: 'T' }, { id: 'c', name: 'Camps, Oriol', section: 'T' }],

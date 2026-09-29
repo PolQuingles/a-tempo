@@ -21,6 +21,7 @@ function connect() {
 }
 /** Once the group's data is in: welcome, «last seen», directory record and this device's notifications. */
 function afterReady() {
+  syncSubLists();   // llistes privades: la llista que passa un substitut (vegeu 22b-tries)
   if (S.config.name) {
     MARCA = { ...(MARCA || {}), name: S.config.name, short: S.config.shortName || MARCA?.short || '', bg: MARCA?.bg || S.config.brand?.accent || '' };
     try { localStorage.setItem(`${LS_BRAND}:${GID}`, JSON.stringify(MARCA)); } catch {}

@@ -135,7 +135,11 @@ function manageMembers() {
 }
 function manageProductions() {
   const ps = productionsSorted();
-  return `<div class="sec-h"><span class="muted" style="font-size:calc(13.5px*var(--ts))">${ps.length} produccions</span><span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" data-act="season-report">Memòria de la temporada</button><button class="btn btn-sm btn-primary" data-act="prod-new">+ Producció</button></span></div>
+  // Si cadascú tria les produccions: quants han respost i quants queden per sota del mínim.
+  const ms = choicesOn() ? membersOf(null) : [];
+  const low = ms.filter(m => !choiceSummary(m.id).ok).length, silent = ms.filter(m => choiceSummary(m.id).none).length;
+  const chPanel = choicesOn() ? `<div class="panel ch-panel"><span><b>Cadascú tria les produccions que fa</b><br><span class="muted">${ms.length - silent} de ${ms.length} han respost${low ? ` · <b class="bad">${low} per sota del ${choiceMin()}%</b>` : ''}</span></span><button class="btn btn-sm" data-act="choices-overview">Qui fa cada producció</button></div>` : '';
+  return `${chPanel}<div class="sec-h"><span class="muted" style="font-size:calc(13.5px*var(--ts))">${ps.length} produccions</span><span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" data-act="season-report">Memòria de la temporada</button><button class="btn btn-sm btn-primary" data-act="prod-new">+ Producció</button></span></div>
     ${ps.length ? `<div class="only-narrow" style="display:grid;gap:10px">${ps.map(p => {
       const ss = allSessions(p.id);
       const shared = ss.filter(s => s.prodId !== p.id).length;
@@ -275,7 +279,7 @@ async function deleteGroup(el) {
   const at = new Date().toISOString();
   try {
     const refs = [];
-    for (const col of ['members', 'productions', 'attendance', 'attArchive', 'absences', 'subs', 'rsvp', 'announcements', 'polls', 'pollVotes', 'push', 'classes', 'classReq', 'classPlan', 'classNotes', 'classFiles', 'classIcs', 'students', 'works', 'trips', 'tripSignups', 'profiles', 'messages', 'threads', 'nudges', 'memberNotes', 'memberDocs', 'memberFiles', 'config']) {
+    for (const col of ['members', 'productions', 'attendance', 'attArchive', 'attMine', 'prodChoice', 'absences', 'subs', 'rsvp', 'announcements', 'polls', 'pollVotes', 'push', 'classes', 'classReq', 'classPlan', 'classNotes', 'classFiles', 'classIcs', 'students', 'works', 'trips', 'tripSignups', 'profiles', 'messages', 'threads', 'nudges', 'memberNotes', 'memberDocs', 'memberFiles', 'config']) {
       say('Preparant…');
       const snap = await db.collection(col).get();
       for (const d of snap.docs) if (!(col === 'config' && d.id === 'main')) refs.push(d.ref);
@@ -362,6 +366,20 @@ function manageConfig() {
     : `<div class="setting"><div><div class="t">${icsOn() ? 'Calendari al mòbil' : 'Desactivat'}</div><div class="s">${icsOn() ? 'S’actualitza sol cada poques hores. Funciona amb Google Calendar, Apple i Outlook.' : 'L’administració l’ha de fer públic a Ajustos.'}</div></div>${icsOn() ? '<button class="btn btn-sm" data-act="cal-subscribe">Com afegir-lo</button>' : ''}</div>`}
     ${isAdmin() && icsOn() ? '<div class="setting"><div><div class="t">Com s’hi subscriu cadascú</div><div class="s">Des del Calendari o des del seu compte (les inicials, a dalt a la dreta).</div></div><button class="btn btn-sm" data-act="cal-subscribe">Instruccions</button></div>' : ''}
   </div>
+  ${isAdmin() ? `${cfgHead('cantaires', `Llistes i produccions`, `${attPrivate() ? 'Llistes privades' : 'Llistes visibles per a tothom'} · ${choicesOn() ? `cadascú tria (mínim ${choiceMin()}%)` : 'produccions per a tothom'}`)}
+  <div class="panel cfg-p"${cfgOpen('cantaires') ? '' : ' hidden'}>
+    <div class="toggle-row setting"><span><b>Llistes d’assistència privades</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">${attPrivate()
+      ? `Cada ${esc(V.member)} només veu la seva assistència. Les llistes, les estadístiques i el risc de tothom només els veu l’equip.`
+      : `Ara tothom pot veure les llistes i les estadístiques de tothom. Activa-ho perquè cadascú només vegi la seva.`}</span></span>
+      <label class="switch"><input type="checkbox" id="cfg-private" ${attPrivate() ? 'checked' : ''} data-bind="cfg-private"><span></span></label></div>
+    <div class="toggle-row setting"><span><b>Cadascú tria les produccions que fa</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">${choicesOn()
+      ? `Cada ${esc(V.member)} diu a «La meva fitxa» quines produccions de la temporada farà. On diu que no, no hi està convocat i no li compta l’assistència.`
+      : `Ara tothom fa totes les produccions (menys les que li treu l’equip). Activa-ho si cadascú pot triar quines fa.`}</span></span>
+      <label class="switch"><input type="checkbox" id="cfg-choice" ${choicesOn() ? 'checked' : ''} data-bind="cfg-choice"><span></span></label></div>
+    ${choicesOn() ? `<div class="setting"><div><div class="t">Mínim de produccions</div><div class="s">Percentatge de les produccions de la temporada que ha de fer cadascú.</div></div>
+      <span style="display:flex;align-items:center;gap:6px"><input class="inp" id="cfg-choice-min" type="number" inputmode="numeric" min="0" max="100" style="width:80px;text-align:center" value="${choiceMin()}" data-bind="cfg-choice-min"><b>%</b></span></div>
+    <div class="setting"><div><div class="t">Qui fa cada producció</div><div class="s">Les respostes de tothom i qui queda per sota del mínim.</div></div><button class="btn btn-sm" data-act="choices-overview">Mira-ho</button></div>` : ''}
+  </div>` : ''}
   ${cfgHead('norma', `Norma i seguiment`, `${minAttendance()}% d’assistència · avís a les ${+S.config.alertFNJ || 3} faltes`)}
   <div class="panel cfg-p"${cfgOpen('norma') ? '' : ' hidden'}>
     <div class="setting">

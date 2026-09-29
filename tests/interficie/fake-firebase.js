@@ -36,7 +36,18 @@
   const testRaw = (v, op, x) => op === '==' ? v === x : op === '>=' ? v >= x : op === '<=' ? v <= x : op === '>' ? v > x : op === '<' ? v < x
     : op === 'in' ? x.includes(v) : op === 'array-contains' ? Array.isArray(v) && v.includes(x) : op === '!=' ? v !== x : false;
   const merge = (a, b) => { const out = { ...(a || {}) }; for (const [k, v] of Object.entries(b)) out[k] = v && typeof v === 'object' && !Array.isArray(v) && out[k] && typeof out[k] === 'object' && !Array.isArray(out[k]) ? merge(out[k], v) : v; return out; };
-  const write = (path, data, opts) => { DB[path] = stamp(clone(opts && opts.merge ? merge(DB[path], data) : data)); save(); notify(); };
+  // set(…, { mergeFields: [camps] }): només aquells camps (un valor esborrat, FieldValue.delete(), treu el camp).
+  const mergeFields = (cur, data, fields) => {
+    const out = clone(cur || {});
+    for (const f of fields) {
+      const parts = typeof f === 'string' ? f.split('.') : f.parts;
+      let src = data; for (const k of parts) src = src == null ? undefined : src[k];
+      let o = out; for (const k of parts.slice(0, -1)) o = o[k] = o[k] && typeof o[k] === 'object' ? o[k] : {};
+      if (src === undefined) delete o[parts[parts.length - 1]]; else o[parts[parts.length - 1]] = clone(src);
+    }
+    return out;
+  };
+  const write = (path, data, opts) => { DB[path] = stamp(clone(opts && opts.mergeFields ? mergeFields(DB[path], data, opts.mergeFields) : opts && opts.merge ? merge(DB[path], data) : data)); save(); notify(); };
   const del = path => { delete DB[path]; save(); notify(); };
 
   function docRef(path) {

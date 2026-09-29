@@ -116,6 +116,9 @@ class Group:
         self.count = 0
 
         self.productions = r.list(f"{self.base}/productions")
+        # Si cadascú tria les produccions que fa, qui ha dit que no en fa una hi compta com si l'haguessin tret.
+        if self.config.get("prodChoice"):
+            self.productions = norma.apply_choices(self.productions, r.list(f"{self.base}/prodChoice"))
         self.all = self._sessions()
 
     # ---------- lectures ----------
