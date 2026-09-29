@@ -89,6 +89,8 @@ service cloud.firestore {
     // Camps de config/main que fan d'identitat de l'agrupació.
     function identityKeys() { return ['name', 'shortName', 'kind', 'sections', 'brand', 'labels', 'deleted', 'deletedAt']; }
     function mine(c, mid) { return mid == myMember(c) && mid != '-'; }
+    // Llistes d'assistència privades (Ajustos): qui no les passa només veu la seva còpia, a attMine/<membre>.
+    function attPrivate(c) { return get(/databases/$(database)/documents/cors/$(c)/config/main).data.get('attPrivate', false) == true; }
     // Una conversa privada: la persona de la plantilla i qui té el rol (els caps de corda, només de la seva corda) o el correu a qui ha escrit.
     function inThread(c, d) {
       return (hasSpace(c) && mine(c, d.memberId))
@@ -108,7 +110,7 @@ service cloud.firestore {
     // tools/stamp.py hi escriu l'empremta d'aquest fitxer. La vigilància comprova que les regles publicades són les del
     // repositori demanant reglesVersio/<empremta>: si les publicades són unes altres, la lectura es denega.
     match /reglesVersio/{v} {
-      allow get: if v == '60d61daa37b2';
+      allow get: if v == 'e8aeca9b7389';
     }
 
     match /plataforma/equip {
@@ -226,8 +228,10 @@ service cloud.firestore {
                                 'announcements', 'polls', 'pollVotes', 'push', 'classes', 'classReq', 'classPlan',
                                 'works', 'trips'] && canEdit(c))
                     // Cantaires i músics: veuen tota l'app (també el repertori i les sortides), però no poden canviar res.
-                    || (col in ['members', 'productions', 'attendance', 'config', 'subs',
+                    || (col in ['members', 'productions', 'config', 'subs',
                                 'announcements', 'polls', 'works', 'trips'] && isStaff(c))
+                    // Les llistes de tothom, només si l'agrupació no les ha fet privades.
+                    || (col == 'attendance' && isStaff(c) && !attPrivate(c))
                     || (col in ['productions', 'config'] && hasRole(c, ['calendar']))
                     || (col in ['members', 'productions', 'attendance', 'config', 'staff', 'subs', 'rsvp', 'absences',
                                 'announcements', 'polls', 'pollVotes', 'push', 'classes', 'classReq', 'classPlan', 'classNotes', 'classIcs',
@@ -242,9 +246,25 @@ service cloud.firestore {
       // Arxiu de l'assistència: totes les llistes d'un tros de temporada ja acabat en un sol document (menys lectures).
       // Qui pot passar llista el crea i el corregeix; el llegeix tothom qui llegeix les llistes.
       match /attArchive/{id} {
-        allow read: if isStaff(c) || hasRole(c, ['backup']) || isService();
+        allow read: if canEdit(c) || (isStaff(c) && !attPrivate(c)) || hasRole(c, ['backup']) || isService();
         allow create, update: if canEdit(c);
         allow delete: if isAdmin(c);
+      }
+      // Llistes privades: la còpia de les marques de cada persona. L'escriu qui passa llista; la llegeix la persona i l'equip.
+      match /attMine/{mid} {
+        allow read: if canEdit(c) || (hasSpace(c) && mine(c, mid)) || hasRole(c, ['backup']) || isService();
+        allow create, update, delete: if canEdit(c);
+      }
+      // Les produccions que farà cada persona, quan cadascú les tria (Ajustos). Les pot canviar ella mateixa o l'equip; les
+      // veu tothom (com qui no fa una producció), menys amb les llistes privades, que cadascú només veu les seves.
+      match /prodChoice/{mid} {
+        allow read: if canEdit(c) || (hasSpace(c) && mine(c, mid)) || (isStaff(c) && !attPrivate(c)) || hasRole(c, ['backup']) || isService();
+        allow create, update: if canEdit(c) || (hasSpace(c) && mine(c, mid)
+          && request.resource.data.memberId == mid
+          && request.resource.data.keys().hasOnly(['memberId', 'prods', 'at', 'by'])
+          && request.resource.data.prods is map && request.resource.data.prods.size() <= 200
+          && shortText(request.resource.data, 'at', 40) && shortText(request.resource.data, 'by', 120));
+        allow delete: if canEdit(c);
       }
       // Converses privades entre algú de la plantilla i l'equip (vegeu inThread). Es poden afegir missatges i marcar-les com a
       // llegides, però no canviar qui hi participa.

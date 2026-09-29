@@ -61,16 +61,26 @@ def cases(n, seed):
                     if ms or rnd.random() < .1:   # també alguna llista buida
                         attendance[f"{s['id']}_{sec}"] = {"sessionId": s["id"], "section": sec, "marks": ms}
         config = {}
+        choices = {}
+        if rnd.random() < .4:   # cadascú tria les produccions: qui diu que no, no la fa
+            config["prodChoice"] = True
+            for m in members:
+                if rnd.random() < .7:
+                    choices[m["id"]] = {"memberId": m["id"], "prods": {p["id"]: rnd.choice(["yes", "no", "yes"]) for p in prods if rnd.random() < .8}}
+        elif rnd.random() < .3:   # tries desades d'abans, però l'opció desactivada: no compten
+            choices = {m["id"]: {"memberId": m["id"], "prods": {p["id"]: "no" for p in prods}} for m in members}
         mn = rnd.choice([80, 80, 75, 60, 90, 100, 1, 66.5, None])
         if mn is not None:
             config["minAttendance"] = mn
-        out.append({"config": config, "members": members, "productions": prods, "attendance": attendance,
+        out.append({"config": config, "members": members, "productions": prods, "attendance": attendance, "choices": choices,
                     "checks": [[p["id"], m["id"]] for p in prods for m in members]})
     return out
 
 
 def python_side(c):
     productions = {p["id"]: p for p in c["productions"]}
+    if c["config"].get("prodChoice"):
+        productions = norma.apply_choices(productions, c["choices"])
     sessions = norma.sessions_of(productions)
     k = dades.KINDS[dades.kind(c["config"])]
     skip = set(k["shows"]) | {"Altres", "Reunió"}

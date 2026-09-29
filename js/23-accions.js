@@ -12,7 +12,7 @@ const CLASS_ONLY = new Set(['cl-new', 'cl-edit', 'cl-review', 'cl-paste', 'cl-pl
 const EDIT_ONLY = new Set(['mark', 'min', 'mark-rest', 'session-new', 'sub-set', 'ann-new', 'ann-edit', 'mat-new', 'mat-edit', 'poll-new', 'poll-edit', 'poll-results', 'poll-remind', 'rsvp-remind', 'doc-new', 'doc-edit', 'share-app', 'staff-bulk', 'preview-on', 'who-in', 'mail-check', 'concert-list', 'concert-toggle', 'session-edit', 'member-edit', 'member-new', 'member-bulk', 'prod-new', 'prod-edit',
   'wipe-demo', 'wipe-all', 'load-demo', 'export-json', 'abs-accept', 'abs-reject', 'abs-delete', 'manage',
   'write', 'msg-new', 'roster-export', 'docs-export', 'docs-copy-noimg',
-  'work-new', 'work-edit', 'work-link', 'plan-edit', 'seating-edit', 'participants', 'certificate', 'season-report', 'trip-new', 'trip-edit', 'trip-admin', 'trip-remind']);
+  'choices-overview', 'work-new', 'work-edit', 'work-link', 'plan-edit', 'seating-edit', 'participants', 'certificate', 'season-report', 'trip-new', 'trip-edit', 'trip-admin', 'trip-remind']);
 const actions = {
   'tab': el => { if (el.dataset.tab === 'gestio' && ui.tab !== 'gestio') ui.gestioFrom = ui.tab; ui.tab = el.dataset.tab; ui.rollSec = null; ui._calScrolled = false; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
   'reload': () => location.reload(),
@@ -220,6 +220,7 @@ const actions = {
   'pick-today': () => { ui.sessionId = defaultSession(allSessions())?.id; closeSheet(); render(); },
   'open-session': el => {
     const s = sessionById(el.dataset.sid); if (!s) return;
+    if (attHidden()) { sheetSessionInfo(s.id); return; }   // llistes privades: la fitxa de la sessió, no la llista
     ui.sessionId = s.id; ui.tab = 'llista';
     if (!el.dataset.keep) ui.rollSec = null;
     else if (!convoked(s, ui.section)) ui.rollSec = ui.section = (s.sections && s.sections[0]) || ui.section;
@@ -281,7 +282,10 @@ const actions = {
   'stats-prod': el => { ui.statsProd = el.dataset.id; ui.statsScope = 'prod'; render(); },
   'stats-sec': el => { ui.statsSec = el.dataset.sec; saveUI(); render(); },
   'stats-sort': el => { ui.statsSort = el.dataset.k; saveUI(); render(); },
-  'member-stats': el => sheetMemberStats(el.dataset.mid),
+  'member-stats': el => { if (attHidden() && el.dataset.mid !== myMemberId()) { toast('Les llistes d’assistència són privades'); return; } sheetMemberStats(el.dataset.mid); },
+  // Tria de produccions (22b-tries).
+  'choice-open': el => sheetProdChoice(el.dataset.mid || myMemberId()),
+  'choices-overview': () => sheetChoicesOverview(),
   'export-csv': () => exportCSV(),
   'export-json': () => exportJSON(),
   'manage': el => {
@@ -375,6 +379,11 @@ document.addEventListener('change', e => {
   const el = e.target.closest('[data-bind="import"]');
   if (el && el.files && el.files[0]) { importJSON(el.files[0]); el.value = ''; }
   if (e.target.closest('[data-bind="cfg-classes"]') && isAdmin()) { saveConfig({ classesOn: e.target.checked }); toast(e.target.checked ? `${V.classes} activades` : `${V.classes} desactivades`); render(); }
+  const priv = e.target.closest('[data-bind="cfg-private"]');
+  if (priv && isAdmin()) setAttPrivate(priv.checked);
+  if (e.target.closest('[data-bind="cfg-choice"]') && isAdmin()) { saveConfig({ prodChoice: e.target.checked }); watchChoices(); toast(e.target.checked ? 'Ara cadascú tria les produccions que fa' : 'Tria de produccions desactivada'); render(); }
+  const chMin = e.target.closest('[data-bind="cfg-choice-min"]');
+  if (chMin && isAdmin()) { const v = parseInt(chMin.value, 10); if (v >= 0 && v <= 100) { saveConfig({ prodChoiceMin: v }); toast('Mínim desat'); render(); } }
   if (e.target.closest('[data-bind="cfg-ics"]') && isAdmin()) { saveConfig({ icsOn: e.target.checked }); toast(e.target.checked ? 'Calendari subscrit activat: funcionarà d’aquí a unes hores' : 'Calendari subscrit desactivat'); render(); }
   if (e.target.closest('[data-bind="min"]')) refreshRow(e.target.closest('.row').dataset.mid);
   const fa = e.target.closest('[data-bind="fee-amount"]');

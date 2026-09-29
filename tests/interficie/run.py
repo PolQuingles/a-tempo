@@ -575,6 +575,59 @@ def main():
         check(not errors, "sense errors a les estadístiques i al visor de PDF", "; ".join(errors[:3]))
         ctx.close()
 
+        print("Llistes privades i tria de produccions (com a l'Orfeó)")
+        ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/gestio/ajustos")
+        r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          const d = n => { const x = new Date(TODAY + 'T12:00:00'); x.setDate(x.getDate() + n); return x.toISOString().slice(0, 10); };
+          for (const [i, off] of [[2, 30], [3, 90], [4, 150]]) saveProduction({ id: 'pt' + i, name: 'Prova ' + i, start: d(off), end: d(off + 14), excluded: [],
+            sessions: [0, 7, 14].map(k => ({ id: `pt${i}s${k}`, date: d(off + k), time: '19:00', end: '21:00', type: k === 14 ? 'Concert' : 'Assaig' })) });
+          ui.cfgOpen = { ...(ui.cfgOpen || {}), cantaires: true }; render(); await s(200);
+          document.querySelector('#cfg-private').click(); await s(400);
+          [...document.querySelectorAll('.sheet-f .btn')].find(b => /privades/.test(b.textContent)).click(); await s(1500);
+          const fake = () => JSON.parse(localStorage.getItem('fake:db'));
+          out.private = S.config.attPrivate === true && Object.keys(fake()).filter(k => k.includes('/attMine/')).length === S.members.size;
+          document.querySelector('#cfg-choice').click(); await s(400);
+          out.choice = choicesOn() && !!document.querySelector('#cfg-choice-min');
+          // Una marca nova arriba a la còpia de la persona.
+          const m = S.members.get('mS1'), x = allSessions().filter(y => y.date <= TODAY && convoked(y, 'S')).at(-1);
+          setMark(x, m, { s: 'R', min: 25 }); await s(2500);
+          out.mirror = fake()[Object.keys(fake()).find(k => k.endsWith('/attMine/mS1'))]?.marks?.[x.id]?.min === 25;
+          return out; }""")
+        switch_user(page, base, "singer")
+        r.update(page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          out.noTab = ![...document.querySelectorAll('.tabs .tab[data-tab]')].some(t => t.dataset.tab === 'llista');
+          out.onlyMine = [...S.attendance.values()].every(d => Object.keys(d.marks).every(k => k === myMemberId())) && S.attendance.size > 0;
+          out.noPct = !document.querySelector('.cal-pct');
+          const t = todoItems().find(x => /produccions/.test(x.t));
+          out.todo = !!t;
+          sheetProdChoice(myMemberId()); await s(300);
+          const rows = [...document.querySelectorAll('.ch-row')];
+          const pick = (pid, k) => rows.find(r => r.dataset.pid === pid).querySelector(`button[data-k=${k}]`).click();
+          pick('pt2', 'no'); pick('pt3', 'no'); pick('pt4', 'no'); await s(100);
+          document.querySelector('#ch-save').click(); await s(400);
+          out.blocked = !!document.querySelector('#ch-save');
+          pick('pt2', 'yes'); pick('pt3', 'yes'); await s(100);
+          document.querySelector('#ch-save').click(); await s(700);
+          out.saved = !document.querySelector('#ch-save') && isExcluded('pt4', myMemberId()) && !isExcluded('pt2', myMemberId());
+          out.fitxa = (sheetMyProfile(), await s(400), /Fas 3 de 4/.test(document.querySelector('.ch-box')?.innerText || ''));
+          closeSheet(); await s(200);
+          out.overflow = document.documentElement.scrollWidth <= innerWidth;
+          return out; }"""))
+        for k, label in [("private", "en fer privades les llistes, cadascú té la còpia de les seves marques"),
+                         ("choice", "es pot activar que cadascú triï les produccions, amb el mínim"),
+                         ("mirror", "una marca nova arriba a la còpia de la persona"),
+                         ("noTab", "amb les llistes privades, un cantaire no té la pestanya d'Assistència"),
+                         ("onlyMine", "i només té les seves marques"),
+                         ("noPct", "ni el percentatge de cada sessió al calendari"),
+                         ("todo", "a Inici li demana quines produccions farà"),
+                         ("blocked", "no pot desar per sota del mínim"),
+                         ("saved", "la tria es desa i on diu que no, no hi està convocat"),
+                         ("fitxa", "«La meva fitxa» mostra quantes en fa"),
+                         ("overflow", "sense eixamplar la pantalla del mòbil")]:
+            check(r.get(k), label, str(r))
+        check(not errors, "sense errors amb les llistes privades i la tria de produccions", "; ".join(errors[:3]))
+        ctx.close()
+
         print("Mira l'app com…")
         ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/gestio/personal")
         page.wait_for_function("S.staffReady", timeout=5000)

@@ -33,7 +33,8 @@ const TAB_SHORT = { stats: 'Estad.', classes: 'Classes', calendari: 'Calend.', l
 // estadístiques), Calendari, Tauler (comunicació) i, si n'hi ha, Classes. La gestió s'obre des del menú del compte.
 const tabsForRole = () => {
   const cl = seeClasses() ? ['classes'] : [];
-  return ['avisos', 'llista', 'calendari', 'tauler', ...cl];
+  // Amb les llistes privades, qui no les passa no té la pestanya d'Assistència: la seva, la veu a Inici.
+  return ['avisos', ...(attHidden() && !mySubs().length ? [] : ['llista']), 'calendari', 'tauler', ...cl];
 };
 /** La pestanya de baix que s'il·lumina. Gestió no és cap pestanya: s'obre des del menú del compte. */
 const navTab = () => ui.tab === 'gestio' ? '' : ui.tab;

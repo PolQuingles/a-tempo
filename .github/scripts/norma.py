@@ -57,6 +57,15 @@ def sessions_of(productions):
     return out
 
 
+def apply_choices(productions, choices):
+    """Les produccions amb excluded ampliat amb qui ha dit que no les farà (prodChoice/<membre> = {prods: {pid: 'no'}})."""
+    out = {}
+    for pid, p in productions.items():
+        no = [mid for mid, c in (choices or {}).items() if ((c or {}).get("prods") or {}).get(pid) == "no"]
+        out[pid] = {**p, "excluded": sorted(set((p.get("excluded") or []) + no))} if no else p
+    return out
+
+
 def excluded(productions, mid, prods):
     """Només queda fora si no fa cap de les produccions de la sessió."""
     prods = [pid for pid in prods if pid in productions]
