@@ -628,6 +628,30 @@ def main():
         check(not errors, "sense errors amb les llistes privades i la tria de produccions", "; ".join(errors[:3]))
         ctx.close()
 
+        print("Un professor sense compte que passa a tenir-ne")
+        ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/gestio/personal")
+        page.wait_for_function("S.staffReady", timeout=5000)
+        r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          const type = (q, v) => { const e = document.querySelector(q); e.value = v; e.dispatchEvent(new Event('input', { bubbles: true })); };
+          const fake = () => JSON.parse(localStorage.getItem('fake:db'));
+          const seat = teacherSeats()[0], had = Object.values(fake()).filter(d => d && d.teacher === seat.id).length;
+          sheetPerson(null, { roles: ['voice'] }); await s(300);
+          type('#ps-name', seat.name + ' Puig'); type('#ps-email', 'profnova@exemple.cat'); await s(100);
+          out.suggested = document.querySelector('#ps-seat').value === seat.id && !document.querySelector('#ps-seat-f').hidden;
+          document.querySelector('#ps-save').click(); await s(1500);
+          const db = fake();
+          out.moved = had > 0 && Object.values(db).filter(d => d && d.teacher === 'profnova@exemple.cat').length === had && !Object.values(db).some(d => d && d.teacher === seat.id);
+          out.seatGone = !teacherSeats().some(t => t.id === seat.id);
+          out.once = teacherOptions().filter(o => o.name.includes(seat.name.split(' ')[0])).length === 1;
+          return out; }""")
+        for k, label in [("suggested", "en donar el rol de professor, l'app proposa el professor sense compte amb el seu nom"),
+                         ("moved", "totes les seves classes passen al compte"),
+                         ("seatGone", "i ja no surt com a professor sense compte"),
+                         ("once", "el professor surt un sol cop")]:
+            check(r.get(k), label, str(r))
+        check(not errors, "sense errors en donar compte a un professor", "; ".join(errors[:3]))
+        ctx.close()
+
         print("Mira l'app com…")
         ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/gestio/personal")
         page.wait_for_function("S.staffReady", timeout=5000)
