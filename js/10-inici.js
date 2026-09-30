@@ -68,6 +68,7 @@ const TODO_ICONS = {
   voices: '<path d="M4 20V11M9 20V6M14 20v-9M19 20V9"/><path d="M3 20h18"/>',
   msg: '<path d="M4 5.5h16v10.5H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/>',
   thread: '<path d="M4 5.5h11v8H8l-4 3.5z"/><path d="M15 9.5h5v8l-3-2.5h-6.5v-2"/>',
+  plan: '<path d="M9 18V6.5l10-2.5v11.5"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="15.5" r="2.5"/>',
 };
 const unreadAnnouncements = () => { const seen = lsGet(LS_SEEN) || ''; return visibleAnnouncements().filter(a => (a.createdAt || '') > seen && (!a.until || a.until >= TODAY)); };
 /** Les seccions on em toca passar llista: la dels caps de corda o de secció. */
@@ -104,6 +105,9 @@ function todoItems() {
     const polls = openPolls().filter(p => !S.pollVotes.get(`${p.id}_${me.id}`));
     if (polls.length) out.push({ icon: 'poll', t: `${polls.length === 1 ? '1 enquesta' : `${polls.length} enquestes`} per respondre`, s: esc(polls[0].title || ''), btn: 'Respon', act: 'data-act="board-polls"', n: polls.length });
   }
+  // No hi va ser: què s'hi va treballar (el pla de l'assaig on va faltar).
+  const missed = missedPlan(me);
+  if (missed) out.push({ icon: 'plan', t: `Què es va fer el ${esc(shortDate(missed.date))}`, s: `No hi vas ser: mira el pla ${esc(missed.type ? `de l’${missed.type.toLowerCase()}` : 'de l’assaig')}`, btn: 'Mira-ho', act: `data-act="session-info" data-sid="${esc(missed.id)}"`, n: 0 });
   const th = unreadThreads();
   if (th.length) out.push({ icon: 'thread', t: `${th.length === 1 ? '1 conversa' : `${th.length} converses`} amb resposta nova`, s: esc(th.map(threadWho).slice(0, 2).join(', ')), btn: 'Llegeix', act: th.length === 1 ? `data-act="thread" data-id="${esc(th[0].id)}"` : 'data-act="threads"', n: th.length });
   const msgs = unreadMessages();
@@ -139,86 +143,95 @@ function todoBlock(me) {
       <span class="todo-t"><b>${x.t}</b>${x.s ? `<small>${x.s}</small>` : ''}</span>
       <button class="btn btn-sm ${x.n ? 'btn-primary' : ''}" ${x.act}>${x.btn}</button></div>`).join('')}</div>`;
 }
-/** La sessió d'avui, amb el botó gran per passar llista (qui edita) o per avisar (qui canta). */
-function todayBlock(me) {
-  const today = allSessions().filter(s => s.date === TODAY && (!me || canEdit() || convoked(s, me.section)));
-  if (!today.length) return '';
-  return today.map(s => {
+/* ---------- Properament ---------- */
+// Una sola llista, per ordre: el d'avui (amb passar llista o avisar), la propera classe, el proper assaig i el proper concert.
+// Cada fila és com les del calendari: la data a l'esquerra i, a la dreta, què és, on i el que s'hi pot fer.
+const dayLabel = d => d === TODAY ? 'Avui' : d === addDays(TODAY, 1) ? 'Demà' : '';
+function soonRow({ date, time, kind, title, meta, extra = '', acts = '', tone = null, now = false, poster = '' }) {
+  const lbl = dayLabel(date);
+  return `<li class="soon-row${now ? ' is-now' : ''}${tone ? ' prod-tone' : ''}${poster ? ' has-poster' : ''}"${tone ? ` style="--ph:${prodHue(tone)}"` : ''}>
+    <span class="soon-d"><b>${+date.slice(8, 10)}</b><small>${esc(wdShort(date))}</small></span>
+    <div class="soon-b">
+      <span class="soon-k">${lbl ? `<em>${lbl}</em>` : ''}${esc(kind)}${time ? ` · <span class="mono">${esc(time)}</span>` : ''}</span>
+      <b class="soon-t">${title}</b>
+      ${meta ? `<span class="soon-m">${meta}</span>` : ''}
+      ${acts ? `<span class="soon-a">${acts}</span>` : ''}
+      ${extra}
+    </div>${poster}</li>`;
+}
+function sessionSoon(s, me, kind) {
+  const prod = S.productions.get(s.prodId);
+  const out = me && isOut(s, me);
+  const now = s.date === TODAY;
+  let acts = '', conv = '';
+  if (now && canEdit()) {
     const secs = mySections().filter(x => convoked(s, x));
     const pr = secs.length ? progress(s, secs[0]) : null;
-    const mine = me && [...S.absences.values()].find(a => a.memberId === me.id && (a.sessionIds || []).includes(s.id) && a.status !== 'rejected');
-    const out = me && isOut(s, me);
-    const action = canEdit()
-      ? `<button class="btn" data-act="home-roll" data-sid="${esc(s.id)}" data-sec="${esc(secs[0] || '')}">${pr ? `Passa llista · ${pr.done}/${pr.total}` : 'Passa llista'}</button>`
-      : me && !out ? (mine ? `<span class="st-pill st-${mine.status}">${mine.kind === 'late' ? 'Has avisat que arribaràs tard' : 'Has avisat que no hi vas'}</span>`
-        : `<button class="btn" data-act="absence-new" data-sid="${esc(s.id)}">No hi puc anar o arribaré tard</button>`) : '';
-    const prodP = S.productions.get(s.prodId);
-    return `<div class="hero-cta today-hero${prodP?.poster ? ' has-poster' : ''}">${posterThumb(prodP)}
-      <span class="eyebrow">Avui${s.time ? ` · ${esc(timeRange(s))}` : ''}</span>
-      <h2 class="h2">${esc(s.type || 'Assaig')}</h2>
-      <span style="font-size:calc(14px*var(--ts))">${[esc(s.place || ''), esc(prodNames(s)), s.info?.call ? `Convocatòria a les ${esc(s.info.call)}` : ''].filter(Boolean).join(' · ')}${out ? ` · ${esc(onLeave(me, TODAY) ? 'Estàs de baixa' : 'No fas aquesta producció')}` : ''}</span>
-      ${s.note ? `<span style="font-size:calc(13px*var(--ts))">${esc(s.note)}</span>` : ''}
-      ${hasInfo(s) ? fitxaChip(s) : ''}
-      ${planChip(s)}
-      ${action}
-    </div>`;
-  }).join('');
+    acts = `<button class="btn btn-sm btn-primary" data-act="home-roll" data-sid="${esc(s.id)}" data-sec="${esc(secs[0] || '')}">${pr ? `Passa llista · ${pr.done}/${pr.total}` : 'Passa llista'}</button>`;
+  } else if (me && !out && s.date >= TODAY) {
+    const mine = [...S.absences.values()].find(a => a.memberId === me.id && (a.sessionIds || []).includes(s.id) && a.status !== 'rejected');
+    const a = s.rsvp ? S.rsvp.get(`${s.id}_${me.id}`) : null;
+    // Convocatòria ja resposta: la resposta, per canviar-la, i (si hi va) com hi va i si fa de voluntari.
+    if (a) conv = `${s.bus && a.answer === 'yes' ? `<div class="soon-a bus-q"><span class="m">Com hi vas?</span><button class="btn btn-sm ${a.transport === 'bus' ? 'btn-primary' : ''}" data-act="rsvp-bus" data-sid="${s.id}" data-k="bus">Amb l’autocar</button><button class="btn btn-sm ${a.transport === 'own' ? 'btn-primary' : ''}" data-act="rsvp-bus" data-sid="${s.id}" data-k="own">Pel meu compte</button></div>` : ''}${a.answer === 'yes' ? tasksBlock(s, true) : ''}`;
+    acts = [a ? `<span class="rsvp ${a.answer}">${a.answer === 'yes' ? 'Hi seràs' : 'No hi seràs'}</span><button class="btn btn-sm btn-ghost" data-act="${a.answer === 'yes' ? 'rsvp-no' : 'rsvp-yes'}" data-sid="${s.id}">${a.answer === 'yes' ? 'Ja no hi puc anar' : 'Sí que hi seré'}</button>` : '',
+      mine ? `<span class="st-pill st-${mine.status}">${mine.kind === 'late' ? 'Has avisat que arribaràs tard' : 'Has avisat que no hi vas'}</span>`
+        : now ? `<button class="btn btn-sm" data-act="absence-new" data-sid="${esc(s.id)}">No hi puc anar o arribaré tard</button>` : ''].filter(Boolean).join('');
+  }
+  const meta = [esc(s.place || ''), s.info?.call ? `Convocatòria a les <span class="mono">${esc(s.info.call)}</span>` : '',
+    out ? esc(onLeave(me, s.date) ? 'Estàs de baixa' : 'No fas aquesta producció') : ''].filter(Boolean).join(' · ');
+  const extra = `${s.note ? `<span class="soon-note">${esc(s.note)}</span>` : ''}${hasInfo(s) ? fitxaChip(s) : ''}${planChip(s)}`;
+  return soonRow({ date: s.date, time: timeRange(s), kind, title: esc(prodNames(s)), meta, extra: extra + conv, acts, tone: prod, now, poster: posterThumb(prod) });
+}
+function soonBlock(me) {
+  const mineS = s => !me || canEdit() || convoked(s, me.section);
+  const rows = [];
+  // Avui: totes les sessions del dia (el que abans era el requadre gran).
+  for (const s of allSessions().filter(s => s.date === TODAY && mineS(s))) rows.push({ key: `${s.date} ${s.time || ''}`, html: sessionSoon(s, me, s.type || 'Assaig') });
+  const nx = nextClass();
+  if (nx) {
+    const clash = classClash(nx.c, nx.slot);
+    rows.push({ key: `${nx.c.date} ${nx.slot.time || ''}`, html: soonRow({ date: nx.c.date, time: nx.slot.time || '', kind: 'La teva classe', title: esc(V.classes.replace(/^Classes/, 'Classe')), meta: esc([nx.c.place, teacherOf(nx.c)].filter(Boolean).join(' · ')),
+      extra: clash ? `<span class="st-pill st-pending">Xoca amb ${esc(clash.type || 'l’assaig')}</span>` : '', now: nx.c.date === TODAY,
+      acts: `<button class="btn btn-sm" data-act="cl-notice" data-c="${esc(nx.c.id)}" data-s="${esc(nx.slot.id)}" data-k="late">Arribaré tard</button><button class="btn btn-sm" data-act="cl-notice" data-c="${esc(nx.c.id)}" data-s="${esc(nx.slot.id)}" data-k="absent">No hi podré anar</button>${classSlots(nx.c).length > 1 ? `<button class="btn btn-sm btn-ghost" data-act="cl-swap" data-c="${esc(nx.c.id)}" data-s="${esc(nx.slot.id)}">Canvia l’hora</button>` : ''}` }) });
+  }
+  const later = allSessions().filter(s => s.date > TODAY && mineS(s) && !(me && isOut(s, me)));
+  const next = later[0];
+  if (next) rows.push({ key: `${next.date} ${next.time || ''}`, html: sessionSoon(next, me, isShow(next) ? V.sh.next : 'Proper assaig') });
+  const show = later.find(x => isShow(x));
+  if (show && show.id !== next?.id) rows.push({ key: `${show.date} ${show.time || ''}`, html: sessionSoon(show, me, V.sh.next) });
+  // Les convocatòries que ja ha respost (les que falten són a «Per fer»): per canviar la resposta, l'autocar i els voluntaris.
+  const shown = new Set([next?.id, show?.id]);
+  if (me) for (const s of openConvocations(me).filter(s => S.rsvp.get(`${s.id}_${me.id}`) && !shown.has(s.id) && s.date > TODAY)) rows.push({ key: `${s.date} ${s.time || ''}`, html: sessionSoon(s, me, 'Convocatòria') });
+  rows.sort((a, b) => a.key.localeCompare(b.key));
+  return `<div class="section-title"><h2 class="h2">Properament</h2><button class="btn btn-sm" data-act="week">La setmana</button></div>
+    ${rows.length ? `<ul class="soon-list">${rows.map(r => r.html).join('')}</ul>` : '<div class="todo-done"><span><b>Res a la vista</b><small>No tens cap assaig ni concert programat.</small></span></div>'}`;
+}
+function myNoticesBlock(me) {
+  const mine = [...S.absences.values()].filter(a => a.memberId === me.id).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+  // Els avisos de sessions que ja han passat de fa més d'un mes no hi fan res: queden a «La meva assistència».
+  const recent = mine.filter(a => (a.createdAt || '').slice(0, 10) >= addDays(TODAY, -30) || (a.sessionIds || []).some(id => (sessionById(id)?.date || '') >= TODAY));
+  return `<div class="section-title"><h2 class="h2">Els meus avisos</h2><button class="btn btn-sm btn-primary" data-act="absence-new">Avisa d’una absència</button></div>
+    ${recent.length ? `<div class="panel">${recent.map(a => absenceCard(a, { mine: true })).join('')}</div>`
+      : `<p class="soon-empty">Si no pots venir a un assaig, avisa’n amb temps: el teu ${V.leader} ho veurà i, si ho accepta, la falta quedarà justificada.</p>`}`;
 }
 function viewHome() {
   const me = S.members.get(myMemberId());
   const name = me ? me.name : (ME()?.name || S.userName || '');
   const first = name.includes(',') ? name.split(',').pop().trim() : name.split(' ')[0];
   const lv = me ? leaveText(me) : '';
-  const who = me ? `<b>${esc(me.name)}</b> · ${esc(SEC[me.section].name)}${me.part ? ` ${esc(me.part)}` : ''}${lv ? ` · ${lv}` : ''}`
-    : `<b>${esc(name || myEmail())}</b>${ME() ? ` · ${esc(rolesText(ME()))}` : ''}`;
-  const head = `<div class="page-head"><div><div class="eyebrow">${esc(longDate(TODAY))}</div><h1 class="h1">Hola${first ? `, ${esc(first)}` : ''}</h1></div></div>
-    <div class="me-line" style="margin-top:-6px"><span>${who}</span></div>`;
+  const who = me ? `${esc(SEC[me.section].name)}${me.part ? ` ${esc(me.part)}` : ''}${lv ? ` · ${lv}` : ''}` : (ME() ? esc(rolesText(ME())) : '');
+  const head = `<div class="page-head home-head"><div><div class="eyebrow">${esc(longDate(TODAY))}</div><h1 class="h1">Hola${first ? `, ${esc(first)}` : ''}</h1>${who ? `<div class="me-line">${who}</div>` : ''}</div></div>`;
   if (!me && !canEdit() && myMemberId()) return head + `<div class="empty">${staffSvg()}<h2 class="h2">Compte sense fitxa</h2><p>El teu correu encara no està vinculat a cap fitxa de la plantilla. Demana-ho a l’administració ${V.del}.</p></div>`;
-  // El que ve: la propera classe, el proper assaig i el concert amb fitxa, les convocatòries ja respostes i els anuncis.
-  const nx = nextClass();
-  const classCard = nx ? `<div class="panel"><div class="cl-day">
-      <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap">
-        <span><span class="eyebrow">La teva propera classe</span><br><b>${esc(longDate(nx.c.date))}</b> · <b class="mono">${esc(nx.slot.time || '')}</b>${[nx.c.place, teacherOf(nx.c)].filter(Boolean).length ? `<br><span class="m">${esc([nx.c.place, teacherOf(nx.c)].filter(Boolean).join(' · '))}</span>` : ''}</span>
-        <button class="btn btn-sm" data-act="cal-class" data-k="${esc(nx.c.teacher || '')}" data-date="${esc(nx.c.date)}">Les classes</button>
-      </div>
-      ${classClash(nx.c, nx.slot) ? `<span class="st-pill st-pending" style="align-self:start">Xoca amb ${esc(classClash(nx.c, nx.slot).type || 'l’assaig')}</span>` : ''}
-      <span class="cl-acts" style="margin-left:0;margin-top:8px">
-        <button class="btn btn-sm" data-act="cl-notice" data-c="${esc(nx.c.id)}" data-s="${esc(nx.slot.id)}" data-k="late">Arribaré tard</button>
-        <button class="btn btn-sm" data-act="cl-notice" data-c="${esc(nx.c.id)}" data-s="${esc(nx.slot.id)}" data-k="absent">No hi podré anar</button>
-        ${classSlots(nx.c).length > 1 ? `<button class="btn btn-sm" data-act="cl-swap" data-c="${esc(nx.c.id)}" data-s="${esc(nx.slot.id)}">Canvia l’hora</button>` : ''}
-      </span>
-    </div></div>` : '';
-  const upcoming = allSessions().filter(s => s.date > TODAY && (!me || convoked(s, me.section)));
-  const next = upcoming[0];
-  const show = allSessions().find(x => isShow(x) && x.date > TODAY && (!me || (convoked(x, me.section) && !isOut(x, me))) && hasInfo(x));
-  const sessCard = (s, label) => `<div class="panel${S.productions.get(s.prodId)?.poster ? ' soon-card' : ''}" style="padding:14px">${S.productions.get(s.prodId)?.poster ? `${posterThumb(S.productions.get(s.prodId))}<div class="soon-t">` : '<div>'}<span class="eyebrow">${label}</span><br><b>${longDate(s.date)}</b><div class="muted" style="font-size:calc(13.5px*var(--ts))">${esc(s.type)}${s.time ? ` · ${esc(timeRange(s))}` : ''}${s.place ? ` · ${esc(s.place)}` : ''} · ${esc(prodNames(s))}</div>${s.note ? `<div style="font-size:calc(13px*var(--ts));color:var(--accent);margin-top:4px">${esc(s.note)}</div>` : ''}${hasInfo(s) ? fitxaChip(s) : ''}${planChip(s)}</div></div>`;
-  const answered = me ? openConvocations(me).filter(s => S.rsvp.get(`${s.id}_${me.id}`)) : [];
-  const ann = visibleAnnouncements().filter(a => !a.until || a.until >= TODAY).slice(0, 2);
-  const missed = missedPlan(me);
-  const soon = [
-    missed ? `<div class="panel" style="padding:14px"><span class="eyebrow">No hi vas ser · ${esc(missed.type || 'Assaig')} del ${esc(shortDate(missed.date))}</span><br><b style="font-size:calc(14px*var(--ts))">Què s’hi va treballar</b>${planHtml(missed, false, me?.section)}</div>` : '',
-    classCard,
-    next ? sessCard(next, isShow(next) ? V.sh.next : 'Proper assaig') : '',
-    show && show.id !== next?.id ? sessCard(show, V.sh.next) : '',
-    answered.length ? `<div class="panel"><div class="todo-k" style="padding:12px 14px 0">Convocatòries que ja has respost</div>${answered.map(s => convCard(s, me)).join('')}</div>` : '',
-    ann.length ? `<div class="panel">${ann.map(a => `<article class="ann ${a.pinned ? 'pinned' : ''}"><span class="eyebrow">Tauler</span><h3 class="ann-t" style="font-size:calc(17px*var(--ts))">${esc(a.title)}</h3>${a.body ? `<div class="ann-b rich">${richText(cutText(a.body, 220))}</div>` : ''}${(a.body || '').length > 220 || (a.files || []).length ? `<button class="btn btn-sm btn-ghost ann-more" data-act="ann-read" data-id="${esc(a.id)}">Llegeix-lo sencer${(a.files || []).length ? ` · ${a.files.length} ${a.files.length === 1 ? 'adjunt' : 'adjunts'}` : ''}</button>` : ''}<div class="ann-m"><span>${esc(a.author || '')}</span><span class="mono">${a.createdAt ? ddmm(a.createdAt.slice(0, 10)) : ''}</span></div></article>`).join('')}
-        <div style="padding:0 14px 12px"><button class="btn btn-sm btn-ghost" data-act="board-news">Tot el tauler</button></div></div>` : '',
-  ].filter(Boolean);
-  const mine = me ? [...S.absences.values()].filter(a => a.memberId === me.id).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')) : [];
+  // Per fer, Properament, Els meus avisos i La meva assistència, una secció darrere l'altra; els missatges, al final.
   return `${head}
     ${installCard()}
-    <div class="home-grid"><div class="home-a">
-    ${todayBlock(me)}
-    ${todoBlock(me)}
-    ${messagesBlock()}
-    </div><div class="home-b">
-    ${soon.length ? `<div class="section-title"><h2 class="h2">Properament</h2><button class="btn btn-sm" data-act="week">La setmana</button></div><div class="soon">${soon.join('')}</div>` : ''}
-    ${me ? `${myAttendanceCard(me)}
-    <div class="section-title"><h2 class="h2">Els meus avisos</h2><button class="btn btn-sm btn-primary" data-act="absence-new">Avisa d’una absència</button></div>
-    <p class="muted" style="margin:-2px 2px 10px;font-size:calc(13px*var(--ts))">Si no pots venir a un assaig, avisa amb temps: el teu ${V.leader} ho veurà i, si l’accepta, la falta quedarà justificada.</p>
-    ${mine.length ? `<div class="panel">${mine.map(a => absenceCard(a, { mine: true })).join('')}</div>`
-      : '<div class="panel" style="padding:14px;font-size:calc(13.5px*var(--ts));color:var(--muted)">Encara no has enviat cap avís.</div>'}` : ''}
-    </div></div>`;
+    <div class="home">
+      <section>${todoBlock(me)}</section>
+      <section>${soonBlock(me)}</section>
+      ${me ? `<section>${myNoticesBlock(me)}</section>` : ''}
+      ${me ? `<section>${myAttendanceCard(me)}</section>` : ''}
+      ${(() => { const m = messagesBlock(); return m ? `<section>${m}</section>` : ''; })()}
+    </div>`;
 }
 
 /* ---------- La setmana ---------- */

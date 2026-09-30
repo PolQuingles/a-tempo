@@ -575,6 +575,19 @@ def main():
         check(not errors, "sense errors a les estadístiques i al visor de PDF", "; ".join(errors[:3]))
         ctx.close()
 
+        print("Inici: Per fer, Properament, Els meus avisos i La meva assistència")
+        ctx, page, errors = open_app(browser, base, "leader", MOBILE, "#/inici")
+        r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms));
+          const p = clone(S.productions.get('p1')); p.sessions.push({ id: 'sAvui', date: TODAY, time: '20:30', end: '22:30', type: 'Assaig' }); saveProduction(p); render(); await s(300);
+          const order = [...document.querySelectorAll('.home > section .section-title .h2')].map(h => h.textContent);
+          const now = [...document.querySelectorAll('.soon-row.is-now')].find(r => r.querySelector('[data-act="home-roll"]'));
+          return { order, hero: !!document.querySelector('.hero-cta'), roll: !!now, overflow: document.documentElement.scrollWidth <= innerWidth }; }""")
+        check(r["order"][:3] == ["Per fer", "Properament", "Els meus avisos"] and (len(r["order"]) < 4 or r["order"][3] in ("La meva assistència", "Missatges")), "Inici: Per fer, Properament, Els meus avisos, La meva assistència", str(r))
+        check(not r["hero"] and r["roll"], "sense el requadre «Avui»: la sessió d'avui és a Properament, amb «Passa llista»", str(r))
+        check(r["overflow"], "Inici sense eixamplar la pantalla del mòbil", str(r))
+        check(not errors, "sense errors a Inici", "; ".join(errors[:3]))
+        ctx.close()
+
         print("Llistes privades i tria de produccions (com a l'Orfeó)")
         ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/gestio/ajustos")
         r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};

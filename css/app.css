@@ -383,6 +383,33 @@ details.np-group[open] summary .chev{transform:rotate(180deg)}
 .sheet-b{padding:16px;overflow-y:auto;overscroll-behavior:contain}
 .sheet-f{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;padding:12px 16px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line)}
 .sheet-f .spacer{flex:1}
+/* Inici (10-inici): una sola columna, Per fer → Properament → Els meus avisos → La meva assistència → Missatges. */
+.home{display:grid;max-width:680px}
+.home > section > .section-title:first-child{margin-top:22px}
+.home > section:first-child > .section-title:first-child{margin-top:6px}
+.home-head{padding-bottom:6px}
+.home-head .me-line{margin-top:4px}
+.soon-list{list-style:none;margin:0;padding:0;background:var(--surface);border-radius:var(--r-lg);overflow:hidden}
+.soon-row{display:grid;grid-template-columns:44px minmax(0,1fr);gap:12px;padding:13px 14px 13px 10px;border-top:1px solid var(--line)}
+.soon-row:first-child{border-top:0}
+.soon-row.prod-tone{box-shadow:inset 3px 0 0 var(--pdot)}
+.soon-row.is-now{background:var(--accent-soft)}
+.soon-d{display:flex;flex-direction:column;align-items:center;line-height:1;padding-top:2px}
+.soon-d b{font-family:var(--f-display);font-weight:600;font-size:26px}
+.soon-d small{font-family:var(--f-mono);font-size:10.5px;color:var(--muted);margin-top:4px;text-transform:lowercase}
+.soon-b{display:grid;gap:3px;min-width:0}
+.soon-k{font-size:calc(12.5px*var(--ts));color:var(--muted)}
+.soon-k em{font-style:normal;font-weight:700;color:var(--accent);margin-right:6px}
+.soon-t{font-size:calc(15.5px*var(--ts));line-height:1.3;overflow-wrap:anywhere}
+.soon-m{font-size:calc(13.5px*var(--ts));color:var(--ink-2)}
+.soon-note{font-size:calc(13px*var(--ts));color:var(--accent)}
+.soon-b .fitxa-chip{margin-top:6px}
+.soon-a{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px}
+.soon-a .rsvp{align-self:center}
+.soon-empty{margin:0 2px;font-size:calc(13.5px*var(--ts));color:var(--muted)}
+.soon-row.has-poster{grid-template-columns:44px minmax(0,1fr) 48px}
+.soon-a.bus-q .m{font-size:calc(13px*var(--ts));color:var(--muted)}
+.soon-b .tasks,.soon-a .tasks{width:100%}
 /* Tria de produccions (22b-tries): una fila per producció amb «La faré / No», i el recompte amb la marca del mínim. */
 .ch-list{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:8px}
 .ch-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
@@ -535,8 +562,6 @@ input[type=date].inp,input[type=time].inp{min-width:0;width:100%}
 .access-acts{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 14px}
 .acc-tag{display:inline-block;font-size:calc(12px*var(--ts));font-weight:700;padding:1px 7px;border-radius:999px;background:var(--fj-soft);color:var(--fj-text);vertical-align:1px}
 /* Inici: la sessió d'avui, el «Per fer» i el que ve */
-.today-hero{margin-top:4px}
-.today-hero .eyebrow{color:inherit;opacity:.85}
 .todo{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden}
 .todo-row{display:grid;grid-template-columns:36px minmax(0,1fr) auto;align-items:center;gap:12px;padding:11px 12px 11px 14px;background:var(--surface)}
 .todo-i{display:grid;place-items:center;width:36px;height:36px;border-radius:11px;background:var(--accent-soft);color:var(--accent)}
@@ -550,7 +575,6 @@ input[type=date].inp,input[type=time].inp{min-width:0;width:100%}
 .todo-done{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px dashed var(--line-strong);border-radius:var(--r-lg);color:var(--ink-2)}
 .todo-done span:last-child{display:grid;gap:1px}
 .todo-done small{font-size:calc(13px*var(--ts));color:var(--muted)}
-.soon{display:grid;gap:10px}
 .link-row .t small{font-weight:400;color:var(--muted)}
 
 /* ---------- Roll overview: four quadrants ---------- */
@@ -966,14 +990,10 @@ button.mday:hover{background:var(--surface-2)}
 .panel,.kpi{border-color:transparent}
 .panel.prod-card{border-color:var(--pline, var(--line))}
 .cfg-h + .cfg-p{border:1px solid var(--line);border-top:0}
-.soon{gap:0;background:var(--surface);border-radius:var(--r-lg);overflow:hidden}
-.soon > .panel{background:transparent;border-radius:0;border:0;border-top:1px solid var(--line)}
-.soon > .panel:first-child{border-top:0}
 /* Tipografia: la Bodoni per als títols grans i els números; la Hanken en negreta per als subtítols. */
 .h2{font-family:var(--f-ui);font-weight:700;font-size:calc(18px*var(--ts));line-height:1.25;letter-spacing:-.012em}
 .sec-h .h2 em{font-family:var(--f-display);font-weight:600;font-size:1.3em;line-height:1}
 .hero-cta .h2{font-family:var(--f-display);font-weight:600;font-size:26px;line-height:1.1;letter-spacing:-.01em}
-.today-hero .h2{font-size:32px}
 .prod-card .h2{font-size:calc(18px*var(--ts))}
 .empty .h2{font-size:calc(19px*var(--ts))}
 .ann-t{font-family:var(--f-ui);font-weight:700;font-size:calc(16.5px*var(--ts));line-height:1.3;letter-spacing:-.01em}
@@ -1047,8 +1067,6 @@ button.mday:hover{background:var(--surface-2)}
   .side-brand small{display:block;font-size:11.5px;color:var(--muted);font-weight:500}
   .only-wide{display:block}
   .only-narrow{display:none !important}
-  .home-grid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:0 36px;align-items:start}
-  .home-b > .section-title:first-child{margin-top:4px}
   .roll-grid{display:grid;grid-template-columns:minmax(0,500px) minmax(0,1fr);gap:0 36px;align-items:start}
   .roll-grid .quads{margin-top:6px}
   .roll-b > .section-title:first-child{margin-top:6px}
@@ -1284,10 +1302,6 @@ svg{stroke-linecap:round;stroke-linejoin:round}
 .cal-prod-h .poster-th{margin-right:2px}
 .poster-banner{display:block;width:100%;max-height:240px;margin:0 0 12px;padding:0;border-radius:var(--r-md);overflow:hidden;background:var(--surface-2)}
 .poster-banner img{display:block;width:100%;height:100%;max-height:240px;object-fit:cover}
-.soon-card{display:flex;gap:12px;align-items:flex-start}
-.soon-card > .soon-t{flex:1;min-width:0}
-.today-hero .poster-th{position:absolute;top:14px;right:14px;width:54px;height:72px;box-shadow:0 2px 8px rgba(0,0,0,.3)}
-.today-hero.has-poster{position:relative;padding-right:84px}
 .poster-full{display:block;width:100%;border-radius:var(--r-md)}
 
 /* ---------- Llista completa (5.4) ---------- */
