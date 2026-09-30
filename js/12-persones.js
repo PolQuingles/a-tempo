@@ -92,7 +92,7 @@ async function moveTeacher(from, to, name = '') {
   if (seats.some(t => t.id === from)) saveConfig({ teachers: seats.filter(t => t.id !== from) });
   return docs.length;
 }
-/** El «professor sense compte» que és aquesta persona: el nom de la fitxa ha de sortir sencer al seu nom («Anaïs» → «Anaïs Oliveras»). */
+/** El «professor sense compte» que és aquesta persona: el nom de la fitxa ha de sortir sencer al seu nom («Neus» → «Neus Serra»). */
 function seatMatch(name) {
   const words = new Set(nameWords(name));
   const hits = teacherSeats().filter(t => { const w = nameWords(t.name); return w.length && w.every(x => words.has(x)); });
