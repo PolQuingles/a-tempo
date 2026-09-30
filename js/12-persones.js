@@ -56,7 +56,7 @@ async function writeAccount(rec, oldEmail = '') {
   await b.commit();
   S.staff.set(rec.email, rec);
   indexPerson(rec.email);
-  if (moved) { S.staff.delete(oldEmail); unindexPerson(oldEmail); moveTeacher(oldEmail, rec.email); }
+  if (moved) { S.staff.delete(oldEmail); unindexPerson(oldEmail); await moveTeacher(oldEmail, rec.email, rec.name); }
   if (hasRole(rec, 'voice') && !classesOn() && isAdmin()) saveConfig({ classesOn: true });
 }
 /** Treu l'agrupació de la llista de qui ja no hi entra (o hi entra amb un altre correu). */
@@ -65,10 +65,38 @@ function unindexPerson(mail) {
   if (GID === FOUNDER) fs.doc(`staffIndex/${mail}`).delete().catch(() => {});
 }
 /** Un professor que canvia de correu s'emporta els dies de classe i l'horari fix. */
-function moveTeacher(from, to) {
-  for (const c of [...S.classes.values()]) if (c.teacher === from) { const next = { ...c, teacher: to }; S.classes.set(c.id, next); persist('classes', c.id, next, 20); }
-  const plan = S.classPlan.get(from);
-  if (plan) { const next = { ...plan, id: to, teacher: to }; S.classPlan.set(to, next); persist('classPlan', to, next, 10); S.classPlan.delete(from); persist('classPlan', from, null, 10); }
+// També quan un «professor sense compte» (Ajustos › Classes) passa a tenir-ne: totes les seves classes (també les de fa més de
+// dues setmanes, que no es tenen carregades) i l'horari fix passen al compte, i la fitxa sense compte desapareix.
+async function moveTeacher(from, to, name = '') {
+  if (!from || !to || from === to || PREVIEW) return 0;
+  const snap = await db.collection('classes').where('teacher', '==', from).get();
+  const docs = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+  for (const c of S.classes.values()) if (c.teacher === from && !docs.some(d => d.id === c.id)) docs.push(c);
+  for (let i = 0; i < docs.length; i += 400) {
+    const b = fs.batch();
+    for (const c of docs.slice(i, i + 400)) {
+      const next = { ...c, teacher: to, ...(name ? { teacherName: name } : {}) };
+      b.set(db.doc(`classes/${c.id}`), stamped(`classes/${c.id}`, next));
+      if (S.classes.has(c.id)) S.classes.set(c.id, next);
+    }
+    await b.commit();
+  }
+  let plan = S.classPlan.get(from);
+  if (!plan) { const d = await db.doc(`classPlan/${from}`).get(); plan = d.exists ? d.data() : null; }
+  if (plan) {
+    const next = { ...plan, id: to, teacher: to };
+    await db.doc(`classPlan/${to}`).set(next); await db.doc(`classPlan/${from}`).delete();
+    S.classPlan.set(to, next); S.classPlan.delete(from);
+  }
+  const seats = S.config.teachers || [];
+  if (seats.some(t => t.id === from)) saveConfig({ teachers: seats.filter(t => t.id !== from) });
+  return docs.length;
+}
+/** El «professor sense compte» que és aquesta persona: el nom de la fitxa ha de sortir sencer al seu nom («Anaïs» → «Anaïs Oliveras»). */
+function seatMatch(name) {
+  const words = new Set(nameWords(name));
+  const hits = teacherSeats().filter(t => { const w = nameWords(t.name); return w.length && w.every(x => words.has(x)); });
+  return hits.length === 1 ? hits[0] : null;
 }
 /** Cap de corda de la seva corda, segons el compte (el permís) o, si no en té, la fitxa. */
 const leadsOwn = (m, acc = accountFor(m.id)) => acc ? hasRole(acc, 'leader') && acc.section === m.section : !!m.leader;
@@ -125,6 +153,9 @@ function sheetPerson(email, preset = {}) {
         <div class="field"><span>${V.Section}</span><div class="pickers" id="ps-sec">${SECTIONS.map(x => secPick(x, x.id === sec0)).join('')}</div></div>
         <div class="field"><span>${V.Part} dins la ${V.section} (opcional)</span><div class="pickers" id="ps-part"><button type="button" class="pick" data-part="" aria-pressed="true">Sense</button>${PARTS.map(v => `<button type="button" class="pick" data-part="${esc(v)}" aria-pressed="false">${esc(v)}</button>`).join('')}</div></div>
       </div>
+      ${teacherSeats().length ? `<label class="field" id="ps-seat-f"><span>Classes que ja porta a l’app</span>
+        <select class="inp" id="ps-seat"><option value="">Cap: encara no en té</option>${teacherSeats().map(t => `<option value="${esc(t.id)}">${esc(t.name)} (${esc(V.Teacher.toLowerCase())} sense compte)</option>`).join('')}</select>
+        <small id="ps-seat-hint"></small></label>` : ''}
       <div class="field" id="ps-lead-f"><span>${V.Section} que porta</span><div class="pickers" id="ps-lead">${SECTIONS.map(x => secPick(x, x.id === (existing?.section || sec0))).join('')}</div></div>
       ${existing ? '' : `<p class="muted" style="margin:0;font-size:calc(13px*var(--ts))">Són unes quantes persones? <button type="button" class="linkish" data-act="staff-bulk">Enganxa’n una llista</button>.</p>`}
     </div>`,
@@ -135,12 +166,21 @@ function sheetPerson(email, preset = {}) {
       const chosen = s => el.querySelector(`${s} .pick[aria-pressed="true"]`)?.dataset || {};
       // Mentre no la triïn a mà, la fitxa es busca pel nom: així qui ja és a la plantilla no hi surt dos cops.
       let auto = !existing && !from;
+      // I si fa classes: el «professor sense compte» amb el seu nom, perquè no surti dos cops (un amb classes i l'altre sense).
+      let seatAuto = true;
+      const seatPick = () => { if (!q('#ps-seat') || !seatAuto) return; q('#ps-seat').value = seatMatch(q('#ps-name').value)?.id || ''; };
       const paint = () => {
         const rs = picked(), singer = rs.includes('singer');
         const mem = S.members.get(q('#ps-mem').value) || null;
         q('#ps-mem-f').hidden = !singer;
         q('#ps-new').hidden = !singer || !!mem;
         q('#ps-lead-f').hidden = !rs.includes('leader') || singer;
+        if (q('#ps-seat-f')) {
+          q('#ps-seat-f').hidden = !rs.includes('voice');
+          const seat = teacherSeats().find(t => t.id === q('#ps-seat').value);
+          q('#ps-seat-hint').textContent = seat ? `Les classes i l’horari fix de «${seat.name}» passaran al seu compte, i «${seat.name}» deixarà de sortir com a ${V.Teacher.toLowerCase()} sense compte.`
+            : 'Si ja té classes a l’app com a professor sense compte, tria’l aquí perquè no surti dos cops.';
+        }
         q('#ps-hint').textContent = rolesHint(rs) + (rs.includes('leader') && singer ? ` Porta la seva ${V.section}.` : '');
         q('#ps-mem-hint').textContent = !mem ? `Entrarà a la plantilla amb una fitxa nova.`
           : mem.id === existing?.memberId || mem.id === from?.id ? `És la seva fitxa (${SEC[mem.section].name}).`
@@ -155,12 +195,14 @@ function sheetPerson(email, preset = {}) {
           : isGoogleMail(mail) ? 'Entrarà amb «Entra amb Google».' : 'Si no és de Google, el primer cop crearà una contrasenya.');
       };
       q('#ps-name').addEventListener('input', () => {
-        if (!auto) return;
+        seatPick();
+        if (!auto) { paint(); return; }
         const m = rosterMatch(q('#ps-name').value);
         q('#ps-mem').value = m ? m.id : '';
         paint();
       });
       q('#ps-mem').onchange = () => { auto = false; paint(); };
+      if (q('#ps-seat')) { seatPick(); q('#ps-seat').onchange = () => { seatAuto = false; paint(); }; }
       q('#ps-email').addEventListener('input', paint);
       el.querySelectorAll('#ps-roles .pick').forEach(b => b.onclick = () => { b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true')); paint(); });
       for (const s of ['#ps-sec', '#ps-part', '#ps-lead']) el.querySelectorAll(`${s} .pick`).forEach(b => b.onclick = () => el.querySelectorAll(`${s} .pick`).forEach(x => x.setAttribute('aria-pressed', String(x === b))));
@@ -213,6 +255,9 @@ function sheetPerson(email, preset = {}) {
             const next = { ...mem, leader: all.includes('leader') && lsec === mem.section };
             if (fresh || JSON.stringify(next) !== JSON.stringify(S.members.get(mem.id))) saveMember(next);
           }
+          // 3) Si fa classes i ja en tenia com a professor sense compte, passen al seu compte.
+          const seat = rec && all.includes('voice') && q('#ps-seat')?.value;
+          if (seat) { const n = await moveTeacher(seat, rec.email, rec.name); toast(`${n} dies de classe passats al seu compte`); }
           render();
           if (rec && !rec.lastSeen && (!existing || rec.email !== existing.email)) { sheetInvite(rec, true); return; }
           closeSheet();
