@@ -147,23 +147,23 @@ function todoBlock(me) {
 // Una sola llista, per ordre: el d'avui (amb passar llista o avisar), la propera classe, el proper assaig i el proper concert.
 // Cada fila és com les del calendari: la data a l'esquerra i, a la dreta, què és, on i el que s'hi pot fer.
 const dayLabel = d => d === TODAY ? 'Avui' : d === addDays(TODAY, 1) ? 'Demà' : '';
-function soonRow({ date, time, kind, title, meta, extra = '', acts = '', tone = null, now = false }) {
+function soonRow({ date, time, kind, title, meta, extra = '', acts = '', tone = null, now = false, poster = '' }) {
   const lbl = dayLabel(date);
-  return `<li class="soon-row${now ? ' is-now' : ''}${tone ? ' prod-tone' : ''}"${tone ? ` style="--ph:${prodHue(tone)}"` : ''}>
+  return `<li class="soon-row${now ? ' is-now' : ''}${tone ? ' prod-tone' : ''}${poster ? ' has-poster' : ''}"${tone ? ` style="--ph:${prodHue(tone)}"` : ''}>
     <span class="soon-d"><b>${+date.slice(8, 10)}</b><small>${esc(wdShort(date))}</small></span>
-    <span class="soon-b">
+    <div class="soon-b">
       <span class="soon-k">${lbl ? `<em>${lbl}</em>` : ''}${esc(kind)}${time ? ` · <span class="mono">${esc(time)}</span>` : ''}</span>
       <b class="soon-t">${title}</b>
       ${meta ? `<span class="soon-m">${meta}</span>` : ''}
-      ${extra}
       ${acts ? `<span class="soon-a">${acts}</span>` : ''}
-    </span></li>`;
+      ${extra}
+    </div>${poster}</li>`;
 }
 function sessionSoon(s, me, kind) {
   const prod = S.productions.get(s.prodId);
   const out = me && isOut(s, me);
   const now = s.date === TODAY;
-  let acts = '';
+  let acts = '', conv = '';
   if (now && canEdit()) {
     const secs = mySections().filter(x => convoked(s, x));
     const pr = secs.length ? progress(s, secs[0]) : null;
@@ -171,14 +171,16 @@ function sessionSoon(s, me, kind) {
   } else if (me && !out && s.date >= TODAY) {
     const mine = [...S.absences.values()].find(a => a.memberId === me.id && (a.sessionIds || []).includes(s.id) && a.status !== 'rejected');
     const a = s.rsvp ? S.rsvp.get(`${s.id}_${me.id}`) : null;
-    acts = [a ? `<span class="rsvp ${a.answer}">${a.answer === 'yes' ? 'Hi seràs' : 'No hi seràs'}</span>` : '',
+    // Convocatòria ja resposta: la resposta, per canviar-la, i (si hi va) com hi va i si fa de voluntari.
+    if (a) conv = `${s.bus && a.answer === 'yes' ? `<div class="soon-a bus-q"><span class="m">Com hi vas?</span><button class="btn btn-sm ${a.transport === 'bus' ? 'btn-primary' : ''}" data-act="rsvp-bus" data-sid="${s.id}" data-k="bus">Amb l’autocar</button><button class="btn btn-sm ${a.transport === 'own' ? 'btn-primary' : ''}" data-act="rsvp-bus" data-sid="${s.id}" data-k="own">Pel meu compte</button></div>` : ''}${a.answer === 'yes' ? tasksBlock(s, true) : ''}`;
+    acts = [a ? `<span class="rsvp ${a.answer}">${a.answer === 'yes' ? 'Hi seràs' : 'No hi seràs'}</span><button class="btn btn-sm btn-ghost" data-act="${a.answer === 'yes' ? 'rsvp-no' : 'rsvp-yes'}" data-sid="${s.id}">${a.answer === 'yes' ? 'Ja no hi puc anar' : 'Sí que hi seré'}</button>` : '',
       mine ? `<span class="st-pill st-${mine.status}">${mine.kind === 'late' ? 'Has avisat que arribaràs tard' : 'Has avisat que no hi vas'}</span>`
         : now ? `<button class="btn btn-sm" data-act="absence-new" data-sid="${esc(s.id)}">No hi puc anar o arribaré tard</button>` : ''].filter(Boolean).join('');
   }
   const meta = [esc(s.place || ''), s.info?.call ? `Convocatòria a les <span class="mono">${esc(s.info.call)}</span>` : '',
     out ? esc(onLeave(me, s.date) ? 'Estàs de baixa' : 'No fas aquesta producció') : ''].filter(Boolean).join(' · ');
   const extra = `${s.note ? `<span class="soon-note">${esc(s.note)}</span>` : ''}${hasInfo(s) ? fitxaChip(s) : ''}${planChip(s)}`;
-  return soonRow({ date: s.date, time: timeRange(s), kind, title: esc(prodNames(s)), meta, extra, acts, tone: prod, now });
+  return soonRow({ date: s.date, time: timeRange(s), kind, title: esc(prodNames(s)), meta, extra: extra + conv, acts, tone: prod, now, poster: posterThumb(prod) });
 }
 function soonBlock(me) {
   const mineS = s => !me || canEdit() || convoked(s, me.section);
@@ -197,6 +199,9 @@ function soonBlock(me) {
   if (next) rows.push({ key: `${next.date} ${next.time || ''}`, html: sessionSoon(next, me, isShow(next) ? V.sh.next : 'Proper assaig') });
   const show = later.find(x => isShow(x));
   if (show && show.id !== next?.id) rows.push({ key: `${show.date} ${show.time || ''}`, html: sessionSoon(show, me, V.sh.next) });
+  // Les convocatòries que ja ha respost (les que falten són a «Per fer»): per canviar la resposta, l'autocar i els voluntaris.
+  const shown = new Set([next?.id, show?.id]);
+  if (me) for (const s of openConvocations(me).filter(s => S.rsvp.get(`${s.id}_${me.id}`) && !shown.has(s.id) && s.date > TODAY)) rows.push({ key: `${s.date} ${s.time || ''}`, html: sessionSoon(s, me, 'Convocatòria') });
   rows.sort((a, b) => a.key.localeCompare(b.key));
   return `<div class="section-title"><h2 class="h2">Properament</h2><button class="btn btn-sm" data-act="week">La setmana</button></div>
     ${rows.length ? `<ul class="soon-list">${rows.map(r => r.html).join('')}</ul>` : '<div class="todo-done"><span><b>Res a la vista</b><small>No tens cap assaig ni concert programat.</small></span></div>'}`;

@@ -407,6 +407,9 @@ details.np-group[open] summary .chev{transform:rotate(180deg)}
 .soon-a{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px}
 .soon-a .rsvp{align-self:center}
 .soon-empty{margin:0 2px;font-size:calc(13.5px*var(--ts));color:var(--muted)}
+.soon-row.has-poster{grid-template-columns:44px minmax(0,1fr) 48px}
+.soon-a.bus-q .m{font-size:calc(13px*var(--ts));color:var(--muted)}
+.soon-b .tasks,.soon-a .tasks{width:100%}
 /* Tria de produccions (22b-tries): una fila per producció amb «La faré / No», i el recompte amb la marca del mínim. */
 .ch-list{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:8px}
 .ch-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
