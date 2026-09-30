@@ -8,7 +8,7 @@ DB = {}
 def put(p, v): DB[p] = v
 put(f"agrupacions/{F}", {"name": "Cor Jove de proves", "kind": "cor", "status": "active"})
 put(f"cors/{F}/config/main", {"name": "Cor Jove de proves", "shortName": "Cor Jove", "alertFNJ": 3, "minAttendance": 80,
-    "brand": {"accent": "#5A3577"}, "classesOn": True, "teachers": [{"id": "pfanais", "name": "Anaïs Oliveras"}],
+    "brand": {"accent": "#5A3577"}, "classesOn": True, "teachers": [{"id": "pfneus", "name": "Neus Serra"}],
     "season": {"from": d(-20), "to": d(260), "name": "Temporada"}, "voiceMin": {"T": 5}, "feeAmount": 120, "terms": [{"name": "1r trimestre", "from": d(-20), "to": d(90)}],
     "teamRoles": ["admin", "director", "gerencia", "leader:T"]})
 names = {"S": ["Anna Puig", "Laia Ferrer", "Marta Soler", "Clara Vila"], "C": ["Júlia Mas", "Neus Roca", "Ona Serra", "Pau Riera"],
@@ -68,7 +68,7 @@ for k, wd in [(1, 0), (3, 0), (8, 0)]:
     cid = f"c{k}"
     put(f"cors/{F}/classes/{cid}", {"id": cid, "date": d(k), "place": "Aula 2", "note": "", "teacher": "prof@exemple.cat", "teacherName": "Prat, Berta",
         "slots": [{"id": f"{cid}a", "time": "17:00", "mins": 40, "memberId": mid["Anna Puig"]}, {"id": f"{cid}b", "time": "17:40", "mins": 40, "memberId": mid["Marc Bosch"]}, {"id": f"{cid}c", "time": "18:20", "mins": 40, "memberId": ""}]})
-    put(f"cors/{F}/classes/x{k}", {"id": f"x{k}", "date": d(k + 1), "place": "", "note": "", "teacher": "pfanais", "teacherName": "Anaïs Oliveras",
+    put(f"cors/{F}/classes/x{k}", {"id": f"x{k}", "date": d(k + 1), "place": "", "note": "", "teacher": "pfneus", "teacherName": "Neus Serra",
         "slots": [{"id": f"x{k}a", "time": "16:20", "mins": 40, "memberId": mid["Laia Ferrer"]}, {"id": f"x{k}b", "time": "17:00", "mins": 40, "memberId": mid["Júlia Mas"]}]})
 open(os.path.join(sys.argv[1] if len(sys.argv) > 1 else os.path.dirname(__file__), "seed.js"), "w").write("window.FAKE_SEED = " + json.dumps(DB, ensure_ascii=False) + ";\n")
 print(len(DB), "documents")
