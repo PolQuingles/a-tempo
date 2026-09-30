@@ -16,7 +16,7 @@ function sheetTeacherSeats() {
   const paint = el => { el.querySelector('#ts-rows').innerHTML = rows(); el.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { read(el); seats.splice(+b.dataset.rm, 1); paint(el); }); };
   openSheet({
     title: `${V.Teacher}s sense compte`,
-    body: `<p style="margin-top:0">Posa-hi qui fa classes però encara no entra a l’app: així ja en pots fer el calendari i els ${esc(V.members)} hi veuen la seva hora. Quan tingui compte, dona-li accés a <b>Gestió › Personal</b> amb el rol de ${esc(V.Teacher.toLowerCase())}.</p>
+    body: `<p style="margin-top:0">Posa-hi qui fa classes però encara no entra a l’app: així ja en pots fer el calendari i els ${esc(V.members)} hi veuen la seva hora. Quan tingui compte, dona-li accés a <b>Gestió › Personal</b> amb el rol de ${esc(V.Teacher.toLowerCase())}: l’app hi reconeixerà el nom i les classes d’aquí passaran al seu compte.</p>
       <div id="ts-rows" style="display:grid;gap:8px"></div>
       <button type="button" class="btn btn-sm" id="ts-add" style="margin-top:10px">+ Afegeix</button>
       ${withAccount.length ? `<p class="muted" style="font-size:calc(13px*var(--ts));margin:14px 0 0">Amb compte: ${esc(withAccount.map(p => p.name || p.email).join(', '))}.</p>` : ''}`,
