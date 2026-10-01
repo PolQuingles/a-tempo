@@ -725,7 +725,7 @@ def main():
         page.wait_for_function("S.staffReady", timeout=5000)
         page.click('[data-act="preview-on"]'); page.wait_for_timeout(400)
         roles = page.evaluate("[...document.querySelectorAll('#pv-role .pick')].map(b => b.dataset.k)")
-        check(roles == ["singer", "leader", "director", "gerencia", "secretaria", "voice"], "es pot mirar com cada rol", str(roles))
+        check(roles == ["singer", "leader", "archive", "director", "gerencia", "secretaria", "voice"], "es pot mirar com cada rol (també l'arxiver)", str(roles))
         page.click('#pv-role .pick[data-k="director"]'); page.wait_for_timeout(200)
         page.click("#pv-ok"); page.wait_for_timeout(500)
         r = page.evaluate("({ edit: canEdit(), admin: isAdmin(), banner: document.querySelector('.preview-banner')?.innerText || '', ro: document.body.classList.contains('ro') })")

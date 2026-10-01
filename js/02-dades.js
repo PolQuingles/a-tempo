@@ -159,7 +159,7 @@ function syncCol(col) {
       S[col] = next;
       if (!snap.metadata.fromCache) {
         if (SYNC.got[col] == null) SYNC.got[col] = snap.size;
-        st.full = startedAt; st.epoch = epoch;
+        st.full = startedAt; st.epoch = epoch; st.n = snap.size;
         // Com a mínim 1: si encara cap document no porta syncAt, la pròxima vegada es demanen tots els que en portin.
         st.max = Math.max(st.max || 0, 1, ...snap.docs.map(syncMillis));
         syncSave();
@@ -172,8 +172,8 @@ function syncCol(col) {
     let cached = null;
     try { cached = await def.query().get({ source: 'cache' }); } catch {}
     if (stop) return;
-    // Res desat en aquest mòbil (o el navegador ho ha buidat): tot sencer.
-    if (!cached || cached.empty) { st.full = 0; return syncCol(col); }
+    // Res desat en aquest mòbil (o el navegador ho ha buidat): tot sencer. Si la col·lecció ja era buida, no cal.
+    if (!cached || (cached.empty && st.n !== 0)) { st.full = 0; return syncCol(col); }
     const next = new Map();
     for (const d of cached.docs) take(col, next, d);
     S[col] = next;
