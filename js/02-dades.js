@@ -412,8 +412,10 @@ function currentProductionId() {
 // mAll = minuts de les sessions on se l'esperava; mDone = minuts que hi ha estat (un retard hi resta els minuts que ha fet tard).
 const emptyCounts = () => ({ P: 0, R: 0, FJ: 0, FNJ: 0, NP: 0, min: 0, mAll: 0, mDone: 0 });
 const clockMins = t => /^\d{1,2}:\d{2}$/.test(t || '') ? +t.slice(0, -3) * 60 + +t.slice(-2) : null;
-/** Minuts que dura una sessió: de l'hora d'inici a la de final; si no en té, dues hores (com al calendari). */
+/** Minuts que compta una sessió: el temps d'assaig, si s'ha posat (un cap de setmana amb pauses i àpats); si no, de l'hora
+ *  d'inici a la de final; i si no en té, dues hores (com al calendari). */
 function sessionMins(s) {
+  if (+s.mins > 0) return Math.round(+s.mins);
   const a = clockMins(s.time), b = clockMins(s.end);
   return a != null && b != null && b > a ? b - a : 120;
 }

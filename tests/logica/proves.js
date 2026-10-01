@@ -151,6 +151,16 @@ prova('canvis d’hora de classe entre els dos dies de la setmana, i a unes quan
   igual(openSwaps().length, 0, 'a qui no és a la llista, no');
   S.memberId = null; S.classes = new Map(); S.classReq = new Map();
 });
+prova('temps d’assaig: un cap de setmana compta per les hores que s’hi assaja', () => {
+  igual(sessionMins({ time: '09:15', end: '20:30', mins: 335 }), 335, 'mana sobre l’hora d’inici i de final');
+  igual(sessionMins({ mins: 175 }), 175, 'també sense hores');
+  igual(sessionMins({ time: '20:30', end: '22:30', mins: 0 }), 120, 'zero: com sempre');
+  igual([parseMins('5:35'), parseMins('2h55'), parseMins('5,5'), parseMins('3'), parseMins('90 min'), parseMins('hola'), parseMins('0:00')], [335, 175, 330, 180, 90, 0, 0]);
+  igual([fmtMins(335), fmtMinsLong(335), fmtMinsLong(120), fmtMinsLong(40)], ['5:35', '5 h 35 min', '2 h', '40 min']);
+  const c = emptyCounts();
+  countMark(c, { mins: 335 }, { s: 'P' }); countMark(c, { time: '20:30', end: '22:30' }, { s: 'FNJ' });
+  prop(rate(c), 335 / 455, 'el dissabte pesa gairebé tres assajos');
+});
 prova('computeStats: compta per persona, per corda i per sessió, i salta les sessions sense llista', () => {
   escenari({
     members: [{ id: 'a', name: 'Puig, Anna', section: 'S' }, { id: 'b', name: 'Bosch, Marc', section: 'T' }, { id: 'c', name: 'Camps, Oriol', section: 'T' }],

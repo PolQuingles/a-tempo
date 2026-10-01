@@ -757,6 +757,26 @@ def main():
         check(not errors, "sense errors als canvis d'hora", "; ".join(errors[:3]))
         ctx.close()
 
+        print("Temps d'assaig d'un cap de setmana, i el percentatge només de sessions fetes")
+        ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/calendari")
+        r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          const fut = allSessions().find(x => x.date > TODAY && membersOf('S').length);
+          setMark(fut, membersOf('S')[0], { s: 'FJ', note: 'Avisat' }); render(); await s(300);
+          out.noPct = !document.querySelector(`.cal-row [data-sid="${fut.id}"] .cal-pct`);
+          sheetSession(fut.id); await s(300);
+          const f = document.querySelector('#se-mins'); f.value = '5:35';
+          document.querySelector('#se-save').click(); await s(600);
+          out.mins = sessionById(fut.id).mins === 335 && sessionMins(sessionById(fut.id)) === 335;
+          sheetSessionInfo(fut.id); await s(300);
+          out.shown = /5 h 35 min/.test(document.querySelector('.fitxa')?.innerText || '');
+          closeSheet(); return out; }""")
+        for k, label in [("noPct", "el calendari no posa percentatge a una sessió que encara no s'ha fet"),
+                         ("mins", "una sessió pot tenir el seu temps d'assaig, i és el que compta"),
+                         ("shown", "la fitxa diu quantes hores s'hi assaja")]:
+            check(r.get(k), label, str(r))
+        check(not errors, "sense errors amb el temps d'assaig", "; ".join(errors[:3]))
+        ctx.close()
+
         print("Mira l'app com…")
         ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/gestio/personal")
         page.wait_for_function("S.staffReady", timeout=5000)

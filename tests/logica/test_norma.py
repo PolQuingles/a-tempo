@@ -41,6 +41,8 @@ def cases(n, seed):
                     s["time"] = f"{h:02d}:{rnd.choice([0, 15, 30, 45]):02d}"
                     if rnd.random() < .8:
                         s["end"] = f"{min(23, h + rnd.randint(-1, 4)):02d}:{rnd.choice([0, 30]):02d}"
+                if rnd.random() < .15:   # temps d'assaig posat a mà (un cap de setmana): mana sobre les hores
+                    s["mins"] = rnd.choice([335, 175, 90, 0])
                 if rnd.random() < .25:
                     s["sections"] = rnd.sample(SECS, rnd.randint(1, 3))
                 if rnd.random() < .2:

@@ -19,7 +19,13 @@ def clock_mins(t):
 
 
 def session_mins(s):
-    """Minuts que dura una sessió: de l'hora d'inici a la de final; si no en té, dues hores."""
+    """Minuts que compta una sessió: el temps d'assaig (mins) si s'ha posat; si no, de l'hora d'inici a la de final; si no
+    en té, dues hores."""
+    try:
+        if float(s.get("mins") or 0) > 0:
+            return round(float(s["mins"]))
+    except (TypeError, ValueError):
+        pass
     a, b = clock_mins(s.get("time")), clock_mins(s.get("end"))
     return b - a if a is not None and b is not None and b > a else 120
 

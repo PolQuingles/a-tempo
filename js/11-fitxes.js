@@ -154,11 +154,24 @@ function infoSummary(s) {
   return [i.call && `Convocatòria ${i.call}`, infoSteps(s).length && 'horari del dia', i.dress && 'vestuari', i.meet && 'punt de trobada', i.bring && 'què cal portar'].filter(Boolean).join(' · ');
 }
 function fitxaHtml(s) {
-  const rows = [['Quan', `${longDate(s.date)}${s.time ? ` · ${timeRange(s)}` : ''}`], ...(s.place ? [['On', s.place]] : []),
+  const rows = [['Quan', `${longDate(s.date)}${s.time ? ` · ${timeRange(s)}` : ''}`], ...(s.mins ? [['Assaig', `${fmtMinsLong(s.mins)} en total`]] : []), ...(s.place ? [['On', s.place]] : []),
     ...INFO_FIELDS.filter(([k]) => s.info?.[k]).map(([k, l]) => [l, s.info[k]])];
   const steps = infoSteps(s);
-  return `<dl class="fitxa">${rows.map(([l, v]) => `<div class="${l === 'Convocatòria' ? 'key' : ''}"><dt>${l}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>
+  return `<dl class="fitxa">${rows.map(([l, v]) => `<div class="${l === 'Convocatòria' ? 'key' : ''}"><dt>${l}</dt><dd>${linkify(v)}</dd></div>`).join('')}</dl>
     ${steps.length ? `<div class="section-title" style="margin-top:14px"><h2 class="h2">Horari del dia</h2></div><ol class="steps">${steps.map(x => `<li><span class="mono">${esc(x.time || '')}</span><span><b>${esc(x.what || '')}</b>${x.where ? `<small>${esc(x.where)}</small>` : ''}</span></li>`).join('')}</ol>` : ''}`;
+}
+/** El temps d'assaig: 335 → «5:35» (per escriure'l) i «5 h 35 min» (per llegir-lo). */
+const fmtMins = n => `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}`;
+const fmtMinsLong = n => [Math.floor(n / 60) ? `${Math.floor(n / 60)} h` : '', n % 60 ? `${n % 60} min` : ''].filter(Boolean).join(' ');
+/** «5:35», «5.5», «5,5» o «335 min» → minuts (0 si no s'entén o no té sentit). */
+function parseMins(t) {
+  const x = String(t || '').trim().toLowerCase().replace(/\s+/g, '');
+  let m = x.match(/^(\d{1,2})[:h](\d{1,2})?(min)?$/);
+  if (m) return Math.min(24 * 60, +m[1] * 60 + (+m[2] || 0)) || 0;
+  m = x.match(/^(\d{1,4})min$/);
+  if (m) return Math.min(24 * 60, +m[1]) || 0;
+  m = x.match(/^(\d{1,2}(?:[.,]\d+)?)h?$/);
+  return m ? Math.min(24 * 60, Math.round(parseFloat(m[1].replace(',', '.')) * 60)) || 0 : 0;
 }
 const stepsText = s => infoSteps(s).map(x => `${x.time || ''} ${x.what || ''}${x.where ? ` (${x.where})` : ''}`.trim()).join('\n');
 /** De quina corda és qui mira el pla: veu primer el que li toca (l'equip ho veu tot). */
@@ -204,6 +217,8 @@ function sheetSession(sid, presetProd, presetDate) {
       <label class="field"><span>Tipus</span><select class="inp" id="se-type">${[...new Set([...TYPES, cur.type].filter(Boolean))].map(t => `<option ${t === cur.type ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label></div>
       <div class="row2"><label class="field"><span>Hora d’inici</span><input class="inp" id="se-time" type="time" value="${esc(cur.time || '')}"></label>
       <label class="field"><span>Hora de final</span><input class="inp" id="se-end" type="time" value="${esc(cur.end || '')}"></label></div>
+      <label class="field"><span>Temps d’assaig (opcional)</span><input class="inp" id="se-mins" type="text" inputmode="decimal" style="max-width:170px" value="${cur.mins ? esc(fmtMins(cur.mins)) : ''}" placeholder="p. ex. 5:35">
+        <small>Per a un cap de setmana o una jornada amb pauses i àpats: les hores que s’assaja de debò, en hores i minuts. És el que compta a l’assistència. En blanc, de l’hora d’inici a la de final.</small></label>
       <label class="field"><span>Lloc</span><input class="inp" id="se-place" type="text" maxlength="60" value="${esc(cur.place || '')}" placeholder="Sala d’assaig"></label>
       <div class="field"><span>${V.Sections} convocades</span><div class="pickers" id="se-secs">${SECTIONS.map(x => secPick(x, secs.has(x.id))).join('')}</div></div>
       <div class="toggle-row"><span><b>Demana confirmació</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Els ${V.members} convocats responen si hi seran</span></span><label class="switch"><input type="checkbox" id="se-rsvp" ${cur.rsvp ? 'checked' : ''}><span></span></label></div>
@@ -265,6 +280,8 @@ function sheetSession(sid, presetProd, presetDate) {
           place: el.querySelector('#se-place').value.trim(), note: el.querySelector('#se-note').value.trim(),
         };
         if (chosen.length && chosen.length < SECTIONS.length) next.sections = chosen;
+        const mn = el.querySelector('#se-mins').value.trim();
+        if (mn) { const v = parseMins(mn); if (!v) { toast('Escriu el temps d’assaig com a 5:35 (hores i minuts)'); return; } next.mins = v; }
         for (const k of ['plan', 'seating']) if (existing && existing[k]) next[k] = existing[k];
         const prodId = el.querySelector('#se-prod').value;
         const also = $$('#se-also .pick[aria-pressed="true"]', el).map(b => b.dataset.also).filter(id => id !== prodId);

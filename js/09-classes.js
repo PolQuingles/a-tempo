@@ -298,5 +298,5 @@ function viewClasses() {
       <button class="btn btn-sm btn-primary" data-act="cl-student" data-m="${esc(myId())}">Obre-la</button></div></div>` : ''}
     ${myNotes.length ? `<div class="section-title"><h2 class="h2">Notes de les teves classes</h2></div>
       <ul class="mini-list" style="max-height:none">${myNotes.map(n => `<li style="display:grid;gap:4px"><span class="m mono">${esc(shortDate(n.date))}</span>${n.text ? `<span style="white-space:pre-wrap">${esc(n.text)}</span>` : ''}${n.file ? `<button class="btn btn-sm" style="justify-self:start" data-act="cl-rec" data-id="${esc(n.id)}">Escolta l’enregistrament</button>` : ''}</li>`).join('')}</ul>` : ''}
-    <p class="muted" style="font-size:calc(13px*var(--ts));margin-top:14px">Els canvis d’hora valen només per al dia que es demanen. Qui rep la petició ha de dir que sí perquè es faci.</p>`;
+    <p class="muted" style="font-size:calc(13px*var(--ts));margin-top:14px">Els canvis d’hora valen només per a la setmana que es demanen, i es poden fer amb qui tingui classe qualsevol dia d’aquella setmana amb el mateix professor. Qui rep la petició ha de dir que sí perquè es faci.</p>`;
 }
