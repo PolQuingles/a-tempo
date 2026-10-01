@@ -14,8 +14,6 @@ const durSecs = d => { const m = String(d || '').match(/^(\d{1,3})(?:[:'.](\d{1,
 const fmtDur = secs => secs ? `${Math.floor(secs / 60)}:${pad(secs % 60)}` : '';
 /** El material que és per a aquesta persona: de la seva corda (o de tots) i de la seva veu (o de totes). */
 const forMyVoice = (x, me) => !me || ((!x.section || x.section === me.section) && (!x.part || !me.part || me.part.includes(x.part) || x.part.includes(me.part)));
-/** Els solos i petits grups on surt aquesta persona: [{ w, r }]. */
-const rolesOfMember = mid => mid ? worksSorted().flatMap(w => (w.roles || []).filter(r => (r.memberIds || []).includes(mid)).map(r => ({ w, r }))) : [];
 const roleNames = r => (r.memberIds || []).map(id => S.members.get(id)?.name).filter(Boolean);
 
 function boardRepertoire() {
@@ -33,7 +31,6 @@ function boardRepertoire() {
     ? `<div class="sec-h" style="margin-top:4px"><span class="muted" style="font-size:calc(13px*var(--ts))">Cada obra té la seva fitxa, i serveix d’una temporada a l’altra.</span>
         <span style="display:flex;gap:6px;flex-wrap:wrap">${prod ? '<button class="btn btn-sm" data-act="work-link">Afegeix-ne una que ja hi és</button>' : ''}<button class="btn btn-sm btn-primary" data-act="work-new">+ Obra</button></span></div>`
     : me ? `<div class="sec-h" style="margin-top:4px"><span class="muted" style="font-size:calc(13px*var(--ts))">${onlyMine ? `Mostrant el material per a ${esc(SEC[me.section].name.toLowerCase())}${me.part ? ` ${esc(me.part)}` : ''}` : 'Mostrant tot el material'}</span><button class="btn btn-sm btn-ghost" data-act="mat-mine">${onlyMine ? 'Mostra-ho tot' : `Només la meva ${V.part}`}</button></div>` : '';
-  const mine = me ? rolesOfMember(me.id).filter(({ w }) => all || (w.prods || []).includes(prod.id)) : [];
   const files = offlineCandidates(works, prod, onlyMine ? me : null);
   const saved = offlineSaved();
   const toSave = files.filter(f => !saved.has(f.id));
@@ -49,9 +46,6 @@ function boardRepertoire() {
   };
   const total = works.reduce((n, w) => n + durSecs(w.duration), 0);
   return chips + tools
-    + (mine.length ? `<div class="section-title"><h2 class="h2">Els teus solos i petits grups</h2></div>
-      <ul class="mini-list" style="max-height:none">${mine.map(({ w, r }) => `<li><span><b>${esc(r.name)}</b><br><span class="m">${esc(w.title)}${roleNames(r).length > 1 ? ` · amb ${esc(roleNames(r).filter(n => n !== me.name).join(', '))}` : ''}</span></span>
-        <button class="btn btn-sm" data-act="work-open" data-id="${esc(w.id)}">Obra</button></li>`).join('')}</ul>` : '')
     + `<div class="section-title"><h2 class="h2">${all ? 'Tot el repertori' : 'Obres'}</h2><span class="eyebrow">${works.length}${total ? ` · ${fmtDur(total)}` : ''}</span></div>`
     + (works.length ? `<div class="works">${works.map(card).join('')}</div>` : `<div class="empty"><p>${all ? 'Encara no hi ha cap obra al repertori.' : `Encara no hi ha obres a ${esc(prod.name)}.`}</p></div>`)
     + archivePanel(prod, works)
