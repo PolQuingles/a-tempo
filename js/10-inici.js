@@ -147,12 +147,15 @@ function todoBlock(me) {
 // Una sola llista, per ordre: el d'avui (amb passar llista o avisar), la propera classe, el proper assaig i el proper concert.
 // Cada fila és com les del calendari: la data a l'esquerra i, a la dreta, què és, on i el que s'hi pot fer.
 const dayLabel = d => d === TODAY ? 'Avui' : d === addDays(TODAY, 1) ? 'Demà' : '';
-function soonRow({ date, time, kind, title, meta, extra = '', acts = '', tone = null, now = false, poster = '' }) {
+const daysTo = d => Math.round((parseISO(d).getTime() - parseISO(TODAY).getTime()) / 864e5);
+function soonRow({ date, time, kind, title, meta, extra = '', acts = '', tone = null, now = false, poster = '', count = false }) {
   const lbl = dayLabel(date);
+  // El proper concert porta el compte enrere: «d'aquí a 16 dies».
+  const n = count && !lbl ? daysTo(date) : 0;
   return `<li class="soon-row${now ? ' is-now' : ''}${tone ? ' prod-tone' : ''}${poster ? ' has-poster' : ''}"${tone ? ` style="--ph:${prodHue(tone)}"` : ''}>
     <span class="soon-d"><b>${+date.slice(8, 10)}</b><small>${esc(wdShort(date))}</small></span>
     <div class="soon-b">
-      <span class="soon-k">${lbl ? `<em>${lbl}</em>` : ''}${esc(kind)}${time ? ` · <span class="mono">${esc(time)}</span>` : ''}</span>
+      <span class="soon-k">${lbl ? `<em>${lbl}</em>` : ''}${esc(kind)}${time ? ` · <span class="mono">${esc(time)}</span>` : ''}${n > 1 ? `<span class="soon-count">d’aquí a ${n} dies</span>` : ''}</span>
       <b class="soon-t">${title}</b>
       ${meta ? `<span class="soon-m">${meta}</span>` : ''}
       ${acts ? `<span class="soon-a">${acts}</span>` : ''}
@@ -178,10 +181,26 @@ function sessionSoon(s, me, kind) {
         // Avisar amb temps: a la sessió d'avui i a les properes (les convocatòries es responen amb «Hi seré» / «No hi podré anar»).
         : now || !s.rsvp ? `<button class="btn btn-sm${now ? '' : ' btn-ghost'}" data-act="absence-new" data-sid="${esc(s.id)}">No hi puc anar o arribaré tard</button>` : ''].filter(Boolean).join('');
   }
-  const meta = [esc(s.place || ''), s.info?.call ? `Convocatòria a les <span class="mono">${esc(s.info.call)}</span>` : '',
+  if (now && isShow(s)) return concertDayRow(s, prod, acts, conv);
+  const meta = [placeLink(s.place || ''), s.info?.call ? `Convocatòria a les <span class="mono">${esc(s.info.call)}</span>` : '',
     out ? esc(onLeave(me, s.date) ? 'Estàs de baixa' : 'No fas aquesta producció') : ''].filter(Boolean).join(' · ');
   const extra = `${s.note ? `<span class="soon-note">${esc(s.note)}</span>` : ''}${hasInfo(s) ? fitxaChip(s) : ''}${planChip(s)}`;
-  return soonRow({ date: s.date, time: timeRange(s), kind, title: esc(prodNames(s)), meta, extra: extra + conv, acts, tone: prod, now, poster: posterThumb(prod) });
+  return soonRow({ date: s.date, time: timeRange(s), kind, title: esc(prodNames(s)), meta, extra: extra + conv, acts, tone: prod, now, poster: posterThumb(prod), count: isShow(s) });
+}
+/** El dia del concert: una fila especial amb el cartell gran, la convocatòria, el vestuari i el lloc (amb el mapa). */
+function concertDayRow(s, prod, acts, conv) {
+  const i = s.info || {};
+  const facts = [['Convocatòria', i.call ? `<span class="mono">${esc(i.call)}</span>` : ''], ['Vestuari', esc(i.dress || '')], ['Lloc', placeLink(s.place || '')], ['Trobada', esc(i.meet || '')]].filter(([, v]) => v);
+  return `<li class="concert-day prod-tone" style="--ph:${prodHue(prod)}">
+    ${prod?.poster ? `<button class="cd-poster" data-act="poster" data-pid="${esc(prod.id)}" aria-label="Cartell de ${esc(prod.name)}"><img src="${esc(prod.poster)}" alt=""></button>` : ''}
+    <div class="cd-b">
+      <span class="soon-k"><em>Avui</em>${esc(s.type || V.sh.Show)}${s.time ? ` · <span class="mono">${esc(timeRange(s))}</span>` : ''}</span>
+      <b class="cd-t">${esc(prodNames(s))}</b>
+      ${facts.length ? `<dl class="cd-facts">${facts.map(([l, v]) => `<div><dt>${l}</dt><dd>${v}</dd></div>`).join('')}</dl>` : ''}
+      ${s.note ? `<span class="soon-note">${esc(s.note)}</span>` : ''}
+      <span class="soon-a">${hasInfo(s) ? `<button class="btn btn-sm" data-act="session-info" data-sid="${s.id}">Tota la fitxa</button>` : ''}${acts}</span>
+      ${conv}
+    </div></li>`;
 }
 function soonBlock(me) {
   const mineS = s => !me || canEdit() || convoked(s, me.section);
