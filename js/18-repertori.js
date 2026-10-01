@@ -88,7 +88,7 @@ function sheetWork(id) {
     body: `${facts.length ? `<dl class="fitxa">${facts.map(([l, v]) => `<div><dt>${l}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>` : ''}
       ${w.notes ? `<p class="fitxa-note" style="white-space:pre-wrap">${esc(w.notes)}</p>` : ''}
       <div class="section-title" style="margin-top:14px"><h2 class="h2">Qui canta què</h2></div>
-      ${(w.roles || []).length ? `<ul class="mini-list" style="max-height:none">${w.roles.map(r => `<li class="${me && (r.memberIds || []).includes(me.id) ? 'is-me' : ''}"><span><b>${esc(r.name)}</b><br><span class="m">${esc(roleNames(r).join(', ') || 'Encara per decidir')}</span></span></li>`).join('')}</ul>`
+      ${(w.roles || []).length ? `<ul class="mini-list" style="max-height:none">${w.roles.map(r => `<li class="${me && (r.memberIds || []).includes(me.id) ? 'is-me' : ''}"><span><b>${esc(r.name)}</b><br>${roleNames(r).length ? `<span class="who-sings">${(r.memberIds || []).map(id => S.members.get(id)).filter(Boolean).map(x => `<span class="ws">${avatar(x)}${esc(fullName(x.name))}</span>`).join('')}</span>` : '<span class="m">Encara per decidir</span>'}</span></li>`).join('')}</ul>`
         : '<p class="muted" style="font-size:calc(13px*var(--ts));margin:0">No hi ha solos ni petits grups.</p>'}
       ${scoreBox(ui.matProd !== 'all' ? ui.matProd : '', w)}
       <div class="section-title" style="margin-top:14px"><h2 class="h2">Partitures i àudios</h2>${me && !canEdit() ? '<button class="btn btn-sm btn-ghost" id="wk-mine"></button>' : ''}</div>

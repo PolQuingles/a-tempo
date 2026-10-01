@@ -54,12 +54,14 @@ function boardBadge() {
   const polls = myId() && !canEdit() ? openPolls().filter(p => !S.pollVotes.get(`${p.id}_${myId()}`)).length : 0;
   return news + polls;
 }
+// Al mòbil, cinc pestanyes amb lletra petita no s'hi llegien bé: ara porten una icona a sobre del nom.
+const BOARD_ICONS = { anuncis: 'ann', materials: 'plan', documents: 'score', enquestes: 'poll', sortides: 'trip' };
 function viewBoard() {
   const tabs = [['anuncis', 'Anuncis'], ['materials', 'Repertori'], ['documents', 'Documents'], ['enquestes', 'Enquestes'], ['sortides', 'Sortides']];
   if (!tabs.some(([k]) => k === ui.board)) ui.board = 'anuncis';
   if (ui.board === 'anuncis') { lsSet(LS_SEEN, new Date().toISOString()); setTimeout(renderTabs, 0); }
   const head = `<div class="page-head"><h1 class="h1">Tauler</h1></div>
-    <div class="subtabs board-tabs" role="tablist" style="margin-bottom:10px;grid-template-columns:repeat(${tabs.length},1fr)">${tabs.map(([k, l]) => `<button class="subtab" role="tab" aria-selected="${ui.board === k}" data-act="board" data-k="${k}">${l}</button>`).join('')}</div>`;
+    <div class="subtabs board-tabs" role="tablist" style="margin-bottom:10px;grid-template-columns:repeat(${tabs.length},1fr)">${tabs.map(([k, l]) => `<button class="subtab" role="tab" aria-selected="${ui.board === k}" data-act="board" data-k="${k}"><svg viewBox="0 0 24 24" aria-hidden="true">${TODO_ICONS[BOARD_ICONS[k]]}</svg><span>${l}</span></button>`).join('')}</div>`;
   if (ui.board === 'materials') return head + boardRepertoire();
   if (ui.board === 'sortides') return head + boardTrips();
   if (ui.board === 'documents') return head + boardDocuments();

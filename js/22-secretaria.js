@@ -228,7 +228,7 @@ function pmRow(m, f) {
   ].filter(Boolean).join('');
   const sub = off ? 'Inactiu' : f === 'moves' ? seasonMoves(m).map(h => `${HIST_WORD[h.kind] || esc(h.kind)} ${esc(ddmm(h.date))}${h.note ? ` · ${esc(h.note)}` : ''}`).join(' · ') : leaveText(m) || esc(phoneOf(m));
   return `<details class="pm" data-mid="${m.id}" data-find="${esc(normText(m.name))}"${PM_OPEN.has(m.id) ? ' open' : ''}>
-    <summary><span class="pm-n${off ? ' dim' : ''}"><span class="t">${esc(m.name)}</span>${m.part ? ` <span class="part">${esc(partTag(m))}</span>` : ''}${m.leader ? ` <span class="tag">${V.Leader}</span>` : ''}${sub ? `<span class="s">${sub}</span>` : ''}</span>
+    <summary>${avatar(m)}<span class="pm-n${off ? ' dim' : ''}"><span class="t">${esc(m.name)}</span>${m.part ? ` <span class="part">${esc(partTag(m))}</span>` : ''}${m.leader ? ` <span class="tag">${V.Leader}</span>` : ''}${sub ? `<span class="s">${sub}</span>` : ''}</span>
       ${tags ? `<span class="pm-tags">${tags}</span>` : ''}${ICON.chev}</summary>
     <div class="pm-b">${memberCard(m)}</div></details>`;
 }

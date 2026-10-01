@@ -439,6 +439,11 @@ function sheetLegacyClean() {
   });
 }
 /** Les inicials de la persona («Quingles, Pol» → PQ). */
+/** Un to per corda (sempre el mateix, segons l'ordre de les cordes), per a les inicials de cada persona. */
+const SEC_HUES = [330, 28, 205, 145, 265, 52, 185, 5];
+const secHue = sec => SEC_HUES[Math.max(0, SECTIONS.findIndex(x => x.id === sec)) % SEC_HUES.length];
+/** Les inicials de la persona en un cercle del color de la seva corda: ajuda a trobar-la d'un cop d'ull. */
+const avatar = m => m ? `<span class="pav" style="--sh:${secHue(m.section)}" aria-hidden="true">${esc(personInitials(m.name))}</span>` : '';
 function personInitials(name) {
   const n = String(name || '').includes(',') ? String(name).split(',').reverse().join(' ') : String(name || '');
   const w = n.split(/\s+/).filter(x => x && !['de', 'del', 'la', 'i'].includes(x.toLowerCase()));

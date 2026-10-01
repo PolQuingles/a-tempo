@@ -929,6 +929,45 @@ def main():
         check(not errors, "sense errors a la distribució nova", "; ".join(errors[:3]))
         ctx.close()
 
+        print("Estètica: inicials de color, dia de concert, mapa, compte enrere, mode fosc i pestanyes del Tauler")
+        ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/assistencia/S")
+        r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          const av = [...document.querySelectorAll('#roster .row .pav')];
+          out.rollAv = av.length > 0 && av[0].textContent.trim().length === 2;
+          out.hues = secHue('S') !== secHue('T');
+          applyRoute('gestio/personal'); render(); await s(400);
+          out.pmAv = !!document.querySelector('details.pm summary .pav');
+          const p = clone(S.productions.get('p1'));
+          let t = p.sessions.find(x => x.date === TODAY);
+          if (!t) { t = { id: 'sAvuiC', date: TODAY, time: '20:30', end: '22:30' }; p.sessions.push(t); }
+          Object.assign(t, { type: 'Concert', place: 'Palau de la Música Catalana', info: { call: '19:30', dress: 'Negre', meet: 'Porta lateral' } });
+          if (!p.sessions.some(x => x.date > addDays(TODAY, 3) && x.type === 'Concert')) p.sessions.push({ id: 'sLater', date: addDays(TODAY, 9), time: '20:00', end: '22:00', type: 'Concert' });
+          saveProduction(p); applyRoute('inici'); render(); await s(300);
+          const cd = document.querySelector('.concert-day');
+          out.concertDay = !!cd && /19:30/.test(cd.innerText) && /Negre/.test(cd.innerText) && !!cd.querySelector('.map-link[href*="google.com/maps"]');
+          out.usual = placeLink(usualPlace()) .indexOf('<a') === -1 && placeLink('La Conreria (Tiana)').includes('map-link');
+          out.count = [...document.querySelectorAll('.soon-count')].some(x => /d’aquí a \d+ dies/.test(x.textContent));
+          const fill = () => getComputedStyle(document.querySelector('.acct-btn')).backgroundColor;
+          const accent = () => { const e = document.createElement('i'); e.style.color = 'var(--accent)'; document.body.appendChild(e); const c = getComputedStyle(e).color; e.remove(); return c; };
+          document.documentElement.dataset.theme = 'light'; await s(50); const light = fill() === accent();
+          document.documentElement.dataset.theme = 'dark'; await s(50); out.dark = light && fill() !== accent();
+          document.documentElement.dataset.theme = 'light';
+          applyRoute('tauler/anuncis'); render(); await s(300);
+          const tabs = [...document.querySelectorAll('.board-tabs .subtab')];
+          out.tabs = tabs.length === 5 && tabs.every(b => b.querySelector('svg') && b.querySelector('span').scrollWidth <= b.querySelector('span').clientWidth + 1);
+          return out; }""")
+        for k, label in [("rollAv", "a passar llista, cada persona té les seves inicials en un cercle"),
+                         ("hues", "cada corda té el seu color"),
+                         ("pmAv", "la plantilla també porta les inicials"),
+                         ("concertDay", "el dia del concert, Properament té una fila amb la convocatòria, el vestuari i el lloc amb el mapa"),
+                         ("usual", "el lloc habitual no s'obre al mapa; els altres, sí"),
+                         ("count", "el proper concert porta el compte enrere"),
+                         ("dark", "en mode fosc, el cercle del compte i els botons destacats són més apagats"),
+                         ("tabs", "les pestanyes del Tauler tenen icona i el nom sencer")]:
+            check(r.get(k), label, str(r))
+        check(not errors, "sense errors a l'estètica nova", "; ".join(errors[:3]))
+        ctx.close()
+
         print("Mira l'app com…")
         ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/gestio/personal")
         page.wait_for_function("S.staffReady", timeout=5000)

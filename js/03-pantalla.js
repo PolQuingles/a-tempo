@@ -89,7 +89,8 @@ function applyBrand() {
   if (!hsl) { st.textContent = ''; return; }
   const [h, sa, l] = hsl;
   const light = `--accent:${brand.accent};--accent-ink:${l > 62 ? '#1D1822' : '#FFFFFF'};--accent-soft:hsl(${h} ${Math.min(sa, 55)}% 94%);--accent-line:hsl(${h} ${Math.min(sa, 40)}% 82%);`;
-  const dark = `--accent:hsl(${h} ${Math.min(sa, 60)}% 78%);--accent-ink:hsl(${h} 40% 12%);--accent-soft:hsl(${h} 22% 20%);--accent-line:hsl(${h} 22% 32%);`;
+  // En fosc, els botons i el cercle del compte van amb un to apagat (el clar de --accent crida massa sobre el fons fosc).
+  const dark = `--accent:hsl(${h} ${Math.min(sa, 60)}% 78%);--accent-ink:hsl(${h} 40% 12%);--accent-soft:hsl(${h} 22% 20%);--accent-line:hsl(${h} 22% 32%);--accent-fill:hsl(${h} ${Math.min(sa, 32)}% 40%);--accent-fill-ink:hsl(${h} 60% 96%);`;
   st.textContent = `:root{${light}}@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){${dark}}}:root[data-theme="dark"]{${dark}}`;
   updateThemeColor();
 }

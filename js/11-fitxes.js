@@ -153,11 +153,20 @@ function infoSummary(s) {
   const i = s.info || {};
   return [i.call && `Convocatòria ${i.call}`, infoSteps(s).length && 'horari del dia', i.dress && 'vestuari', i.meet && 'punt de trobada', i.bring && 'què cal portar'].filter(Boolean).join(' · ');
 }
+/* ---------- El lloc, amb el mapa ---------- */
+// Un lloc que no és l'habitual (la sala d'assaig on es fa gairebé tot) s'obre al mapa del mòbil en tocar-lo.
+function usualPlace() {
+  const n = new Map();
+  for (const s of allSessions()) { const k = normText(s.place || ''); if (k) n.set(k, (n.get(k) || 0) + 1); }
+  return [...n].sort((a, b) => b[1] - a[1])[0]?.[0] || '';
+}
+const mapUrl = p => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p)}`;
+const placeLink = p => !p ? '' : normText(p) === usualPlace() ? esc(p) : `<a class="map-link" href="${mapUrl(p)}" target="_blank" rel="noopener">${esc(p)}</a>`;
 function fitxaHtml(s) {
   const rows = [['Quan', `${longDate(s.date)}${s.time ? ` · ${timeRange(s)}` : ''}`], ...(s.mins ? [['Assaig', `${fmtMinsLong(s.mins)} en total`]] : []), ...(s.place ? [['On', s.place]] : []),
     ...INFO_FIELDS.filter(([k]) => s.info?.[k]).map(([k, l]) => [l, s.info[k]])];
   const steps = infoSteps(s);
-  return `<dl class="fitxa">${rows.map(([l, v]) => `<div class="${l === 'Convocatòria' ? 'key' : ''}"><dt>${l}</dt><dd>${linkify(v)}</dd></div>`).join('')}</dl>
+  return `<dl class="fitxa">${rows.map(([l, v]) => `<div class="${l === 'Convocatòria' ? 'key' : ''}"><dt>${l}</dt><dd>${l === 'On' ? placeLink(v) : linkify(v)}</dd></div>`).join('')}</dl>
     ${steps.length ? `<div class="section-title" style="margin-top:14px"><h2 class="h2">Horari del dia</h2></div><ol class="steps">${steps.map(x => `<li><span class="mono">${esc(x.time || '')}</span><span><b>${esc(x.what || '')}</b>${x.where ? `<small>${esc(x.where)}</small>` : ''}</span></li>`).join('')}</ol>` : ''}`;
 }
 /** El temps d'assaig: 335 → «5:35» (per escriure'l) i «5 h 35 min» (per llegir-lo). */
