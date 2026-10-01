@@ -15,6 +15,8 @@ const DOC_ITEMS = [['imatge', 'Drets d’imatge', 'Fotos i vídeos dels concerts
 const FEE_METHODS = ['Transferència', 'Bizum', 'Efectiu', 'Rebut domiciliat'];
 const feeKey = () => { const s = seasonCfg().season; return `${s.from.slice(0, 4)}-${s.to.slice(2, 4)}`; };
 const feeAmount = () => +S.config.feeAmount || 0;
+/** La quota es pot desactivar a Ajustos (el Cor Jove no en té): llavors no en surt res enlloc. Per defecte, activada. */
+const feesOn = () => S.config.feesOn !== false;
 const euros = n => `${(+n || 0).toLocaleString('ca', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} €`;
 async function loadMemberDocs() {
   if (!canDocs()) return new Map();
@@ -152,7 +154,7 @@ document.addEventListener('toggle', e => {
   const d = e.target;
   if (d instanceof HTMLDetailsElement && d.classList.contains('pm')) { if (d.open) PM_OPEN.add(d.dataset.mid); else PM_OPEN.delete(d.dataset.mid); }
 }, true);
-const PM_FILTERS = () => [['all', 'Tothom'], ['moves', 'Altes i baixes'], ...(canDocs() ? [['docs', 'Documents pendents'], ['fees', 'Quota pendent']] : []), ...(isAdmin() ? [['access', 'Sense accés']] : [])];
+const PM_FILTERS = () => [['all', 'Tothom'], ['moves', 'Altes i baixes'], ...(canDocs() ? [['docs', 'Documents pendents'], ...(feesOn() ? [['fees', 'Quota pendent']] : [])] : []), ...(isAdmin() ? [['access', 'Sense accés']] : [])];
 const seasonMoves = m => { const { season } = seasonCfg(); return (m.history || []).filter(h => h.date >= season.from && h.date <= season.to); };
 const feeOf = m => docsOf(m.id).fees?.[feeKey()] || {};
 const docsPending = m => DOC_ITEMS.some(([k]) => !docState(m.id, k).v);
@@ -174,13 +176,13 @@ function plantillaSummary(all) {
     if (!S.memberDocs) lines.push('<span class="muted">Carregant els documents i les quotes…</span>');
     else {
       const paid = active.filter(m => feeOf(m).paid), total = paid.reduce((n, m) => n + (+feeOf(m).amount || 0), 0);
-      lines.push(`Quota ${esc(feeKey())}: <b>${paid.length} de ${active.length}</b> han pagat · ${euros(total)}${feeAmount() ? ` de ${euros(feeAmount() * active.length)}` : ''}`);
+      if (feesOn()) lines.push(`Quota ${esc(feeKey())}: <b>${paid.length} de ${active.length}</b> han pagat · ${euros(total)}${feeAmount() ? ` de ${euros(feeAmount() * active.length)}` : ''}`);
       const noImg = active.filter(m => docState(m.id, 'imatge').v === 'no');
       lines.push(noImg.length ? `No poden sortir a fotos: <b>${esc(noImg.map(m => fullName(m.name)).join(', '))}</b> <button class="linkish" data-act="docs-copy-noimg">Copia la llista</button>` : 'Ningú no ha dit que no pugui sortir a fotos ni vídeos.');
     }
   }
   return `<div class="panel pm-sum">${lines.map(l => `<p>${l}</p>`).join('')}
-    <div class="pm-tools">${canDocsWrite() ? `<label class="pm-fee"><span>Quota</span><input class="inp" id="fee-amount" type="number" min="0" step="1" inputmode="decimal" value="${feeAmount() || ''}" data-bind="fee-amount"> €</label>` : ''}
+    <div class="pm-tools">${canDocsWrite() && feesOn() ? `<label class="pm-fee"><span>Quota</span><input class="inp" id="fee-amount" type="number" min="0" step="1" inputmode="decimal" value="${feeAmount() || ''}" data-bind="fee-amount"> €</label>` : ''}
       <button class="btn btn-sm" data-act="roster-export">Exporta a Excel</button></div></div>`;
 }
 /** Tot el que se sap d'una persona, per desplegar-ho a la plantilla. */
@@ -199,19 +201,19 @@ function memberCard(m) {
   ].filter(r => r && r[1]);
   const hist = (m.history || []).slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
   const docs = canDocs() && S.memberDocs;
-  const fee = docs ? feeOf(m) : null;
+  const fee = docs && feesOn() ? feeOf(m) : null;
   const w = canDocsWrite();
   const acts = [
     canEdit() ? `<button class="btn btn-sm" data-act="member-edit" data-mid="${m.id}">Edita la fitxa</button>` : '',
-    w ? `<button class="btn btn-sm" data-act="member-docs" data-mid="${m.id}">Documents</button><button class="btn btn-sm" data-act="fee-edit" data-mid="${m.id}">Quota</button>` : '',
+    w ? `<button class="btn btn-sm" data-act="member-docs" data-mid="${m.id}">Documents</button>${feesOn() ? `<button class="btn btn-sm" data-act="fee-edit" data-mid="${m.id}">Quota</button>` : ''}` : '',
     w && fee && !fee.paid && !off ? `<button class="btn btn-sm btn-soft" data-act="fee-paid" data-mid="${m.id}">Marca la quota pagada</button>` : '',
     !off ? `<button class="btn btn-sm" data-act="member-stats" data-mid="${m.id}">Assistència</button>` : '',
     !off && canWriteTo() && writableMembers().some(x => x.id === m.id) ? `<button class="btn btn-sm" data-act="thread-to" data-mid="${m.id}">Escriu-li</button>` : '',
   ].filter(Boolean).join('');
   return `<dl class="fitxa">${rows.map(([l, v]) => `<div><dt>${l}</dt><dd>${v}</dd></div>`).join('')}</dl>
-    ${docs ? `<div class="pm-box"><b>Documents i quota</b><div class="pm-docs">${DOC_ITEMS.map(([k, l]) => `<span class="dp-i"><small>${esc(l)}</small>${docPill(docState(m.id, k))}</span>`).join('')}
-      <span class="dp-i"><small>Quota ${esc(feeKey())}</small><span class="dp ${fee.paid ? 'ok' : ''}">${fee.paid ? 'Pagada' : 'Pendent'}</span></span></div>
-      ${fee.paid && (fee.date || fee.method) ? `<p class="pm-note">Quota pagada${fee.date ? ` el ${esc(ddmm(fee.date))}` : ''}${fee.amount ? ` · ${euros(fee.amount)}` : ''}${fee.method ? ` · ${esc(fee.method)}` : ''}</p>` : fee.note ? `<p class="pm-note">${esc(fee.note)}</p>` : ''}</div>` : ''}
+    ${docs ? `<div class="pm-box"><b>${fee ? 'Documents i quota' : 'Documents'}</b><div class="pm-docs">${DOC_ITEMS.map(([k, l]) => `<span class="dp-i"><small>${esc(l)}</small>${docPill(docState(m.id, k))}</span>`).join('')}
+      ${fee ? `<span class="dp-i"><small>Quota ${esc(feeKey())}</small><span class="dp ${fee.paid ? 'ok' : ''}">${fee.paid ? 'Pagada' : 'Pendent'}</span></span>` : ''}</div>
+      ${!fee ? '' : fee.paid && (fee.date || fee.method) ? `<p class="pm-note">Quota pagada${fee.date ? ` el ${esc(ddmm(fee.date))}` : ''}${fee.amount ? ` · ${euros(fee.amount)}` : ''}${fee.method ? ` · ${esc(fee.method)}` : ''}</p>` : fee.note ? `<p class="pm-note">${esc(fee.note)}</p>` : ''}</div>` : ''}
     ${hist.length ? `<div class="pm-box"><b>Altes i baixes</b><ul class="pm-hist">${hist.map(h => `<li><span class="hist-k ${h.kind}">${HIST_WORD[h.kind] || esc(h.kind)}</span> ${esc(ddmm(h.date))}/${h.date.slice(2, 4)}${h.note ? ` · ${esc(h.note)}` : ''}</li>`).join('')}</ul></div>` : ''}
     ${acts ? `<div class="pm-acts">${acts}</div>` : ''}`;
 }
@@ -224,7 +226,7 @@ function pmRow(m, f) {
   const tags = [
     isAdmin() && !off && (f === 'all' || f === 'access') ? (!acc ? '<span class="acc-tag">Sense accés</span>' : !acc.lastSeen ? '<span class="acc-tag">No ha entrat</span>' : '') : '',
     docs && f === 'docs' ? DOC_ITEMS.filter(([k]) => !docState(m.id, k).v).map(([k]) => `<span class="dp">${short[k]}</span>`).join('') : '',
-    docs && f === 'fees' ? `<span class="dp">${feeAmount() ? euros(feeAmount()) : 'Pendent'}</span>` : '',
+    docs && f === 'fees' && feesOn() ? `<span class="dp">${feeAmount() ? euros(feeAmount()) : 'Pendent'}</span>` : '',
   ].filter(Boolean).join('');
   const sub = off ? 'Inactiu' : f === 'moves' ? seasonMoves(m).map(h => `${HIST_WORD[h.kind] || esc(h.kind)} ${esc(ddmm(h.date))}${h.note ? ` · ${esc(h.note)}` : ''}`).join(' · ') : leaveText(m) || esc(phoneOf(m));
   return `<details class="pm" data-mid="${m.id}" data-find="${esc(normText(m.name))}"${PM_OPEN.has(m.id) ? ' open' : ''}>
@@ -258,15 +260,15 @@ function managePlantilla() {
 /* ---------- La plantilla a Excel ---------- */
 async function exportRoster() {
   await Promise.all([loadProfiles(), canDocs() ? loadMemberDocs() : null]);
-  const key = feeKey(), docs = canDocs();
+  const key = feeKey(), docs = canDocs(), fees = docs && feesOn();
   const head = ['Nom i cognoms', capz(V.section), capz(V.part), capz(V.leader), 'Estat', 'Data d’alta', 'Antiguitat', 'Correu', 'Telèfon', 'Talla', 'Contacte d’emergència',
-    ...(docs ? ['Drets d’imatge', 'Protecció de dades', 'Autoritzacions', `Quota ${key}`] : [])];
+    ...(docs ? ['Drets d’imatge', 'Protecció de dades', 'Autoritzacions'] : []), ...(fees ? [`Quota ${key}`] : [])];
   const word = v => v === 'yes' ? 'Sí' : v === 'no' ? 'No' : 'Pendent';
   const rows = membersOf(null, true).sort((a, b) => secIdx(a.section) - secIdx(b.section) || byName(a, b)).map(m => {
     const p = profileOf(m.id), f = docsOf(m.id).fees?.[key];
     return [fullName(m.name), SEC[m.section].name, m.part || '', m.leader ? 'Sí' : '', m.active === false ? 'Inactiu' : leaveText(m) || 'Actiu', m.joined || '', seniority(m), accountFor(m.id)?.email || '', phoneOf(m), p.size || '',
       [p.emergencyName, p.emergencyPhone].filter(Boolean).join(' · '),
-      ...(docs ? [...DOC_ITEMS.map(([k]) => word(docState(m.id, k).v)), f?.paid ? `Pagada${f.date ? ` ${f.date}` : ''}${f.amount ? ` (${f.amount} €)` : ''}` : 'Pendent'] : [])];
+      ...(docs ? DOC_ITEMS.map(([k]) => word(docState(m.id, k).v)) : []), ...(fees ? [f?.paid ? `Pagada${f.date ? ` ${f.date}` : ''}${f.amount ? ` (${f.amount} €)` : ''}` : 'Pendent'] : [])];
   });
   offerCSV(`plantilla-${S.config.shortName || S.config.name || ''}-${TODAY}`, [head, ...rows]);
 }
