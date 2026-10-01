@@ -4,7 +4,7 @@
 
 /* ---------- Missatges ---------- */
 // messages/<id> = { id, to: ['*'] (tothom) o [corda…], title, body, by (correu), byName, byRole, createdAt }.
-// Els caps de corda escriuen només a la seva corda; administració, direcció, gerència i secretaria, a tothom o a les
+// Els caps de corda i els arxivers escriuen només a la seva corda; administració, direcció, gerència i secretaria, a tothom o a les
 // cordes que triïn. Les regles només deixen llegir cada missatge a qui és de la corda (i a l'equip), i arriba al mòbil
 // com un avís (avisos.py, «missatges»).
 const LS_MSG = 'atempo:missatges-vist';
@@ -12,12 +12,16 @@ const MSG_DAYS = 120;
 const WRITE_ALL = ['admin', 'director', 'gerencia', 'secretaria'];
 const canWriteAll = () => WRITE_ALL.some(iHave);
 const myLeadSection = () => { const me = ME(); return hasRole(me, 'leader') && me.section && SEC_MAP[me.section] ? me.section : null; };
-const canMessage = () => canWriteAll() || !!myLeadSection();
+/** Els arxivers també escriuen a la seva corda (p. ex. per recordar que cal tornar les partitures). */
+const myArchSection = () => { const me = ME(); return hasRole(me, 'archive') && me.section && SEC_MAP[me.section] ? me.section : null; };
+/** La corda a qui escric quan no puc escriure a tothom: la que porto o de la qual guardo les partitures. */
+const mySecWrite = () => myLeadSection() || myArchSection();
+const canMessage = () => canWriteAll() || !!mySecWrite();
 const mySectionNow = () => S.members.get(myMemberId())?.section || null;
 const msgTo = m => (m.to || []).includes('*') ? 'A tothom' : `A ${(m.to || []).map(x => SEC_MAP[x] ? SEC[x].name.toLowerCase() : x).join(', ')}`;
 /** Els missatges que són per a mi: a tothom, a la meva corda (o la que porto) i els que he escrit. */
 function messagesForMe(all) {
-  const secs = [mySectionNow(), myLeadSection()].filter(Boolean);
+  const secs = [mySectionNow(), mySecWrite()].filter(Boolean);
   return [...S.messages.values()]
     .filter(m => all || m.by === myEmail() || (m.to || []).includes('*') || (m.to || []).some(x => secs.includes(x)))
     .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
@@ -52,11 +56,10 @@ function msgCard(m, full) {
 /** A Inici: els últims missatges i el botó per escriure'n. */
 function messagesBlock() {
   const list = messagesForMe();
-  const lead = myLeadSection();
+  const lead = mySecWrite();
   const threads = S.threads.size;
   if (!list.length && !canMessage() && !myId() && !threads) return '';
-  const write = canWriteAll() ? '<button class="btn btn-sm btn-primary" data-act="write">Escriu</button>'
-    : lead ? `<button class="btn btn-sm btn-primary" data-act="msg-new">Missatge a la ${esc(V.section)}</button>`
+  const write = canMessage() || canWriteTo() ? '<button class="btn btn-sm btn-primary" data-act="write">Escriu</button>'
     : myId() && !PREVIEW ? '<button class="btn btn-sm btn-primary" data-act="thread-new">Escriu a l’equip</button>' : '';
   const conv = threads || (myId() && (canWriteAll() || lead)) ? `<button class="btn btn-sm" data-act="threads">Converses${unreadThreads().length ? ` (${unreadThreads().length})` : ''}</button>` : '';
   return `<div class="section-title"><h2 class="h2">Missatges</h2><span style="display:flex;gap:6px;flex-wrap:wrap">${conv}${write}</span></div>
@@ -86,18 +89,20 @@ function sheetMessages() {
 }
 /** Escriure: un missatge, un anunci al tauler o una enquesta (a tothom o a unes cordes). */
 function sheetWrite() {
+  const sec = canWriteAll() ? null : mySecWrite();
   openSheet({
     title: 'Què vols enviar?',
     body: `<div class="write-opts">
-      <button class="write-o" data-act="msg-new"><b>Un missatge</b><small>Arriba a l’app i al mòbil de tothom o de les ${esc(V.sections)} que triïs. Per a avisos del dia a dia.</small></button>
-      <button class="write-o" data-act="ann-new"><b>Un anunci al tauler</b><small>Queda fixat al Tauler (també es pot adreçar a unes ${esc(V.sections)}), amb data de caducitat.</small></button>
+      ${canMessage() ? `<button class="write-o" data-act="msg-new"><b>${sec ? `Un missatge a la ${esc(V.section)}` : 'Un missatge'}</b><small>${sec ? `Arriba a l’app i al mòbil de tota la ${esc(SEC[sec].name.toLowerCase())}.` : `Arriba a l’app i al mòbil de tothom o de les ${esc(V.sections)} que triïs. Per a avisos del dia a dia.`}</small></button>` : ''}
+      ${canWriteTo() ? `<button class="write-o" data-act="thread-to"><b>Un missatge a una persona</b><small>Una conversa privada${sec ? ` amb algú de la ${esc(SEC[sec].name.toLowerCase())}` : ''}: només la veieu tu i ella, i li arriba al mòbil.</small></button>` : ''}
+      ${canWriteAll() ? `<button class="write-o" data-act="ann-new"><b>Un anunci al tauler</b><small>Queda fixat al Tauler (també es pot adreçar a unes ${esc(V.sections)}), amb data de caducitat.</small></button>
       <button class="write-o" data-act="poll-new"><b>Una enquesta</b><small>Una pregunta amb opcions: disponibilitat, vestuari, sopar…</small></button>
-      <button class="write-o" data-act="trip-new"><b>Una sortida o un cap de setmana</b><small>Amb inscripció, preguntes (àpats, autocar…), transport i habitacions.</small></button>
+      <button class="write-o" data-act="trip-new"><b>Una sortida o un cap de setmana</b><small>Amb inscripció, preguntes (àpats, autocar…), transport i habitacions.</small></button>` : ''}
     </div>`,
   });
 }
-function sheetMessage() {
-  const lead = myLeadSection();
+function sheetMessage(preset = {}) {
+  const lead = mySecWrite();
   const all = canWriteAll();
   if (!all && !lead) return;
   const reach = to => to.includes('*') ? membersOf(null).length : membersOf(null).filter(m => to.includes(m.section)).length;
@@ -106,8 +111,8 @@ function sheetMessage() {
     body: `<div class="kv">
       ${all ? `<div class="field"><span>Per a</span><div class="pickers" id="mg-to"><button type="button" class="pick" data-sec="*" aria-pressed="${!lead}">Tothom</button>${SECTIONS.map(x => secPick(x, x.id === lead)).join('')}</div></div>`
         : `<p style="margin:0">Per a tota la <b>${esc(SEC[lead].name.toLowerCase())}</b> (${membersOf(lead).length} persones). Els arribarà a l’app i, a qui tingui els avisos activats, al mòbil.</p>`}
-      <label class="field"><span>Assumpte (opcional)</span><input class="inp" id="mg-title" maxlength="80" placeholder="p. ex. Assaig parcial de dijous"></label>
-      <label class="field"><span>Missatge</span><textarea class="inp" id="mg-body" maxlength="1500" style="min-height:140px" placeholder="Escriu aquí…"></textarea></label>
+      <label class="field"><span>Assumpte (opcional)</span><input class="inp" id="mg-title" maxlength="80" value="${esc(preset.title || '')}" placeholder="p. ex. Assaig parcial de dijous"></label>
+      <label class="field"><span>Missatge</span><textarea class="inp" id="mg-body" maxlength="1500" style="min-height:140px" placeholder="Escriu aquí…">${esc(preset.body || '')}</textarea></label>
       <p class="muted" id="mg-reach" style="margin:0;font-size:calc(13px*var(--ts))"></p>
     </div>`,
     foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="mg-send">Envia</button>`,
@@ -125,7 +130,7 @@ function sheetMessage() {
         const body = el.querySelector('#mg-body').value.trim();
         if (!body) { toast('Escriu el missatge'); return; }
         const rec = { id: uid('ms'), to: to(), title: el.querySelector('#mg-title').value.trim(), body, by: S.email || '', byName: fullName(S.me?.name || S.userName || S.email || ''),
-          byRole: lead && !all ? `${capz(V.leader)} de ${SEC[lead].name.toLowerCase()}` : (rolesText(S.me).split(' · ')[0] || ''), createdAt: new Date().toISOString() };
+          byRole: lead && !all ? `${myLeadSection() ? capz(V.leader) : 'Arxiver'} de ${SEC[lead].name.toLowerCase()}` : (rolesText(S.me).split(' · ')[0] || ''), createdAt: new Date().toISOString() };
         S.messages.set(rec.id, rec); persist('messages', rec.id, rec, 10);
         closeSheet(); toast(`Missatge enviat a ${reach(rec.to)} ${V.members}`); render();
       };

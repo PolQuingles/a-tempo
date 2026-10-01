@@ -111,7 +111,7 @@ service cloud.firestore {
     // tools/stamp.py hi escriu l'empremta d'aquest fitxer. La vigilància comprova que les regles publicades són les del
     // repositori demanant reglesVersio/<empremta>: si les publicades són unes altres, la lectura es denega.
     match /reglesVersio/{v} {
-      allow get: if v == '852ae71dd31b';
+      allow get: if v == '8806af457ac4';
     }
 
     match /plataforma/equip {
@@ -283,6 +283,13 @@ service cloud.firestore {
         allow create: if isStaff(c) && inThread(c, request.resource.data)
           && request.resource.data.keys().hasAll(['memberId', 'toRole', 'toEmail', 'section', 'msgs', 'lastAt', 'lastSide'])
           && (!mine(c, request.resource.data.memberId) || request.resource.data.section == memberSection(c))
+          // L'equip també pot començar una conversa amb una persona de la plantilla, a nom seu: la direcció, la gerència, la
+          // secretaria, l'administració i el professorat de cant amb qualsevol; els caps de corda i els arxivers, amb la seva corda.
+          && (mine(c, request.resource.data.memberId) || (request.resource.data.toEmail == email()
+            && request.resource.data.toRole == '' && request.resource.data.msgs[0].side == 's'
+            && (staffHas(c, ['admin', 'director', 'gerencia', 'secretaria', 'voice'])
+              || (staffHas(c, ['leader', 'archive']) && request.resource.data.section == staffSection(c)
+                && get(/databases/$(database)/documents/cors/$(c)/members/$(request.resource.data.memberId)).data.get('section', '-') == staffSection(c)))))
           && request.resource.data.msgs is list && request.resource.data.msgs.size() == 1
           && request.resource.data.msgs[0].by == email()
           && request.resource.data.msgs[0].text is string && request.resource.data.msgs[0].text.size() <= 2000;
@@ -374,12 +381,13 @@ service cloud.firestore {
       match /messages/{id} {
         allow read: if canEdit(c) || hasRole(c, ['backup']) || isService()
           || (isStaff(c) && ('*' in resource.data.to || memberSection(c) in resource.data.to));
-        allow create: if canEdit(c)
+        // Els arxivers també escriuen a la seva corda (p. ex. per recordar que cal tornar les partitures).
+        allow create: if (canEdit(c) || staffHas(c, ['archive']))
           && request.resource.data.by == email()
           && request.resource.data.to is list && request.resource.data.to.size() > 0 && request.resource.data.to.size() <= 20
           && request.resource.data.body is string && request.resource.data.body.size() <= 2000
           && (staffHas(c, ['admin', 'director', 'gerencia', 'secretaria']) || request.resource.data.to == [staffSection(c)]);
-        allow delete: if isAdmin(c) || (canEdit(c) && resource.data.by == email());
+        allow delete: if isAdmin(c) || ((canEdit(c) || staffHas(c, ['archive'])) && resource.data.by == email());
       }
       // Notes de seguiment de cada persona: només la direcció, l'administració i els caps de corda (de la seva corda).
       match /memberNotes/{id} {

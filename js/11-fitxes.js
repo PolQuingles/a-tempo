@@ -480,7 +480,7 @@ function sheetMemberStats(mid) {
       <ul class="notes-list">${r.notes.map(({ s, mk }) => `<li><span class="mono muted">${ddmm(s.date)}</span><span><span class="pill ${mk.s === 'FNJ' ? 'fnj' : ''}" style="${mk.s === 'FJ' ? 'background:var(--fj-soft);color:var(--ink)' : ''}">${mk.s}</span> ${esc(mk.note)}</span></li>`).join('')}</ul>` : ''}
       ${m.phone ? `<p style="margin-top:18px"><a class="btn btn-sm" href="tel:${esc(m.phone.replace(/\s/g, ''))}">Truca ${esc(m.phone)}</a></p>` : ''}
       ${canTrack(m) ? '<div id="ms-track"></div>' : ''}`,
-    foot: canEdit() ? `<span class="spacer"></span><button class="btn" data-act="certificate" data-mid="${m.id}">Certificat d’assistència</button>` : '',
+    foot: canEdit() || canWriteTo() ? `<span class="spacer"></span>${canWriteTo() && writableMembers().some(x => x.id === m.id) ? `<button class="btn" data-act="thread-to" data-mid="${m.id}">Escriu-li</button>` : ''}${canEdit() ? `<button class="btn" data-act="certificate" data-mid="${m.id}">Certificat d’assistència</button>` : ''}` : '',
     onMount: el => trackBox(el, m),
   });
 }

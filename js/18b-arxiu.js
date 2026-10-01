@@ -66,7 +66,13 @@ function archivePanel(prod, works) {
   const n = k => st.filter(x => x === k).length;
   const bits = [[n('todo'), 'a repartir'], [n('given'), n('given') === 1 ? 'repartida' : 'repartides'], [n('returned'), n('returned') === 1 ? 'retornada' : 'retornades']].filter(([k]) => k).map(([k, l]) => `${k} ${l}`);
   return `<div class="panel arx-panel"><span><b>Arxiu de partitures</b>${sec ? ` · ${esc(SEC[sec].name)}` : ''}<br><span class="muted">${bits.join(' · ') || 'Cap obra'}</span></span>
-    <button class="btn btn-sm" data-act="archive" data-pid="${esc(prod.id)}">Estadístiques de l’arxiu</button></div>`;
+    <span style="display:flex;gap:6px;flex-wrap:wrap">${myArchSection() ? `<button class="btn btn-sm" data-act="msg-new" data-pid="${esc(prod.id)}">Avisa la ${esc(V.section)}</button>` : ''}<button class="btn btn-sm" data-act="archive" data-pid="${esc(prod.id)}">Estadístiques de l’arxiu</button></span></div>`;
+}
+/** El missatge que proposa «Avisa la corda» a l'arxiver: recordar que cal tornar les partitures de la producció. */
+function scoreReminder(pid) {
+  const prod = S.productions.get(pid);
+  const name = prod?.name || 'la producció';
+  return { title: `Partitures de ${name}`, body: `Recordeu tornar-me les partitures de ${name} al pròxim assaig. Gràcies!` };
 }
 /** A la fitxa d'una obra: la partitura en paper d'aquesta producció. */
 function scoreBox(pid, w) {

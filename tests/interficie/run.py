@@ -334,7 +334,9 @@ def main():
         ctx, page, errors = open_app(browser, base, "leader", MOBILE)
         r = page.evaluate("""async () => {
           const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
-          out.button = !!document.querySelector('#view [data-act="msg-new"]');
+          document.querySelector('#view [data-act="write"]')?.click(); await s(200);
+          out.button = !!document.querySelector('.sheet [data-act="msg-new"]') && !!document.querySelector('.sheet [data-act="thread-to"]') && !document.querySelector('.sheet [data-act="ann-new"]');
+          closeSheet(); await s(100);
           sheetMessage(); await s(200);
           document.querySelector('#mg-body').value = 'Tenors, assaig parcial dijous a les 19 h.';
           document.querySelector('#mg-send').click(); await s(200); flushAll(); await s(300);
@@ -346,7 +348,7 @@ def main():
           out.note = (await firebase.firestore().collection(`cors/${GID}/memberNotes`).where('memberId', '==', tenor.id).get()).docs.some(d => d.data().section === 'T');
           return out;
         }""")
-        check(r["button"], "el cap de corda té «Missatge a la corda» a Inici", str(r))
+        check(r["button"], "el cap de corda, a «Escriu», té un missatge a la corda o a una persona", str(r))
         check(r["sent"], "el missatge del cap de corda va només a la seva corda", str(r))
         check(r["track"] and r["note"], "el cap de corda escriu notes de seguiment dels de la seva corda", str(r))
         check(not errors, "sense errors als missatges del cap de corda", "; ".join(errors[:3]))
@@ -836,6 +838,46 @@ def main():
                          ("acctCal", "el calendari al mòbil és al menú del compte")]:
             check(r.get(k), label, str(r))
         check(not errors, "sense errors als canvis ràpids", "; ".join(errors[:3]))
+        ctx.close()
+
+        print("Missatges a una persona, i els arxivers a la seva corda")
+        ctx, page, errors = open_app(browser, base, "pol", MOBILE)
+        r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          const anna = [...S.members.values()].find(m => /Puig/.test(m.name) && /Anna/.test(m.name));
+          sheetThreadTo(); await s(200);
+          const sel = document.querySelector('#tt-who'); sel.value = anna.id;
+          document.querySelector('#tt-text').value = 'Anna, em passes la partitura del Gloria?';
+          document.querySelector('#tt-send').click(); await s(800);
+          const t = [...S.threads.values()].find(x => x.memberId === anna.id && x.toEmail === S.email);
+          out.sent = !!t && t.lastSide === 's' && t.msgs.length === 1;
+          sheetThreadTo(anna.id); await s(200);
+          out.reopens = !!document.querySelector('.sheet .bubbles');
+          closeSheet();
+          ensureStaff(); for (let i = 0; i < 20 && !S.staffReady; i++) await s(200);
+          await writeAccount({ email: 'arx@exemple.cat', name: 'Laia Ferrer', roles: ['archive', 'singer'], role: 'archive', section: 'S', memberId: 'mS1', addedAt: new Date().toISOString() });
+          return out; }""")
+        switch_user(page, base, "singer")
+        r.update(page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          for (let i = 0; i < 20 && !S.threads.size; i++) await s(200);
+          out.inbox = unreadThreads().some(t => /Gloria/.test(t.msgs[0].text)) && todoItems().some(x => x.icon === 'thread');
+          return out; }"""))
+        switch_user(page, base, "arx")
+        r.update(page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          out.canMsg = canMessage() && mySecWrite() === 'S' && writableMembers().every(m => m.section === 'S');
+          ui.tab = 'tauler'; ui.board = 'materials'; ui.matProd = 'p1'; render(); await s(300);
+          document.querySelector('.arx-panel [data-act="msg-new"]').click(); await s(300);
+          out.preset = /Partitures de/.test(document.querySelector('#mg-title').value);
+          document.querySelector('#mg-send').click(); await s(200); flushAll(); await s(500);
+          out.arxSent = [...S.messages.values()].some(m => /tornar-me les partitures/.test(m.body) && m.to.join() === 'S' && /^Arxiver/.test(m.byRole));
+          return out; }"""))
+        for k, label in [("sent", "l'equip escriu a una persona: una conversa privada a nom seu"),
+                         ("reopens", "si ja hi parla, s'obre la mateixa conversa"),
+                         ("inbox", "a la persona li surt a «Per fer» i a les converses"),
+                         ("canMsg", "l'arxiver pot escriure a la seva corda i a la gent de la seva corda"),
+                         ("preset", "«Avisa la corda» proposa el recordatori de les partitures"),
+                         ("arxSent", "i el missatge va només a la seva corda, signat com a arxiver")]:
+            check(r.get(k), label, str(r))
+        check(not errors, "sense errors als missatges a una persona", "; ".join(errors[:3]))
         ctx.close()
 
         print("Mira l'app com…")
