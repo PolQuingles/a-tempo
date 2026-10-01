@@ -282,6 +282,9 @@ const actions = {
   'stats-prod': el => { ui.statsProd = el.dataset.id; ui.statsScope = 'prod'; render(); },
   'stats-sec': el => { ui.statsSec = el.dataset.sec; saveUI(); render(); },
   'stats-sort': el => { ui.statsSort = el.dataset.k; saveUI(); render(); },
+  // L'arxiu de partitures (18b-arxiu): l'equip i els arxivers.
+  'archive': el => { closeSheet(); sheetArchive(el.dataset.pid); },
+  'score-work': el => { closeSheet(); sheetScoreWork(el.dataset.pid, el.dataset.id, el.dataset.sec || ''); },
   'member-stats': el => { if (attHidden() && el.dataset.mid !== myMemberId()) { toast('Les llistes d’assistència són privades'); return; } sheetMemberStats(el.dataset.mid); },
   // Tria de produccions (22b-tries).
   'choice-open': el => sheetProdChoice(el.dataset.mid || myMemberId()),

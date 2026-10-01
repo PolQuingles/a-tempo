@@ -69,6 +69,7 @@ const TODO_ICONS = {
   msg: '<path d="M4 5.5h16v10.5H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/>',
   thread: '<path d="M4 5.5h11v8H8l-4 3.5z"/><path d="M15 9.5h5v8l-3-2.5h-6.5v-2"/>',
   plan: '<path d="M9 18V6.5l10-2.5v11.5"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="15.5" r="2.5"/>',
+  score: '<path d="M6 3.5h9l3 3v14H6z"/><path d="M15 3.5v3h3M9 11h6M9 14h6M9 17h4"/>',
 };
 const unreadAnnouncements = () => { const seen = lsGet(LS_SEEN) || ''; return visibleAnnouncements().filter(a => (a.createdAt || '') > seen && (!a.until || a.until >= TODAY)); };
 /** Les seccions on em toca passar llista: la dels caps de corda o de secció. */
@@ -108,6 +109,7 @@ function todoItems() {
   // No hi va ser: què s'hi va treballar (el pla de l'assaig on va faltar).
   const missed = missedPlan(me);
   if (missed) out.push({ icon: 'plan', t: `Què es va fer el ${esc(shortDate(missed.date))}`, s: `No hi vas ser: mira el pla ${esc(missed.type ? `de l’${missed.type.toLowerCase()}` : 'de l’assaig')}`, btn: 'Mira-ho', act: `data-act="session-info" data-sid="${esc(missed.id)}"`, n: 0 });
+  out.push(...archiveTodos());
   const th = unreadThreads();
   if (th.length) out.push({ icon: 'thread', t: `${th.length === 1 ? '1 conversa' : `${th.length} converses`} amb resposta nova`, s: esc(th.map(threadWho).slice(0, 2).join(', ')), btn: 'Llegeix', act: th.length === 1 ? `data-act="thread" data-id="${esc(th[0].id)}"` : 'data-act="threads"', n: th.length });
   const msgs = unreadMessages();

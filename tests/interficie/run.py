@@ -665,6 +665,61 @@ def main():
         check(not errors, "sense errors en donar compte a un professor", "; ".join(errors[:3]))
         ctx.close()
 
+        print("Arxiu de partitures: l'arxiver reparteix i recull les de la seva corda")
+        ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/tauler/repertori")
+        r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          ui.matProd = 'p1'; render(); await s(300);
+          out.pill = /A repartir/.test(document.querySelector('.work .sc-pill.pend')?.textContent || '');
+          out.panel = !!document.querySelector('.arx-panel [data-act="archive"]');
+          ensureStaff(); for (let i = 0; i < 20 && !S.staffReady; i++) await s(200);
+          await writeAccount({ email: 'arx@exemple.cat', name: 'Laia Ferrer', roles: ['archive', 'singer'], role: 'archive', section: 'S', memberId: 'mS1', addedAt: new Date().toISOString() });
+          return out; }""")
+        switch_user(page, base, "arx")
+        r.update(page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          out.todo = archiveTodos().some(x => /per repartir/.test(x.t));
+          ui.tab = 'tauler'; ui.board = 'materials'; ui.matProd = 'p1'; render(); await s(300);
+          out.mySec = /0\/4/.test(document.querySelector('.work .sc-pill')?.textContent || '');
+          sheetScoreWork('p1', 'w1'); await s(300);
+          out.rows = document.querySelectorAll('.sw-row').length === 4 && !document.querySelector('.sw-row button').disabled;
+          document.querySelector('#sw-bulk [data-bulk="given"]').click(); await s(1200);
+          const fake = JSON.parse(localStorage.getItem('fake:db'));
+          const doc = fake[Object.keys(fake).find(k => k.endsWith('/scores/p1_w1_S'))];
+          out.saved = !!doc && Object.values(doc.marks).filter(x => x.s === 'given').length === 4 && doc.section === 'S';
+          document.querySelector('#sw-sec .chip[data-sec="T"]').click(); await s(200);
+          out.otherRO = [...document.querySelectorAll('.sw-row button')].every(b => b.disabled) && document.querySelector('#sw-bulk').hidden;
+          document.querySelector('#sw-sec .chip[data-sec="S"]').click(); await s(200);
+          const laia = document.querySelector('.sw-row[data-mid="mS1"] button[data-k="returned"]'); laia.click(); await s(900);
+          out.returned = scoreOf('p1', 'w1', S.members.get('mS1')) === 'returned';
+          closeSheet(); await s(300); render(); await s(200);
+          out.cardGiven = /Repartida/.test(document.querySelector('.work .sc-pill')?.textContent || '');
+          out.noTodo = !archiveTodos().some(x => /per repartir/.test(x.t));
+          sheetArchive('p1'); await s(300);
+          out.archive = /a les mans/.test(document.querySelector('.ax-kpis')?.innerText || '') && document.querySelectorAll('.ax-table tbody tr').length === 4;
+          closeSheet(); await s(200);
+          out.overflow = document.documentElement.scrollWidth <= innerWidth;
+          return out; }"""))
+        switch_user(page, base, "singer")
+        r.update(page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms));
+          ui.tab = 'tauler'; ui.board = 'materials'; ui.matProd = 'p1'; render(); await s(300);
+          return { mine: (document.querySelector('.work .sc-pill')?.textContent || '') === 'Repartida', noPanel: !document.querySelector('.arx-panel') }; }"""))
+        for k, label in [("pill", "cada obra de la producció diu si està a repartir, repartida o retornada"),
+                         ("panel", "sota les obres hi ha l'arxiu de partitures"),
+                         ("todo", "a l'arxiver li surt a «Per fer» que té partitures per repartir"),
+                         ("mySec", "l'arxiver veu com va la seva corda"),
+                         ("rows", "l'arxiver té la llista de la seva corda per marcar"),
+                         ("saved", "«Totes repartides» les marca i queda desat a la seva corda"),
+                         ("otherRO", "les d'una altra corda només les pot mirar"),
+                         ("returned", "es pot marcar qui l'ha retornada"),
+                         ("cardGiven", "l'obra passa a «Repartida»"),
+                         ("noTodo", "i ja no li queda res per repartir"),
+                         ("archive", "les estadístiques de l'arxiu mostren qui té què"),
+                         ("overflow", "sense eixamplar la pantalla del mòbil"),
+                         ("mine", "cada cantaire veu l'estat de la seva partitura"),
+                         ("noPanel", "i no les estadístiques de l'arxiu")]:
+            check(r.get(k), label, str(r))
+        check(not errors, "sense errors a l'arxiu de partitures", "; ".join(errors[:3]))
+        ctx.close()
+
         print("Mira l'app com…")
         ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/gestio/personal")
         page.wait_for_function("S.staffReady", timeout=5000)

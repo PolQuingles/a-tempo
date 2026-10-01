@@ -42,7 +42,7 @@ function boardRepertoire() {
     const kinds = Object.keys(MAT_KINDS).map(k => [k, mats.filter(x => x.kind === k).length]).filter(([, n]) => n);
     const facts = [w.composer, w.arranger ? `arr. ${w.arranger}` : '', fmtDur(durSecs(w.duration)), w.voicing].filter(Boolean).map(esc).join(' · ');
     return `<button class="work" data-act="work-open" data-id="${esc(w.id)}">
-      <span class="work-t">${esc(w.title)}</span>
+      <span class="work-t">${esc(w.title)}</span>${prod ? scorePill(prod.id, w) : ''}
       ${facts ? `<span class="work-f">${facts}</span>` : ''}
       <span class="work-k">${kinds.map(([k, n]) => `<span class="mat-k ${k}">${MAT_KINDS[k].slice(0, 4)}${n > 1 ? ` ${n}` : ''}</span>`).join('')}${(w.roles || []).length ? `<span class="work-r">${(w.roles || []).length} ${(w.roles || []).length === 1 ? 'solo o grup' : 'solos i grups'}</span>` : ''}</span>
     </button>`;
@@ -54,6 +54,7 @@ function boardRepertoire() {
         <button class="btn btn-sm" data-act="work-open" data-id="${esc(w.id)}">Obra</button></li>`).join('')}</ul>` : '')
     + `<div class="section-title"><h2 class="h2">${all ? 'Tot el repertori' : 'Obres'}</h2><span class="eyebrow">${works.length}${total ? ` · ${fmtDur(total)}` : ''}</span></div>`
     + (works.length ? `<div class="works">${works.map(card).join('')}</div>` : `<div class="empty"><p>${all ? 'Encara no hi ha cap obra al repertori.' : `Encara no hi ha obres a ${esc(prod.name)}.`}</p></div>`)
+    + archivePanel(prod, works)
     + (files.length ? `<div class="panel" style="padding:12px 14px;margin-top:12px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
         <span style="font-size:calc(13.5px*var(--ts))">${toSave.length ? `${files.length - toSave.length} de ${files.length} fitxers desats al mòbil.` : `Tens els ${files.length} fitxers desats al mòbil: els pots obrir sense cobertura.`}</span>
         ${toSave.length ? `<button class="btn btn-sm" data-act="offline-save-all">Desa’ls al mòbil</button>` : `<button class="btn btn-sm btn-ghost" data-act="offline-clear">Treu-los</button>`}</div>` : '')
@@ -95,6 +96,7 @@ function sheetWork(id) {
       <div class="section-title" style="margin-top:14px"><h2 class="h2">Qui canta què</h2></div>
       ${(w.roles || []).length ? `<ul class="mini-list" style="max-height:none">${w.roles.map(r => `<li class="${me && (r.memberIds || []).includes(me.id) ? 'is-me' : ''}"><span><b>${esc(r.name)}</b><br><span class="m">${esc(roleNames(r).join(', ') || 'Encara per decidir')}</span></span></li>`).join('')}</ul>`
         : '<p class="muted" style="font-size:calc(13px*var(--ts));margin:0">No hi ha solos ni petits grups.</p>'}
+      ${scoreBox(ui.matProd !== 'all' ? ui.matProd : '', w)}
       <div class="section-title" style="margin-top:14px"><h2 class="h2">Partitures i àudios</h2>${me && !canEdit() ? '<button class="btn btn-sm btn-ghost" id="wk-mine"></button>' : ''}</div>
       <div class="panel" id="wk-mats"></div>`,
     foot: `${canEdit() ? `<button class="btn" data-act="work-edit" data-id="${esc(w.id)}">Edita</button>` : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Tanca</button>`,

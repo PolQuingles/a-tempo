@@ -96,6 +96,36 @@ prova('llistes privades: les còpies de cadascú només es tornen a escriure per
   igual(attHidden(), false, 'qui passa llista, sí');
   delete S.config.attPrivate;
 });
+prova('arxiu de partitures: A repartir, Repartida i Retornada, per corda i per a tot el cor', () => {
+  escenari({ members: [{ id: 'a', name: 'Puig, Anna', section: 'S' }, { id: 'b', name: 'Vila, Clara', section: 'S' }, { id: 'c', name: 'Bosch, Marc', section: 'T' }, { id: 'd', name: 'Font, Pere', section: 'B' }],
+    productions: [{ id: 'p', name: 'Tardor', sessions: [{ id: 's', date: D(5), type: 'Assaig' }], excluded: ['d'] }] });
+  S.scores = new Map();
+  const m = id => S.members.get(id);
+  igual(scoreSummary('p', 'w', '').state, 'todo', 'al principi, a repartir');
+  igual(scoreSummary('p', 'w', '').n, 3, 'qui no fa la producció no en té');
+  setScore('p', 'w', m('a'), 'given'); setScore('p', 'w', m('b'), 'given');
+  igual(scoreSummary('p', 'w', 'S').state, 'given', 'les sopranos ja la tenen');
+  igual(scoreSummary('p', 'w', '').state, 'todo', 'el cor encara no: falta el tenor');
+  igual(S.scores.get('p_w_S').section, 'S', 'un document per corda');
+  setScore('p', 'w', m('c'), 'given');
+  igual(scoreSummary('p', 'w', '').state, 'given');
+  setScore('p', 'w', m('a'), 'returned');
+  const x = scoreSummary('p', 'w', '');
+  igual([x.state, x.given, x.returned], ['given', 3, 1], 'una de tornada: encara repartida');
+  setScore('p', 'w', m('b'), 'returned'); setScore('p', 'w', m('c'), 'returned');
+  igual(scoreSummary('p', 'w', '').state, 'returned', 'totes tornades');
+  setScore('p', 'w', m('c'), '');
+  igual(scoreOf('p', 'w', m('c')), '', 'es pot desfer');
+  S.scores = new Map();
+});
+prova('arxiver: el rol porta la seva corda, també si la fitxa en canvia', () => {
+  escenari({ members: [{ id: 'a', name: 'Puig, Anna', section: 'S' }] });
+  const acc = { email: 'a@x.cat', roles: ['archive', 'singer'], role: 'archive', section: 'S', memberId: 'a' };
+  igual(accountForMember(acc, { ...S.members.get('a'), section: 'C' }, S.members.get('a')).section, 'C', 'canvia de corda');
+  igual(accountForMember({ ...acc, roles: ['leader', 'archive', 'singer'] }, { ...S.members.get('a'), leader: false }, { ...S.members.get('a'), leader: true }).section, 'S', 'si deixa de ser cap de corda, continua sent arxiver de la seva');
+  igual(rolesOf(acc), ['archive', 'singer']);
+  igual(roleLevel(acc), 'read', 'no passa llista');
+});
 prova('computeStats: compta per persona, per corda i per sessió, i salta les sessions sense llista', () => {
   escenari({
     members: [{ id: 'a', name: 'Puig, Anna', section: 'S' }, { id: 'b', name: 'Bosch, Marc', section: 'T' }, { id: 'c', name: 'Camps, Oriol', section: 'T' }],
