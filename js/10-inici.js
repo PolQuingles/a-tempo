@@ -194,7 +194,7 @@ function soonBlock(me) {
     const clash = classClash(nx.c, nx.slot);
     rows.push({ key: `${nx.c.date} ${nx.slot.time || ''}`, html: soonRow({ date: nx.c.date, time: nx.slot.time || '', kind: 'La teva classe', title: esc(V.classes.replace(/^Classes/, 'Classe')), meta: esc([nx.c.place, teacherOf(nx.c)].filter(Boolean).join(' · ')),
       extra: clash ? `<span class="st-pill st-pending">Xoca amb ${esc(clash.type || 'l’assaig')}</span>` : '', now: nx.c.date === TODAY,
-      acts: `<button class="btn btn-sm" data-act="cl-notice" data-c="${esc(nx.c.id)}" data-s="${esc(nx.slot.id)}" data-k="late">Arribaré tard</button><button class="btn btn-sm" data-act="cl-notice" data-c="${esc(nx.c.id)}" data-s="${esc(nx.slot.id)}" data-k="absent">No hi podré anar</button>${classSlots(nx.c).length > 1 ? `<button class="btn btn-sm btn-ghost" data-act="cl-swap" data-c="${esc(nx.c.id)}" data-s="${esc(nx.slot.id)}">Canvia l’hora</button>` : ''}` }) });
+      acts: `<button class="btn btn-sm" data-act="cl-notice" data-c="${esc(nx.c.id)}" data-s="${esc(nx.slot.id)}" data-k="late">Arribaré tard</button><button class="btn btn-sm" data-act="cl-notice" data-c="${esc(nx.c.id)}" data-s="${esc(nx.slot.id)}" data-k="absent">No hi podré anar</button>${classSlots(nx.c).length > 1 || weekClasses(nx.c).length > 1 ? `<button class="btn btn-sm btn-ghost" data-act="cl-swap" data-c="${esc(nx.c.id)}" data-s="${esc(nx.slot.id)}">Canvia l’hora</button>` : ''}` }) });
   }
   const later = allSessions().filter(s => s.date > TODAY && mineS(s) && !(me && isOut(s, me)));
   const next = later[0];
@@ -224,13 +224,13 @@ function viewHome() {
   const who = me ? `${esc(SEC[me.section].name)}${me.part ? ` ${esc(me.part)}` : ''}${lv ? ` · ${lv}` : ''}` : (ME() ? esc(rolesText(ME())) : '');
   const head = `<div class="page-head home-head"><div><div class="eyebrow">${esc(longDate(TODAY))}</div><h1 class="h1">Hola${first ? `, ${esc(first)}` : ''}</h1>${who ? `<div class="me-line">${who}</div>` : ''}</div></div>`;
   if (!me && !canEdit() && myMemberId()) return head + `<div class="empty">${staffSvg()}<h2 class="h2">Compte sense fitxa</h2><p>El teu correu encara no està vinculat a cap fitxa de la plantilla. Demana-ho a l’administració ${V.del}.</p></div>`;
-  // Per fer, Properament, Els meus avisos i La meva assistència, una secció darrere l'altra; els missatges, al final.
+  // Per fer, Els meus avisos, Properament i La meva assistència, una secció darrere l'altra; els missatges, al final.
   return `${head}
     ${installCard()}
     <div class="home">
       <section>${todoBlock(me)}</section>
-      <section>${soonBlock(me)}</section>
       ${me ? `<section>${myNoticesBlock(me)}</section>` : ''}
+      <section>${soonBlock(me)}</section>
       ${me ? `<section>${myAttendanceCard(me)}</section>` : ''}
       ${(() => { const m = messagesBlock(); return m ? `<section>${m}</section>` : ''; })()}
     </div>`;

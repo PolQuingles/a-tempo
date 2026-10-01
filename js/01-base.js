@@ -263,16 +263,42 @@ const classesOn = () => !!S.config.classesOn;
 const teachesClasses = () => iHave('voice') || iHave('admin');
 const classDays = who => [...S.classes.values()].filter(c => !who || (c.teacher || '') === who)
   .sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.id || '').localeCompare(b.id || ''));
-/** Els llocs del dia, amb els canvis d'hora acceptats ja aplicats. */
+/** El dia de classe de l'altra persona d'un canvi d'hora: el mateix o, si canvien entre dies, l'altre. */
+const swapWithClass = r => r.withClassId || r.classId;
+/** Els llocs del dia, amb els canvis d'hora acceptats ja aplicats. Un canvi entre dos dies (el dilluns amb el dimecres)
+ *  posa cadascú a l'hora de l'altre, cada dia al seu document. */
 function classSlots(c) {
   const slots = (c.slots || []).map(x => ({ ...x }));
   const by = new Map(slots.map(x => [x.id, x]));
   for (const r of S.classReq.values()) {
-    if (r.classId !== c.id || r.kind !== 'swap' || r.status !== 'accepted') continue;
-    const a = by.get(r.slotId), b = by.get(r.withSlotId);
-    if (a && b) { const t = a.memberId; a.memberId = b.memberId; b.memberId = t; a.swapped = b.swapped = true; }
+    if (r.kind !== 'swap' || r.status !== 'accepted') continue;
+    const wc = swapWithClass(r);
+    if (r.classId !== c.id && wc !== c.id) continue;
+    if (wc === r.classId) {
+      const a = by.get(r.slotId), b = by.get(r.withSlotId);
+      if (a && b) { const t = a.memberId; a.memberId = b.memberId; b.memberId = t; a.swapped = b.swapped = true; }
+    } else if (r.classId === c.id) { const a = by.get(r.slotId); if (a && r.withMemberId) { a.memberId = r.withMemberId; a.swapped = true; } }
+    else { const b = by.get(r.withSlotId); if (b) { b.memberId = r.memberId; b.swapped = true; } }
   }
   return slots;
+}
+/** Els dies de classe d'aquella setmana amb el mateix professor (p. ex. el dilluns i el dimecres) que encara han de venir:
+ *  entre ells es pot canviar l'hora. */
+function weekClasses(c) {
+  if (!c) return [];
+  const dow = (new Date(c.date + 'T12:00:00').getDay() + 6) % 7, mon = addDays(c.date, -dow), sun = addDays(mon, 6);
+  return classDays(c.teacher || '-').filter(x => x.date >= mon && x.date <= sun && x.date >= TODAY && classLive(x));
+}
+/** La meva hora per agafar un canvi obert: la que l'altre m'ofereix o, si no, la meva d'aquella setmana (primer el mateix dia). */
+function mySwapSlot(r) {
+  const c = S.classes.get(r.classId);
+  const offer = r.offers && myId() ? r.offers[myId()] : '';
+  if (offer) { const [cid, sid] = offer.split('|'); const oc = S.classes.get(cid), ox = oc && classSlots(oc).find(x => x.id === sid && x.memberId === myId()); if (ox) return { c: oc, x: ox }; }
+  for (const k of [c, ...weekClasses(c).filter(x => x.id !== c?.id)]) {
+    const x = k && mySlot(k);
+    if (x && !(k.id === r.classId && x.id === r.slotId)) return { c: k, x };
+  }
+  return null;
 }
 const mySlot = c => { const id = myId(); return id ? classSlots(c).find(x => x.memberId === id) : null; };
 const classNoteFor = (classId, slotId) => S.classNotes.get(`${classId}_${slotId}`);
@@ -282,8 +308,9 @@ const openSwaps = () => {
   const id = myId();
   if (!id) return [];
   return [...S.classReq.values()].filter(r => r.kind === 'swap' && r.open && r.status === 'pending' && r.memberId !== id
+    && (!r.to || r.to.includes(id))
     && classLive(S.classes.get(r.classId)) && S.classes.get(r.classId)?.date >= TODAY
-    && !!mySlot(S.classes.get(r.classId)));
+    && !!mySwapSlot(r));
 };
 /** Assajos o concerts que es trepitgen amb una hora de classe. */
 function classClash(c, x) {
@@ -310,8 +337,9 @@ const seeClasses = () => classesOn() && (teachesClasses() || inClasses());
 /** Els avisos que toquen una hora concreta: els de retard o absència segueixen la persona
  *  (si s'ha fet un canvi, van amb ella a l'hora nova); els canvis d'hora, les dues hores. */
 const slotReqs = (c, slot) => [...S.classReq.values()]
-  .filter(r => r.classId === c.id && !['cancelled', 'rejected'].includes(r.status)
-    && (r.kind === 'swap' ? (r.slotId === slot.id || r.withSlotId === slot.id) : r.memberId === slot.memberId))
+  .filter(r => !['cancelled', 'rejected'].includes(r.status)
+    && (r.kind === 'swap' ? (r.classId === c.id && r.slotId === slot.id) || (swapWithClass(r) === c.id && r.withSlotId === slot.id)
+      : r.classId === c.id && r.memberId === slot.memberId))
   .sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
 const reqsToAnswer = () => { const id = myId(); return id ? [...S.classReq.values()].filter(r => r.kind === 'swap' && r.status === 'pending' && r.withMemberId === id) : []; };
 const reqsForTeacher = () => [...S.classReq.values()].filter(r => r.status === 'pending' && r.kind !== 'swap');

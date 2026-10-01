@@ -576,9 +576,27 @@ class Group:
             return f"la classe de {day_label(day['date'])}" + (f" ({slot['time']})" if slot and slot.get("time") else "")
 
         def other_time(req):
-            day = days.get(req.get("classId") or "")
+            """L'hora de l'altra persona; si és un altre dia de la setmana (withClassId), amb el dia."""
+            cid = req.get("withClassId") or req.get("classId") or ""
+            day = days.get(cid)
             slot = next((x for x in (day or {}).get("slots") or [] if x.get("id") == req.get("withSlotId")), None)
-            return (slot or {}).get("time") or ""
+            t = (slot or {}).get("time") or ""
+            return f"{day_label(day['date'])} {t}".strip() if day and cid != req.get("classId") else t
+
+        def week_people(req):
+            """Qui té classe aquella setmana amb el mateix professor (els dies que encara han de venir)."""
+            day = days.get(req.get("classId") or "") or {}
+            if not day.get("date"):
+                return set()
+            d = datetime.date.fromisoformat(day["date"])
+            mon = d - datetime.timedelta(days=d.weekday())
+            sun = mon + datetime.timedelta(days=6)
+            out = set()
+            for x in days.values():
+                if x.get("teacher") == day.get("teacher") and not x.get("deleted") and not x.get("cancelled") \
+                        and mon.isoformat() <= (x.get("date") or "") <= sun.isoformat() and x["date"] >= TODAY.isoformat():
+                    out |= {s.get("memberId") for s in x.get("slots") or [] if s.get("memberId")}
+            return out
 
         # Dies anul·lats: s'avisa qui hi tenia hora.
         for cid, day in sorted(off.items()):
@@ -601,6 +619,8 @@ class Group:
                     body = f"{who} no podrà venir a {when(req)}."
                 elif req.get("withMemberId"):
                     body = f"{who} demana canviar l'hora de {when(req)} amb {mate} ({other_time(req)})."
+                elif req.get("to"):
+                    body = f"{who} demana canviar l'hora de {when(req)} a {', '.join(name(m) for m in req['to'])}."
                 else:
                     body = f"{who} busca algú per canviar l'hora de {when(req)}."
                 for did, d in self.to_emails(teachers):
@@ -610,9 +630,9 @@ class Group:
                     for did, d in self.targets("classes", member_ids={req.get("withMemberId")}):
                         self.deliver(f"cls:{rid}:ask:{did}", d, msg, f"cls-{rid}")
                 elif kind == "swap":
-                    # Canvi obert: ho saben tots els qui tenen classe aquell dia, tret de qui el demana.
-                    day = days.get(req.get("classId") or "") or {}
-                    others = {x.get("memberId") for x in day.get("slots") or [] if x.get("memberId")} - {req.get("memberId")}
+                    # Canvi obert: ho saben les persones triades o, si és per a tothom, tots els qui tenen classe aquella
+                    # setmana amb el mateix professor, tret de qui el demana.
+                    others = (set(req.get("to") or []) or week_people(req)) - {req.get("memberId")}
                     msg = f"{who} busca algú per canviar l'hora de {when(req)}. Si et va bé, queda-te'l des de l'app."
                     for did, d in self.targets("classes", member_ids=others):
                         self.deliver(f"cls:{rid}:ask:{did}", d, msg, f"cls-{rid}")
