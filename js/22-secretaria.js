@@ -55,45 +55,8 @@ function seniority(m, until = TODAY) {
   return [y ? `${y} ${y === 1 ? 'any' : 'anys'}` : '', mo ? `${mo} ${mo === 1 ? 'mes' : 'mesos'}` : ''].filter(Boolean).join(' i ');
 }
 const HIST_WORD = { alta: 'Alta', baixa: 'Baixa', retorn: 'Torna' };
-function manageHistory() {
-  const { season } = seasonCfg();
-  const all = membersOf(null, true);
-  const events = all.flatMap(m => (m.history || []).map(h => ({ ...h, m }))).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-  const inSeason = events.filter(e => e.date >= season.from && e.date <= season.to);
-  const active = all.filter(m => m.active !== false).sort((a, b) => (a.joined || '9999').localeCompare(b.joined || '9999') || byName(a, b));
-  const noDate = active.filter(m => !m.joined).length;
-  return `<div class="kpis kpis-3" style="margin-top:4px">
-      <div class="kpi"><div class="kpi-v">${active.length}</div><div class="kpi-l">En actiu</div></div>
-      <div class="kpi"><div class="kpi-v">${inSeason.filter(e => e.kind !== 'baixa').length}</div><div class="kpi-l">Altes aquesta temporada</div></div>
-      <div class="kpi"><div class="kpi-v">${inSeason.filter(e => e.kind === 'baixa').length}</div><div class="kpi-l">Baixes aquesta temporada</div></div></div>
-    <div class="sec-h" style="margin-top:10px"><span class="muted" style="font-size:calc(13px*var(--ts))">L’alta i la baixa es posen a la fitxa de cada persona (en desactivar-la, se’n demana la data i el motiu).</span><button class="btn btn-sm" data-act="roster-export">Exporta la plantilla a Excel</button></div>
-    <div class="section-title"><h2 class="h2">Moviments</h2><span class="eyebrow">${esc(season.name)}</span></div>
-    ${inSeason.length ? `<ul class="list">${inSeason.map(e => `<li class="li"><button data-act="member-edit" data-mid="${e.m.id}"><span><span class="hist-k ${e.kind}">${HIST_WORD[e.kind] || e.kind}</span> <span class="t">${esc(e.m.name)}</span><br><span class="s">${esc(ddmm(e.date))}/${e.date.slice(2, 4)} · ${esc(SEC[e.m.section].name)}${e.note ? ` · ${esc(e.note)}` : ''}</span></span></button></li>`).join('')}</ul>`
-      : '<p class="muted" style="margin:0 2px;font-size:calc(13px*var(--ts))">Aquesta temporada encara no hi ha hagut cap alta ni cap baixa.</p>'}
-    <div class="section-title"><h2 class="h2">Antiguitat</h2><span class="eyebrow">${noDate ? `${noDate} sense data d’alta` : 'de més a menys'}</span></div>
-    <ul class="list">${active.map(m => `<li class="li"><button data-act="member-edit" data-mid="${m.id}"><span><span class="t">${esc(m.name)}</span> <span class="part">${esc(partTag(m) || SEC[m.section].short)}</span><br><span class="s">${m.joined ? `Des del ${esc(ddmm(m.joined))}/${m.joined.slice(0, 4)} · ${esc(seniority(m))}` : 'Sense data d’alta'}</span></span></button></li>`).join('')}</ul>
-    ${events.length > inSeason.length ? `<details class="np-group"><summary><span>Moviments d’altres temporades (${events.length - inSeason.length})</span>${ICON.chev}</summary>
-      <ul class="list">${events.filter(e => !inSeason.includes(e)).map(e => `<li class="li"><button data-act="member-edit" data-mid="${e.m.id}"><span><span class="hist-k ${e.kind}">${HIST_WORD[e.kind] || e.kind}</span> <span class="t">${esc(e.m.name)}</span><br><span class="s">${esc(ddmm(e.date))}/${e.date.slice(2, 4)}${e.note ? ` · ${esc(e.note)}` : ''}</span></span></button></li>`).join('')}</ul></details>` : ''}`;
-}
 
 /* ---------- Documents per persona ---------- */
-function manageDocs() {
-  if (!S.memberDocs) { ensureSecData(); return '<p class="muted" style="margin:10px 2px">Carregant els documents…</p>'; }
-  const ms = membersOf(null);
-  const noImg = ms.filter(m => docState(m.id, 'imatge').v === 'no');
-  const pend = k => ms.filter(m => !docState(m.id, k).v).length;
-  return `<div class="panel" style="padding:12px 14px;margin-top:4px">
-      <b>No poden sortir a fotos ni vídeos</b> <span class="m">(${noImg.length})</span>
-      <p style="margin:6px 0 0;font-size:calc(13.5px*var(--ts))">${noImg.length ? esc(noImg.map(m => fullName(m.name)).join(', ')) : 'Ningú no ha dit que no.'}</p>
-      ${noImg.length ? '<button class="btn btn-sm" data-act="docs-copy-noimg" style="margin-top:8px">Copia la llista (per a qui fa les fotos)</button>' : ''}</div>
-    <div class="sec-h" style="margin-top:10px"><span class="muted" style="font-size:calc(13px*var(--ts))">Pendents: ${DOC_ITEMS.map(([k, l]) => `${esc(l.toLowerCase())} ${pend(k)}`).join(' · ')}. Cadascú pot respondre els dos primers a «La meva fitxa».</span><button class="btn btn-sm" data-act="docs-export">Excel</button></div>
-    ${SECTIONS.map(x => {
-      const rows = membersOf(x.id);
-      if (!rows.length) return '';
-      return `<div class="section-title"><h2 class="h2">${esc(x.name)}</h2></div><ul class="list">${rows.map(m => `<li class="li"><button ${canDocsWrite() ? `data-act="member-docs" data-mid="${m.id}"` : 'disabled'}>
-        <span class="t">${esc(m.name)}</span><span class="dps">${DOC_ITEMS.map(([k, l]) => `<span class="dp-i" title="${esc(l)}"><small>${esc(l.split(' ')[0] === 'Drets' ? 'Imatge' : l.split(' ')[0] === 'Protecció' ? 'Dades' : 'Autor.')}</small>${docPill(docState(m.id, k))}</span>`).join('')}</span></button></li>`).join('')}</ul>`;
-    }).join('')}`;
-}
 function sheetMemberDocs(mid) {
   const m = S.members.get(mid);
   if (!m) return;
@@ -149,26 +112,6 @@ function sheetMemberDocs(mid) {
 }
 
 /* ---------- Quotes ---------- */
-function manageFees() {
-  if (!S.memberDocs) { ensureSecData(); return '<p class="muted" style="margin:10px 2px">Carregant les quotes…</p>'; }
-  const key = feeKey(), ms = membersOf(null);
-  const fee = m => docsOf(m.id).fees?.[key] || {};
-  const paid = ms.filter(m => fee(m).paid);
-  const total = paid.reduce((n, m) => n + (+fee(m).amount || 0), 0);
-  return `<div class="panel" style="padding:12px 14px;margin-top:4px;display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between">
-      <span><b>Temporada ${esc(key)}</b><br><span class="m">${paid.length} de ${ms.length} han pagat · ${euros(total)} recaptats${feeAmount() ? ` de ${euros(feeAmount() * ms.length)}` : ''}</span></span>
-      ${canDocsWrite() ? `<label class="field" style="margin:0"><span>Quota</span><span style="display:flex;align-items:center;gap:6px"><input class="inp" id="fee-amount" type="number" min="0" step="1" inputmode="decimal" value="${feeAmount() || ''}" data-bind="fee-amount" style="width:90px;text-align:right"> €</span></label>` : ''}
-      <button class="btn btn-sm" data-act="fees-export">Excel</button></div>
-    ${SECTIONS.map(x => {
-      const rows = membersOf(x.id);
-      if (!rows.length) return '';
-      return `<div class="section-title"><h2 class="h2">${esc(x.name)}</h2><span class="eyebrow">${rows.filter(m => fee(m).paid).length} de ${rows.length}</span></div>
-        <ul class="list">${rows.map(m => { const f = fee(m); return `<li class="li fee-row"><button ${canDocsWrite() ? `data-act="fee-edit" data-mid="${m.id}"` : 'disabled'}>
-          <span><span class="t">${esc(m.name)}</span><br><span class="s">${f.paid ? `Pagada${f.date ? ` el ${esc(ddmm(f.date))}` : ''}${f.amount ? ` · ${euros(f.amount)}` : ''}${f.method ? ` · ${esc(f.method)}` : ''}` : f.note ? esc(f.note) : `${euros(feeAmount())} per pagar`}</span></span>
-          <span class="dp ${f.paid ? 'ok' : ''}">${f.paid ? 'Pagada' : 'Pendent'}</span></button>
-          ${canDocsWrite() && !f.paid ? `<button class="btn btn-sm" data-act="fee-paid" data-mid="${m.id}">Marca-la pagada</button>` : ''}</li>`; }).join('')}</ul>`;
-    }).join('')}`;
-}
 async function markFeePaid(mid) {
   const rec = clone(docsOf(mid)); rec.fees = rec.fees || {};
   rec.fees[feeKey()] = { paid: true, amount: feeAmount(), date: TODAY, method: '', note: '' };
@@ -199,6 +142,117 @@ function sheetFee(mid) {
       };
     },
   });
+}
+
+/* ---------- La plantilla: cada persona, amb tota la seva informació ---------- */
+// Abans eren quatre llistes (Plantilla, Altes i baixes, Documents i Quotes). Ara n'és una: el resum de la temporada a dalt,
+// uns filtres i, en tocar una persona, se'n desplega tot (dades, la seva fitxa, l'historial, els documents i la quota).
+const PM_OPEN = new Set();
+document.addEventListener('toggle', e => {
+  const d = e.target;
+  if (d instanceof HTMLDetailsElement && d.classList.contains('pm')) { if (d.open) PM_OPEN.add(d.dataset.mid); else PM_OPEN.delete(d.dataset.mid); }
+}, true);
+const PM_FILTERS = () => [['all', 'Tothom'], ['moves', 'Altes i baixes'], ...(canDocs() ? [['docs', 'Documents pendents'], ['fees', 'Quota pendent']] : []), ...(isAdmin() ? [['access', 'Sense accés']] : [])];
+const seasonMoves = m => { const { season } = seasonCfg(); return (m.history || []).filter(h => h.date >= season.from && h.date <= season.to); };
+const feeOf = m => docsOf(m.id).fees?.[feeKey()] || {};
+const docsPending = m => DOC_ITEMS.some(([k]) => !docState(m.id, k).v);
+function pmMatch(m, f) {
+  const on = m.active !== false;
+  if (f === 'moves') return seasonMoves(m).length > 0;
+  if (f === 'docs') return on && !!S.memberDocs && docsPending(m);
+  if (f === 'fees') return on && !!S.memberDocs && !feeOf(m).paid;
+  if (f === 'access') return on && !accountFor(m.id);
+  return true;
+}
+function plantillaSummary(all) {
+  const { season } = seasonCfg();
+  const active = all.filter(m => m.active !== false);
+  const ev = all.flatMap(seasonMoves);
+  const ups = ev.filter(e => e.kind !== 'baixa').length, downs = ev.length - ups;
+  const lines = [`<b>${active.length}</b> en actiu · ${ups} ${ups === 1 ? 'alta' : 'altes'} i ${downs} ${downs === 1 ? 'baixa' : 'baixes'} (${esc(season.name.toLowerCase())})`];
+  if (canDocs()) {
+    if (!S.memberDocs) lines.push('<span class="muted">Carregant els documents i les quotes…</span>');
+    else {
+      const paid = active.filter(m => feeOf(m).paid), total = paid.reduce((n, m) => n + (+feeOf(m).amount || 0), 0);
+      lines.push(`Quota ${esc(feeKey())}: <b>${paid.length} de ${active.length}</b> han pagat · ${euros(total)}${feeAmount() ? ` de ${euros(feeAmount() * active.length)}` : ''}`);
+      const noImg = active.filter(m => docState(m.id, 'imatge').v === 'no');
+      lines.push(noImg.length ? `No poden sortir a fotos: <b>${esc(noImg.map(m => fullName(m.name)).join(', '))}</b> <button class="linkish" data-act="docs-copy-noimg">Copia la llista</button>` : 'Ningú no ha dit que no pugui sortir a fotos ni vídeos.');
+    }
+  }
+  return `<div class="panel pm-sum">${lines.map(l => `<p>${l}</p>`).join('')}
+    <div class="pm-tools">${canDocsWrite() ? `<label class="pm-fee"><span>Quota</span><input class="inp" id="fee-amount" type="number" min="0" step="1" inputmode="decimal" value="${feeAmount() || ''}" data-bind="fee-amount"> €</label>` : ''}
+      <button class="btn btn-sm" data-act="roster-export">Exporta a Excel</button></div></div>`;
+}
+/** Tot el que se sap d'una persona, per desplegar-ho a la plantilla. */
+function memberCard(m) {
+  const p = profileOf(m.id), off = m.active === false;
+  const acc = isAdmin() ? accountFor(m.id) : null;
+  const phone = phoneOf(m);
+  const rows = [
+    [capz(V.section), `${esc(SEC[m.section].name)}${m.part ? ` · ${esc(V.part)} ${esc(m.part)}` : ''}${m.leader ? ` · ${esc(V.leader)}` : ''}`],
+    ['Estat', off ? 'Inactiu' : leaveText(m) || 'Actiu'],
+    ['Alta', m.joined ? `${esc(ddmm(m.joined))}/${m.joined.slice(0, 4)} · ${esc(seniority(m))}` : 'Sense data d’alta'],
+    ['Telèfon', phone ? `<a href="tel:${esc(phone.replace(/\s/g, ''))}">${esc(phone)}</a>` : ''],
+    isAdmin() && !off ? ['Accés a l’app', acc ? `${esc(acc.email)}${acc.lastSeen ? '' : ' · encara no ha entrat'}` : 'Sense accés'] : null,
+    ['Talla', esc(p.size || '')], ['Emergència', esc([p.emergencyName, p.emergencyPhone].filter(Boolean).join(' · '))], ['Al·lèrgies', esc(p.diet || '')],
+    ['Notes', esc(m.notes || '')],
+  ].filter(r => r && r[1]);
+  const hist = (m.history || []).slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  const docs = canDocs() && S.memberDocs;
+  const fee = docs ? feeOf(m) : null;
+  const w = canDocsWrite();
+  const acts = [
+    canEdit() ? `<button class="btn btn-sm" data-act="member-edit" data-mid="${m.id}">Edita la fitxa</button>` : '',
+    w ? `<button class="btn btn-sm" data-act="member-docs" data-mid="${m.id}">Documents</button><button class="btn btn-sm" data-act="fee-edit" data-mid="${m.id}">Quota</button>` : '',
+    w && fee && !fee.paid && !off ? `<button class="btn btn-sm btn-soft" data-act="fee-paid" data-mid="${m.id}">Marca la quota pagada</button>` : '',
+    !off ? `<button class="btn btn-sm" data-act="member-stats" data-mid="${m.id}">Assistència</button>` : '',
+    !off && canWriteTo() && writableMembers().some(x => x.id === m.id) ? `<button class="btn btn-sm" data-act="thread-to" data-mid="${m.id}">Escriu-li</button>` : '',
+  ].filter(Boolean).join('');
+  return `<dl class="fitxa">${rows.map(([l, v]) => `<div><dt>${l}</dt><dd>${v}</dd></div>`).join('')}</dl>
+    ${docs ? `<div class="pm-box"><b>Documents i quota</b><div class="pm-docs">${DOC_ITEMS.map(([k, l]) => `<span class="dp-i"><small>${esc(l)}</small>${docPill(docState(m.id, k))}</span>`).join('')}
+      <span class="dp-i"><small>Quota ${esc(feeKey())}</small><span class="dp ${fee.paid ? 'ok' : ''}">${fee.paid ? 'Pagada' : 'Pendent'}</span></span></div>
+      ${fee.paid && (fee.date || fee.method) ? `<p class="pm-note">Quota pagada${fee.date ? ` el ${esc(ddmm(fee.date))}` : ''}${fee.amount ? ` · ${euros(fee.amount)}` : ''}${fee.method ? ` · ${esc(fee.method)}` : ''}</p>` : fee.note ? `<p class="pm-note">${esc(fee.note)}</p>` : ''}</div>` : ''}
+    ${hist.length ? `<div class="pm-box"><b>Altes i baixes</b><ul class="pm-hist">${hist.map(h => `<li><span class="hist-k ${h.kind}">${HIST_WORD[h.kind] || esc(h.kind)}</span> ${esc(ddmm(h.date))}/${h.date.slice(2, 4)}${h.note ? ` · ${esc(h.note)}` : ''}</li>`).join('')}</ul></div>` : ''}
+    ${acts ? `<div class="pm-acts">${acts}</div>` : ''}`;
+}
+function pmRow(m, f) {
+  const off = m.active === false;
+  const acc = isAdmin() && !off ? accountFor(m.id) : null;
+  const docs = canDocs() && S.memberDocs && !off;
+  // A la fila, només el que diu el filtre triat (a «Tothom», l'accés): la resta és dins, en desplegar-la.
+  const short = { imatge: 'Imatge', dades: 'Dades', autoritzacio: 'Autorització' };
+  const tags = [
+    isAdmin() && !off && (f === 'all' || f === 'access') ? (!acc ? '<span class="acc-tag">Sense accés</span>' : !acc.lastSeen ? '<span class="acc-tag">No ha entrat</span>' : '') : '',
+    docs && f === 'docs' ? DOC_ITEMS.filter(([k]) => !docState(m.id, k).v).map(([k]) => `<span class="dp">${short[k]}</span>`).join('') : '',
+    docs && f === 'fees' ? `<span class="dp">${feeAmount() ? euros(feeAmount()) : 'Pendent'}</span>` : '',
+  ].filter(Boolean).join('');
+  const sub = off ? 'Inactiu' : f === 'moves' ? seasonMoves(m).map(h => `${HIST_WORD[h.kind] || esc(h.kind)} ${esc(ddmm(h.date))}${h.note ? ` · ${esc(h.note)}` : ''}`).join(' · ') : leaveText(m) || esc(phoneOf(m));
+  return `<details class="pm" data-mid="${m.id}" data-find="${esc(normText(m.name))}"${PM_OPEN.has(m.id) ? ' open' : ''}>
+    <summary><span class="pm-n${off ? ' dim' : ''}"><span class="t">${esc(m.name)}</span>${m.part ? ` <span class="part">${esc(partTag(m))}</span>` : ''}${m.leader ? ` <span class="tag">${V.Leader}</span>` : ''}${sub ? `<span class="s">${sub}</span>` : ''}</span>
+      ${tags ? `<span class="pm-tags">${tags}</span>` : ''}${ICON.chev}</summary>
+    <div class="pm-b">${memberCard(m)}</div></details>`;
+}
+function managePlantilla() {
+  // Les fitxes (talla, emergència…), els documents i les quotes es llegeixen un sol cop, en obrir la plantilla.
+  if (canEdit() && (!S.profiles || (canDocs() && !S.memberDocs))) ensureSecData();
+  if (!PM_FILTERS().some(([k]) => k === ui.pmFilter)) ui.pmFilter = 'all';
+  const f = ui.pmFilter;
+  const all = membersOf(null, true);
+  const chips = `<div class="chips pm-chips" role="group" aria-label="Filtra la plantilla">${PM_FILTERS().map(([k, l]) => {
+    const n = k === 'all' ? all.filter(m => m.active !== false).length : all.filter(m => pmMatch(m, k)).length;
+    return `<button class="chip" aria-pressed="${f === k}" data-act="pm-filter" data-k="${k}">${l} <span class="m">${n}</span></button>`;
+  }).join('')}</div>`;
+  const secs = SECTIONS.map(x => {
+    const ms = membersOf(x.id, true).filter(m => pmMatch(m, f));
+    if (f !== 'all' && !ms.length) return '';
+    const active = ms.filter(m => m.active !== false).length;
+    return `<section data-group="${x.id}"><div class="sec-h"><h2 class="h2"><em>${esc(x.short)}</em>${esc(x.name)} <span class="mono muted" style="font-size:calc(13px*var(--ts));font-weight:400">${active}</span></h2>
+      ${f === 'all' ? `<button class="btn btn-sm btn-ghost" data-act="member-new" data-sec="${x.id}">Afegeix</button>` : ''}</div>
+      ${ms.length ? `<div class="list pm-list">${ms.map(m => pmRow(m, f)).join('')}</div>`
+        : `<div class="panel" style="padding:14px;color:var(--muted);font-size:calc(13.5px*var(--ts))">Encara no hi ha ningú en aquesta ${V.section}.</div>`}</section>`;
+  }).join('');
+  return `${onboardingPanel()}${plantillaSummary(all)}${chips}
+    <div id="mlist">${findBox('#mlist', `Cerca un ${V.member}`)}${secs || '<div class="panel" style="padding:14px;color:var(--muted)">Ningú no hi correspon.</div>'}<div class="panel find-empty" hidden>Ningú amb aquest nom.</div></div>`;
 }
 
 /* ---------- La plantilla a Excel ---------- */

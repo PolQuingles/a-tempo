@@ -141,7 +141,7 @@ function todoBlock(me) {
   return `<div class="section-title"><h2 class="h2">Per fer</h2><span class="eyebrow">${items.length}</span></div>` + `<div class="todo">${items.map(x => x.conv ? `<div class="todo-conv"><span class="todo-k">Convocatòria · confirma si hi seràs</span>${convCard(x.conv, me)}</div>`
     : `<div class="todo-row"><span class="todo-i"><svg viewBox="0 0 24 24" aria-hidden="true">${TODO_ICONS[x.icon]}</svg></span>
       <span class="todo-t"><b>${x.t}</b>${x.s ? `<small>${x.s}</small>` : ''}</span>
-      <button class="btn btn-sm ${x.n ? 'btn-primary' : ''}" ${x.act}>${x.btn}</button></div>`).join('')}</div>`;
+      <button class="btn btn-sm ${x.n ? 'btn-soft' : ''}" ${x.act}>${x.btn}</button></div>`).join('')}</div>`;
 }
 /* ---------- Properament ---------- */
 // Una sola llista, per ordre: el d'avui (amb passar llista o avisar), la propera classe, el proper assaig i el proper concert.
@@ -175,7 +175,8 @@ function sessionSoon(s, me, kind) {
     if (a) conv = `${s.bus && a.answer === 'yes' ? `<div class="soon-a bus-q"><span class="m">Com hi vas?</span><button class="btn btn-sm ${a.transport === 'bus' ? 'btn-primary' : ''}" data-act="rsvp-bus" data-sid="${s.id}" data-k="bus">Amb l’autocar</button><button class="btn btn-sm ${a.transport === 'own' ? 'btn-primary' : ''}" data-act="rsvp-bus" data-sid="${s.id}" data-k="own">Pel meu compte</button></div>` : ''}${a.answer === 'yes' ? tasksBlock(s, true) : ''}`;
     acts = [a ? `<span class="rsvp ${a.answer}">${a.answer === 'yes' ? 'Hi seràs' : 'No hi seràs'}</span><button class="btn btn-sm btn-ghost" data-act="${a.answer === 'yes' ? 'rsvp-no' : 'rsvp-yes'}" data-sid="${s.id}">${a.answer === 'yes' ? 'Ja no hi puc anar' : 'Sí que hi seré'}</button>` : '',
       mine ? `<span class="st-pill st-${mine.status}">${mine.kind === 'late' ? 'Has avisat que arribaràs tard' : 'Has avisat que no hi vas'}</span>`
-        : now ? `<button class="btn btn-sm" data-act="absence-new" data-sid="${esc(s.id)}">No hi puc anar o arribaré tard</button>` : ''].filter(Boolean).join('');
+        // Avisar amb temps: a la sessió d'avui i a les properes (les convocatòries es responen amb «Hi seré» / «No hi podré anar»).
+        : now || !s.rsvp ? `<button class="btn btn-sm${now ? '' : ' btn-ghost'}" data-act="absence-new" data-sid="${esc(s.id)}">No hi puc anar o arribaré tard</button>` : ''].filter(Boolean).join('');
   }
   const meta = [esc(s.place || ''), s.info?.call ? `Convocatòria a les <span class="mono">${esc(s.info.call)}</span>` : '',
     out ? esc(onLeave(me, s.date) ? 'Estàs de baixa' : 'No fas aquesta producció') : ''].filter(Boolean).join(' · ');
@@ -211,7 +212,7 @@ function myNoticesBlock(me) {
   // Els avisos de sessions que ja han passat de fa més d'un mes no hi fan res: queden a «La meva assistència».
   const recent = mine.filter(a => (a.createdAt || '').slice(0, 10) >= addDays(TODAY, -30) || (a.sessionIds || []).some(id => (sessionById(id)?.date || '') >= TODAY));
   // Sense avisos, n'hi ha prou amb el botó: l'explicació és a la finestra d'avisar.
-  return `<div class="section-title"><h2 class="h2">Els meus avisos</h2><button class="btn btn-sm btn-primary" data-act="absence-new">Avisa d’una absència</button></div>
+  return `<div class="section-title"><h2 class="h2">Els meus avisos</h2><button class="btn btn-sm" data-act="absence-new">Avisa d’una absència</button></div>
     ${recent.length ? `<div class="panel">${recent.map(a => absenceCard(a, { mine: true })).join('')}</div>` : ''}`;
 }
 function viewHome() {
@@ -222,15 +223,14 @@ function viewHome() {
   const who = me ? `${esc(SEC[me.section].name)}${me.part ? ` ${esc(me.part)}` : ''}${lv ? ` · ${lv}` : ''}` : (ME() ? esc(rolesText(ME())) : '');
   const head = `<div class="page-head home-head"><div><div class="eyebrow">${esc(longDate(TODAY))}</div><h1 class="h1">Hola${first ? `, ${esc(first)}` : ''}</h1>${who ? `<div class="me-line">${who}</div>` : ''}</div></div>`;
   if (!me && !canEdit() && myMemberId()) return head + `<div class="empty">${staffSvg()}<h2 class="h2">Compte sense fitxa</h2><p>El teu correu encara no està vinculat a cap fitxa de la plantilla. Demana-ho a l’administració ${V.del}.</p></div>`;
-  // Per fer, Els meus avisos, Properament i La meva assistència, una secció darrere l'altra; els missatges, al final.
+  // Al mòbil, una columna: Per fer, Els meus avisos, Properament, La meva assistència i els missatges (l'ordre el posa el CSS).
+  // A l'ordinador, dues: a l'esquerra el que cal fer i el que ve; a la dreta els avisos, l'assistència i els missatges.
+  const msgs = messagesBlock();
   return `${head}
     ${installCard()}
     <div class="home">
-      <section>${todoBlock(me)}</section>
-      ${me ? `<section>${myNoticesBlock(me)}</section>` : ''}
-      <section>${soonBlock(me)}</section>
-      ${me ? `<section>${myAttendanceCard(me)}</section>` : ''}
-      ${(() => { const m = messagesBlock(); return m ? `<section>${m}</section>` : ''; })()}
+      <div class="home-a"><section class="h-todo">${todoBlock(me)}</section><section class="h-soon">${soonBlock(me)}</section></div>
+      <div class="home-b">${me ? `<section class="h-notices">${myNoticesBlock(me)}</section>` : ''}${me ? `<section class="h-att">${myAttendanceCard(me)}</section>` : ''}${msgs ? `<section class="h-msgs">${msgs}</section>` : ''}</div>
     </div>`;
 }
 

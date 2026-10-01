@@ -367,7 +367,7 @@ function sheetHelp() {
     <h3>Notes de seguiment</h3>
     <p>A les estadístiques de cada ${w.member} (toca-li el nom) la direcció i el seu ${w.leader} hi poden deixar notes de seguiment: afinació, actitud, progressos. No les veu ningú més, ni la persona.</p>
     <h3>Secretaria</h3>
-    <p>A <b>Gestió › Personal</b>: <b>Altes i baixes</b> (moviments de la temporada i antiguitat de cadascú; la data d’alta i la de baixa es posen a la fitxa), <b>Documents</b> (drets d’imatge, protecció de dades i autoritzacions, amb el document signat, i la llista de qui no pot sortir a fotos ni vídeos) i <b>Quotes</b> (qui ha pagat, quan i com). La plantilla sencera s’exporta a Excel.</p>
+    <p>A <b>Gestió › Personal</b>, toca una persona de la plantilla i se’n desplega tot: les dades, l’antiguitat, les altes i baixes, els documents (drets d’imatge, protecció de dades i autoritzacions) i la quota. A dalt hi ha el resum de la temporada (qui no pot sortir a fotos, qui ha pagat) i els filtres <b>Altes i baixes</b>, <b>Documents pendents</b> i <b>Quota pendent</b>. La plantilla sencera s’exporta a Excel.</p>
     <h3>Repertori i pla d’assaig</h3>
     <p>A <b>Tauler › Repertori</b> cada obra té una fitxa (compositor, durada, formació, partitures i àudios per ${w.section} i ${w.part}) i s’enllaça a les produccions on es fa, de manera que serveix d’una temporada a l’altra. A la fitxa hi poses <b>qui canta cada solo i cada petit grup</b>, i cadascú veu els seus.</p>
     <p>A la fitxa de cada sessió hi ha el <b>pla d’assaig</b>: quines obres i compassos, per a qui i una nota. El veuen tots els convocats a Inici i al Calendari, i després de l’assaig hi pots escriure què s’ha fet: qui no hi era ho veu a Inici.</p>

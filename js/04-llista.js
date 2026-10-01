@@ -145,6 +145,10 @@ function celebrateRoll(s, sec, quiet) {
   if (!quiet) toast(`Llista de ${SEC[sec].name.toLowerCase()} completa: ${pr.done} de ${pr.total}`);
   buzz([12, 70, 24]);
 }
+/* Vista compacta (opcional, la recorda cada mòbil): una fila per persona i cinc cercles de color en lloc de cinc botons amb text. */
+const LS_COMPACT = 'atempo:llista-compacta';
+const rollCompact = () => lsGet(LS_COMPACT) === '1';
+const MARK_CODE = { P: 'P', R: 'R', FNJ: 'NJ', FJ: 'J', NP: 'NF' };
 function viewRollSection(cur, list, sec, pendingBySec) {
   const on = convoked(cur, sec);
   const pr = progress(cur, sec);
@@ -177,14 +181,14 @@ function viewRollSection(cur, list, sec, pendingBySec) {
   return head + pendHtml + `
   <div class="leader">
     <span>${V.Leader}: <b>${leaders.length ? leaders.map(m => esc(m.name)).join(' i ') : '—'}</b></span>
-    <span class="mono">${all.length - c.none}/${all.length} marcats</span>
+    <span class="leader-r"><span class="mono">${all.length - c.none}/${all.length} marcats</span>${canMark(cur, sec) ? `<button class="btn btn-sm btn-ghost" data-act="roll-compact" aria-pressed="${rollCompact()}">${rollCompact() ? 'Vista detallada' : 'Vista compacta'}</button>` : ''}</span>
   </div>
   ${subLine(cur, sec, leader)}
   <div class="tally" id="tally">${tallyInner(c, inRoll.some(m => !effMark(cur, m)))}</div>
-  <ul class="roster" id="roster">${inRoll.map(m => rowHtml(cur, m)).join('')}</ul>
+  <ul class="roster${rollCompact() ? ' compact' : ''}" id="roster">${inRoll.map(m => rowHtml(cur, m)).join('')}</ul>
   ${out.length ? `<details class="np-group" ${out.some(m => effMark(cur, m)?.s !== 'NP') ? 'open' : ''}>
       <summary><span>De baixa o no fan la producció (${out.length})</span>${ICON.chev}</summary>
-      <ul class="roster" style="margin-top:0">${out.map(m => rowHtml(cur, m)).join('')}</ul>
+      <ul class="roster${rollCompact() ? ' compact' : ''}" style="margin-top:0">${out.map(m => rowHtml(cur, m)).join('')}</ul>
     </details>` : ''}
   <button class="btn" data-act="close-sec" style="display:flex;margin:18px auto 0">Torna a totes les ${V.sections}</button>
   ${canMark(cur, sec) ? '<p class="muted" style="font-size:calc(13px*var(--ts));text-align:center;margin-top:12px">Toca l’estat marcat una altra vegada per desmarcar-lo.</p>' : ''}`;
@@ -250,7 +254,7 @@ function rowHtml(session, m) {
   let body = '';
   const editable = canMark(session, m.section);
   if (editable) {
-    body = `<div class="seg" role="radiogroup" aria-label="Assistència de ${esc(m.name)}">${ORDER.map(k => `<button class="opt o-${k}" role="radio" aria-checked="${s === k}" aria-label="${STATUS[k].label}" data-act="mark" data-s="${k}"><i></i>${STATUS[k].short}</button>`).join('')}</div>`;
+    body = `<div class="seg" role="radiogroup" aria-label="Assistència de ${esc(m.name)}">${ORDER.map(k => `<button class="opt o-${k}" role="radio" aria-checked="${s === k}" aria-label="${STATUS[k].label}" data-act="mark" data-s="${k}" data-c="${MARK_CODE[k]}"><i></i>${STATUS[k].short}</button>`).join('')}</div>`;
     if (s === 'R') {
       const now = lateNow(session);
       body += `<div class="extra x-R"><label for="min-${m.id}">Minuts</label>
@@ -264,7 +268,7 @@ function rowHtml(session, m) {
     body = `<div class="muted" style="font-size:calc(13px*var(--ts))">${esc(mk.note)}</div>`;
   }
   const dot = s === 'none' ? '' : `<i class="i-${s}" style="display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px"></i>`;
-  return `<li class="row ${mk ? 'has-mark' : ''}" data-mid="${m.id}" data-s="${s}">
+  return `<li class="row ${mk ? 'has-mark' : ''}${editable ? ' ed' : ''}" data-mid="${m.id}" data-s="${s}">
     <div class="row-top" ${editable ? '' : 'style="margin-bottom:4px"'}><span class="who"><span class="name">${esc(m.name)}</span>${m.part ? `<span class="part" title="${V.Part}">${esc(partTag(m))}</span>` : ''}${m.leader ? `<span class="tag">${V.Leader}</span>` : ''}${mk?.auto || !canEdit() ? '' : ruleTag(session, m)}${session.rsvp && canEdit() && !mk?.auto ? rsvpPill(session, m) : ''}</span>
       <span class="state ${warn ? 'warn' : ''}">${editable ? '' : dot}${state}</span></div>
     ${body}${noticeHtml(session, m, mk && !mk.auto ? mk : null)}</li>`;

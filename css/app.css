@@ -145,6 +145,8 @@ h1,h2,h3{margin:0;text-wrap:balance}
 .btn:active{transform:translateY(1px)}
 .btn-primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .btn-ghost{border-color:transparent;background:transparent;color:var(--accent)}
+.btn-soft{border-color:transparent;background:var(--accent-soft);color:var(--accent)}
+.btn-soft:hover{border-color:var(--accent-line)}
 .btn-danger{background:var(--fnj);border-color:var(--fnj);color:var(--fnj-ink)}
 .btn-danger-ghost{border-color:transparent;color:var(--fnj)}
 .btn-sm{min-height:34px;padding:0 12px;font-size:calc(13px*var(--ts))}
@@ -388,8 +390,10 @@ details.np-group[open] summary .chev{transform:rotate(180deg)}
 .sheet-f .spacer{flex:1}
 /* Inici (10-inici): una sola columna, Per fer → Properament → Els meus avisos → La meva assistència → Missatges. */
 .home{display:grid;max-width:680px}
-.home > section > .section-title:first-child{margin-top:22px}
-.home > section:first-child > .section-title:first-child{margin-top:6px}
+.home-a,.home-b{display:contents}
+.h-todo{order:1}.h-notices{order:2}.h-soon{order:3}.h-att{order:4}.h-msgs{order:5}
+.home section > .section-title:first-child{margin-top:22px}
+.home .h-todo > .section-title:first-child{margin-top:6px}
 .home-head{padding-bottom:6px}
 .home-head .me-line{margin-top:4px}
 .soon-list{list-style:none;margin:0;padding:0;background:var(--surface);border-radius:var(--r-lg);overflow:hidden}
@@ -1071,6 +1075,9 @@ button.mday:hover{background:var(--surface-2)}
   .only-wide{display:block}
   .only-narrow{display:none !important}
   .roll-grid{display:grid;grid-template-columns:minmax(0,500px) minmax(0,1fr);gap:0 36px;align-items:start}
+  .home{max-width:none;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:0 36px;align-items:start}
+  .home-a,.home-b{display:block;min-width:0}
+  .home .home-b > section:first-child > .section-title:first-child{margin-top:6px}
   .roll-grid .quads{margin-top:6px}
   .roll-b > .section-title:first-child{margin-top:6px}
   .ann-b,.panel p{max-width:76ch}
@@ -1451,3 +1458,56 @@ svg{stroke-linecap:round;stroke-linejoin:round}
 .help-p{margin:8px 2px 4px;padding:10px 12px;border-radius:var(--r-md);background:var(--surface-2);color:var(--ink-2);font-size:calc(13.5px*var(--ts));line-height:1.45;max-width:65ch}
 .setting .help-p{margin:8px 0 0}
 .sec-h.end{justify-content:flex-end}
+/* Passar llista: vista compacta (una fila per persona, cinc cercles) */
+.leader-r{display:inline-flex;align-items:center;gap:6px}
+.roster.compact .row.ed{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:8px;padding:6px 8px 6px 12px}
+.roster.compact .row.ed .row-top{margin:0;min-width:0}
+.roster.compact .row.ed .state{display:none}
+.roster.compact .row.ed > :not(.row-top):not(.seg){grid-column:1 / -1}
+.roster.compact .seg{display:flex;gap:4px}
+.roster.compact .who{row-gap:2px;column-gap:6px}
+.roster.compact .opt{width:34px;height:34px;min-height:0;padding:0;border-radius:50%;font-size:0;gap:0;background:var(--surface);border:2px solid var(--line-strong)}
+.roster.compact .opt i{display:none}
+.roster.compact .opt::after{content:attr(data-c);font-size:11.5px;font-weight:700;letter-spacing:-.02em;color:var(--ink-2)}
+.roster.compact .opt.o-P{border-color:var(--p)} .roster.compact .opt.o-R{border-color:var(--r)} .roster.compact .opt.o-FJ{border-color:var(--fj)} .roster.compact .opt.o-FNJ{border-color:var(--fnj)} .roster.compact .opt.o-NP{border-color:var(--np)}
+.roster.compact .opt.o-P[aria-checked="true"]{background:var(--p);color:var(--p-ink)}
+.roster.compact .opt.o-R[aria-checked="true"]{background:var(--r);color:var(--r-ink)}
+.roster.compact .opt.o-FJ[aria-checked="true"]{background:var(--fj);color:var(--fj-ink)}
+.roster.compact .opt.o-FNJ[aria-checked="true"]{background:var(--fnj);color:var(--fnj-ink)}
+.roster.compact .opt.o-NP[aria-checked="true"]{background:var(--np);color:var(--np-ink)}
+.roster.compact .opt[aria-checked="true"]::after{color:inherit}
+.roster.compact .who .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+@media (max-width:360px){.roster.compact .opt{width:30px;height:30px}.roster.compact .seg{gap:3px}}
+/* Personal › plantilla: cada persona es desplega amb tota la seva informació */
+.pm-sum{display:grid;gap:4px;padding:12px 14px;margin:4px 0 10px;font-size:calc(13.5px*var(--ts))}
+.pm-sum p{margin:0}
+.pm-tools{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px 12px;margin-top:6px}
+.pm-fee{display:inline-flex;align-items:center;gap:6px;font-size:calc(13px*var(--ts));color:var(--muted)}
+.pm-fee .inp{width:84px;min-height:34px;text-align:right}
+.pm-chips{margin-bottom:6px}
+.pm-list .pm{border-top:1px solid var(--line)}
+.pm-list .pm:first-child{border-top:0}
+.pm > summary{display:flex;align-items:center;gap:10px;padding:11px 12px 11px 14px;min-height:52px;cursor:pointer;list-style:none}
+.pm > summary::-webkit-details-marker{display:none}
+.pm > summary:hover{background:var(--surface-2)}
+.pm > summary > svg{width:16px;height:16px;flex:none;fill:none;stroke:var(--muted);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .15s}
+.pm[open] > summary > svg{transform:rotate(180deg)}
+.pm[open] > summary{background:var(--surface-2)}
+.pm-n{flex:1;min-width:0}
+.pm-n .t{font-weight:600}
+.pm-n .s{display:block;font-size:calc(13px*var(--ts));color:var(--muted)}
+.pm-n.dim{opacity:.55}
+.pm-tags{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:4px;flex:none;max-width:48%}
+.pm-tags .dp{min-width:0}
+.pm-b{display:grid;gap:10px;padding:12px 14px 14px;background:var(--surface-2);border-top:1px solid var(--line)}
+.pm-b .fitxa{margin:0;background:var(--surface)}
+.pm-b .fitxa > div{grid-template-columns:104px minmax(0,1fr);gap:8px;padding:8px 12px}
+.pm-box{display:grid;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface)}
+.pm-box > b{font-size:calc(13px*var(--ts));color:var(--muted)}
+.pm-docs{display:flex;flex-wrap:wrap;gap:10px 14px}
+.pm-docs .dp-i{justify-items:start}
+.pm-docs .dp-i small{font-size:calc(12px*var(--ts))}
+.pm-note{margin:0;font-size:calc(13px*var(--ts));color:var(--muted)}
+.pm-hist{list-style:none;margin:0;padding:0;display:grid;gap:4px;font-size:calc(13.5px*var(--ts))}
+.pm-acts{display:flex;flex-wrap:wrap;gap:6px}
+@media (prefers-reduced-motion:reduce){.pm > summary > svg{transition:none}}

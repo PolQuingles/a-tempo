@@ -4,14 +4,14 @@
 
 /* ================= Events ================= */
 const SUB_OK = new Set(['mark', 'min', 'mark-rest']);
-const ADMIN_ONLY = new Set(['staff-new', 'staff-edit', 'staff-bulk', 'staff-link', 'preview-on', 'who-in', 'mail-check', 'wipe-all', 'share-app', 'onboard-hide', 'cl-seats', 'legacy-clean']);
+const ADMIN_ONLY = new Set(['people-tools', 'staff-new', 'staff-edit', 'staff-bulk', 'staff-link', 'preview-on', 'who-in', 'mail-check', 'wipe-all', 'share-app', 'onboard-hide', 'cl-seats', 'legacy-clean']);
 // La identitat de l'agrupació i esborrar-la: només un Usuari Pro que l'administri.
 const PRO_ONLY = new Set(['brand-color', 'logo-remove', 'kind-set', 'group-delete', 'sections-save', 'sections-undo']);
 // El calendari de les classes: només el professorat de cant i l'administració.
 const CLASS_ONLY = new Set(['cl-new', 'cl-edit', 'cl-review', 'cl-paste', 'cl-plan', 'cl-note', 'cl-mark', 'cl-stats', 'cl-cancel-day']);
 const EDIT_ONLY = new Set(['mark', 'min', 'mark-rest', 'session-new', 'sub-set', 'ann-new', 'ann-edit', 'mat-new', 'mat-edit', 'poll-new', 'poll-edit', 'poll-results', 'poll-remind', 'rsvp-remind', 'doc-new', 'doc-edit', 'share-app', 'staff-bulk', 'preview-on', 'who-in', 'mail-check', 'concert-list', 'concert-toggle', 'session-edit', 'member-edit', 'member-new', 'member-bulk', 'prod-new', 'prod-edit',
   'wipe-demo', 'wipe-all', 'load-demo', 'export-json', 'abs-accept', 'abs-reject', 'abs-delete', 'manage',
-  'roster-export', 'docs-export', 'docs-copy-noimg',
+  'roster-export', 'docs-copy-noimg',
   'choices-overview', 'work-new', 'work-edit', 'work-link', 'plan-edit', 'seating-edit', 'participants', 'certificate', 'season-report', 'trip-new', 'trip-edit', 'trip-admin', 'trip-remind']);
 const actions = {
   'tab': el => { if (el.dataset.tab === 'gestio' && ui.tab !== 'gestio') ui.gestioFrom = ui.tab; ui.tab = el.dataset.tab; ui.rollSec = null; ui._calScrolled = false; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
@@ -76,10 +76,6 @@ const actions = {
   'member-docs': el => { if (canDocsWrite()) sheetMemberDocs(el.dataset.mid); },
   'fee-edit': el => { if (!canDocsWrite()) return; if (!S.memberDocs) { ensureSecData().then(() => sheetFee(el.dataset.mid)); return; } sheetFee(el.dataset.mid); },
   'fee-paid': el => { if (canDocsWrite()) markFeePaid(el.dataset.mid); },
-  'fees-export': () => { const key = feeKey(); offerCSV(`quotes-${key}`, [['Nom i cognoms', capz(V.section), 'Pagada', 'Import', 'Data', 'Com', 'Nota'],
-    ...membersOf(null).map(m => { const f = docsOf(m.id).fees?.[key] || {}; return [fullName(m.name), SEC[m.section].name, f.paid ? 'Sí' : 'No', f.amount || '', f.date || '', f.method || '', f.note || '']; })]); },
-  'docs-export': () => offerCSV(`documents-${TODAY}`, [['Nom i cognoms', capz(V.section), ...DOC_ITEMS.map(([, l]) => l)],
-    ...membersOf(null).map(m => [fullName(m.name), SEC[m.section].name, ...DOC_ITEMS.map(([k]) => { const st = docState(m.id, k); return st.v === 'yes' ? 'Sí' : st.v === 'no' ? 'No' : 'Pendent'; })])]),
   'docs-copy-noimg': () => copyText(`No poden sortir a fotos ni vídeos:\n${membersOf(null).filter(m => docState(m.id, 'imatge').v === 'no').map(m => `· ${fullName(m.name)} (${SEC[m.section].name})`).join('\n')}`, 'Llista copiada'),
   // Repertori, pla d'assaig i concerts (18 i 19).
   'work-new': () => sheetWorkEdit(null, ui.matProd),
@@ -310,7 +306,9 @@ const actions = {
     if (panel && panel.classList.contains('cfg-p')) panel.hidden = !open;
   },
   'people-role': el => { ui.people = el.dataset.k; saveUI(); render(); },
-  'cant-tab': el => { ui.cantTab = el.dataset.k; saveUI(); render(); },
+  'people-tools': () => sheetPeopleTools(),
+  'roll-compact': () => { lsSet(LS_COMPACT, rollCompact() ? '0' : '1'); render(); },
+  'pm-filter': el => { ui.pmFilter = el.dataset.k; saveUI(); render(); },
   'member-edit': el => sheetMember(el.dataset.mid),
   'member-bulk': el => sheetPeopleBulk(el.dataset.sec || ui.section),
   // A la plantilla: l'administració hi afegeix la persona amb el correu i tot; la resta de l'equip, els noms.
