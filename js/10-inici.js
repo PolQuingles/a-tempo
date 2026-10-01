@@ -147,7 +147,7 @@ function todoBlock(me) {
 // Una sola llista, per ordre: el d'avui (amb passar llista o avisar), la propera classe, el proper assaig i el proper concert.
 // Cada fila és com les del calendari: la data a l'esquerra i, a la dreta, què és, on i el que s'hi pot fer.
 const dayLabel = d => d === TODAY ? 'Avui' : d === addDays(TODAY, 1) ? 'Demà' : '';
-const daysTo = d => Math.round((parseISO(d) - parseISO(TODAY)) / 864e5);
+const daysTo = d => Math.round((parseISO(d).getTime() - parseISO(TODAY).getTime()) / 864e5);
 function soonRow({ date, time, kind, title, meta, extra = '', acts = '', tone = null, now = false, poster = '', count = false }) {
   const lbl = dayLabel(date);
   // El proper concert porta el compte enrere: «d'aquí a 16 dies».
