@@ -88,7 +88,7 @@ function boardAnnouncements() {
   const active = list.filter(a => !a.until || a.until >= TODAY);
   const expired = list.filter(a => a.until && a.until < TODAY);
   const card = a => annCard(a, true);
-  return `${canEdit() ? `<div class="sec-h" style="margin-top:6px"><span class="muted" style="font-size:calc(13px*var(--ts))">Els veuen tots els ${V.members} (o només les ${V.sections} triades).</span><button class="btn btn-sm btn-primary" data-act="ann-new">+ Anunci</button></div>` : ''}
+  return `${canEdit() ? `<div class="sec-h end" style="margin-top:6px"><button class="btn btn-sm btn-primary" data-act="ann-new">+ Anunci</button></div>` : ''}
     ${active.length ? `<div class="panel">${active.map(card).join('')}</div>` : `<div class="empty"><p>No hi ha anuncis.</p></div>`}
     ${canEdit() && expired.length ? `<details class="np-group"><summary><span>Caducats (${expired.length})</span>${ICON.chev}</summary><div class="panel">${expired.map(card).join('')}</div></details>` : ''}`;
 }
@@ -339,7 +339,7 @@ const choirDocs = () => [...(S.config.documents || [])]
 function boardDocuments() {
   const docs = choirDocs();
   const tools = canEdit()
-    ? `<div class="sec-h" style="margin-top:6px"><span class="muted" style="font-size:calc(13px*var(--ts))">Normativa, calendari de la temporada, formularis…</span><button class="btn btn-sm btn-primary" data-act="doc-new">+ Document</button></div>`
+    ? `<div class="sec-h end" style="margin-top:6px"><button class="btn btn-sm btn-primary" data-act="doc-new">+ Document</button></div>`
     : '';
   const row = d => `<div class="mat"><span class="mat-k doc-${esc(d.kind)}">${DOC_KINDS[d.kind]?.[1] || 'Doc'}</span>
       <span class="mat-i">${itemLink(d, `data-act="file-open" data-src="doc" data-id="${esc(d.id)}"`)}<small>${[DOC_KINDS[d.kind]?.[0], d.note, fileNote(d)].filter(Boolean).map(esc).join(' · ')}</small></span>

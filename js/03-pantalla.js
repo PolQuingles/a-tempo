@@ -165,10 +165,25 @@ const groupAvatar = g => `<span class="g-av" aria-hidden="true"><i>${esc(initial
 /** The group name in the top bar: a button to switch when there is somewhere to switch to. */
 function paintBrandName() {
   const name = shownName();
+  // Al mòbil, el nom curt (Ajustos › Identitat), perquè el llarg no ocupi dues línies.
+  const short = (S.ready && S.config.shortName) || MARCA?.short || '';
+  const shown = short && short !== name ? `<span class="bn-long">${esc(name)}</span><span class="bn-short">${esc(short)}</span>` : esc(name);
   const canSwitch = S.mode === 'shared' && !PREVIEW && (S.groups.length > 1 || S.platform);
   $('#choir-name').innerHTML = canSwitch
-    ? `<button class="brand-btn" data-act="groups" aria-label="${esc(name)}. Les teves agrupacions">${esc(name)}${ICON.chev}</button>`
-    : esc(name);
+    ? `<button class="brand-btn" data-act="groups" aria-label="${esc(name)}. Les teves agrupacions">${shown}${ICON.chev}</button>`
+    : shown;
+}
+/* ---------- «?»: les explicacions de cada pantalla, plegades ---------- */
+// Un «?» al costat del títol obre l'explicació a sota, en lloc d'un paràgraf gris que es llegeix cada dia. Queda oberta fins que es torna a tocar.
+const HELP_OPEN = new Set();
+const helpBtn = k => `<button type="button" class="q-help" data-act="qhelp" data-k="${k}" aria-expanded="${HELP_OPEN.has(k)}" aria-controls="help-${k}" aria-label="Què vol dir?">?</button>`;
+const helpText = (k, html) => `<p class="help-p" id="help-${k}"${HELP_OPEN.has(k) ? '' : ' hidden'}>${html}</p>`;
+function toggleHelp(el) {
+  const k = el.dataset.k;
+  if (HELP_OPEN.has(k)) HELP_OPEN.delete(k); else HELP_OPEN.add(k);
+  const p = document.getElementById(`help-${k}`);
+  if (p) p.hidden = !HELP_OPEN.has(k);
+  el.setAttribute('aria-expanded', String(HELP_OPEN.has(k)));
 }
 function render() {
   if (!S.ready && MARCA) S.config = { ...S.config, name: S.config.name || MARCA.name, brand: { ...(S.config.brand || {}), logo: S.config.brand?.logo || MARCA.logo } };

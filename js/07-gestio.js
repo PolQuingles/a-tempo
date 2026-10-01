@@ -39,8 +39,8 @@ function accessPanel() {
   const withAccount = members.filter(m => accountFor(m.id)).length;
   const r = accessReport();
   return `<div class="panel access-panel">
-    <div class="setting"><div><div class="t">${withAccount} de ${members.length} ${esc(V.members)} tenen accés · ${r.inApp.length} han entrat${r.never.length ? `, ${r.never.length} encara no` : ''}</div>
-      <div class="s">Afegeix cada persona un sol cop: el nom, el correu per entrar a l’app i què fa (si canta, també la ${esc(V.section)}). Si algú marxa, treu-li l’accés: el perd a l’instant, però no se n’esborra la fitxa ni les llistes.</div></div></div>
+    <div class="setting"><div><div class="t">${withAccount} de ${members.length} ${esc(V.members)} tenen accés · ${r.inApp.length} han entrat${r.never.length ? `, ${r.never.length} encara no` : ''} ${helpBtn('acces')}</div>
+      ${helpText('acces', `Afegeix cada persona un sol cop: el nom, el correu per entrar a l’app i què fa (si canta, també la ${esc(V.section)}). Si algú marxa, treu-li l’accés: el perd a l’instant, però no se n’esborra la fitxa ni les llistes.`)}</div></div>
     <div class="access-acts"><button class="btn btn-sm btn-primary" data-act="staff-new" ${ROLE_KEYS.includes(ui.people) ? `data-role="${esc(ui.people)}"` : ''}>+ Persona</button><button class="btn btn-sm" data-act="staff-bulk">Enganxa una llista</button><button class="btn btn-sm" data-act="share-app">Enllaç de l’app</button>
       <button class="btn btn-sm" data-act="who-in">Qui ha entrat</button><button class="btn btn-sm ${mailProblems().length ? 'btn-primary' : ''}" data-act="mail-check">Comprova els correus${mailProblems().length ? ` (${mailProblems().length})` : ''}</button><button class="btn btn-sm" data-act="preview-on">Mira l’app com…</button></div>
   </div>`;
@@ -69,11 +69,11 @@ function managePeople() {
     if (ui.cantTab === 'altes') return accessPanel() + menu + manageHistory();
     if (ui.cantTab === 'docs') return accessPanel() + menu + manageDocs();
     if (ui.cantTab === 'quotes') return accessPanel() + menu + manageFees();
-    return accessPanel() + menu + `<div class="sec-h" style="margin:4px 0 0"><span class="muted" style="font-size:calc(13px*var(--ts))">Tota la plantilla, amb l’antiguitat i la fitxa de cadascú.</span><button class="btn btn-sm" data-act="roster-export">Exporta a Excel</button></div>` + manageMembers();
+    return accessPanel() + menu + `<div class="sec-h end" style="margin:4px 0 0"><button class="btn btn-sm" data-act="roster-export">Exporta a Excel</button></div>` + manageMembers();
   }
   if (role === 'access') {
     const people = peopleSorted();
-    return `${accessPanel()}${menu}<p class="muted" style="margin:4px 2px 10px;font-size:calc(13px*var(--ts))">Tothom qui pot entrar a l’app, amb els seus rols. Toca una persona per canviar-li els rols o el correu, convidar-la o treure-li l’accés.</p>
+    return `${accessPanel()}${menu}
       ${people.length ? `<ul class="list">${people.map(personRow).join('')}</ul>` : '<div class="empty"><p>Encara no hi ha ningú. Afegeix les persones una per una o enganxa’n una llista.</p></div>'}`;
   }
   const list = peopleWithRole(role);
@@ -88,8 +88,7 @@ function managePeople() {
   }[role] || '';
   return `${accessPanel()}${menu}<div class="sec-h" style="margin-top:4px"><span class="muted" style="font-size:calc(13px*var(--ts))">${esc(what)}</span>${add}</div>
     ${list.length ? `<ul class="list">${list.map(personRow).join('')}</ul>`
-      : `<div class="empty"><p>Encara no hi ha ningú amb el rol de ${esc(roleLabel(role).toLowerCase())}.${isAdmin() ? ' Afegeix-la amb «+ Persona»: el nom, el correu i el rol, tot d’una.' : ''}</p></div>`}
-    <p class="muted" style="margin:10px 2px 0;font-size:calc(13px*var(--ts))">Una persona pot tenir més d’un rol i, per tant, sortir a més d’una llista.</p>`;
+      : `<div class="empty"><p>Encara no hi ha ningú amb el rol de ${esc(roleLabel(role).toLowerCase())}.${isAdmin() ? ' Afegeix-la amb «+ Persona»: el nom, el correu i el rol, tot d’una.' : ''}</p></div>`}`;
 }
 function leaveText(m) {
   const now = onLeave(m, TODAY);
@@ -514,7 +513,7 @@ function sheetAccount() {
   const groups = [
     canEdit() ? [item('gestio', 'Gestió', `data-act="manage" data-k="${pend ? 'avisos' : ROUTE_MANAGE[ui.manage] ? ui.manage : 'personal'}"`, pend)] : [],
     [(myId() || S.threads.size) && item('threads', 'Converses', 'data-act="acct-open" data-k="threads"', unreadThreads().length), open('week', 'La setmana'),
-      myId() && !PREVIEW && open('profile', 'La meva fitxa'), icsOn() && open('calendar', 'Calendari al mòbil'), clOn && open('classIcs', 'Les teves classes al calendari'), pushSupported() && open('push', 'Avisos al mòbil')],
+      myId() && !PREVIEW && open('profile', 'La meva fitxa'), open('calendar', icsOn() ? 'Calendari al mòbil' : 'Exporta el calendari'), clOn && open('classIcs', 'Les teves classes al calendari'), pushSupported() && open('push', 'Avisos al mòbil')],
     [groupsVisible() && open('groups', 'Agrupacions'), open('theme', 'Aparença'), canInstall() && open('install', 'Instal·la l’app'), open('help', 'Com funciona')],
   ].map(g => g.filter(Boolean)).filter(g => g.length);
   openSheet({

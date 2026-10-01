@@ -286,8 +286,8 @@ function viewClasses() {
   const who = ui.clWho && classTeachers().some(t => t.key === ui.clWho) ? ui.clWho : null;
   if (!who && ui.clWho) ui.clWho = null;
   if (who) return `<div class="page-head" style="margin-bottom:0"><h1 class="h1">${esc(V.classes)}</h1></div>${avisos}${classTeacherSpace(who)}`;
-  return `<div class="page-head"><h1 class="h1">${esc(V.classes)}</h1></div>
-    <p class="muted" style="margin:-4px 2px 0;font-size:calc(13.5px*var(--ts))">Tria un ${esc(V.Teacher.toLowerCase())} per veure’n el calendari i les hores de cada ${esc(V.member)}.</p>
+  return `<div class="page-head"><h1 class="h1">${esc(V.classes)} ${helpBtn('classes')}</h1></div>
+    ${helpText('classes', `Tria un ${esc(V.Teacher.toLowerCase())} per veure’n el calendari i les hores de cada ${esc(V.member)}. Els canvis d’hora valen només per a la setmana que es demanen, i es poden fer amb qui tingui classe qualsevol dia d’aquella setmana amb el mateix ${esc(V.Teacher.toLowerCase())}. Qui rep la petició ha de dir que sí perquè es faci.`)}
     ${avisos}
     ${classQuads()}
     ${myId() ? `<div class="panel" style="margin-top:18px">${teach ? '' : `<div class="setting"><div><div class="t">La teva assistència</div><div class="s">Les classes on has vingut durant el curs.</div></div>
@@ -298,5 +298,5 @@ function viewClasses() {
       <button class="btn btn-sm btn-primary" data-act="cl-student" data-m="${esc(myId())}">Obre-la</button></div></div>` : ''}
     ${myNotes.length ? `<div class="section-title"><h2 class="h2">Notes de les teves classes</h2></div>
       <ul class="mini-list" style="max-height:none">${myNotes.map(n => `<li style="display:grid;gap:4px"><span class="m mono">${esc(shortDate(n.date))}</span>${n.text ? `<span style="white-space:pre-wrap">${esc(n.text)}</span>` : ''}${n.file ? `<button class="btn btn-sm" style="justify-self:start" data-act="cl-rec" data-id="${esc(n.id)}">Escolta l’enregistrament</button>` : ''}</li>`).join('')}</ul>` : ''}
-    <p class="muted" style="font-size:calc(13px*var(--ts));margin-top:14px">Els canvis d’hora valen només per a la setmana que es demanen, i es poden fer amb qui tingui classe qualsevol dia d’aquella setmana amb el mateix professor. Qui rep la petició ha de dir que sí perquè es faci.</p>`;
+`;
 }
