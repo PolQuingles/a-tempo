@@ -634,7 +634,7 @@ function sheetAbsence(presetSid) {
   openSheet({
     title: 'Avís d’absència',
     body: `<div class="kv">
-      ${singer ? `<p style="margin:0">De part de <b>${esc(S.members.get(memberId).name)}</b></p>`
+      ${singer ? `<p style="margin:0">De part de <b>${esc(S.members.get(memberId).name)}</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Avisa’n amb temps: el teu ${V.leader} ho veurà i, si ho accepta, la falta quedarà justificada.</span></p>`
         : `<label class="field"><span>${V.Member}</span><select class="inp" id="ab-member"><option value="">—</option>${memberOptions('')}</select></label>`}
       <div class="field"><span>Què passa?</span><div class="pickers" id="ab-kind">
         <button type="button" class="pick" data-k="absent" aria-pressed="true">No hi podré anar</button>

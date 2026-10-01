@@ -62,7 +62,7 @@ function messagesBlock() {
   return `<div class="section-title"><h2 class="h2">Missatges</h2><span style="display:flex;gap:6px;flex-wrap:wrap">${conv}${write}</span></div>
     ${list.length ? `<div class="panel msgs">${list.slice(0, 3).map(m => msgCard(m)).join('')}
       ${list.length > 3 || list.some(m => (m.body || '').length > 180) ? `<div style="padding:4px 14px 12px"><button class="btn btn-sm btn-ghost" data-act="msg-list">Tots els missatges${list.length > 3 ? ` (${list.length})` : ''}</button></div>` : ''}</div>`
-      : `<p class="muted" style="margin:0 2px;font-size:calc(13px*var(--ts))">${lead && !canWriteAll() ? `Escriu a tota la ${esc(SEC[lead].name.toLowerCase())} des d’aquí: els arriba a l’app i al mòbil, sense correus ni WhatsApp.` : canMessage() ? 'Escriu a tothom o a una corda des d’aquí: els arriba a l’app i al mòbil, sense correus ni WhatsApp.' : 'Si tens un dubte o has d’avisar l’equip de res, escriu-los des d’aquí: només ho veuen ells.'}</p>`}`;
+      : canMessage() ? '' : '<p class="muted" style="margin:0 2px;font-size:calc(13px*var(--ts))">El que hi escriguis només ho veu l’equip.</p>'}`;
 }
 function sheetMessages() {
   let all = false;

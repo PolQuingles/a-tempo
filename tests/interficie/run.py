@@ -244,7 +244,10 @@ def main():
         print("Instal·lar l'app")
         IPHONE = dict(MOBILE, user_agent="Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1")
         ctx, page, errors = open_app(browser, base, "singer", IPHONE)
-        check(page.locator(".install-card").count() == 1 and "Comparteix" in page.inner_text(".install-card"), "a l'iPhone, Inici explica com posar l'app a la pantalla d'inici")
+        check(page.locator(".install-card").count() == 1 and page.locator(".install-card").bounding_box()["height"] < 70, "a l'iPhone, Inici té una sola línia per posar l'app a la pantalla d'inici")
+        page.click('.install-card .install-go'); page.wait_for_timeout(400)
+        check("Comparteix" in page.inner_text(".sheet"), "en tocar-la, explica com fer-ho")
+        page.click('.sheet [data-act="sheet-close"]'); page.wait_for_timeout(400)
         page.click('[data-act="install-hide"]'); page.wait_for_timeout(300)
         check(page.locator(".install-card").count() == 0, "«Ara no» l'amaga")
         check(not errors, "sense errors a la guia d'instal·lació", "; ".join(errors[:3]))
@@ -775,6 +778,64 @@ def main():
                          ("shown", "la fitxa diu quantes hores s'hi assaja")]:
             check(r.get(k), label, str(r))
         check(not errors, "sense errors amb el temps d'assaig", "; ".join(errors[:3]))
+        ctx.close()
+
+        print("Canvis ràpids: Inici més net, calendari d'una fila i ajudes plegades")
+        ctx, page, errors = open_app(browser, base, "singer", MOBILE, "#/inici")
+        r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          const ti = todoItems; todoItems = () => []; render(); await s(200);
+          out.allDone = !!document.querySelector('.home .pf-ok') && !document.querySelector('.home .todo-done');
+          todoItems = ti; render(); await s(200);
+          const mine = [...document.querySelectorAll('.home section')].find(x => /Els meus avisos/.test(x.querySelector('.h2')?.textContent || ''));
+          out.noticesQuiet = !!mine && !mine.querySelector('p') && !!mine.querySelector('[data-act="absence-new"]');
+          const row = [...document.querySelectorAll('.soon-row')].find(x => x.querySelector('[data-act="cl-avisa"]'));
+          out.oneBtn = !!row && row.querySelectorAll('.soon-a .btn').length === 1;
+          row?.querySelector('[data-act="cl-avisa"]').click(); await s(300);
+          out.chooser = ['late', 'absent'].every(k => document.querySelector(`.sheet .write-o[data-act="cl-notice"][data-k="${k}"]`));
+          document.querySelector('.sheet .write-o[data-k="late"]').click(); await s(300);
+          out.late = !!document.querySelector('.sheet #cn-min');
+          closeSheet(); await s(200);
+          out.short = getComputedStyle(document.querySelector('#choir-name .bn-short') || document.body).display !== 'none' && document.querySelector('#choir-name').innerText.trim() === S.config.shortName;
+          applyRoute('calendari'); render(); await s(300);
+          const head = document.querySelector('.page-head');
+          out.calHead = !head.querySelector('[data-act="cal-subscribe"], [data-act="cal-past"]') && !!document.querySelector('.cal-past-link');
+          out.noMarks = !document.querySelector('.cal-row .vmarks');
+          return out; }""")
+        switch_user(page, base, "pol")
+        r.update(page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          applyRoute('calendari'); render(); await s(300);
+          const head = document.querySelector('.page-head');
+          out.oneRow = head.getBoundingClientRect().height < 70 && !!head.querySelector('[data-act="session-new"]');
+          out.marks = !!document.querySelector('.cal-row .vmarks');
+          applyRoute('inici'); render(); await s(300);
+          out.noPlanChip = !document.querySelector('.soon-row .fitxa-chip.empty');
+          const nx = allSessions().find(x => x.date >= TODAY && !isShow(x));
+          out.planTodo = !planOf(nx) && nx.date <= addDays(TODAY, 7) ? todoItems().some(x => x.icon === 'plan' && /pla d’assaig/.test(x.t)) : true;
+          applyRoute('gestio/personal'); render(); await s(300);
+          const q = document.querySelector('.access-panel .q-help'), p = document.getElementById('help-acces');
+          out.helpFolded = !!q && !!p && p.hidden;
+          q.click(); await s(100);
+          out.helpOpens = !p.hidden && q.getAttribute('aria-expanded') === 'true';
+          sheetAccount(); await s(200);
+          out.acctCal = !!document.querySelector('.acct-item[data-k="calendar"]');
+          closeSheet(); return out; }"""))
+        for k, label in [("allDone", "sense res pendent, «Per fer» és només el títol amb «Tot al dia»"),
+                         ("noticesQuiet", "«Els meus avisos» buit és només el botó, sense paràgraf"),
+                         ("oneBtn", "la classe de cant d'Inici té un sol botó «Avisa…»"),
+                         ("chooser", "«Avisa…» obre arribar tard, no venir i canviar l'hora"),
+                         ("late", "i cada opció obre la seva finestra"),
+                         ("short", "al mòbil, la capçalera fa servir el nom curt"),
+                         ("calHead", "el calendari no té «Subscriu-t'hi» ni «Mostra passades» a dalt: hi ha un enllaç sobre la llista"),
+                         ("noMarks", "un cantaire no veu les boletes de les llistes de cada corda"),
+                         ("oneRow", "la capçalera del calendari és d'una sola fila"),
+                         ("marks", "qui passa llista sí que les veu"),
+                         ("noPlanChip", "Properament no té el requadre «Afegeix el pla d'assaig»"),
+                         ("planTodo", "el pla del proper assaig és a «Per fer» de la direcció"),
+                         ("helpFolded", "les explicacions de Personal queden plegades sota un «?»"),
+                         ("helpOpens", "el «?» les obre"),
+                         ("acctCal", "el calendari al mòbil és al menú del compte")]:
+            check(r.get(k), label, str(r))
+        check(not errors, "sense errors als canvis ràpids", "; ".join(errors[:3]))
         ctx.close()
 
         print("Mira l'app com…")

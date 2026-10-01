@@ -85,6 +85,8 @@ input,select,textarea{font:inherit;color:var(--ink)}
 .acct-t{flex:1;min-width:0;font-size:calc(15.5px*var(--ts));font-weight:600}
 .acct-n{min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--fnj);color:#fff;font-size:11.5px;font-weight:700;line-height:20px;text-align:center}
 .acct-item > svg{width:16px;height:16px;flex:none;fill:none;stroke:var(--muted);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.bn-short{display:none}
+@media (max-width:699px){.brand-choir .bn-long{display:none}.brand-choir .bn-short{display:inline}}
 .brand-choir{display:block;font-family:var(--f-display);font-weight:600;font-size:clamp(17px, 4.6vw, 21px);line-height:1.12;letter-spacing:-.015em;color:var(--accent);text-wrap:balance}
 @media (max-width:480px){ .sync[data-state="ok"] span{display:none} .sync[data-state="ok"]{padding:9px} }
 .sync{display:inline-flex;align-items:center;gap:7px;font-size:calc(13px*var(--ts));color:var(--muted);padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:var(--surface);white-space:nowrap}
@@ -263,7 +265,8 @@ details.np-group[open] summary .chev{transform:rotate(180deg)}
 .cal-date b{font-family:var(--f-display);font-weight:600;font-size:24px}
 .cal-date small{font-family:var(--f-mono);font-size:10.5px;color:var(--muted);margin-top:3px;text-transform:lowercase}
 .cal-info{min-width:0}
-.cal-type{display:block;font-weight:600;font-size:calc(14.5px*var(--ts));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal-type{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-weight:600;font-size:calc(14.5px*var(--ts));line-height:1.3;overflow-wrap:anywhere}
+.cal-past-link{display:block;margin:0 2px 12px}
 .cal-type em{font-style:normal;font-family:var(--f-mono);font-weight:400;font-size:calc(13px*var(--ts));color:var(--muted);margin-left:4px}
 .cal-place{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:calc(13px*var(--ts));line-height:1.35;color:var(--muted);overflow:hidden}
 .cal-place .mono{font-size:calc(13px*var(--ts));color:var(--ink-2)}
@@ -406,7 +409,6 @@ details.np-group[open] summary .chev{transform:rotate(180deg)}
 .soon-b .fitxa-chip{margin-top:6px}
 .soon-a{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px}
 .soon-a .rsvp{align-self:center}
-.soon-empty{margin:0 2px;font-size:calc(13.5px*var(--ts));color:var(--muted)}
 .soon-row.has-poster{grid-template-columns:44px minmax(0,1fr) 48px}
 .soon-a.bus-q .m{font-size:calc(13px*var(--ts));color:var(--muted)}
 .soon-b .tasks,.soon-a .tasks{width:100%}
@@ -533,13 +535,12 @@ input[type=date].inp,input[type=time].inp{min-width:0;width:100%}
 .hero-cta .h2{color:inherit}
 .hero-cta .btn{background:var(--surface);color:var(--accent);border-color:transparent;justify-self:start}
 /* Inici: instal·lar l'app i activar els avisos */
-.install-card{display:grid;grid-template-columns:36px minmax(0,1fr);gap:12px;margin:4px 0 14px;padding:14px;border-radius:var(--r-lg);background:var(--accent-soft);color:var(--ink)}
-.install-card .todo-i{background:var(--surface)}
-.install-card .todo-i svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
-.install-card b{font-size:calc(15px*var(--ts))}
-.install-card p{margin:3px 0 0;font-size:calc(13.5px*var(--ts));color:var(--ink-2)}
-.install-card ol{margin:8px 0 0;padding-left:20px;display:grid;gap:4px;font-size:calc(13.5px*var(--ts))}
-.install-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.install-card{display:flex;align-items:center;gap:2px;margin:2px 0 12px;padding:3px 3px 3px 0;border-radius:var(--r-lg);background:var(--accent-soft);color:var(--ink)}
+.install-go{flex:1;min-width:0;display:flex;align-items:center;gap:10px;padding:5px 8px 5px 6px;border-radius:calc(var(--r-lg) - 3px);text-align:left;color:var(--ink);font-weight:600;font-size:calc(14.5px*var(--ts))}
+.install-go > span:not(.todo-i){flex:1;min-width:0}
+.install-go .todo-i{width:32px;height:32px;border-radius:10px;background:var(--surface)}
+.install-go > svg{width:16px;height:16px;flex:none;fill:none;stroke:var(--accent);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.install-card .icon-btn{color:var(--muted)}
 .ios-share{display:inline-block;width:14px;height:16px;vertical-align:-2px;background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 16' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 1v9M4 4l3-3 3 3M4.5 7H2.5v8h9V7h-2'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 16' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 1v9M4 4l3-3 3 3M4.5 7H2.5v8h9V7h-2'/%3E%3C/svg%3E") center/contain no-repeat}
 .me-line{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;font-size:calc(13.5px*var(--ts));color:var(--muted);margin-top:10px}
 .me-line b{color:var(--ink)}
@@ -572,6 +573,8 @@ input[type=date].inp,input[type=time].inp{min-width:0;width:100%}
 .todo-t small{font-size:calc(13px*var(--ts));color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .todo-conv{background:var(--surface);padding:10px 2px 0}
 .todo-k{display:block;font-size:calc(12px*var(--ts));font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);padding:0 12px}
+.pf-ok{display:inline-flex;align-items:center;gap:5px;padding:3px 10px 3px 7px;border-radius:999px;background:var(--p-soft);color:var(--p-text);font-size:calc(13px*var(--ts));font-weight:600;white-space:nowrap}
+.pf-ok svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
 .todo-done{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px dashed var(--line-strong);border-radius:var(--r-lg);color:var(--ink-2)}
 .todo-done span:last-child{display:grid;gap:1px}
 .todo-done small{font-size:calc(13px*var(--ts));color:var(--muted)}
@@ -1441,3 +1444,10 @@ svg{stroke-linecap:round;stroke-linejoin:round}
 .kpis-3 .kpi{padding:10px}
 .kpis-3 .kpi-l{overflow-wrap:anywhere;hyphens:auto}
 @media (max-width:360px){:root[data-text] .kpis-3{grid-template-columns:1fr 1fr}}
+/* «?»: les explicacions plegades */
+.q-help{display:inline-grid;place-items:center;width:22px;height:22px;margin-left:4px;border:1px solid var(--line-strong);border-radius:50%;background:var(--surface);color:var(--muted);font-family:var(--f-ui);font-size:13px;font-weight:700;line-height:1;vertical-align:middle;cursor:pointer}
+.q-help:hover,.q-help[aria-expanded="true"]{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.h1 .q-help{vertical-align:6px}
+.help-p{margin:8px 2px 4px;padding:10px 12px;border-radius:var(--r-md);background:var(--surface-2);color:var(--ink-2);font-size:calc(13.5px*var(--ts));line-height:1.45;max-width:65ch}
+.setting .help-p{margin:8px 0 0}
+.sec-h.end{justify-content:flex-end}

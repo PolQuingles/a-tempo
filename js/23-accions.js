@@ -36,6 +36,7 @@ const actions = {
   'cl-edit': el => sheetClassDay(el.dataset.c),
   'cl-notice': el => sheetClassNotice(el.dataset.c, el.dataset.s, el.dataset.k),
   'cl-swap': el => sheetClassSwap(el.dataset.c, el.dataset.s),
+  'cl-avisa': el => sheetClassAct(el.dataset.c, el.dataset.s),
   'cl-answer': el => answerClassReq(el.dataset.r, el.dataset.v),
   'cl-review': el => answerClassReq(el.dataset.r, el.dataset.v),
   'cl-cancel': el => answerClassReq(el.dataset.r, 'cancelled'),
@@ -47,6 +48,7 @@ const actions = {
   'mail-out': async () => { try { await auth.signOut(); } catch {} MAIL = null; location.replace(location.pathname + location.search); },
   'sign-out': () => signOut(),
   'help': () => sheetHelp(),
+  'qhelp': el => toggleHelp(el),
   // Una persona: el nom, el correu i què fa, amb la seva fitxa de la plantilla si canta (vegeu 12-persones.js).
   'staff-new': el => sheetPerson(null, { roles: el && el.dataset.role ? [el.dataset.role] : [], memberId: el?.dataset.mid || '', section: el?.dataset.sec || '' }),
   'staff-bulk': () => sheetPeopleBulk(ui.people === 'singer' ? ui.section : ''),
@@ -111,6 +113,7 @@ const actions = {
   'search-link': el => { if (/^https?:\/\//.test(el.dataset.url || '')) window.open(el.dataset.url, '_blank', 'noopener'); },
   'text-size': el => setTextSize(el.dataset.k),
   'poster': el => sheetPoster(el.dataset.pid),
+  'install-how': () => sheetInstall(),
   'install-go': async () => { const p = installPrompt; if (!p) return; installPrompt = null; try { await p.prompt(); await p.userChoice; } catch {} render(); },
   'acct-open': el => { const f = ACCT_SHEETS[el.dataset.k]; if (f) { SHEET_BACK.at = Date.now(); f(); } },
   'concert-list': el => { closeSheet(); sheetConcertList(el.dataset.pid); },

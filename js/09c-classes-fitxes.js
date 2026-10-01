@@ -230,6 +230,22 @@ function sheetClassDay(id, preset) {
     },
   });
 }
+/** «Avisa…» de la classe a Inici: arribar tard, no venir o canviar l'hora, en una sola finestra. */
+function sheetClassAct(classId, slotId) {
+  const c = S.classes.get(classId);
+  if (!c) return;
+  const swap = classSlots(c).length > 1 || weekClasses(c).length > 1;
+  const opt = (act, k, t, s) => `<button class="write-o" data-act="${act}" data-c="${esc(classId)}" data-s="${esc(slotId)}"${k ? ` data-k="${k}"` : ''}><b>${t}</b><small>${s}</small></button>`;
+  openSheet({
+    title: 'La teva classe',
+    body: `<p style="margin:0 0 12px">${esc(longDate(c.date))}, a les <b>${esc(slotTime(c, slotId))}</b>${teacherOf(c) ? `, amb ${esc(teacherOf(c))}` : ''}.</p>
+      <div class="write-opts">
+      ${opt('cl-notice', 'late', 'Arribaré tard', 'Digues quants minuts, més o menys.')}
+      ${opt('cl-notice', 'absent', 'No hi podré anar', `Ho rebrà el ${esc(V.Teacher.toLowerCase())} al mòbil.`)}
+      ${swap ? opt('cl-swap', '', 'Canvia l’hora', 'Demana-ho a algú que tingui classe aquella setmana.') : ''}
+    </div>`,
+  });
+}
 function sheetClassNotice(classId, slotId, kind) {
   const c = S.classes.get(classId);
   if (!c) return;

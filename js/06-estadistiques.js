@@ -44,7 +44,8 @@ function viewStats(inBoard) {
     <div class="kpi"><div class="kpi-v">${t.min}<small>min</small></div><div class="kpi-l">Retard acumulat · ${t.R} retards</div></div>
     <div class="kpi ${t.FNJ ? 'alert' : ''}"><div class="kpi-v">${t.FNJ}</div><div class="kpi-l">Faltes no justificades · ${t.FJ} just.</div></div>
   </div>
-  <p class="muted" style="font-size:calc(13px*var(--ts));margin:10px 2px 0">${st.counted.length} de ${st.all.length} sessions amb llista · Assistència = minuts d’assaig fets sobre els convocats: un retard compta pels minuts que s’hi ha estat (sense comptar «no fa» ni baixes).</p>`;
+  <p class="muted" style="font-size:calc(13px*var(--ts));margin:10px 2px 0">${st.counted.length} de ${st.all.length} sessions amb llista ${helpBtn('assist')}</p>
+  ${helpText('assist', 'L’assistència són els minuts d’assaig fets sobre els convocats: un retard compta pels minuts que s’hi ha estat. No compten «no fa» ni les baixes.')}`;
 
   const dist = `<div class="panel" style="padding:14px;margin-top:14px">${stackBar(t)}<div class="legend">${ORDER.map(k => `<span><i class="i-${k}"></i>${STATUS[k].label} <b>${t[k]}</b></span>`).join('')}</div></div>`;
 
@@ -57,12 +58,12 @@ function viewStats(inBoard) {
     const riskL = st.rows.filter(r => ruleMap.get(r.m.id)?.status === 'risk');
     const hasConcert = st.all.some(isShow);
     const item = (r, rs) => `<li><span><b>${esc(r.m.name)}</b> <span class="muted">· ${esc(SEC[r.m.section].name)} · ${pct(rs.cur)}${rs.status === 'risk' ? ` (pot arribar al ${pct(rs.best)})` : ''}</span></span><button class="rule ${rs.status}" data-act="member-stats" data-mid="${r.m.id}">${rs.status === 'out' ? `No pot fer ${V.sh.el}` : 'En risc'}</button></li>`;
-    rule = `<div class="section-title"><h2 class="h2">Norma del ${minAttendance()}%</h2>${hasConcert ? `<button class="btn btn-sm" data-act="concert-list" data-pid="${scope.id}">${V.sh.list}</button>` : '<span class="eyebrow">assistència mínima</span>'}</div>
+    rule = `<div class="section-title"><h2 class="h2">Norma del ${minAttendance()}% ${helpBtn('norma')}</h2>${hasConcert ? `<button class="btn btn-sm" data-act="concert-list" data-pid="${scope.id}">${V.sh.list}</button>` : '<span class="eyebrow">assistència mínima</span>'}</div>
       <div class="panel">
         ${outL.length || riskL.length ? `<ul class="alerts">${outL.map(r => item(r, ruleMap.get(r.m.id))).join('')}${riskL.map(r => item(r, ruleMap.get(r.m.id))).join('')}</ul>`
           : `<p style="margin:0;padding:14px;font-size:calc(13.5px*var(--ts))">Ara mateix tothom compleix la norma.</p>`}
-        <p class="muted" style="margin:0;padding:10px 14px 12px;font-size:calc(13px*var(--ts));border-top:1px solid var(--line)">Compten tots els assajos de la producció (no ${V.sh.els} ni les sessions «Altres»). «En risc» vol dir que ara està per sota però encara hi pot arribar amb els assajos que queden.</p>
-      </div>`;
+      </div>
+      ${helpText('norma', `Compten tots els assajos de la producció (no ${V.sh.els} ni les sessions «Altres»). «En risc» vol dir que ara està per sota però encara hi pot arribar amb els assajos que queden.`)}`;
   }
 
   const secBars = !ui.statsSec ? `<div class="section-title"><h2 class="h2">Per ${V.sections}</h2><span class="eyebrow">assistència</span></div>
@@ -184,7 +185,8 @@ function riskView() {
       <div class="kpi ${nOut ? 'alert' : ''}"><div class="kpi-v">${nOut}</div><div class="kpi-l">No poden fer ${V.sh.el}</div></div>
       <div class="kpi"><div class="kpi-v">${nRisk}</div><div class="kpi-l">Hi són a temps</div></div>
     </div>
-    <p class="muted" style="font-size:calc(13px*var(--ts));margin:10px 2px 0">Produccions en curs i properes. Compten els assajos (no ${V.sh.els} ni les sessions «Altres») i no compten les baixes.</p>
+    <p class="muted" style="font-size:calc(13px*var(--ts));margin:10px 2px 0">Produccions en curs i properes ${helpBtn('risc')}</p>
+    ${helpText('risc', `Compten els assajos (no ${V.sh.els} ni les sessions «Altres») i no compten les baixes.`)}
     ${blocks}
     <div class="panel" style="padding:14px;margin-top:14px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
       <span style="font-size:calc(13.5px*var(--ts))">Passa-ho a direcció o guarda-ho.</span>

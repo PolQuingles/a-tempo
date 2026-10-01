@@ -15,25 +15,21 @@ function openConvocations(me) {
 }
 /* ---------- Instal·lar l'app i activar els avisos ---------- */
 // A l'iPhone, els avisos només funcionen si l'app està a la pantalla d'inici, i el Safari no ho diu enlloc. Mentre el mòbil
-// no la tingui instal·lada, Inici explica com fer-ho; després, proposa activar els avisos. «Ara no» l'amaga 30 dies.
+// no la tingui instal·lada, Inici hi té una línia que obre com fer-ho; després, una que activa els avisos. «Ara no» l'amaga 30 dies.
 const LS_INSTALL = 'atempo:installa';
 function installCard() {
   if (PREVIEW || !(isiOS() || isAndroid())) return '';
   const hidden = +lsGet(LS_INSTALL) || 0;
   if (Date.now() - hidden < 30 * 864e5) return '';
-  const hide = '<button class="btn btn-sm btn-ghost" data-act="install-hide">Ara no</button>';
-  const icon = '<span class="todo-i"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 18.5h3"/></svg></span>';
+  let t, act;
   if (installed()) {
     if (!pushSupported() || S.pushOn) return '';
-    return `<div class="install-card">${icon}<div><b>Activa els avisos al mòbil</b>
-      <p>T’assabentaràs dels anuncis, de les convocatòries i dels canvis sense haver d’obrir l’app. Mai de nit.</p>
-      <div class="install-acts"><button class="btn btn-sm btn-primary" data-act="push-setup">Activa’ls</button>${hide}</div></div></div>`;
+    t = 'Activa els avisos al mòbil'; act = 'data-act="push-setup"';
+  } else {
+    t = 'Posa l’app a la pantalla d’inici'; act = installPrompt ? 'data-act="install-go"' : 'data-act="install-how"';
   }
-  const steps = installSteps();
-  return `<div class="install-card">${icon}<div><b>Posa l’app a la pantalla d’inici</b>
-    <p>${isiOS() ? 'Al iPhone és l’única manera de rebre els avisos al mòbil.' : 'La tindràs com una app més, i s’obre més de pressa.'}</p>
-    ${steps.length ? `<ol>${steps.map(x => `<li>${x}</li>`).join('')}</ol>` : ''}
-    <div class="install-acts">${installPrompt ? '<button class="btn btn-sm btn-primary" data-act="install-go">Instal·la-la</button>' : ''}${hide}</div></div></div>`;
+  return `<div class="install-card"><button class="install-go" ${act}><span class="todo-i"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 18.5h3"/></svg></span><span>${t}</span>${ICON.right}</button>
+    <button class="icon-btn" data-act="install-hide" aria-label="Ara no">${ICON.close}</button></div>`;
 }
 /** Els passos per posar l'app a la pantalla d'inici en aquest mòbil (buit si el Chrome ho fa amb un botó). */
 function installSteps() {
@@ -109,6 +105,8 @@ function todoItems() {
   // No hi va ser: què s'hi va treballar (el pla de l'assaig on va faltar).
   const missed = missedPlan(me);
   if (missed) out.push({ icon: 'plan', t: `Què es va fer el ${esc(shortDate(missed.date))}`, s: `No hi vas ser: mira el pla ${esc(missed.type ? `de l’${missed.type.toLowerCase()}` : 'de l’assaig')}`, btn: 'Mira-ho', act: `data-act="session-info" data-sid="${esc(missed.id)}"`, n: 0 });
+  const plan = planTodo();
+  if (plan) out.push(plan);
   out.push(...archiveTodos());
   const th = unreadThreads();
   if (th.length) out.push({ icon: 'thread', t: `${th.length === 1 ? '1 conversa' : `${th.length} converses`} amb resposta nova`, s: esc(th.map(threadWho).slice(0, 2).join(', ')), btn: 'Llegeix', act: th.length === 1 ? `data-act="thread" data-id="${esc(th[0].id)}"` : 'data-act="threads"', n: th.length });
@@ -138,9 +136,9 @@ function convCard(s, me) {
 }
 function todoBlock(me) {
   const items = todoItems();
-  const head = `<div class="section-title"><h2 class="h2">Per fer</h2>${items.length ? `<span class="eyebrow">${items.length}</span>` : ''}</div>`;
-  if (!items.length) return head + `<div class="todo-done"><span class="todo-i ok"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span><b>Tot al dia</b><small>No tens res pendent de respondre.</small></span></div>`;
-  return head + `<div class="todo">${items.map(x => x.conv ? `<div class="todo-conv"><span class="todo-k">Convocatòria · confirma si hi seràs</span>${convCard(x.conv, me)}</div>`
+  // Res pendent: només una marca al costat del títol, sense requadre.
+  if (!items.length) return `<div class="section-title"><h2 class="h2">Per fer</h2><span class="pf-ok"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Tot al dia</span></div>`;
+  return `<div class="section-title"><h2 class="h2">Per fer</h2><span class="eyebrow">${items.length}</span></div>` + `<div class="todo">${items.map(x => x.conv ? `<div class="todo-conv"><span class="todo-k">Convocatòria · confirma si hi seràs</span>${convCard(x.conv, me)}</div>`
     : `<div class="todo-row"><span class="todo-i"><svg viewBox="0 0 24 24" aria-hidden="true">${TODO_ICONS[x.icon]}</svg></span>
       <span class="todo-t"><b>${x.t}</b>${x.s ? `<small>${x.s}</small>` : ''}</span>
       <button class="btn btn-sm ${x.n ? 'btn-primary' : ''}" ${x.act}>${x.btn}</button></div>`).join('')}</div>`;
@@ -194,7 +192,7 @@ function soonBlock(me) {
     const clash = classClash(nx.c, nx.slot);
     rows.push({ key: `${nx.c.date} ${nx.slot.time || ''}`, html: soonRow({ date: nx.c.date, time: nx.slot.time || '', kind: 'La teva classe', title: esc(V.classes.replace(/^Classes/, 'Classe')), meta: esc([nx.c.place, teacherOf(nx.c)].filter(Boolean).join(' · ')),
       extra: clash ? `<span class="st-pill st-pending">Xoca amb ${esc(clash.type || 'l’assaig')}</span>` : '', now: nx.c.date === TODAY,
-      acts: `<button class="btn btn-sm" data-act="cl-notice" data-c="${esc(nx.c.id)}" data-s="${esc(nx.slot.id)}" data-k="late">Arribaré tard</button><button class="btn btn-sm" data-act="cl-notice" data-c="${esc(nx.c.id)}" data-s="${esc(nx.slot.id)}" data-k="absent">No hi podré anar</button>${classSlots(nx.c).length > 1 || weekClasses(nx.c).length > 1 ? `<button class="btn btn-sm btn-ghost" data-act="cl-swap" data-c="${esc(nx.c.id)}" data-s="${esc(nx.slot.id)}">Canvia l’hora</button>` : ''}` }) });
+      acts: `<button class="btn btn-sm" data-act="cl-avisa" data-c="${esc(nx.c.id)}" data-s="${esc(nx.slot.id)}">Avisa…</button>` }) });
   }
   const later = allSessions().filter(s => s.date > TODAY && mineS(s) && !(me && isOut(s, me)));
   const next = later[0];
@@ -212,9 +210,9 @@ function myNoticesBlock(me) {
   const mine = [...S.absences.values()].filter(a => a.memberId === me.id).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
   // Els avisos de sessions que ja han passat de fa més d'un mes no hi fan res: queden a «La meva assistència».
   const recent = mine.filter(a => (a.createdAt || '').slice(0, 10) >= addDays(TODAY, -30) || (a.sessionIds || []).some(id => (sessionById(id)?.date || '') >= TODAY));
+  // Sense avisos, n'hi ha prou amb el botó: l'explicació és a la finestra d'avisar.
   return `<div class="section-title"><h2 class="h2">Els meus avisos</h2><button class="btn btn-sm btn-primary" data-act="absence-new">Avisa d’una absència</button></div>
-    ${recent.length ? `<div class="panel">${recent.map(a => absenceCard(a, { mine: true })).join('')}</div>`
-      : `<p class="soon-empty">Si no pots venir a un assaig, avisa’n amb temps: el teu ${V.leader} ho veurà i, si ho accepta, la falta quedarà justificada.</p>`}`;
+    ${recent.length ? `<div class="panel">${recent.map(a => absenceCard(a, { mine: true })).join('')}</div>` : ''}`;
 }
 function viewHome() {
   const me = S.members.get(myMemberId());

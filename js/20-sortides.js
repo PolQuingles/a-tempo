@@ -45,7 +45,7 @@ function boardTrips() {
       ${canEdit() ? `<div class="trip-acts"><button class="btn btn-sm" data-act="trip-admin" data-id="${esc(t.id)}">Inscrits, transport i habitacions</button>${tripOpen(t) && c.wait ? `<button class="btn btn-sm" data-act="trip-remind" data-id="${esc(t.id)}">Recorda-ho (${c.wait})</button>` : ''}</div>` : ''}
     </article>`;
   };
-  return `${canEdit() ? `<div class="sec-h" style="margin-top:6px"><span class="muted" style="font-size:calc(13px*var(--ts))">Sortides, gires i caps de setmana: cadascú s’hi apunta, i l’equip reparteix el transport i les habitacions.</span><button class="btn btn-sm btn-primary" data-act="trip-new">+ Sortida</button></div>` : ''}
+  return `${canEdit() ? `<div class="sec-h end" style="margin-top:6px"><button class="btn btn-sm btn-primary" data-act="trip-new">+ Sortida</button></div>` : ''}
     ${next.length ? `<div class="panel">${next.map(card).join('')}</div>` : `<div class="empty"><p>No hi ha cap sortida prevista.</p></div>`}
     ${past.length ? `<details class="np-group"><summary><span>Fetes (${past.length})</span>${ICON.chev}</summary><div class="panel">${past.map(card).join('')}</div></details>` : ''}`;
 }

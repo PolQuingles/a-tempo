@@ -13,9 +13,9 @@ function viewCalendar() {
   const month = ui.calView === 'month';
   const head = `<div class="page-head"><h1 class="h1">Calendari</h1>
     <span style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="seg3" role="radiogroup" aria-label="Vista del calendari"><button type="button" role="radio" aria-checked="${!month}" data-act="cal-view" data-k="list">Llista</button><button type="button" role="radio" aria-checked="${month}" data-act="cal-view" data-k="month">Mes</button></span>
-    <button class="btn btn-sm" data-act="cal-subscribe">${icsOn() ? 'Subscriu-t’hi' : 'Exporta'}</button>${month ? '' : `<button class="btn btn-sm" data-act="cal-past">${ui.calPast ? 'Amaga passades' : 'Mostra passades'}</button>`}
     ${canEdit() ? `<button class="btn btn-sm btn-primary" data-act="session-new" ${month && ui.calDay ? `data-date="${ui.calDay}"` : ''}>+ Sessió</button>` : ''}</span></div>
 `;
+  // Subscriure's al calendari és al menú del compte; les sessions passades, amb un enllaç a dalt de la llista.
   if (!prods.length) return head + `<div class="empty">${staffSvg()}<h2 class="h2">Cap producció</h2><p>Les sessions s’organitzen per produccions.</p>${canEdit() ? '<button class="btn btn-primary" data-act="prod-new">Nova producció</button>' : ''}</div>`;
 
   if (month) return head + chips + calMonthView();
@@ -40,7 +40,8 @@ function viewCalendar() {
       ${rows || `<p class="muted">No queden sessions pendents. ${ui.calPast ? '' : 'Mostra les passades per veure-les.'}</p>`}
     </section>`;
   }
-  if (!body) body = `<div class="empty"><p>No hi ha sessions properes${hiddenPast ? ` (${hiddenPast} ja passades)` : ''}.</p><button class="btn" data-act="cal-past">Mostra passades</button></div>`;
+  if (!body) body = `<div class="empty"><p>No hi ha sessions properes${hiddenPast ? ` (${hiddenPast} ja passades)` : ''}.</p><button class="btn" data-act="cal-past">Mostra les passades</button></div>`;
+  else if (ui.calPast || hiddenPast) body = `<button class="linkish cal-past-link" data-act="cal-past">${ui.calPast ? 'Amaga les sessions passades' : hiddenPast === 1 ? 'Mostra la sessió passada' : `Mostra les ${hiddenPast} sessions passades`}</button>${body}`;
   // Les classes de cadascú, en un bloc a part (no són de cap producció).
   const cls = ui.calProd === 'all' ? calClasses().filter(x => ui.calPast || x.c.date >= TODAY) : [];
   if (cls.length) {
@@ -121,6 +122,7 @@ function calMonthView() {
 function calRow(s, underProd, tone) {
   let marks;
   if (attHidden()) marks = '';   // llistes privades: ni com van les llistes ni el percentatge de la sessió
+  else if (!canEdit()) marks = '';   // com van les llistes de cada corda només li diu res a qui en passa
   else if (SECTIONS.length <= 5) {
     marks = SECTIONS.map(x => {
       if (!convoked(s, x.id)) return `<span class="vm off${x.short.length > 1 ? ' long' : ''}" title="${esc(x.name)}: no convocats">${esc(x.short)}</span>`;

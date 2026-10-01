@@ -28,7 +28,7 @@ function boardRepertoire() {
       <option value="all" ${all ? 'selected' : ''}>Tot el repertori · ${S.works.size}</option>
       ${prods.map(p => `<option value="${p.id}" ${prod && p.id === prod.id ? 'selected' : ''}>${esc(p.name)}${worksOf(p.id).length ? ` · ${worksOf(p.id).length}` : ''}</option>`).join('')}</select></label></div>`;
   const tools = canEdit()
-    ? `<div class="sec-h" style="margin-top:4px"><span class="muted" style="font-size:calc(13px*var(--ts))">Cada obra té la seva fitxa, i serveix d’una temporada a l’altra.</span>
+    ? `<div class="sec-h end" style="margin-top:4px">
         <span style="display:flex;gap:6px;flex-wrap:wrap">${prod ? '<button class="btn btn-sm" data-act="work-link">Afegeix-ne una que ja hi és</button>' : ''}<button class="btn btn-sm btn-primary" data-act="work-new">+ Obra</button></span></div>`
     : me ? `<div class="sec-h" style="margin-top:4px"><span class="muted" style="font-size:calc(13px*var(--ts))">${onlyMine ? `Mostrant el material per a ${esc(SEC[me.section].name.toLowerCase())}${me.part ? ` ${esc(me.part)}` : ''}` : 'Mostrant tot el material'}</span><button class="btn btn-sm btn-ghost" data-act="mat-mine">${onlyMine ? 'Mostra-ho tot' : `Només la meva ${V.part}`}</button></div>` : '';
   const files = offlineCandidates(works, prod, onlyMine ? me : null);
@@ -64,7 +64,7 @@ function boardMaterialsOf(prod, onlyMine, me) {
       ${canEdit() ? `<button class="icon-btn" data-act="mat-edit" data-pid="${prod.id}" data-id="${x.id}" aria-label="Edita">${ICON.more}</button>` : ''}</div>`;
   if (!sorted.length && !canEdit()) return '';
   return `<div class="section-title"><h2 class="h2">Altres materials</h2>${canEdit() ? '<button class="btn btn-sm" data-act="mat-new">+ Material</button>' : ''}</div>
-    ${sorted.length ? `<div class="panel prod-tone tinted" style="--ph:${prodHue(prod)}">${sorted.map(row).join('')}</div>` : '<p class="muted" style="font-size:calc(13px*var(--ts));margin:0 2px">Material de la producció que no és de cap obra: el programa, horaris, enllaços…</p>'}`;
+    ${sorted.length ? `<div class="panel prod-tone tinted" style="--ph:${prodHue(prod)}">${sorted.map(row).join('')}</div>` : '<p class="muted" style="font-size:calc(13px*var(--ts));margin:0 2px">El programa, horaris, enllaços…</p>'}`;
 }
 function sheetWork(id) {
   const w = S.works.get(id);
@@ -476,7 +476,7 @@ function missedPlan(me) {
     .reverse().find(s => { const mk = effMark(s, me); return mk && (mk.s === 'FJ' || mk.s === 'FNJ'); }) || null;
 }
 const PLAN_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V6.5l10-2.5v11.5"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="15.5" r="2.5"/></svg>';
-/** A les targetes (Inici, avui): el pla d'assaig en una línia, o un botó per fer-lo. */
+/** A les targetes (Inici, avui): el pla d'assaig en una línia. Si encara no n'hi ha, la direcció ho té a «Per fer» (planTodo). */
 function planChip(s) {
   const p = planOf(s);
   if (p) {
@@ -484,6 +484,12 @@ function planChip(s) {
     const titles = planWorks(planForMe(p.items || [], me && !canEdit() ? me.section : '')).map(it => `${planTitle(it)}${it.bars ? ` (${it.bars})` : ''}`).join(' · ') || p.text || p.after;
     return `<button class="fitxa-chip plan-chip" data-act="session-info" data-sid="${s.id}">${PLAN_ICON}<span><b>${s.date < TODAY ? 'Què s’hi va treballar' : 'Pla d’assaig'}</b><small>${esc(titles)}</small></span></button>`;
   }
-  if (canEdit() && !isShow(s) && s.date >= TODAY) return `<button class="fitxa-chip empty" data-act="plan-edit" data-sid="${s.id}">${PLAN_ICON}<span><b>Afegeix el pla d’assaig</b><small>Quines obres i quins compassos, perquè ho puguin preparar</small></span></button>`;
   return '';
+}
+/** «Per fer» de la direcció: el proper assaig encara sense pla (abans era un requadre a cada assaig de Properament). */
+function planTodo() {
+  if (!canEdit() || !(iHave('director') || iHave('admin'))) return null;
+  const s = allSessions().find(x => x.date >= TODAY && !isShow(x));
+  if (!s || planOf(s) || s.date > addDays(TODAY, 7)) return null;
+  return { icon: 'plan', t: 'Afegeix el pla d’assaig', s: `${esc(dayLabel(s.date) || shortDate(s.date))} · ${esc(s.type || 'Assaig')} · quines obres i quins compassos`, btn: 'Fes-lo', act: `data-act="plan-edit" data-sid="${esc(s.id)}"`, n: 0 };
 }
