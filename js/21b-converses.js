@@ -117,6 +117,61 @@ function sheetThreadNew(preset = {}) {
     },
   });
 }
+/* ---------- L'equip escriu a una persona ---------- */
+// La direcció, la gerència, la secretaria, l'administració i el professorat de cant poden escriure a qualsevol persona de la
+// plantilla; els caps de corda i els arxivers, a la seva corda. És una conversa a nom de qui escriu (toEmail), com les altres:
+// la persona la veu a «Converses», li arriba al mòbil i hi pot respondre.
+const canWriteTo = () => !!S.email && !PREVIEW && (canWriteAll() || iHave('voice') || !!mySecWrite());
+const writableMembers = () => (canWriteAll() || iHave('voice') ? membersOf(null) : membersOf(mySecWrite())).filter(m => m.id !== myId());
+const myThreadWith = mid => threadsSorted().find(t => t.memberId === mid && t.toEmail === S.email && !t.ref);
+function sheetThreadTo(mid) {
+  if (!canWriteTo()) return;
+  const list = writableMembers();
+  if (mid && !list.some(m => m.id === mid)) return;
+  if (mid && myThreadWith(mid)) return sheetThread(myThreadWith(mid).id);
+  const secs = SECTIONS.filter(x => list.some(m => m.section === x.id));
+  const me = fullName(S.me?.name || S.userName || S.email || '');
+  openSheet({
+    title: 'Missatge a una persona',
+    body: `<div class="kv">
+      ${mid ? `<p style="margin:0">Per a <b>${esc(fullName(S.members.get(mid).name))}</b></p>`
+        : `<label class="field"><span>Per a</span><select class="inp" id="tt-who"><option value="">—</option>${secs.map(x => `<optgroup label="${esc(x.name)}">${list.filter(m => m.section === x.id).map(m => `<option value="${esc(m.id)}">${esc(m.name)}</option>`).join('')}</optgroup>`).join('')}</select></label>`}
+      <label class="field"><span>Sobre què (opcional)</span><input class="inp" id="tt-subject" maxlength="80" placeholder="p. ex. Partitura del Gloria"></label>
+      <label class="field"><span>Missatge</span><textarea class="inp" id="tt-text" maxlength="${THREAD_MAX}" style="min-height:130px" placeholder="Escriu aquí…"></textarea></label>
+      <p class="muted" style="margin:0;font-size:calc(13px*var(--ts))">Només ho veieu tu i aquesta persona. Li arribarà un avís al mòbil i et podrà respondre aquí mateix.</p>
+    </div>`,
+    foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="tt-send">Envia</button>`,
+    onMount: el => {
+      el.querySelector('#tt-send').onclick = async e => {
+        const btn = e.currentTarget;
+        const who = mid || el.querySelector('#tt-who').value;
+        const m = S.members.get(who);
+        const text = el.querySelector('#tt-text').value.trim();
+        if (!m) { toast('Tria a qui escrius'); return; }
+        if (!text) { toast('Escriu el missatge'); return; }
+        const at = new Date().toISOString();
+        const msg = { by: S.email || '', name: me, side: 's', text, at };
+        const subject = el.querySelector('#tt-subject').value.trim();
+        const open = myThreadWith(m.id);
+        btn.disabled = true;
+        try {
+          if (open) {
+            // Ja hi parlàvem: el missatge va a la mateixa conversa.
+            const patch = { msgs: [...(open.msgs || []), msg].slice(-300), lastAt: at, lastSide: 's', readS: at };
+            await db.doc(`threads/${open.id}`).update(patch);
+            S.threads.set(open.id, { ...open, ...patch });
+          } else {
+            const rec = { id: uid('th'), memberId: m.id, memberName: m.name, section: m.section, toRole: '', toEmail: S.email || '', toName: me,
+              subject, ref: '', msgs: [msg], lastAt: at, lastSide: 's', readM: '', readS: at, createdAt: at };
+            await db.doc(`threads/${rec.id}`).set(rec);
+            S.threads.set(rec.id, rec);
+          }
+          closeSheet(); toast(`Missatge enviat a ${firstName(m.name)}`); render();
+        } catch { btn.disabled = false; toast('No s’ha pogut enviar. Comprova la connexió.'); }
+      };
+    },
+  });
+}
 function sheetThread(id) {
   const t = S.threads.get(id);
   if (!t) return;

@@ -547,6 +547,16 @@ expect("P9b el director la llegeix", get(f"cors/{F}/threads/t5", T["dir"]), True
 expect("P9c el director busca les seves", qry(f"cors/{F}", "threads", [("toEmail", "EQUAL", "dir@exemple.cat")], T["dir"]), True)
 expect("P9d gerència busca les del director", qry(f"cors/{F}", "threads", [("toEmail", "EQUAL", "dir@exemple.cat")], T["ger"]), False)
 expect("P9e el compte de servei les llegeix (avisos)", qry(f"cors/{F}", "threads", [("lastAt", "GREATER_THAN_OR_EQUAL", now)], T["service"]), True)
+TS = lambda tid, mid, sec, by: {**TH, "id": tid, "memberId": mid, "memberName": "X", "section": sec, "toRole": "", "toEmail": by, "toName": "Equip",
+                                 "msgs": [{"by": by, "name": "Equip", "side": "s", "text": "Hola", "at": now}], "lastSide": "s", "readM": "", "readS": now}
+expect("P10 secretaria escriu a una cantaire", commit([upd(f"cors/{F}/threads/u1", TS("u1", "m1", "S", "sec@exemple.cat"))], T["sec"]), True)
+expect("P10b la cantaire la llegeix", get(f"cors/{F}/threads/u1", T["singer"]), True)
+expect("P10c secretaria la troba a les seves", qry(f"cors/{F}", "threads", [("toEmail", "EQUAL", "sec@exemple.cat")], T["sec"]), True)
+expect("P10d un cantaire escriu a un altre cantaire", commit([upd(f"cors/{F}/threads/u2", TS("u2", "m2", "T", "singer@exemple.cat"))], T["singer"]), False)
+expect("P10e un cap de corda escriu a un de la seva corda", commit([upd(f"cors/{F}/threads/u3", TS("u3", "m2", "T", "leader@exemple.cat"))], T["leader"]), True)
+expect("P10f a una d'una altra corda", commit([upd(f"cors/{F}/threads/u4", TS("u4", "m1", "S", "leader@exemple.cat"))], T["leader"]), False)
+expect("P10g fent veure que és de la seva corda", commit([upd(f"cors/{F}/threads/u5", TS("u5", "m1", "T", "leader@exemple.cat"))], T["leader"]), False)
+expect("P10h a nom d'un altre de l'equip", commit([upd(f"cors/{F}/threads/u6", {**TS("u6", "m1", "S", "dir@exemple.cat"), "msgs": [{"by": "sec@exemple.cat", "name": "Equip", "side": "s", "text": "Hola", "at": now}]})], T["sec"]), False)
 ND = {"id": "n1", "kind": "poll", "ref": "q1", "title": "Tens pendent l'enquesta", "memberIds": ["m1", "m2"], "by": "leader@exemple.cat", "byName": "Lluc", "createdAt": now}
 expect("P10 un cap de corda envia un recordatori", commit([upd(f"cors/{F}/nudges/n1", ND)], T["leader"]), True)
 expect("P10b en nom d'un altre", commit([upd(f"cors/{F}/nudges/n2", {**ND, "by": "pol@exemple.cat"})], T["leader"]), False)
@@ -621,6 +631,12 @@ expect("R4b la direcció també", commit([upd(f"cors/{F}/scores/p1_w1_B", SC("B"
 expect("R5 l'arxiver no passa llista", commit([upd(f"cors/{F}/attendance/s1_S", {"sessionId": "s1", "section": "S", "marks": {"m1": {"s": "P"}}})], T["arx"]), False)
 expect("R5b l'arxiver d'una altra agrupació no hi entra", lst(f"cors/{F}/scores", T["orq"]), False)
 expect("R6 el compte de servei ho llegeix (còpies)", lst(f"cors/{F}/scores", T["service"]), True)
+expect("R7 l'arxiver escriu un missatge a la seva corda", commit([upd(f"cors/{F}/messages/r7", {**MSG, "id": "r7", "to": ["S"], "by": "arx@exemple.cat"})], T["arx"]), True)
+expect("R7b no a una altra corda", commit([upd(f"cors/{F}/messages/r7b", {**MSG, "id": "r7b", "to": ["T"], "by": "arx@exemple.cat"})], T["arx"]), False)
+expect("R7c ni a tothom", commit([upd(f"cors/{F}/messages/r7c", {**MSG, "id": "r7c", "to": ["*"], "by": "arx@exemple.cat"})], T["arx"]), False)
+expect("R7d esborra el seu", commit([dele(f"cors/{F}/messages/r7")], T["arx"]), True)
+expect("R8 l'arxiver escriu a una soprano", commit([upd(f"cors/{F}/threads/r8", TS("r8", "m1", "S", "arx@exemple.cat"))], T["arx"]), True)
+expect("R8b no a un tenor", commit([upd(f"cors/{F}/threads/r8b", TS("r8b", "m2", "T", "arx@exemple.cat"))], T["arx"]), False)
 
 print("M. Registre d'errors")
 ERR = {"kind": "error", "msg": "TypeError: x is undefined", "where": "04-llista.js:10:5", "at": now, "app": "abc123", "gid": F, "route": "inici", "ua": "Mozilla/5.0", "online": True}

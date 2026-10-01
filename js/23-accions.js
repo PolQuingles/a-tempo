@@ -11,7 +11,7 @@ const PRO_ONLY = new Set(['brand-color', 'logo-remove', 'kind-set', 'group-delet
 const CLASS_ONLY = new Set(['cl-new', 'cl-edit', 'cl-review', 'cl-paste', 'cl-plan', 'cl-note', 'cl-mark', 'cl-stats', 'cl-cancel-day']);
 const EDIT_ONLY = new Set(['mark', 'min', 'mark-rest', 'session-new', 'sub-set', 'ann-new', 'ann-edit', 'mat-new', 'mat-edit', 'poll-new', 'poll-edit', 'poll-results', 'poll-remind', 'rsvp-remind', 'doc-new', 'doc-edit', 'share-app', 'staff-bulk', 'preview-on', 'who-in', 'mail-check', 'concert-list', 'concert-toggle', 'session-edit', 'member-edit', 'member-new', 'member-bulk', 'prod-new', 'prod-edit',
   'wipe-demo', 'wipe-all', 'load-demo', 'export-json', 'abs-accept', 'abs-reject', 'abs-delete', 'manage',
-  'write', 'msg-new', 'roster-export', 'docs-export', 'docs-copy-noimg',
+  'roster-export', 'docs-export', 'docs-copy-noimg',
   'choices-overview', 'work-new', 'work-edit', 'work-link', 'plan-edit', 'seating-edit', 'participants', 'certificate', 'season-report', 'trip-new', 'trip-edit', 'trip-admin', 'trip-remind']);
 const actions = {
   'tab': el => { if (el.dataset.tab === 'gestio' && ui.tab !== 'gestio') ui.gestioFrom = ui.tab; ui.tab = el.dataset.tab; ui.rollSec = null; ui._calScrolled = false; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
@@ -67,7 +67,8 @@ const actions = {
   'account': () => sheetAccount(),
   // Missatges (21).
   'write': () => sheetWrite(),
-  'msg-new': () => sheetMessage(),
+  'msg-new': el => sheetMessage(el.dataset.pid ? scoreReminder(el.dataset.pid) : {}),
+  'thread-to': el => sheetThreadTo(el.dataset.mid || ''),
   'msg-list': () => sheetMessages(),
   'msg-del': el => deleteMessage(el.dataset.id),
   // Secretaria (22).
