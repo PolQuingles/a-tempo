@@ -56,12 +56,16 @@ async () => {
   if (ui.tab === 'gestio') {
     for (const k of ['avisos', 'personal', 'produccions', 'config']) { await cl(`[data-act="manage"][data-k="${k}"]`); chk('gestio/' + k); }
     await cl('[data-act="manage"][data-k="personal"]');
-    // El desplegable dels rols i, dins de la plantilla, les seves llistes (altes i baixes, documents, quotes).
+    // El desplegable dels rols i, dins de la plantilla, els seus filtres (altes i baixes, documents, quotes, accés).
     const sel = document.querySelector('#people-menu');
     for (const v of sel ? [...sel.options].map(o => o.value) : []) {
       const cur = document.querySelector('#people-menu');
       cur.value = v; cur.dispatchEvent(new Event('change', { bubbles: true })); await s(250); chk('personal/' + v);
-      if (v === 'singer') for (const t of [...document.querySelectorAll('[data-act="cant-tab"]')].map(b => b.dataset.k)) { await cl(`[data-act="cant-tab"][data-k="${t}"]`); chk('plantilla/' + t); }
+      if (v === 'singer') {
+        for (const t of [...document.querySelectorAll('.pm-chips .chip')].map(b => b.dataset.k)) { await cl(`.pm-chips [data-k="${t}"]`); chk('plantilla/' + t); }
+        await cl('.pm-chips [data-k="all"]');
+        const d = document.querySelector('details.pm'); if (d) { d.open = true; await s(150); chk('plantilla/fitxa-oberta'); d.open = false; }
+      }
     }
     await cl('[data-act="manage"][data-k="config"]');
     for (const b of [...document.querySelectorAll('.cfg-h')]) { b.click(); await s(120); }

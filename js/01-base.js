@@ -201,7 +201,7 @@ const ui = {
   tab: 'avisos', section: '', sessionId: null, rollSec: null,
   calProd: 'all', calPast: false,
   statsScope: 'prod', statsProd: null, statsSec: '', statsSort: 'pct',
-  manage: 'personal', people: 'singer', cantTab: 'plantilla', absFilter: 'pending',
+  manage: 'personal', people: 'singer', pmFilter: 'all', absFilter: 'pending',
   clWho: null, clMonth: null, clDay: null,
 };
 /* ---------- Memòria del mòbil, per agrupació ---------- */
@@ -219,7 +219,7 @@ function loadUI() {
   ui.clWho = null;   // les classes comencen sempre pel quadre del professorat
 }
 function saveUI() {
-  lsSet(LS_UI, JSON.stringify({ tab: ui.tab, section: ui.section, calProd: ui.calProd, calView: ui.calView, statsScope: ui.statsScope, statsSec: ui.statsSec, statsSort: ui.statsSort, manage: ui.manage, people: ui.people, cantTab: ui.cantTab, board: ui.board, att: ui.att }));
+  lsSet(LS_UI, JSON.stringify({ tab: ui.tab, section: ui.section, calProd: ui.calProd, calView: ui.calView, statsScope: ui.statsScope, statsSec: ui.statsSec, statsSort: ui.statsSort, manage: ui.manage, people: ui.people, pmFilter: ui.pmFilter, board: ui.board, att: ui.att }));
 }
 // Rols de les persones de l'agrupació. Una persona pot tenir-ne més d'un (p. ex. cap de corda i cantaire).
 // Administració ho pot fer tot; direcció, caps i equip passen llista i editen; cantaires i músics només llegeixen.

@@ -59,8 +59,8 @@ function messagesBlock() {
   const lead = mySecWrite();
   const threads = S.threads.size;
   if (!list.length && !canMessage() && !myId() && !threads) return '';
-  const write = canMessage() || canWriteTo() ? '<button class="btn btn-sm btn-primary" data-act="write">Escriu</button>'
-    : myId() && !PREVIEW ? '<button class="btn btn-sm btn-primary" data-act="thread-new">Escriu a l’equip</button>' : '';
+  const write = canMessage() || canWriteTo() ? '<button class="btn btn-sm" data-act="write">Escriu</button>'
+    : myId() && !PREVIEW ? '<button class="btn btn-sm" data-act="thread-new">Escriu a l’equip</button>' : '';
   const conv = threads || (myId() && (canWriteAll() || lead)) ? `<button class="btn btn-sm" data-act="threads">Converses${unreadThreads().length ? ` (${unreadThreads().length})` : ''}</button>` : '';
   return `<div class="section-title"><h2 class="h2">Missatges</h2><span style="display:flex;gap:6px;flex-wrap:wrap">${conv}${write}</span></div>
     ${list.length ? `<div class="panel msgs">${list.slice(0, 3).map(m => msgCard(m)).join('')}

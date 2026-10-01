@@ -41,36 +41,41 @@ function accessPanel() {
   return `<div class="panel access-panel">
     <div class="setting"><div><div class="t">${withAccount} de ${members.length} ${esc(V.members)} tenen accés · ${r.inApp.length} han entrat${r.never.length ? `, ${r.never.length} encara no` : ''} ${helpBtn('acces')}</div>
       ${helpText('acces', `Afegeix cada persona un sol cop: el nom, el correu per entrar a l’app i què fa (si canta, també la ${esc(V.section)}). Si algú marxa, treu-li l’accés: el perd a l’instant, però no se n’esborra la fitxa ni les llistes.`)}</div></div>
-    <div class="access-acts"><button class="btn btn-sm btn-primary" data-act="staff-new" ${ROLE_KEYS.includes(ui.people) ? `data-role="${esc(ui.people)}"` : ''}>+ Persona</button><button class="btn btn-sm" data-act="staff-bulk">Enganxa una llista</button><button class="btn btn-sm" data-act="share-app">Enllaç de l’app</button>
-      <button class="btn btn-sm" data-act="who-in">Qui ha entrat</button><button class="btn btn-sm ${mailProblems().length ? 'btn-primary' : ''}" data-act="mail-check">Comprova els correus${mailProblems().length ? ` (${mailProblems().length})` : ''}</button><button class="btn btn-sm" data-act="preview-on">Mira l’app com…</button></div>
+    <div class="access-acts"><button class="btn btn-sm btn-primary" data-act="staff-new" ${ROLE_KEYS.includes(ui.people) ? `data-role="${esc(ui.people)}"` : ''}>+ Persona</button>
+      ${mailProblems().length ? `<button class="btn btn-sm btn-soft" data-act="mail-check">Comprova els correus (${mailProblems().length})</button>` : ''}<button class="btn btn-sm" data-act="people-tools">Més…</button></div>
   </div>`;
 }
-/** El menú de Personal: un desplegable amb cada rol (i quants n'hi ha) i, dins de la plantilla, les seves quatre llistes. */
-const CANT_TABS = () => [['plantilla', 'Plantilla'], ['altes', 'Altes i baixes'], ...(canDocs() ? [['docs', 'Documents'], ['quotes', 'Quotes']] : [])];
+/** «Més…» de Personal: les eines de l'accés que no es fan servir cada dia. */
+function sheetPeopleTools() {
+  const n = mailProblems().length;
+  const o = (act, t, sm) => `<button class="write-o" data-act="${act}"><b>${t}</b><small>${sm}</small></button>`;
+  openSheet({
+    title: 'Eines de l’accés',
+    body: `<div class="write-opts">
+      ${o('staff-bulk', 'Enganxa una llista', 'Unes quantes persones d’un cop, amb el nom i el correu (també d’un full de càlcul).')}
+      ${o('share-app', 'Enllaç de l’app', 'L’adreça i un missatge per enviar a qui ha de començar a fer-la servir.')}
+      ${o('who-in', 'Qui ha entrat', 'Qui ja fa servir l’app, qui encara no i a qui li falta el correu.')}
+      ${o('mail-check', `Comprova els correus${n ? ` (${n})` : ''}`, 'Correus repetits, comptes sense fitxa i caps de corda sense permís.')}
+      ${o('preview-on', 'Mira l’app com…', 'Com la veu un cantaire, un cap de corda, la direcció o un professor de cant.')}
+    </div>`,
+  });
+}
+/** El menú de Personal: un desplegable amb cada rol (i quants n'hi ha). La plantilla és una sola llista (managePlantilla). */
 function peopleMenu(role) {
   const opts = [['singer', rolePlural('singer'), roleCount('singer')], ...(isAdmin() ? [['access', 'Amb accés a l’app', S.staff.size]] : []),
     ...PEOPLE_MENU.filter(k => k !== 'singer').map(k => [k, rolePlural(k), roleCount(k)])];
-  const sel = `<div class="filters people-filters"><label class="sel sel-big"><span class="sr">Mostra</span><select id="people-menu" data-pick="people-role">${opts.map(([k, l, n]) =>
+  return `<div class="filters people-filters"><label class="sel sel-big"><span class="sr">Mostra</span><select id="people-menu" data-pick="people-role">${opts.map(([k, l, n]) =>
     `<option value="${k}" ${role === k ? 'selected' : ''}>${esc(l)}${S.staffReady || k === 'singer' ? ` · ${n}` : ''}</option>`).join('')}</select></label></div>`;
-  if (role !== 'singer') return sel;
-  const tabs = CANT_TABS();
-  return sel + `<div class="subtabs cant-tabs" role="tablist" aria-label="${esc(V.Members)}" style="grid-template-columns:repeat(${tabs.length},1fr)">${tabs.map(([k, l]) =>
-    `<button class="subtab" role="tab" aria-selected="${ui.cantTab === k}" data-act="cant-tab" data-k="${k}">${l}</button>`).join('')}</div>`;
 }
 function managePeople() {
   ensureStaff();
-  // Abans, altes, documents i quotes eren al mateix menú que els rols.
-  if (['altes', 'docs', 'quotes'].includes(ui.people)) { ui.cantTab = ui.people; ui.people = 'singer'; }
+  // Abans, altes, documents i quotes eren llistes a part: ara són filtres de la plantilla.
+  const OLD = { altes: 'moves', docs: 'docs', quotes: 'fees' };
+  if (OLD[ui.people]) { ui.pmFilter = OLD[ui.people]; ui.people = 'singer'; }
   if (!ROLE_KEYS.includes(ui.people) && ui.people !== 'access') ui.people = 'singer';
-  if (!CANT_TABS().some(([k]) => k === ui.cantTab)) ui.cantTab = 'plantilla';
   const role = ui.people;
   const menu = peopleMenu(role);
-  if (role === 'singer') {
-    if (ui.cantTab === 'altes') return accessPanel() + menu + manageHistory();
-    if (ui.cantTab === 'docs') return accessPanel() + menu + manageDocs();
-    if (ui.cantTab === 'quotes') return accessPanel() + menu + manageFees();
-    return accessPanel() + menu + `<div class="sec-h end" style="margin:4px 0 0"><button class="btn btn-sm" data-act="roster-export">Exporta a Excel</button></div>` + manageMembers();
-  }
+  if (role === 'singer') return accessPanel() + menu + managePlantilla();
   if (role === 'access') {
     const people = peopleSorted();
     return `${accessPanel()}${menu}
@@ -98,40 +103,6 @@ function leaveText(m) {
 }
 const SEARCH_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>';
 const findBox = (target, ph) => `<label class="find">${SEARCH_ICON}<input class="inp" type="search" inputmode="search" autocomplete="off" placeholder="${ph}" data-bind="find" data-target="${target}" aria-label="${ph}"></label>`;
-function manageMembers() {
-  const secs = SECTIONS.map(x => {
-    const ms = membersOf(x.id, true);
-    const active = ms.filter(m => m.active !== false).length;
-    return `<section data-group="${x.id}"><div class="sec-h"><h2 class="h2"><em>${esc(x.short)}</em>${esc(x.name)} <span class="mono muted" style="font-size:calc(13px*var(--ts));font-weight:400">${active}</span></h2>
-      <span style="display:flex;gap:4px"><button class="btn btn-sm btn-ghost" data-act="member-new" data-sec="${x.id}">Afegeix</button></span></div>
-      ${ms.length ? `<ul class="list">${ms.map(m => {
-        const lv = leaveText(m);
-        const acc = isAdmin() && m.active !== false ? accountFor(m.id) : null;
-        const accTag = !isAdmin() || m.active === false ? '' : !acc ? ' <span class="acc-tag">Sense accés</span>' : !acc.lastSeen ? ' <span class="acc-tag">No ha entrat</span>' : '';
-        return `<li class="li" data-find="${esc(normText(m.name))}"><button data-act="member-edit" data-mid="${m.id}">
-        <span class="${m.active === false ? 'dim' : ''}"><span class="t">${esc(m.name)}</span>${m.part ? ` <span class="part">${esc(partTag(m))}</span>` : ''}${m.leader ? ` <span class="tag">${V.Leader}</span>` : ''}${accTag}
-        ${m.active === false ? '<br><span class="s">Inactiu</span>' : lv ? `<br><span class="s">${lv}</span>` : m.phone ? `<br><span class="s mono">${esc(m.phone)}</span>` : ''}</span>
-        <span class="icon-btn" aria-hidden="true">${ICON.go}</span></button></li>`;
-      }).join('')}</ul>`
-        : `<div class="panel" style="padding:14px;color:var(--muted);font-size:calc(13.5px*var(--ts))">Encara no hi ha ningú en aquesta ${V.section}.</div>`}</section>`;
-  }).join('');
-  // A l'ordinador, la mateixa plantilla en una taula: nom, veu o part, estat, accés i telèfon.
-  const admin = isAdmin();
-  const table = `<div class="only-wide table-wrap"><table class="dtable"><thead><tr><th>Nom</th><th>${esc(V.Part)}</th><th>Estat</th>${admin ? '<th>Accés a l’app</th>' : ''}<th>Telèfon</th></tr></thead>
-    ${SECTIONS.map(x => {
-      const ms = membersOf(x.id, true);
-      return `<tbody data-group="${x.id}"><tr class="grp"><td colspan="${admin ? 5 : 4}"><em>${esc(x.short)}</em>${esc(x.name)} <span class="m" style="font-weight:500">· ${ms.filter(m => m.active !== false).length}</span><button class="btn btn-sm btn-ghost" data-act="member-new" data-sec="${x.id}">Afegeix</button></td></tr>
-        ${ms.map(m => {
-          const acc = admin ? accountFor(m.id) : null;
-          const state = m.active === false ? 'Inactiu' : leaveText(m) || 'Actiu';
-          const access = !admin ? '' : m.active === false ? '' : !acc ? '<span class="acc-tag">Sense accés</span>' : !acc.lastSeen ? '<span class="acc-tag">No ha entrat</span>' : `<span class="m">${esc(acc.email)}</span>`;
-          return `<tr data-act="member-edit" data-mid="${m.id}" data-find="${esc(normText(m.name))}" ${m.active === false ? 'style="opacity:.55"' : ''}>
-            <td><b>${esc(m.name)}</b>${m.leader ? ` <span class="tag">${V.Leader}</span>` : ''}</td><td>${m.part ? `<span class="part">${esc(partTag(m))}</span>` : ''}</td>
-            <td class="m">${esc(state)}</td>${admin ? `<td>${access}</td>` : ''}<td class="m mono">${esc(m.phone || '')}</td></tr>`;
-        }).join('') || `<tr><td colspan="${admin ? 5 : 4}" class="m">Encara no hi ha ningú en aquesta ${V.section}.</td></tr>`}</tbody>`;
-    }).join('')}</table></div>`;
-  return `${onboardingPanel()}<div id="mlist">${findBox('#mlist', `Cerca un ${V.member}`)}<div class="only-narrow">${secs}</div>${table}<div class="panel find-empty" hidden>Ningú amb aquest nom.</div></div>`;
-}
 function manageProductions() {
   const ps = productionsSorted();
   // Si cadascú tria les produccions: quants han respost i quants queden per sota del mínim.
@@ -186,7 +157,7 @@ function manageAbsences() {
   return `<div class="sec-h"><div class="pickers">
       <button class="pick" aria-pressed="${ui.absFilter !== 'all'}" data-act="abs-filter" data-k="pending">Pendents</button>
       <button class="pick" aria-pressed="${ui.absFilter === 'all'}" data-act="abs-filter" data-k="all">Tots</button></div>
-    <button class="btn btn-sm btn-primary" data-act="absence-new">+ Nou avís</button></div>
+    <button class="btn btn-sm" data-act="absence-new">+ Nou avís</button></div>
     ${list.length ? `<div class="panel">${list.map(a => absenceCard(a, { staff: true })).join('')}</div>`
       : `<div class="panel" style="padding:16px;font-size:calc(13.5px*var(--ts));color:var(--muted)">${ui.absFilter === 'all' ? 'Encara no hi ha cap avís.' : 'No hi ha avisos pendents.'} Cada ${V.member} amb accés pot avisar des d’Inici.</div>`}`;
 }

@@ -257,7 +257,7 @@ function render() {
   }
   const html = { llista: viewRoll, calendari: viewCalendar, stats: () => viewStats(false), gestio: viewManage, avisos: viewHome, tauler: viewBoard, classes: viewClasses }[ui.tab]();
   v.innerHTML = html;
-  const key = [ui.tab, ui.att, ui.board, ui.manage, ui.people, ui.cantTab, ui.rollSec, ui.clWho, ui.sessionId].join('|');
+  const key = [ui.tab, ui.att, ui.board, ui.manage, ui.people, ui.pmFilter, ui.rollSec, ui.clWho, ui.sessionId].join('|');
   if (key !== lastViewKey) { lastViewKey = key; v.classList.remove('view-in'); void v.offsetWidth; v.classList.add('view-in'); }
   afterRender();
   if (typeof syncRoute === 'function') syncRoute();
