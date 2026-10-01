@@ -575,14 +575,14 @@ def main():
         check(not errors, "sense errors a les estadístiques i al visor de PDF", "; ".join(errors[:3]))
         ctx.close()
 
-        print("Inici: Per fer, Properament, Els meus avisos i La meva assistència")
+        print("Inici: Per fer, Els meus avisos, Properament i La meva assistència")
         ctx, page, errors = open_app(browser, base, "leader", MOBILE, "#/inici")
         r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms));
           const p = clone(S.productions.get('p1')); p.sessions.push({ id: 'sAvui', date: TODAY, time: '20:30', end: '22:30', type: 'Assaig' }); saveProduction(p); render(); await s(300);
           const order = [...document.querySelectorAll('.home > section .section-title .h2')].map(h => h.textContent);
           const now = [...document.querySelectorAll('.soon-row.is-now')].find(r => r.querySelector('[data-act="home-roll"]'));
           return { order, hero: !!document.querySelector('.hero-cta'), roll: !!now, overflow: document.documentElement.scrollWidth <= innerWidth }; }""")
-        check(r["order"][:3] == ["Per fer", "Properament", "Els meus avisos"] and (len(r["order"]) < 4 or r["order"][3] in ("La meva assistència", "Missatges")), "Inici: Per fer, Properament, Els meus avisos, La meva assistència", str(r))
+        check(r["order"][:3] == ["Per fer", "Els meus avisos", "Properament"] and (len(r["order"]) < 4 or r["order"][3] in ("La meva assistència", "Missatges")), "Inici: Per fer, Els meus avisos, Properament, La meva assistència", str(r))
         check(not r["hero"] and r["roll"], "sense el requadre «Avui»: la sessió d'avui és a Properament, amb «Passa llista»", str(r))
         check(r["overflow"], "Inici sense eixamplar la pantalla del mòbil", str(r))
         check(not errors, "sense errors a Inici", "; ".join(errors[:3]))
@@ -718,6 +718,43 @@ def main():
                          ("noPanel", "i no les estadístiques de l'arxiu")]:
             check(r.get(k), label, str(r))
         check(not errors, "sense errors a l'arxiu de partitures", "; ".join(errors[:3]))
+        ctx.close()
+
+        print("Canvis d'hora de classe entre els dos dies i a unes quantes persones")
+        ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/classes")
+        r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms));
+          let mon = addDays(TODAY, 7); while (new Date(mon + 'T12:00:00').getDay() !== 1) mon = addDays(mon, 1);
+          const day = (id, date, slots) => saveClassDay({ id, date, place: 'Aula 2', note: '', teacher: 'prof@exemple.cat', teacherName: 'Prat, Berta', slots });
+          day('cdl', mon, [{ id: 'q1', time: '17:00', mins: 40, memberId: 'mS0' }, { id: 'q2', time: '17:40', mins: 40, memberId: 'mS2' }]);
+          day('cdc', addDays(mon, 2), [{ id: 'q3', time: '18:00', mins: 40, memberId: 'mT1' }, { id: 'q4', time: '18:40', mins: 40, memberId: 'mS3' }]);
+          await s(1200); return { ok: true }; }""")
+        switch_user(page, base, "singer")
+        r.update(page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          sheetClassSwap('cdl', 'q1'); await s(300);
+          const rows = [...document.querySelectorAll('#cs-list .cs-row')].map(l => l.innerText.replace(/\\s+/g, ' '));
+          out.bothDays = document.querySelectorAll('#cs-list .cs-day').length === 2 && rows.length === 3;
+          for (const v of ['cdc|q3', 'cdc|q4']) { const i = document.querySelector(`#cs-list input[value="${v}"]`); i.checked = true; i.dispatchEvent(new Event('change')); }
+          await s(100);
+          out.hint = /2 persones/.test(document.querySelector('#cs-hint').textContent);
+          document.querySelector('#cs-go').click(); await s(800);
+          const req = [...S.classReq.values()].find(x => x.classId === 'cdl' && x.kind === 'swap');
+          out.req = !!req && req.open && req.to.join() === 'mT1,mS3' && req.offers.mT1 === 'cdc|q3';
+          return out; }"""))
+        switch_user(page, base, "pol")
+        r.update(page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          const req = openSwaps().find(x => x.classId === 'cdl');
+          out.offered = !!req;
+          takeOpenSwap(req.id); await s(800);
+          const dl = classSlots(S.classes.get('cdl')), dc = classSlots(S.classes.get('cdc'));
+          out.swapped = dl.find(x => x.id === 'q1').memberId === 'mT1' && dc.find(x => x.id === 'q3').memberId === 'mS0';
+          return out; }"""))
+        for k, label in [("bothDays", "es pot demanar el canvi a les persones dels dos dies de la setmana"),
+                         ("hint", "es poden triar unes quantes persones"),
+                         ("req", "la petició va només a les triades"),
+                         ("offered", "a una de les triades li surt"),
+                         ("swapped", "en acceptar-lo, cadascú passa a l'hora de l'altre, cada dia")]:
+            check(r.get(k), label, str(r))
+        check(not errors, "sense errors als canvis d'hora", "; ".join(errors[:3]))
         ctx.close()
 
         print("Mira l'app com…")

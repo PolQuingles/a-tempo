@@ -126,6 +126,31 @@ prova('arxiver: el rol porta la seva corda, també si la fitxa en canvia', () =>
   igual(rolesOf(acc), ['archive', 'singer']);
   igual(roleLevel(acc), 'read', 'no passa llista');
 });
+prova('canvis d’hora de classe entre els dos dies de la setmana, i a unes quantes persones', () => {
+  escenari({ members: [{ id: 'a', name: 'Puig, Anna', section: 'S' }, { id: 'b', name: 'Vila, Clara', section: 'S' }, { id: 'c', name: 'Bosch, Marc', section: 'T' }] });
+  const mon = (() => { let d = addDays(TODAY, 7); while (new Date(d + 'T12:00:00').getDay() !== 1) d = addDays(d, 1); return d; })();
+  S.classes = new Map([
+    ['dl', { id: 'dl', date: mon, teacher: 'p', slots: [{ id: 'x1', time: '17:00', memberId: 'a' }, { id: 'x2', time: '17:40', memberId: 'b' }] }],
+    ['dc', { id: 'dc', date: addDays(mon, 2), teacher: 'p', slots: [{ id: 'y1', time: '18:00', memberId: 'c' }] }],
+    ['al', { id: 'al', date: addDays(mon, 2), teacher: 'q', slots: [{ id: 'z1', time: '18:00', memberId: 'b' }] }],
+    ['nx', { id: 'nx', date: addDays(mon, 7), teacher: 'p', slots: [{ id: 'w1', time: '18:00', memberId: 'b' }] }],
+  ]);
+  igual(weekClasses(S.classes.get('dl')).map(c => c.id), ['dl', 'dc'], 'el dilluns i el dimecres del mateix professor, no els d’un altre ni de la setmana següent');
+  S.classReq = new Map([['r', { id: 'r', kind: 'swap', status: 'accepted', classId: 'dl', slotId: 'x1', memberId: 'a', withClassId: 'dc', withSlotId: 'y1', withMemberId: 'c' }]]);
+  igual(classSlots(S.classes.get('dl')).find(x => x.id === 'x1').memberId, 'c', 'en Marc passa al dilluns');
+  igual(classSlots(S.classes.get('dc')).find(x => x.id === 'y1').memberId, 'a', 'l’Anna passa al dimecres');
+  igual(classSlots(S.classes.get('dl')).find(x => x.id === 'x2').memberId, 'b', 'la resta no es mou');
+  S.classReq = new Map([['s', { id: 's', kind: 'swap', status: 'accepted', classId: 'dl', slotId: 'x1', memberId: 'a', withSlotId: 'x2', withMemberId: 'b' }]]);
+  igual(classSlots(S.classes.get('dl')).map(x => x.memberId), ['b', 'a'], 'el mateix dia, com sempre');
+  S.memberId = 'c'; S.classReq = new Map();
+  const open = { id: 'o', kind: 'swap', status: 'pending', open: true, classId: 'dl', slotId: 'x1', memberId: 'a', to: ['c'], offers: { c: 'dc|y1' } };
+  igual(mySwapSlot(open)?.x.id, 'y1', 'qui és a la llista hi posa la seva hora del dimecres');
+  S.classReq = new Map([['o', open]]);
+  igual(openSwaps().length, 1, 'li surt');
+  S.memberId = 'b';
+  igual(openSwaps().length, 0, 'a qui no és a la llista, no');
+  S.memberId = null; S.classes = new Map(); S.classReq = new Map();
+});
 prova('computeStats: compta per persona, per corda i per sessió, i salta les sessions sense llista', () => {
   escenari({
     members: [{ id: 'a', name: 'Puig, Anna', section: 'S' }, { id: 'b', name: 'Bosch, Marc', section: 'T' }, { id: 'c', name: 'Camps, Oriol', section: 'T' }],

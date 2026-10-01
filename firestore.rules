@@ -111,7 +111,7 @@ service cloud.firestore {
     // tools/stamp.py hi escriu l'empremta d'aquest fitxer. La vigilància comprova que les regles publicades són les del
     // repositori demanant reglesVersio/<empremta>: si les publicades són unes altres, la lectura es denega.
     match /reglesVersio/{v} {
-      allow get: if v == 'f6e810c90732';
+      allow get: if v == '852ae71dd31b';
     }
 
     match /plataforma/equip {
@@ -426,13 +426,15 @@ service cloud.firestore {
           && request.resource.data.status == 'pending'
           && (request.resource.data.kind != 'swap' || request.resource.data.get('withMemberId', '-') != myMember(c));
         allow update: if teaches(c)
-          // Canvi obert a tothom: qui se'l queda s'hi posa ell mateix i queda acceptat.
+          // Canvi obert (a tothom o a unes quantes persones, «to»): qui se'l queda s'hi posa ell mateix, amb la seva hora
+          // d'aquell dia o de l'altre dia de la setmana (withClassId), i queda acceptat.
           || (hasSpace(c) && resource.data.kind == 'swap' && !('withMemberId' in resource.data)
               && resource.data.status == 'pending'
+              && (!('to' in resource.data) || myMember(c) in resource.data.to)
               && request.resource.data.status == 'accepted'
               && request.resource.data.withMemberId == myMember(c)
               && request.resource.data.memberId != myMember(c)
-              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewedAt', 'reviewedBy', 'withMemberId', 'withSlotId', 'open']))
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewedAt', 'reviewedBy', 'withMemberId', 'withSlotId', 'withClassId', 'open']))
           // El company a qui es demana el canvi: només pot respondre que sí o que no.
           || (hasSpace(c) && mine(c, resource.data.get('withMemberId', '-'))
               && resource.data.status == 'pending'

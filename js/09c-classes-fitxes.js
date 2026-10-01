@@ -255,29 +255,48 @@ function sheetClassNotice(classId, slotId, kind) {
     },
   });
 }
+/** Demanar un canvi d'hora: a una persona, a unes quantes o a tothom, del mateix dia o de l'altre dia d'aquella setmana
+ *  amb el mateix professor. A una sola persona, li ho demana a ella; a més d'una, el primer que diu que sí se'l queda. */
 function sheetClassSwap(classId, slotId) {
   const c = S.classes.get(classId);
   if (!c) return;
-  const others = classSlots(c).filter(x => x.id !== slotId && x.memberId && S.members.get(x.memberId));
-  if (!others.length) { toast('Aquell dia no hi ha ningú més amb hora'); return; }
+  const days = [c, ...weekClasses(c).filter(x => x.id !== c.id)].sort((a, b) => a.date.localeCompare(b.date));
+  const cands = days.flatMap(k => classSlots(k).filter(x => !(k.id === classId && x.id === slotId) && x.memberId && x.memberId !== myId() && S.members.get(x.memberId)).map(x => ({ k, x })));
+  if (!cands.length) { toast('Aquella setmana no hi ha ningú més amb hora'); return; }
+  const key = o => `${o.k.id}|${o.x.id}`;
   openSheet({
     title: 'Canvia l’hora amb algú',
     body: `<div class="kv">
-      <p style="margin:0">Classe ${esc(longDate(c.date))}. Ara tens les <b>${esc(slotTime(c, slotId))}</b>. El canvi val <b>només per aquest dia</b>, i l’ha d’acceptar qui triïs.</p>
-      <label class="field"><span>Amb qui</span><select class="inp" id="cs-who"><option value="">Qualsevol que pugui aquell dia</option>${others.map(x => `<option value="${esc(x.id)}">${esc(S.members.get(x.memberId).name)} · ${esc(x.time)}</option>`).join('')}</select>
-        <small>Si tries «qualsevol», ho veuran tots els qui tenen classe aquell dia i s’ho queda el primer que digui que sí.</small></label>
+      <p style="margin:0">Classe ${esc(longDate(c.date))}. Ara tens les <b>${esc(slotTime(c, slotId))}</b>. El canvi val <b>només per aquesta setmana</b>, i l’ha d’acceptar qui triïs.</p>
+      <div class="field"><span>A qui ho demanes</span><div class="pickers" id="cs-mode"><button type="button" class="pick" data-k="pick" aria-pressed="true">Tria a qui</button><button type="button" class="pick" data-k="all" aria-pressed="false">A tothom</button></div>
+        <small id="cs-hint"></small></div>
+      <div id="cs-list" class="cs-list">${days.map(k => { const os = cands.filter(o => o.k.id === k.id); return os.length ? `<div class="cs-day"><b>${esc(capz(fmtD(k.date, { weekday: 'long', day: 'numeric', month: 'short' })))}</b>${os.map(o => `<label class="cs-row"><input type="checkbox" value="${esc(key(o))}"><span>${esc(S.members.get(o.x.memberId).name)}</span><span class="mono m">${esc(o.x.time || '')}</span></label>`).join('')}</div>` : ''; }).join('')}</div>
       <label class="field"><span>Missatge</span><textarea class="inp" id="cs-why" maxlength="200" style="min-height:70px" placeholder="p. ex. Aquell dia treballo fins a les 18h"></textarea></label>
     </div>`,
     foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="cs-go">Demana el canvi</button>`,
     onMount: el => {
+      let mode = 'pick';
+      const picked = () => [...el.querySelectorAll('#cs-list input:checked')].map(i => cands.find(o => key(o) === i.value)).filter(Boolean);
+      const paint = () => {
+        el.querySelectorAll('#cs-mode .pick').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.k === mode)));
+        el.querySelector('#cs-list').hidden = mode === 'all';
+        const n = picked().length;
+        el.querySelector('#cs-hint').textContent = mode === 'all' ? `Ho veuran tots els qui tenen classe aquella setmana amb ${teacherOf(c)}, i s’ho queda el primer que digui que sí.`
+          : n > 1 ? `Ho demanes a ${n} persones: s’ho queda la primera que digui que sí.` : n === 1 ? 'Li ho demanes només a aquesta persona.' : 'Marca una o més persones.';
+      };
+      el.querySelectorAll('#cs-mode .pick').forEach(b => b.onclick = () => { mode = b.dataset.k; paint(); });
+      el.querySelectorAll('#cs-list input').forEach(i => i.onchange = paint);
+      paint();
       el.querySelector('#cs-go').onclick = () => {
-        const withSlotId = el.querySelector('#cs-who').value;
-        const other = withSlotId ? classSlots(c).find(x => x.id === withSlotId) : null;
+        const sel = mode === 'all' ? [] : picked();
+        if (mode === 'pick' && !sel.length) { toast('Marca a qui ho demanes'); return; }
         const m = S.members.get(myId());
+        const one = sel.length === 1 ? sel[0] : null;
         saveClassReq({ id: uid('cr'), classId, slotId, memberId: myId(), memberName: m ? m.name : '', kind: 'swap',
-          ...(other ? { withSlotId, withMemberId: other.memberId, withName: S.members.get(other.memberId)?.name || '' } : { open: true }),
+          ...(one ? { withSlotId: one.x.id, withClassId: one.k.id, withMemberId: one.x.memberId, withName: S.members.get(one.x.memberId)?.name || '' }
+            : { open: true, ...(sel.length ? { to: sel.map(o => o.x.memberId), offers: Object.fromEntries(sel.map(o => [o.x.memberId, key(o)])) } : {}) }),
           reason: el.querySelector('#cs-why').value.trim(), status: 'pending', createdAt: new Date().toISOString(), uid: S.uid });
-        closeSheet(); toast(other ? 'Petició enviada' : 'Demanat a tothom qui té classe aquell dia'); render();
+        closeSheet(); toast(one ? 'Petició enviada' : sel.length ? `Demanat a ${sel.length} persones` : 'Demanat a tothom qui té classe aquella setmana'); render();
       };
     },
   });
@@ -300,10 +319,10 @@ function markClass(classId, slotId, value) {
 /** Em quedo un canvi d'hora obert: hi poso la meva hora i queda fet. */
 function takeOpenSwap(id) {
   const r = S.classReq.get(id);
-  const c = r && S.classes.get(r.classId);
-  const x = c && mySlot(c);
+  const mine = r && mySwapSlot(r);
+  const x = mine && mine.x, oc = mine && mine.c;
   if (!r || !x || r.status !== 'pending') { toast('Aquest canvi ja no hi és'); return; }
-  saveClassReq({ ...r, status: 'accepted', open: false, withMemberId: myId(), withSlotId: x.id,
+  saveClassReq({ ...r, status: 'accepted', open: false, withMemberId: myId(), withSlotId: x.id, withClassId: oc.id,
     reviewedAt: new Date().toISOString(), reviewedBy: S.email || '' });
   toast('Fet: heu canviat l’hora'); render();
 }

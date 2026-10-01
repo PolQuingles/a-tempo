@@ -42,7 +42,12 @@ function savePlan(who, rows, places = planPlaces(who)) {
 const REQ_WORD = { late: 'Arribarà tard', absent: 'No hi anirà', swap: 'Canvi d’hora' };
 const reqMemberName = r => S.members.get(r.memberId)?.name || r.memberName || '';
 const slotAt = (c, id) => (c.slots || []).find(x => x.id === id);
-const slotTime = (c, id) => slotAt(c, id)?.time || '';
+const slotTime = (c, id) => c ? slotAt(c, id)?.time || '' : '';
+/** L'hora de l'altra persona d'un canvi: «18:30» o, si és un altre dia, «dimecres 18:30». */
+function swapOther(r, cid = swapWithClass(r), sid = r.withSlotId) {
+  const oc = S.classes.get(cid), t = slotTime(oc, sid);
+  return oc && cid !== r.classId ? `${fmtD(oc.date, { weekday: 'long' })} ${t}` : t;
+}
 
 function classReqLine(r) {
   const c = S.classes.get(r.classId);
@@ -50,7 +55,8 @@ function classReqLine(r) {
   if (r.kind === 'late') return `${esc(reqMemberName(r))} arribarà ${r.mins ? `${r.mins} min ` : ''}tard · ${esc(when)}`;
   if (r.kind === 'absent') return `${esc(reqMemberName(r))} no hi podrà anar · ${esc(when)}`;
   if (r.kind === 'take') return `${esc(reqMemberName(r))} demana l’hora lliure · ${esc(when)}`;
-  const otherTime = c ? slotTime(c, r.withSlotId) : '';
+  const otherTime = swapOther(r);
+  if (!r.withMemberId && r.to) return `${esc(reqMemberName(r))} (${esc(slotTime(c, r.slotId) || '')}) demana canviar l’hora a ${esc(r.to.map(id => S.members.get(id)?.name || '').filter(Boolean).join(', '))} · ${esc(when)}`;
   if (!r.withMemberId) return `${esc(reqMemberName(r))} (${esc(slotTime(c, r.slotId) || '')}) busca algú per canviar l’hora · ${esc(when)}`;
   return `${esc(reqMemberName(r))} (${esc(slotTime(c, r.slotId) || '')}) vol canviar l’hora amb ${esc(S.members.get(r.withMemberId)?.name || r.withName || '')} (${esc(otherTime)}) · ${esc(when)}`;
 }
@@ -75,7 +81,7 @@ function classSlotRow(c, x, past) {
     ? `<span class="cl-acts">
         <button class="btn btn-sm" data-act="cl-notice" data-c="${esc(c.id)}" data-s="${esc(x.id)}" data-k="late">Tard</button>
         <button class="btn btn-sm" data-act="cl-notice" data-c="${esc(c.id)}" data-s="${esc(x.id)}" data-k="absent">No hi vaig</button>
-        ${classSlots(c).length > 1 ? `<button class="btn btn-sm" data-act="cl-swap" data-c="${esc(c.id)}" data-s="${esc(x.id)}">Canvia l’hora</button>` : ''}
+        ${classSlots(c).length > 1 || weekClasses(c).length > 1 ? `<button class="btn btn-sm" data-act="cl-swap" data-c="${esc(c.id)}" data-s="${esc(x.id)}">Canvia l’hora</button>` : ''}
       </span>`
     : '';
   const teach = teachesClasses();
@@ -248,10 +254,10 @@ function viewClasses() {
     .sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, 6) : [];
   const open = openSwaps();
   const openCard = r => {
-    const c = S.classes.get(r.classId), mySl = mySlot(c);
+    const c = S.classes.get(r.classId), mySl = mySwapSlot(r);
     return `<div class="conv-card">
       <div class="a-h"><b>${esc(reqMemberName(r))}</b> busca algú per canviar l’hora</div>
-      <span class="muted" style="font-size:calc(13.5px*var(--ts))">${esc(longDate(c.date))} · té les <b>${esc(slotTime(c, r.slotId))}</b> i tu les <b>${esc(mySl ? mySl.time : '')}</b>. Només per aquell dia.</span>
+      <span class="muted" style="font-size:calc(13.5px*var(--ts))">${esc(longDate(c.date))} · té les <b>${esc(slotTime(c, r.slotId))}</b> i tu ${mySl && mySl.c.id !== c.id ? `el ${esc(longDate(mySl.c.date))} ` : ''}les <b>${esc(mySl ? mySl.x.time : '')}</b>. Només per aquella setmana.</span>
       ${r.reason ? `<span style="font-size:calc(13px*var(--ts))">${esc(r.reason)}</span>` : ''}
       <span style="margin-top:6px"><button class="btn btn-sm btn-primary" data-act="cl-open-take" data-r="${esc(r.id)}">Me’l quedo</button></span>
     </div>`;
@@ -260,7 +266,7 @@ function viewClasses() {
     const c = S.classes.get(r.classId);
     return `<div class="conv-card">
       <div class="a-h"><b>${esc(reqMemberName(r))}</b> et demana canviar l’hora</div>
-      <span class="muted" style="font-size:calc(13.5px*var(--ts))">${c ? esc(longDate(c.date)) : ''} · ell/a té les <b>${esc(slotTime(c, r.slotId))}</b> i tu les <b>${esc(slotTime(c, r.withSlotId))}</b>. Només per aquest dia.</span>
+      <span class="muted" style="font-size:calc(13.5px*var(--ts))">${c ? esc(longDate(c.date)) : ''} · ell/a té les <b>${esc(slotTime(c, r.slotId))}</b> i tu ${swapWithClass(r) !== r.classId ? 'el ' : 'les '}<b>${esc(swapOther(r))}</b>. Només per aquella setmana.</span>
       ${r.reason ? `<span style="font-size:calc(13px*var(--ts))">${esc(r.reason)}</span>` : ''}
       <span style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><button class="btn btn-sm btn-primary" data-act="cl-answer" data-r="${esc(r.id)}" data-v="accepted">Accepto el canvi</button><button class="btn btn-sm" data-act="cl-answer" data-r="${esc(r.id)}" data-v="rejected">Ara no puc</button></span>
     </div>`;
