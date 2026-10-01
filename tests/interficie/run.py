@@ -968,6 +968,30 @@ def main():
         check(not errors, "sense errors a l'estètica nova", "; ".join(errors[:3]))
         ctx.close()
 
+        print("Quota opcional (Ajustos)")
+        ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/gestio/ajustos")
+        r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          out.on = feesOn() && !!document.querySelector('.cfg-h[data-k="quota"]');
+          document.querySelector('.cfg-h[data-k="quota"]').click(); await s(200);
+          const sw = document.querySelector('#cfg-fees'); sw.checked = false; sw.dispatchEvent(new Event('change', { bubbles: true })); await s(400);
+          out.off = !feesOn() && S.config.feesOn === false;
+          applyRoute('gestio/personal'); render(); await ensureSecData(); render(); await s(400);
+          const d = document.querySelector('details.pm'); if (d) d.open = true; await s(100);
+          const v = document.querySelector('#view').innerText;
+          out.gone = !/Quota/.test(v) && !document.querySelector('.pm-chips [data-k="fees"]') && !document.querySelector('[data-act="fee-edit"], [data-act="fee-paid"], #fee-amount');
+          let csv = ''; window.offerFile = (name, text) => { csv = text; }; await exportRoster(); await s(100);
+          out.csv = !!csv && !csv.includes('Quota');
+          applyRoute('gestio/ajustos'); render(); await s(200);
+          const sw2 = document.querySelector('#cfg-fees'); sw2.checked = true; sw2.dispatchEvent(new Event('change', { bubbles: true })); await s(400);
+          applyRoute('gestio/personal'); render(); await s(300);
+          out.back = feesOn() && !!document.querySelector('.pm-chips [data-k="fees"]');
+          return out; }""")
+        for k, label in [("on", "Ajustos té el calaix de la quota, activada per defecte"), ("off", "es pot desactivar"),
+                         ("gone", "desactivada, la quota desapareix de la plantilla"), ("csv", "i de l'Excel"), ("back", "i torna en activar-la")]:
+            check(r.get(k), label, str(r))
+        check(not errors, "sense errors amb la quota opcional", "; ".join(errors[:3]))
+        ctx.close()
+
         print("Mira l'app com…")
         ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/gestio/personal")
         page.wait_for_function("S.staffReady", timeout=5000)

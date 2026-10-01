@@ -255,12 +255,12 @@ async function sheetMyProfile() {
     onMount: el => {
       el.querySelectorAll('#pf-size .pick').forEach(b => b.onclick = () => { const on = b.getAttribute('aria-pressed') !== 'true'; el.querySelectorAll('#pf-size .pick').forEach(x => x.setAttribute('aria-pressed', on && x === b)); });
       el.querySelectorAll('#pf-img .pick').forEach(b => b.onclick = () => el.querySelectorAll('#pf-img .pick').forEach(x => x.setAttribute('aria-pressed', x === b)));
-      // La quota i els documents que té posats la secretaria (només es poden mirar).
+      // La quota (si l'agrupació en té) i els documents que té posats la secretaria (només es poden mirar).
       db.doc(`memberDocs/${mid}`).get().then(d => {
         const box = el.querySelector('#pf-mine');
         if (!box || !d.exists) return;
         const x = d.data(), f = (x.fees || {})[feeKey()];
-        box.innerHTML = `<dl class="fitxa"><div><dt>Quota ${esc(feeKey())}</dt><dd>${f?.paid ? `Pagada${f.date ? ` el ${esc(ddmm(f.date))}` : ''}` : 'Pendent'}</dd></div>
+        box.innerHTML = `<dl class="fitxa">${feesOn() ? `<div><dt>Quota ${esc(feeKey())}</dt><dd>${f?.paid ? `Pagada${f.date ? ` el ${esc(ddmm(f.date))}` : ''}` : 'Pendent'}</dd></div>` : ''}
           ${DOC_ITEMS.filter(([k]) => x.docs?.[k]?.v).map(([k, l]) => `<div><dt>${esc(l)}</dt><dd>${x.docs[k].v === 'yes' ? 'Sí' : 'No'}${x.docs[k].file ? ' · document signat' : ''}</dd></div>`).join('')}</dl>`;
       }).catch(() => {});
       el.querySelector('#pf-save').onclick = async () => {

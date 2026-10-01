@@ -74,8 +74,8 @@ const actions = {
   // Secretaria (22).
   'roster-export': () => exportRoster(),
   'member-docs': el => { if (canDocsWrite()) sheetMemberDocs(el.dataset.mid); },
-  'fee-edit': el => { if (!canDocsWrite()) return; if (!S.memberDocs) { ensureSecData().then(() => sheetFee(el.dataset.mid)); return; } sheetFee(el.dataset.mid); },
-  'fee-paid': el => { if (canDocsWrite()) markFeePaid(el.dataset.mid); },
+  'fee-edit': el => { if (!canDocsWrite() || !feesOn()) return; if (!S.memberDocs) { ensureSecData().then(() => sheetFee(el.dataset.mid)); return; } sheetFee(el.dataset.mid); },
+  'fee-paid': el => { if (canDocsWrite() && feesOn()) markFeePaid(el.dataset.mid); },
   'docs-copy-noimg': () => copyText(`No poden sortir a fotos ni vídeos:\n${membersOf(null).filter(m => docState(m.id, 'imatge').v === 'no').map(m => `· ${fullName(m.name)} (${SEC[m.section].name})`).join('\n')}`, 'Llista copiada'),
   // Repertori, pla d'assaig i concerts (18 i 19).
   'work-new': () => sheetWorkEdit(null, ui.matProd),
@@ -383,6 +383,7 @@ document.addEventListener('change', e => {
   if (color && canManageGroup()) setBrandColor(color.value);
   const el = e.target.closest('[data-bind="import"]');
   if (el && el.files && el.files[0]) { importJSON(el.files[0]); el.value = ''; }
+  if (e.target.closest('[data-bind="cfg-fees"]') && isAdmin()) { saveConfig({ feesOn: e.target.checked }); if (!e.target.checked && ui.pmFilter === 'fees') ui.pmFilter = 'all'; toast(e.target.checked ? 'Quota activada' : 'Quota desactivada'); render(); }
   if (e.target.closest('[data-bind="cfg-classes"]') && isAdmin()) { saveConfig({ classesOn: e.target.checked }); toast(e.target.checked ? `${V.classes} activades` : `${V.classes} desactivades`); render(); }
   const priv = e.target.closest('[data-bind="cfg-private"]');
   if (priv && isAdmin()) setAttPrivate(priv.checked);

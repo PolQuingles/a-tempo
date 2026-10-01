@@ -329,6 +329,13 @@ function manageConfig() {
       <label class="switch"><input type="checkbox" id="cfg-classes" ${classesOn() ? 'checked' : ''} data-bind="cfg-classes"><span></span></label></div>
     ${classesOn() ? `<div class="setting"><div><div class="t">Professorat sense compte</div><div class="s">Per posar el calendari d’un ${esc(V.Teacher.toLowerCase())} que encara no entra a l’app. Quan en tingui, dona-li accés amb el rol i passa-li els dies.</div></div>
       <button class="btn btn-sm" data-act="cl-seats">${teacherSeats().length ? `Són ${teacherSeats().length}` : 'Afegeix-ne'}</button></div>` : ''}</div>` : ''}
+  ${isAdmin() ? `${cfgHead('quota', 'Quota', feesOn() ? `Activada${feeAmount() ? ` · ${euros(feeAmount())} per temporada` : ''}` : 'Desactivada')}
+  <div class="panel cfg-p"${cfgOpen('quota') ? '' : ' hidden'}><div class="toggle-row setting"><span><b>${feesOn() ? 'Activada' : 'Desactivada'}</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">${feesOn()
+      ? `La secretaria i la gerència apunten qui ha pagat la quota de cada temporada, i cada ${esc(V.member)} veu la seva a «La meva fitxa».`
+      : `Activa-la si l’agrupació cobra una quota: es podrà apuntar qui l’ha pagada, quan i com.`}</span></span>
+      <label class="switch"><input type="checkbox" id="cfg-fees" ${feesOn() ? 'checked' : ''} data-bind="cfg-fees"><span></span></label></div>
+    ${feesOn() ? `<div class="setting"><div><div class="t">Import per temporada</div><div class="s">El que es proposa en marcar-la com a pagada.</div></div>
+      <span style="display:flex;align-items:center;gap:6px"><input class="inp" id="cfg-fee-amount" type="number" min="0" step="1" inputmode="decimal" style="width:90px;text-align:right" value="${feeAmount() || ''}" data-bind="fee-amount"><b>€</b></span></div>` : ''}</div>` : ''}
   ${cfgHead('ics', `Calendari subscrit`, `${icsOn() ? 'Activat' : 'Desactivat'}`)}
   <div class="panel cfg-p"${cfgOpen('ics') ? '' : ' hidden'}>${isAdmin()
     ? `<div class="toggle-row setting"><span><b>${icsOn() ? 'Activat' : 'Desactivat'}</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">${icsOn() ? 'Qui s’hi subscrigui tindrà les sessions a Google Calendar, Apple o Outlook, sempre al dia. L’adreça és pública però difícil d’endevinar, i no porta noms de persones.' : 'Activa’l perquè tothom pugui tenir les sessions a l’app de calendari del mòbil. Funciona al cap d’unes hores.'}</span></span>
