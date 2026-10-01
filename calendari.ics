@@ -84,18 +84,54 @@ END:VEVENT
 BEGIN:VEVENT
 UID:cj-dido-07@a-tempo
 DTSTAMP:20260101T000000Z
-DTSTART;VALUE=DATE:20261003
-DTEND;VALUE=DATE:20261004
+DTSTART;TZID=Europe/Madrid:20261003T091500
+DTEND;TZID=Europe/Madrid:20261003T203000
 SUMMARY:Cap de setmana de treball · Dido i Eneas · Purcell
 LOCATION:La Conreria (Tiana)
+DESCRIPTION:Convocatòria: 09:15\nPunt de trobada: C/ Trafalgar cantonada c
+ / Ortigosa (el bus surt a les 9:30)\nCal portar: DNI · dinar i berenar de
+  dissabte · tovallola de dutxa · roba de llit (vegeu sota)\nIndicacions:
+  Alberg La Conreria · Carretera B-500\, km 6\, 08391 Tiana (Barcelona).\n
+ Mapa: https://maps.app.goo.gl/u2wkRZ5oBHfvo23v7\nWeb de la casa: https://w
+ ww.peretarres.org/cases-colonies-albergs/cases-colonies-albergs-catalunya-
+ balears/cases-colonies-albergs-catalunya/alberg-la-conreria-tiana-barcelon
+ a\n\nRoba de llit: opció 1\, sac de dormir + llençol de sota + coixinera
+ \; opció 2\, llençols de sobre + llençol de sota + coixinera. La casa t
+ é mantes.\n\nA dormir a les 0:00. A partir de les 22:30 no es pot fer sor
+ oll a la casa.\n\nAssegurança: Helvetia\, pòlissa B7 C30 0000482 (Fund. 
+ Orfeó Català-Palau de la Música Catalana). Telèfon d’assistència 24
+  hores: +34 913 939 030.\nHorari del dia:\n09:10 Transport del teclat a l
+ ’autocar (Espai Palau)\n09:15 Trobada (C/ Trafalgar amb c/ Ortigosa)\n09
+ :30 Sortida del bus\n10:00 Arribada\, distribució d’habitacions i prepa
+ ració de les sales (La Conreria)\n10:30 Joc de coneixença\n11:45 Vocalit
+ zació i assaig\n12:15 Pausa\n12:40 Assaig Dido i Eneas\n14:00 Dinar (cada
+ scú porta el seu)\n16:00 Assaig O sing unto the Lord (petit cor amb Pablo
+ \, tutti amb Mateo i Paul)\n16:40 Assaig O sing unto the Lord: petit cor +
+  tutti\n17:10 Assaig Sant Esteve: En les nits de desembre\n17:30 Berenar (
+ cadascú porta el seu)\n18:00 Assaig Dido i Eneas\n19:00 Pausa\n19:15 Assa
+ ig Dido i Eneas\n20:30 Sopar\nPorteu el DNI: és imprescindible per al reg
+ istre a la casa
 END:VEVENT
 BEGIN:VEVENT
 UID:cj-dido-08@a-tempo
 DTSTAMP:20260101T000000Z
-DTSTART;VALUE=DATE:20261004
-DTEND;VALUE=DATE:20261005
+DTSTART;TZID=Europe/Madrid:20261004T100000
+DTEND;TZID=Europe/Madrid:20261004T131500
 SUMMARY:Cap de setmana de treball · Dido i Eneas · Purcell
 LOCATION:La Conreria (Tiana)
+DESCRIPTION:Cal portar: El mateix que dissabte (és el mateix cap de setman
+ a)\nIndicacions: Alberg La Conreria · Carretera B-500\, km 6\, 08391 Tian
+ a (Barcelona).\nMapa: https://maps.app.goo.gl/u2wkRZ5oBHfvo23v7\nWeb de la
+  casa: https://www.peretarres.org/cases-colonies-albergs/cases-colonies-al
+ bergs-catalunya-balears/cases-colonies-albergs-catalunya/alberg-la-conreri
+ a-tiana-barcelona\n\nAssegurança: Helvetia\, pòlissa B7 C30 0000482 (Fun
+ d. Orfeó Català-Palau de la Música Catalana). Telèfon d’assistència
+  24 hores: +34 913 939 030.\nHorari del dia:\n09:00 Esmorzar\n10:00 Vocali
+ tzació i despertar el cos\n10:15 Treball amb Anna Ponces · Dido i Eneas\
+ n11:40 Pausa\n12:00 Treball amb Anna Ponces · Dido i Eneas\n13:15 Recolli
+ da de la sala\n13:30 Dinar\n15:30 Sortida de la Conreria\n16:00 Arribada a
+  Barcelona (hora aproximada)\nTransport del teclat i el material de l’au
+ tocar a l’Espai Palau (Espai Palau)\nTreball amb Anna Ponces
 END:VEVENT
 BEGIN:VEVENT
 UID:cj-dido-09@a-tempo
