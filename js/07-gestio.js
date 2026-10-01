@@ -18,9 +18,9 @@ function viewManage() {
 }
 /* ---------- Personal: la gent de l'agrupació, rol per rol ---------- */
 // Al menú, la plantilla va primer (és la llista que més es mira) i els noms van en plural.
-const PEOPLE_MENU = ['singer', 'admin', 'director', 'gerencia', 'secretaria', 'leader', 'voice'];
+const PEOPLE_MENU = ['singer', 'admin', 'director', 'gerencia', 'secretaria', 'leader', 'archive', 'voice'];
 const rolePlural = r => ({ admin: 'Administració', director: 'Direcció', gerencia: 'Gerència', secretaria: 'Secretaria',
-  leader: capz(V.leaders), singer: V.Members, voice: V.kind === 'cor' ? 'Professors de cant' : 'Professors' }[r] || roleLabel(r));
+  leader: capz(V.leaders), archive: 'Arxivers', singer: V.Members, voice: V.kind === 'cor' ? 'Professors de cant' : 'Professors' }[r] || roleLabel(r));
 /** Qui té aquest rol. Els de la plantilla són tota la plantilla, tinguin compte o no. */
 const peopleWithRole = r => peopleSorted().filter(p => hasRole(p, r));
 const roleCount = r => r === 'singer' ? membersOf(null, true).filter(m => m.active !== false).length : peopleWithRole(r).length;
@@ -279,7 +279,7 @@ async function deleteGroup(el) {
   const at = new Date().toISOString();
   try {
     const refs = [];
-    for (const col of ['members', 'productions', 'attendance', 'attArchive', 'attMine', 'prodChoice', 'absences', 'subs', 'rsvp', 'announcements', 'polls', 'pollVotes', 'push', 'classes', 'classReq', 'classPlan', 'classNotes', 'classFiles', 'classIcs', 'students', 'works', 'trips', 'tripSignups', 'profiles', 'messages', 'threads', 'nudges', 'memberNotes', 'memberDocs', 'memberFiles', 'config']) {
+    for (const col of ['members', 'productions', 'attendance', 'attArchive', 'attMine', 'prodChoice', 'scores', 'absences', 'subs', 'rsvp', 'announcements', 'polls', 'pollVotes', 'push', 'classes', 'classReq', 'classPlan', 'classNotes', 'classFiles', 'classIcs', 'students', 'works', 'trips', 'tripSignups', 'profiles', 'messages', 'threads', 'nudges', 'memberNotes', 'memberDocs', 'memberFiles', 'config']) {
       say('Preparant…');
       const snap = await db.collection(col).get();
       for (const d of snap.docs) if (!(col === 'config' && d.id === 'main')) refs.push(d.ref);

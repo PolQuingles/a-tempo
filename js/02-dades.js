@@ -94,7 +94,7 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 //    col·lecció sencera. Un dia de classe esborrat queda com a `deleted: true` (el professorat no toca la configuració);
 //    una llista d'una sessió esborrada no cal treure-la, perquè ja no es mostra enlloc;
 //  · la primera vegada, un cop per setmana i si el mòbil no té res desat, es baixa tot sencer.
-const DELTA = ['members', 'productions', 'attendance', 'classes', 'works', 'announcements', 'polls', 'trips', 'rsvp', 'pollVotes'];
+const DELTA = ['members', 'productions', 'attendance', 'classes', 'works', 'announcements', 'polls', 'trips', 'rsvp', 'pollVotes', 'scores'];
 // En aquestes, esborrar un document fa que els altres mòbils les tornin a baixar senceres (vegeu bumpEpoch). Només
 // n'esborra l'equip, que pot canviar la configuració. Les llistes (attendance) no cal: una d'esborrada ja no es mostra.
 const EPOCH_ON_DELETE = ['announcements', 'polls', 'trips', 'rsvp', 'pollVotes'];
@@ -159,7 +159,7 @@ function syncCol(col) {
       S[col] = next;
       if (!snap.metadata.fromCache) {
         if (SYNC.got[col] == null) SYNC.got[col] = snap.size;
-        st.full = startedAt; st.epoch = epoch;
+        st.full = startedAt; st.epoch = epoch; st.n = snap.size;
         // Com a mínim 1: si encara cap document no porta syncAt, la pròxima vegada es demanen tots els que en portin.
         st.max = Math.max(st.max || 0, 1, ...snap.docs.map(syncMillis));
         syncSave();
@@ -172,8 +172,8 @@ function syncCol(col) {
     let cached = null;
     try { cached = await def.query().get({ source: 'cache' }); } catch {}
     if (stop) return;
-    // Res desat en aquest mòbil (o el navegador ho ha buidat): tot sencer.
-    if (!cached || cached.empty) { st.full = 0; return syncCol(col); }
+    // Res desat en aquest mòbil (o el navegador ho ha buidat): tot sencer. Si la col·lecció ja era buida, no cal.
+    if (!cached || (cached.empty && st.n !== 0)) { st.full = 0; return syncCol(col); }
     const next = new Map();
     for (const d of cached.docs) take(col, next, d);
     S[col] = next;
@@ -225,7 +225,7 @@ function subscribe() {
   const teachCl = hasRole(S.me, 'voice') || hasRole(S.me, 'admin');
   const teach = staff || hasRole(S.me, 'voice');           // veu tots els avisos de les classes
   // El personal (qui té accés i amb quins rols) només es llegeix quan s'obre Gestió: vegeu ensureStaff.
-  const wanted = ['members', 'productions', 'attendance', 'config', 'absences', 'subs', 'rsvp', 'announcements', 'polls', 'pollVotes', 'classes', 'classReq', 'classNotes', 'works', 'trips', 'tripSignups'];
+  const wanted = ['members', 'productions', 'attendance', 'config', 'absences', 'subs', 'rsvp', 'announcements', 'polls', 'pollVotes', 'classes', 'classReq', 'classNotes', 'works', 'trips', 'tripSignups', 'scores'];
   if (teachCl) wanted.push('classPlan');
   const loaded = new Set();
   const markLoaded = k => { loaded.add(k); if (loaded.size >= wanted.length && !S.ready) { S.ready = true; render(); afterReady(); } };
@@ -244,6 +244,7 @@ function subscribe() {
   big('productions', () => db.collection('productions'), e => { markLoaded('productions'); onDbError(e); });
   big('classes', () => db.collection('classes').where('date', '>=', CLASS_FROM));
   big('works', () => db.collection('works'));
+  big('scores', () => db.collection('scores'));   // l'arxiu de partitures (18b-arxiu)
   big('attendance', () => archCut() ? db.collection('attendance').where('date', '>', archCut()) : db.collection('attendance'), e => { markLoaded('attendance'); onDbError(e); });
   // Amb les llistes privades, qui no passa llista només en llegeix la seva còpia (vegeu 22b-tries).
   const attDone = BIG.get('attendance').done;

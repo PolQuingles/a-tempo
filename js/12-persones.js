@@ -15,12 +15,12 @@ const peopleSorted = () => [...S.staff.values()].sort((a, b) =>
 function roleSummary(p) {
   const bits = rolesOf(p).map(roleLabel);
   if (!bits.length) bits.push('Sense rol');
-  const sec = hasRole(p, 'leader') && p.section ? p.section : S.members.get(p.memberId || '')?.section;
+  const sec = (hasRole(p, 'leader') || hasRole(p, 'archive')) && p.section ? p.section : S.members.get(p.memberId || '')?.section;
   if (sec) bits.push(SEC[sec].name);
   return bits.join(' · ');
 }
 /** Els rols en l'ordre que es pensen: primer si canta, després què més fa. */
-const PERSON_ROLES = ['singer', 'leader', 'voice', 'director', 'gerencia', 'secretaria', 'admin'];
+const PERSON_ROLES = ['singer', 'leader', 'archive', 'voice', 'director', 'gerencia', 'secretaria', 'admin'];
 /** Qui no canta només existeix com a compte: sense correu no hi ha res a desar. */
 const needsMail = roles => roles.some(r => r !== 'singer' && r !== 'leader');
 const NAME_SKIP = new Set(['de', 'del', 'dels', 'la', 'les', 'el', 'els', 'i', 'y', 'da', 'van']);
@@ -107,7 +107,9 @@ function accountForMember(acc, m, prev) {
   let roles = rolesOf(acc);
   const ledOld = roles.includes('leader') && (acc.section || '') === (prev || m).section;
   if (m.leader && !(roles.includes('leader') && acc.section === m.section)) { roles = ROLE_KEYS.filter(k => k === 'leader' || roles.includes(k)); rec.section = m.section; }
-  else if (!m.leader && ledOld) { roles = roles.filter(r => r !== 'leader'); delete rec.section; }
+  else if (!m.leader && ledOld) { roles = roles.filter(r => r !== 'leader'); if (!roles.includes('archive')) delete rec.section; }
+  // L'arxiver ho és de la seva corda: si canvia de corda, la segueix.
+  if (roles.includes('archive') && !roles.includes('leader') && rec.memberId === m.id) rec.section = m.section;
   if (!roles.length) roles = ['singer'];
   rec.roles = roles; rec.role = roles[0];
   if (prev && acc.name === prev.name && m.name !== prev.name) rec.name = m.name;
@@ -174,14 +176,14 @@ function sheetPerson(email, preset = {}) {
         const mem = S.members.get(q('#ps-mem').value) || null;
         q('#ps-mem-f').hidden = !singer;
         q('#ps-new').hidden = !singer || !!mem;
-        q('#ps-lead-f').hidden = !rs.includes('leader') || singer;
+        q('#ps-lead-f').hidden = !(rs.includes('leader') || rs.includes('archive')) || singer;
         if (q('#ps-seat-f')) {
           q('#ps-seat-f').hidden = !rs.includes('voice');
           const seat = teacherSeats().find(t => t.id === q('#ps-seat').value);
           q('#ps-seat-hint').textContent = seat ? `Les classes i l’horari fix de «${seat.name}» passaran al seu compte, i «${seat.name}» deixarà de sortir com a ${V.Teacher.toLowerCase()} sense compte.`
             : 'Si ja té classes a l’app com a professor sense compte, tria’l aquí perquè no surti dos cops.';
         }
-        q('#ps-hint').textContent = rolesHint(rs) + (rs.includes('leader') && singer ? ` Porta la seva ${V.section}.` : '');
+        q('#ps-hint').textContent = rolesHint(rs) + (rs.includes('leader') && singer ? ` Porta la seva ${V.section}.` : '') + (rs.includes('archive') && singer ? ` És l’arxiver de la seva ${V.section}.` : '');
         q('#ps-mem-hint').textContent = !mem ? `Entrarà a la plantilla amb una fitxa nova.`
           : mem.id === existing?.memberId || mem.id === from?.id ? `És la seva fitxa (${SEC[mem.section].name}).`
           : auto ? `Ja és a la plantilla (${SEC[mem.section].name}): es farà servir la seva fitxa. Si no és aquesta persona, tria «Fitxa nova».`
@@ -229,8 +231,8 @@ function sheetPerson(email, preset = {}) {
         const holder = mem ? accountFor(mem.id) : null;
         if (holder && holder.email !== (existing?.email || mail)) { toast(`Aquesta fitxa ja és del compte ${holder.email}`); return; }
         if (existing && hasRole(existing, 'admin') && !all.includes('admin') && peopleWithRole('admin').length === 1) { toast('Ha de quedar almenys una persona d’administració'); return; }
-        const lsec = !all.includes('leader') ? '' : all.includes('singer') ? (mem?.section || chosen('#ps-sec').sec) : chosen('#ps-lead').sec;
-        if (all.includes('leader') && !lsec) { toast(`Tria quina ${V.section} porta`); return; }
+        const lsec = !all.includes('leader') && !all.includes('archive') ? '' : all.includes('singer') ? (mem?.section || chosen('#ps-sec').sec) : chosen('#ps-lead').sec;
+        if ((all.includes('leader') || all.includes('archive')) && !lsec) { toast(`Tria quina ${V.section} porta`); return; }
         btn.disabled = true;
         try {
           // 1) La fitxa de la plantilla, si canta: la que ja hi era o una de nova.
@@ -293,6 +295,7 @@ async function linkAccount(email, mid) {
   if (acc && acc.email !== email) { toast(`Aquesta fitxa ja és del compte ${acc.email}`); return; }
   const roles = ROLE_KEYS.filter(k => k === 'singer' || hasRole(p, k));
   const rec = { ...p, roles, role: roles[0], memberId: mid };
+  if (hasRole(rec, 'archive') && !hasRole(rec, 'leader')) rec.section = m.section;
   try {
     await writeAccount(rec);
     if (hasRole(rec, 'leader') && rec.section === m.section && !m.leader) saveMember({ ...m, leader: true });
@@ -421,7 +424,7 @@ function peoplePlan(text, role, section, admin) {
     r.holder = r.mail ? S.staff.get(r.mail) || null : null;
     r.member = (r.name && rosterMatch(r.name, { free: false })) || S.members.get(r.holder?.memberId || '') || null;
     r.acc = r.member ? accountFor(r.member.id) : null;
-    const singing = role === 'singer' || role === 'leader';
+    const singing = role === 'singer' || role === 'leader' || role === 'archive';
     r.sec = r.member?.section || r.sec || section;
     if (!r.name) r.name = r.member?.name || r.holder?.name || '';
     if (!r.name && (singing || !r.mail)) return { ...r, skip: 'Falta el nom' };
@@ -461,7 +464,7 @@ function sheetPeopleBulk(sec) {
       const section = () => q('#pb-sec .pick[aria-pressed="true"]')?.dataset.sec || SECTIONS[0]?.id;
       const plan = () => peoplePlan(q('#pb-text').value, role, section(), admin);
       const draw = () => {
-        q('#pb-sec-f').hidden = role !== 'singer' && role !== 'leader';
+        q('#pb-sec-f').hidden = role !== 'singer' && role !== 'leader' && role !== 'archive';
         const rows = plan(), ok = rows.filter(r => !r.skip);
         if (!rows.length) { q('#pb-prev').innerHTML = ''; return; }
         const nNew = ok.filter(r => r.newMember).length, nMail = ok.filter(r => r.adds).length, bad = rows.length - ok.length;
@@ -495,7 +498,7 @@ function sheetPeopleBulk(sec) {
               const rec = { ...prev, email: r.mail, name: prev.name || m?.name || r.name, role: r.roles[0], roles: r.roles, addedAt: prev.addedAt || at };
               delete rec.memberId; delete rec.section;
               if (r.roles.includes('singer') && m) rec.memberId = m.id;
-              if (r.roles.includes('leader')) rec.section = prev.section || m?.section || r.sec;
+              if (r.roles.includes('leader') || r.roles.includes('archive')) rec.section = prev.section || m?.section || r.sec;
               accounts.push(rec);
               if (m && rec.memberId === m.id) m = { ...m, leader: leadsOwn(m, rec) };
             } else if (m && role === 'leader' && !r.acc) m = { ...m, leader: true };
@@ -529,8 +532,8 @@ function indexPerson(mail) {
 // L'administració pot veure l'app tal com la veu un cantaire, un cap de corda, la direcció, la gerència, la secretaria o un
 // professor de cant. Es fa servir la fitxa real d'algú que tingui aquell rol (o una de genèrica si encara no n'hi ha cap).
 // Només canvia el que es veu en aquest mòbil i no es desa res: ni els canvis de les llistes ni res que s'escrigui.
-const PREVIEW_ROLES = ['singer', 'leader', 'director', 'gerencia', 'secretaria', 'voice'];
-const previewLabel = r => ({ singer: V.Member, leader: capz(V.leader), director: 'Direcció', gerencia: 'Gerència', secretaria: 'Secretaria', voice: V.Teacher }[r] || r);
+const PREVIEW_ROLES = ['singer', 'leader', 'archive', 'director', 'gerencia', 'secretaria', 'voice'];
+const previewLabel = r => ({ singer: V.Member, leader: capz(V.leader), archive: 'Arxiver', director: 'Direcció', gerencia: 'Gerència', secretaria: 'Secretaria', voice: V.Teacher }[r] || r);
 /** Les persones que es poden triar per a un rol: [{ key, label, person }]. */
 function previewPeople(role) {
   if (role === 'singer') return membersOf(null).sort(byName).map(m => ({ key: m.id, label: `${m.name} · ${SEC[m.section].name}`, person: { roles: ['singer'], memberId: m.id, section: m.section, name: m.name, email: accountFor(m.id)?.email || '' } }));
@@ -539,6 +542,11 @@ function previewPeople(role) {
     const m = p?.memberId ? S.members.get(p.memberId) : membersOf(x.id).find(q => q.leader);
     return { key: x.id, label: `${capz(V.leader)} de ${x.name.toLowerCase()}${p || m ? ` · ${fullName((p || m).name)}` : ''}`,
       person: { roles: p ? rolesOf(p).filter(r => r !== 'admin') : ['leader', ...(m ? ['singer'] : [])], section: x.id, memberId: p?.memberId || m?.id || '', name: p?.name || m?.name || '', email: p?.email || '' } };
+  });
+  if (role === 'archive') return SECTIONS.map(x => {
+    const p = peopleWithRole('archive').find(q => q.section === x.id);
+    return { key: x.id, label: `Arxiver de ${x.name.toLowerCase()}${p ? ` · ${fullName(p.name || p.email)}` : ' (encara no n’hi ha)'}`,
+      person: { roles: p ? rolesOf(p).filter(r => r !== 'admin') : ['archive', 'singer'], section: x.id, memberId: p?.memberId || membersOf(x.id)[0]?.id || '', name: p?.name || '', email: p?.email || '' } };
   });
   if (role === 'voice') return teacherOptions().map(t => {
     const p = S.staff.get(t.key);
@@ -552,7 +560,7 @@ function sheetPreview() {
   let role = 'singer';
   const paint = el => {
     const list = previewPeople(role);
-    el.querySelector('#pv-who-l').textContent = role === 'singer' ? V.Member : role === 'leader' ? capz(V.section) : role === 'voice' ? V.Teacher : 'Qui';
+    el.querySelector('#pv-who-l').textContent = role === 'singer' ? V.Member : role === 'leader' || role === 'archive' ? capz(V.section) : role === 'voice' ? V.Teacher : 'Qui';
     el.querySelector('#pv-who').innerHTML = list.map(x => `<option value="${esc(x.key)}">${esc(x.label)}</option>`).join('');
     el.querySelectorAll('#pv-role .pick').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.k === role)));
   };

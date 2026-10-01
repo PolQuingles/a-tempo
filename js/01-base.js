@@ -223,8 +223,8 @@ function saveUI() {
 }
 // Rols de les persones de l'agrupació. Una persona pot tenir-ne més d'un (p. ex. cap de corda i cantaire).
 // Administració ho pot fer tot; direcció, caps i equip passen llista i editen; cantaires i músics només llegeixen.
-const ROLE_KEYS = ['admin', 'director', 'gerencia', 'secretaria', 'leader', 'voice', 'singer'];
-const roleLabel = r => ({ admin: 'Administració', director: 'Director', gerencia: 'Gerència', secretaria: 'Secretaria', leader: V.Leader, singer: V.Member, voice: V.Teacher }[r] || r);
+const ROLE_KEYS = ['admin', 'director', 'gerencia', 'secretaria', 'leader', 'archive', 'voice', 'singer'];
+const roleLabel = r => ({ admin: 'Administració', director: 'Director', gerencia: 'Gerència', secretaria: 'Secretaria', leader: V.Leader, archive: 'Arxiver', singer: V.Member, voice: V.Teacher }[r] || r);
 const EDIT_ROLES = new Set(['admin', 'director', 'gerencia', 'secretaria', 'leader']);
 /** The roles of a person record, in ROLE_KEYS order: the list, or the single role of older records. */
 const rolesOf = p => {
@@ -241,6 +241,7 @@ const rolesHint = roles => !roles.length ? 'Tria almenys un rol.' : [
     : 'Veu tota l’app en mode lectura, sense poder-hi canviar res.',
   roles.includes('singer') ? `Té el seu espai: avisa de les seves absències i veu la seva assistència.` : '',
   roles.includes('leader') ? `Porta una ${V.section}.` : '',
+  roles.includes('archive') ? `Reparteix les partitures de la seva ${V.section} i les recull en acabar cada producció.` : '',
   roles.includes('gerencia') || roles.includes('secretaria') ? 'Forma part de l’equip de l’agrupació.' : '',
   roles.includes('voice') ? `Porta les ${V.classes.toLowerCase()}: en fa el calendari i rep els avisos dels ${V.members}.` : '',
 ].filter(Boolean).join(' ');
