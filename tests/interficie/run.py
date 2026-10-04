@@ -735,7 +735,8 @@ def main():
         print("Canvis d'hora de classe entre els dos dies i a unes quantes persones")
         ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/classes")
         r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms));
-          let mon = addDays(TODAY, 7); while (new Date(mon + 'T12:00:00').getDay() !== 1) mon = addDays(mon, 1);
+          // Un dilluns més enllà de les classes de la llavor (fins a avui + 9), també si avui és diumenge.
+          let mon = addDays(TODAY, 10); while (new Date(mon + 'T12:00:00').getDay() !== 1) mon = addDays(mon, 1);
           const day = (id, date, slots) => saveClassDay({ id, date, place: 'Aula 2', note: '', teacher: 'prof@exemple.cat', teacherName: 'Prat, Berta', slots });
           day('cdl', mon, [{ id: 'q1', time: '17:00', mins: 40, memberId: 'mS0' }, { id: 'q2', time: '17:40', mins: 40, memberId: 'mS2' }]);
           day('cdc', addDays(mon, 2), [{ id: 'q3', time: '18:00', mins: 40, memberId: 'mT1' }, { id: 'q4', time: '18:40', mins: 40, memberId: 'mS3' }]);
