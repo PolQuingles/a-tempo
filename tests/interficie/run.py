@@ -672,7 +672,7 @@ def main():
         check(not errors, "sense errors en donar compte a un professor", "; ".join(errors[:3]))
         ctx.close()
 
-        print("Arxiu de partitures: l'arxiver reparteix i recull les de la seva corda")
+        print("Arxiu de partitures: l'arxiver reparteix i recull les de totes les cordes")
         ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/tauler/repertori")
         r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
           ui.matProd = 'p1'; render(); await s(300);
@@ -693,7 +693,11 @@ def main():
           const doc = fake[Object.keys(fake).find(k => k.endsWith('/scores/p1_w1_S'))];
           out.saved = !!doc && Object.values(doc.marks).filter(x => x.s === 'given').length === 4 && doc.section === 'S';
           document.querySelector('#sw-sec .chip[data-sec="T"]').click(); await s(200);
-          out.otherRO = [...document.querySelectorAll('.sw-row button')].every(b => b.disabled) && document.querySelector('#sw-bulk').hidden;
+          out.otherRW = [...document.querySelectorAll('.sw-row button')].every(b => !b.disabled) && !document.querySelector('#sw-bulk').hidden;
+          document.querySelector('.sw-row button[data-k="given"]').click(); await s(1200);
+          const fake2 = JSON.parse(localStorage.getItem('fake:db'));
+          const docT = fake2[Object.keys(fake2).find(k => k.endsWith('/scores/p1_w1_T'))];
+          out.otherSaved = !!docT && docT.section === 'T' && Object.values(docT.marks).some(x => x.s === 'given');
           document.querySelector('#sw-sec .chip[data-sec="S"]').click(); await s(200);
           const laia = document.querySelector('.sw-row[data-mid="mS1"] button[data-k="returned"]'); laia.click(); await s(900);
           out.returned = scoreOf('p1', 'w1', S.members.get('mS1')) === 'returned';
@@ -715,7 +719,8 @@ def main():
                          ("mySec", "l'arxiver veu com va la seva corda"),
                          ("rows", "l'arxiver té la llista de la seva corda per marcar"),
                          ("saved", "«Totes repartides» les marca i queda desat a la seva corda"),
-                         ("otherRO", "les d'una altra corda només les pot mirar"),
+                         ("otherRW", "també pot marcar les d'una altra corda"),
+                         ("otherSaved", "i queden desades a aquella corda"),
                          ("returned", "es pot marcar qui l'ha retornada"),
                          ("cardGiven", "l'obra passa a «Repartida»"),
                          ("noTodo", "i ja no li queda res per repartir"),
