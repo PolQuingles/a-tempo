@@ -241,7 +241,7 @@ const rolesHint = roles => !roles.length ? 'Tria almenys un rol.' : [
     : 'Veu tota l’app en mode lectura, sense poder-hi canviar res.',
   roles.includes('singer') ? `Té el seu espai: avisa de les seves absències i veu la seva assistència.` : '',
   roles.includes('leader') ? `Porta una ${V.section}.` : '',
-  roles.includes('archive') ? `Reparteix les partitures de la seva ${V.section}, les recull en acabar cada producció i hi pot escriure missatges.` : '',
+  roles.includes('archive') ? `Reparteix les partitures (les de la seva ${V.section} i, si cal, les de les altres), les recull en acabar cada producció i pot escriure missatges a la seva ${V.section}.` : '',
   roles.includes('gerencia') || roles.includes('secretaria') ? 'Forma part de l’equip de l’agrupació.' : '',
   roles.includes('voice') ? `Porta les ${V.classes.toLowerCase()}: en fa el calendari i rep els avisos dels ${V.members}.` : '',
 ].filter(Boolean).join(' ');

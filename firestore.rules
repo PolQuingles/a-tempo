@@ -14,7 +14,7 @@ service cloud.firestore {
     //   director | gerencia | secretaria | leader → passen llista, publiquen avisos, pugen documents…
     //                             (leader = cap de corda o de secció)
     //   voice                     → professor de cant: porta les classes (classes i classReq), la resta només lectura
-    //   archive                   → arxiver d'una corda (section): reparteix i recull les partitures (scores), la resta només lectura
+    //   archive                   → arxiver d'una corda (section): reparteix i recull les partitures (scores) de totes les cordes, la resta només lectura
     //   singer                    → només lectura de tota l'app
     // La fitxa pot portar memberId: llavors la persona té el seu espai personal, sigui quin sigui el rol.
     // Cada persona té un índex de les seves agrupacions a staffIndex/<correu>/agrupacions/<agrupació>.
@@ -111,7 +111,7 @@ service cloud.firestore {
     // tools/stamp.py hi escriu l'empremta d'aquest fitxer. La vigilància comprova que les regles publicades són les del
     // repositori demanant reglesVersio/<empremta>: si les publicades són unes altres, la lectura es denega.
     match /reglesVersio/{v} {
-      allow get: if v == '8806af457ac4';
+      allow get: if v == 'dcfe581574e5';
     }
 
     match /plataforma/equip {
@@ -268,12 +268,11 @@ service cloud.firestore {
         allow delete: if canEdit(c);
       }
       // Arxiu de partitures: un document per producció, obra i corda, amb qui té la seva partitura i qui l'ha tornada.
-      // El llegeix tothom de l'agrupació (cadascú hi veu la seva); el canvia l'equip o l'arxiver d'aquella corda.
+      // El llegeix tothom de l'agrupació (cadascú hi veu la seva); el canvia l'equip o qualsevol arxiver (tots porten les partitures de totes les cordes).
       match /scores/{id} {
         allow read: if isStaff(c) || hasRole(c, ['backup']) || isService();
-        allow create: if canEdit(c) || (staffHas(c, ['archive']) && request.resource.data.section == staffSection(c));
-        allow update: if canEdit(c) || (staffHas(c, ['archive']) && resource.data.section == staffSection(c)
-          && request.resource.data.section == staffSection(c));
+        allow create: if canEdit(c) || staffHas(c, ['archive']);
+        allow update: if canEdit(c) || (staffHas(c, ['archive']) && request.resource.data.section == resource.data.section);
         allow delete: if canEdit(c);
       }
       // Converses privades entre algú de la plantilla i l'equip (vegeu inThread). Es poden afegir missatges i marcar-les com a

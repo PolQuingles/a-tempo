@@ -16,8 +16,8 @@ const scoreOf = (pid, wid, m) => S.scores.get(scoreKey(pid, wid, m.section))?.ma
 /** És l'arxiver d'alguna corda (el de la seva, que porta a section). */
 const isArchivist = () => iHave('archive');
 const archiveSec = () => isArchivist() ? (ME()?.section || '') : '';
-/** Pot repartir i recollir les d'aquesta corda: l'equip, totes; l'arxiver, les de la seva. */
-const canScores = sec => canEdit() || (isArchivist() && archiveSec() === sec);
+/** Pot repartir i recollir les d'aquesta corda: l'equip i els arxivers, les de totes (cada arxiver comença per la seva). */
+const canScores = sec => canEdit() || (isArchivist() && !!sec);
 /** Veu l'arxiu sencer (l'estat de tothom): l'equip i els arxivers. */
 const seesArchive = () => canEdit() || isArchivist();
 /** Qui ha de tenir les partitures d'una producció: qui la fa (actiu i que no n'és fora). */
