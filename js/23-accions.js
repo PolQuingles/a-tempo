@@ -138,6 +138,7 @@ const actions = {
   'rsvp-task': el => rsvpTask(el.dataset.sid, el.dataset.k),
   'trip-remind': el => remindTrip(el.dataset.id),
   'cal-subscribe': () => sheetCalendar(),
+  'risk-write': el => sheetRiskWrite(el.dataset.pid),
   'board': el => { ui.board = el.dataset.k; saveUI(); render(); },
   'board-polls': () => { ui.tab = 'tauler'; ui.board = 'enquestes'; render(); window.scrollTo({ top: 0 }); },
   'board-news': () => { ui.tab = 'tauler'; ui.board = 'anuncis'; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
@@ -167,9 +168,9 @@ const actions = {
   'absence-new': el => sheetAbsence(el.dataset.sid),
   'who-am-i': () => sheetWhoAmI(),
   'abs-filter': el => { ui.absFilter = el.dataset.k; render(); },
-  'abs-accept': el => { const a = S.absences.get(el.dataset.aid); if (!a) return; acceptAbsence(a); toast(a.kind === 'absent' ? 'Avís acceptat: faltes justificades' : 'Avís acceptat'); render(); },
-  'abs-reject': el => { const a = S.absences.get(el.dataset.aid); if (!a) return; saveAbsence({ ...a, status: 'rejected', reviewedAt: new Date().toISOString() }); toast('Avís rebutjat'); render(); },
-  'abs-delete': el => { const a = S.absences.get(el.dataset.aid); if (!a) return; const b = clone(a); S.absences.delete(a.id); persist('absences', a.id, null, 10); render(); undoable('Avís esborrat (les faltes ja marcades es mantenen)', () => saveAbsence(b)); },
+  'abs-accept': el => { const a = S.absences.get(el.dataset.aid); if (!a) return; acceptAbsence(a); toast(a.kind === 'absent' ? 'Absència acceptada: faltes justificades' : 'Absència acceptada'); render(); },
+  'abs-reject': el => { const a = S.absences.get(el.dataset.aid); if (!a) return; saveAbsence({ ...a, status: 'rejected', reviewedAt: new Date().toISOString() }); toast('Absència rebutjada'); render(); },
+  'abs-delete': el => { const a = S.absences.get(el.dataset.aid); if (!a) return; const b = clone(a); S.absences.delete(a.id); persist('absences', a.id, null, 10); render(); undoable('Absència esborrada (les faltes ja marcades es mantenen)', () => saveAbsence(b)); },
   'abs-cancel': el => { const a = S.absences.get(el.dataset.aid); if (!a) return; const b = clone(a); S.absences.delete(a.id); persist('absences', a.id, null, 10); render(); undoable(`Avís retirat: el teu ${V.leader} ja no el veu`, () => saveAbsence(b)); },
   'stats-scope': el => { ui.statsScope = el.dataset.k; saveUI(); render(); },
   'att': el => { ui.att = el.dataset.k; ui.rollSec = null; saveUI(); render(); window.scrollTo({ top: 0 }); },
@@ -383,6 +384,14 @@ document.addEventListener('change', e => {
   if (color && canManageGroup()) setBrandColor(color.value);
   const el = e.target.closest('[data-bind="import"]');
   if (el && el.files && el.files[0]) { importJSON(el.files[0]); el.value = ''; }
+  const docSw = e.target.closest('[data-bind="cfg-doc"]');
+  if (docSw && isAdmin()) {
+    const on = new Set(docItems().map(([k]) => k));
+    if (docSw.checked) on.add(docSw.dataset.k); else on.delete(docSw.dataset.k);
+    saveConfig({ askDocs: DOC_ITEMS.map(([k]) => k).filter(k => on.has(k)) });
+    if (!on.size && ui.pmFilter === 'docs') ui.pmFilter = 'all';
+    toast(!on.size ? 'Documents desactivats' : docSw.checked ? 'Ara es demana' : 'Ja no es demana'); render();
+  }
   if (e.target.closest('[data-bind="cfg-fees"]') && isAdmin()) { saveConfig({ feesOn: e.target.checked }); if (!e.target.checked && ui.pmFilter === 'fees') ui.pmFilter = 'all'; toast(e.target.checked ? 'Quota activada' : 'Quota desactivada'); render(); }
   if (e.target.closest('[data-bind="cfg-classes"]') && isAdmin()) { saveConfig({ classesOn: e.target.checked }); toast(e.target.checked ? `${V.classes} activades` : `${V.classes} desactivades`); render(); }
   const priv = e.target.closest('[data-bind="cfg-private"]');

@@ -348,7 +348,7 @@ function sheetMember(mid, sec) {
   // Si el compte en té el permís, és cap de corda encara que la fitxa no ho digués (dades d'abans).
   const leadNow = existing ? leadsOwn(m, acc0) || !!m.leader : false;
   const leadLocked = !!acc0 && !isAdmin();
-  const leadHint = () => acc0 ? `Passa llista de la seva ${V.section} i en rep els avisos.${leadLocked ? ' Ho canvia l’administració.' : ''}`
+  const leadHint = () => acc0 ? `Passa llista de la seva ${V.section} i en rep les absències.${leadLocked ? ' Ho canvia l’administració.' : ''}`
     : isAdmin() ? `Passa llista de la seva ${V.section}. Des del mòbil, quan tingui accés: posa-li el correu aquí sota.`
     : `Surt a la llista com a ${V.leader}. Per passar-la des del mòbil, l’administració li ha de donar accés.`;
   openSheet({
@@ -371,7 +371,7 @@ function sheetMember(mid, sec) {
       <div class="row2" id="me-move" hidden><label class="field"><span id="me-move-l">Data de la baixa</span><input class="inp" id="me-move-date" type="date" value="${TODAY}"></label>
         <label class="field"><span>Motiu (opcional)</span><input class="inp" id="me-move-note" maxlength="80" placeholder="p. ex. Estudis a fora, trasllat…"></label></div>
       ${(m.history || []).length ? `<div class="field"><span>Historial</span><ul class="mini-list" style="max-height:none">${m.history.slice().sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(h => `<li><span><span class="hist-k ${h.kind}">${HIST_WORD[h.kind] || h.kind}</span> ${esc(ddmm(h.date))}/${h.date.slice(2, 4)}${h.note ? ` · ${esc(h.note)}` : ''}</span></li>`).join('')}</ul></div>` : ''}
-      ${existing && canDocs() ? `<div class="toggle-row"><span><b>${feesOn() ? 'Documents i quota' : 'Documents'}</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Drets d’imatge, protecció de dades${feesOn() ? ', autoritzacions i quota' : ' i autoritzacions'}</span></span><span style="display:flex;gap:6px"><button type="button" class="btn btn-sm" data-act="member-docs" data-mid="${m.id}">Documents</button>${feesOn() ? `<button type="button" class="btn btn-sm" data-act="fee-edit" data-mid="${m.id}">Quota</button>` : ''}</span></div>` : ''}
+      ${existing && canDocs() && (docsOn() || feesOn()) ? `<div class="toggle-row"><span><b>${docsOn() && feesOn() ? 'Documents i quota' : docsOn() ? 'Documents' : 'Quota'}</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">${esc([...docItems().map(([, l]) => l), ...(feesOn() ? ['quota'] : [])].join(', '))}</span></span><span style="display:flex;gap:6px">${docsOn() ? `<button type="button" class="btn btn-sm" data-act="member-docs" data-mid="${m.id}">Documents</button>` : ''}${feesOn() ? `<button type="button" class="btn btn-sm" data-act="fee-edit" data-mid="${m.id}">Quota</button>` : ''}</span></div>` : ''}
       <label class="field"><span>Telèfon</span><input class="inp" id="me-phone" type="tel" maxlength="20" value="${esc(m.phone || '')}"></label>
       <label class="field"><span>Notes</span><input class="inp" id="me-notes" type="text" maxlength="120" value="${esc(m.notes || '')}"></label>
       ${existing ? `<div class="field"><span>La seva fitxa</span><div id="me-profile"><span class="muted" style="font-size:calc(13px*var(--ts))">Carregant…</span></div></div>` : ''}
@@ -616,7 +616,7 @@ function memberOptions(selected) {
 function sheetWhoAmI(then) {
   openSheet({
     title: 'Qui ets?',
-    body: `<p style="margin-top:0">Tria el teu nom. Aquest mòbil el recordarà per als propers avisos.</p>
+    body: `<p style="margin-top:0">Tria el teu nom. Aquest mòbil el recordarà per a la propera vegada.</p>
       <label class="field"><span>Nom</span><select class="inp" id="who-sel"><option value="">—</option>${memberOptions(myMemberId())}</select></label>`,
     foot: `<button class="btn btn-primary" id="who-ok">Desa</button>`,
     onMount: el => {

@@ -93,7 +93,7 @@ function sheetWrite() {
   openSheet({
     title: 'Què vols enviar?',
     body: `<div class="write-opts">
-      ${canMessage() ? `<button class="write-o" data-act="msg-new"><b>${sec ? `Un missatge a la ${esc(V.section)}` : 'Un missatge'}</b><small>${sec ? `Arriba a l’app i al mòbil de tota la ${esc(SEC[sec].name.toLowerCase())}.` : `Arriba a l’app i al mòbil de tothom o de les ${esc(V.sections)} que triïs. Per a avisos del dia a dia.`}</small></button>` : ''}
+      ${canMessage() ? `<button class="write-o" data-act="msg-new"><b>${sec ? `Un missatge a la ${esc(V.section)}` : 'Un missatge'}</b><small>${sec ? `Arriba a l’app i al mòbil de tota la ${esc(SEC[sec].name.toLowerCase())}.` : `Arriba a l’app i al mòbil de tothom o de les ${esc(V.sections)} que triïs. Per al dia a dia.`}</small></button>` : ''}
       ${canWriteTo() ? `<button class="write-o" data-act="thread-to"><b>Un missatge a una persona</b><small>Una conversa privada${sec ? ` amb algú de la ${esc(SEC[sec].name.toLowerCase())}` : ''}: només la veieu tu i ella, i li arriba al mòbil.</small></button>` : ''}
       ${canWriteAll() ? `<button class="write-o" data-act="ann-new"><b>Un anunci al tauler</b><small>Queda fixat al Tauler (també es pot adreçar a unes ${esc(V.sections)}), amb data de caducitat.</small></button>
       <button class="write-o" data-act="poll-new"><b>Una enquesta</b><small>Una pregunta amb opcions: disponibilitat, vestuari, sopar…</small></button>
@@ -110,7 +110,7 @@ function sheetMessage(preset = {}) {
     title: all ? 'Nou missatge' : `Missatge a la ${V.section}`,
     body: `<div class="kv">
       ${all ? `<div class="field"><span>Per a</span><div class="pickers" id="mg-to"><button type="button" class="pick" data-sec="*" aria-pressed="${!lead}">Tothom</button>${SECTIONS.map(x => secPick(x, x.id === lead)).join('')}</div></div>`
-        : `<p style="margin:0">Per a tota la <b>${esc(SEC[lead].name.toLowerCase())}</b> (${membersOf(lead).length} persones). Els arribarà a l’app i, a qui tingui els avisos activats, al mòbil.</p>`}
+        : `<p style="margin:0">Per a tota la <b>${esc(SEC[lead].name.toLowerCase())}</b> (${membersOf(lead).length} persones). Els arribarà a l’app i, a qui tingui les notificacions activades, al mòbil.</p>`}
       <label class="field"><span>Assumpte (opcional)</span><input class="inp" id="mg-title" maxlength="80" value="${esc(preset.title || '')}" placeholder="p. ex. Assaig parcial de dijous"></label>
       <label class="field"><span>Missatge</span><textarea class="inp" id="mg-body" maxlength="1500" style="min-height:140px" placeholder="Escriu aquí…">${esc(preset.body || '')}</textarea></label>
       <p class="muted" id="mg-reach" style="margin:0;font-size:calc(13px*var(--ts))"></p>

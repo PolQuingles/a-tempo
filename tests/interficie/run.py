@@ -582,14 +582,14 @@ def main():
         check(not errors, "sense errors a les estadístiques i al visor de PDF", "; ".join(errors[:3]))
         ctx.close()
 
-        print("Inici: Per fer, Els meus avisos, Properament i La meva assistència")
+        print("Inici: Per fer, Les meves absències, Properament i La meva assistència")
         ctx, page, errors = open_app(browser, base, "leader", MOBILE, "#/inici")
         r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms));
           const p = clone(S.productions.get('p1')); p.sessions.push({ id: 'sAvui', date: TODAY, time: '20:30', end: '22:30', type: 'Assaig' }); saveProduction(p); render(); await s(300);
           const order = [...document.querySelectorAll('.home section')].sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top).map(x => x.querySelector('.section-title .h2')?.textContent);
           const now = [...document.querySelectorAll('.soon-row.is-now')].find(r => r.querySelector('[data-act="home-roll"]'));
           return { order, hero: !!document.querySelector('.hero-cta'), roll: !!now, overflow: document.documentElement.scrollWidth <= innerWidth }; }""")
-        check(r["order"][:3] == ["Per fer", "Els meus avisos", "Properament"] and (len(r["order"]) < 4 or r["order"][3] in ("La meva assistència", "Missatges")), "Inici: Per fer, Els meus avisos, Properament, La meva assistència", str(r))
+        check(r["order"][:3] == ["Per fer", "Les meves absències", "Properament"] and (len(r["order"]) < 4 or r["order"][3] in ("La meva assistència", "Missatges")), "Inici: Per fer, Les meves absències, Properament, La meva assistència", str(r))
         check(not r["hero"] and r["roll"], "sense el requadre «Avui»: la sessió d'avui és a Properament, amb «Passa llista»", str(r))
         check(r["overflow"], "Inici sense eixamplar la pantalla del mòbil", str(r))
         check(not errors, "sense errors a Inici", "; ".join(errors[:3]))
@@ -796,7 +796,7 @@ def main():
           const ti = todoItems; todoItems = () => []; render(); await s(200);
           out.allDone = !!document.querySelector('.home .pf-ok') && !document.querySelector('.home .todo-done');
           todoItems = ti; render(); await s(200);
-          const mine = [...document.querySelectorAll('.home section')].find(x => /Els meus avisos/.test(x.querySelector('.h2')?.textContent || ''));
+          const mine = [...document.querySelectorAll('.home section')].find(x => /Les meves absències/.test(x.querySelector('.h2')?.textContent || ''));
           out.noticesQuiet = !!mine && !mine.querySelector('p') && !!mine.querySelector('[data-act="absence-new"]');
           const row = [...document.querySelectorAll('.soon-row')].find(x => x.querySelector('[data-act="cl-avisa"]'));
           out.oneBtn = !!row && row.querySelectorAll('.soon-a .btn').length === 1;
@@ -830,7 +830,7 @@ def main():
           out.acctCal = !!document.querySelector('.acct-item[data-k="calendar"]');
           closeSheet(); return out; }"""))
         for k, label in [("allDone", "sense res pendent, «Per fer» és només el títol amb «Tot al dia»"),
-                         ("noticesQuiet", "«Els meus avisos» buit és només el botó, sense paràgraf"),
+                         ("noticesQuiet", "«Les meves absències» buit és només el botó, sense paràgraf"),
                          ("oneBtn", "la classe de cant d'Inici té un sol botó «Avisa…»"),
                          ("chooser", "«Avisa…» obre arribar tard, no venir i canviar l'hora"),
                          ("late", "i cada opció obre la seva finestra"),
@@ -981,6 +981,7 @@ def main():
           document.querySelector('.cfg-h[data-k="quota"]').click(); await s(200);
           const sw = document.querySelector('#cfg-fees'); sw.checked = false; sw.dispatchEvent(new Event('change', { bubbles: true })); await s(400);
           out.off = !feesOn() && S.config.feesOn === false;
+          ui.people = 'singer'; ui.pmFilter = 'all';
           applyRoute('gestio/personal'); render(); await ensureSecData(); render(); await s(400);
           const d = document.querySelector('details.pm'); if (d) d.open = true; await s(100);
           const v = document.querySelector('#view').innerText;
@@ -1073,6 +1074,61 @@ def main():
                          ("overflow", "sense eixamplar la pantalla del mòbil")]:
             check(r.get(k), label, str(r))
         check(not errors, "sense errors als canvis de l'auditoria", "; ".join(errors[:3]))
+        ctx.close()
+
+        print("Documents a triar, absències i notificacions, i escriure als que no arriben")
+        ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/gestio/ajustos")
+        r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          const txt = q => document.querySelector(q)?.innerText || '';
+          const sw = k => { const x = document.querySelector(`[data-bind="cfg-doc"][data-k="${k}"]`); x.click(); };
+          // 12. Ajustos › Documents: es tria quins es demanen; sense cap, desapareixen de la plantilla.
+          out.allOn = docItems().length === 3 && !!document.querySelector('.cfg-h[data-k="docs"]');
+          document.querySelector('.cfg-h[data-k="docs"]').click(); await s(200);
+          sw('imatge'); await s(400);
+          out.two = JSON.stringify(S.config.askDocs) === '["dades","autoritzacio"]' && /Es demanen 2/.test(txt('.cfg-h[data-k="docs"]'));
+          ui.people = 'singer'; ui.pmFilter = 'all';
+          applyRoute('gestio/personal'); render(); await ensureSecData(); render(); await s(400);
+          const d = document.querySelector('details.pm'); if (d) d.open = true; await s(100);
+          out.noImg = !/Drets d’imatge/.test(txt('.pm-docs')) && /Protecció de dades/.test(txt('.pm-docs')) && !/sortir a fotos/.test(txt('.pm-sum'));
+          applyRoute('gestio/ajustos'); render(); await s(200);
+          sw('dades'); await s(300); sw('autoritzacio'); await s(400);
+          out.off = !docsOn() && /Desactivats/.test(txt('.cfg-h[data-k="docs"]'));
+          applyRoute('gestio/personal'); render(); await s(300);
+          const d2 = document.querySelector('details.pm'); if (d2) d2.open = true; await s(100);
+          out.gone = !document.querySelector('.pm-chips [data-k="docs"]') && !document.querySelector('[data-act="member-docs"]') && !!document.querySelector('details.pm[open]')
+            && !/Drets d’imatge|Protecció de dades|Autoritzacions/.test(txt('.pm-docs')) && /Quota/.test(txt('.pm-box b'));
+          applyRoute('gestio/ajustos'); render(); await s(200);
+          for (const k of ['imatge', 'dades', 'autoritzacio']) { sw(k); await s(300); }
+          out.back = docItems().length === 3;
+          // 13. Els noms: Absències i Notificacions.
+          out.absTab = [...document.querySelectorAll('.page-head ~ * .subtab, .subtabs .subtab')].some(b => /^Absències/.test(b.textContent.trim()));
+          applyRoute('inici'); render(); await s(300);
+          out.mine = /Les meves absències/.test(txt('#view'));
+          sheetHelp(); await s(300);
+          out.help = /Què és cada cosa/.test(txt('.sheet')) && /Notificacions/.test(txt('.sheet')); closeSheet(); await s(200);
+          // 15. Risc › Escriu-los: un missatge privat a cadascú, amb les seves xifres.
+          applyRoute('assistencia/risc'); render(); await s(300);
+          const before = S.threads.size;
+          const b = document.querySelector('[data-act="risk-write"][data-pid="p1"]'); out.btn = !!b; b.click(); await s(400);
+          const boxes = [...document.querySelectorAll('.rw-list input')];
+          out.list = boxes.length === 4 && /Hola, Clara!/.test(txt('#rw-prev'));
+          boxes.find(x => x.value === 'mB3').click(); boxes.find(x => x.value === 'mB3').dispatchEvent(new Event('change')); await s(100);
+          out.count = /Envia a 3 persones/.test(txt('#rw-send'));
+          document.querySelector('#rw-send').click(); await s(1500);
+          const mine = [...S.threads.values()].filter(t => t.toEmail === S.email && t.subject === 'Assistència · Concert de tardor');
+          out.sent = S.threads.size === before + 3 && mine.length === 3 && !mine.some(t => t.memberId === 'mB3')
+            && mine.every(t => /^Hola, \S+! A Concert de tardor portes un \d+% d’assistència/.test(t.msgs[0].text) && !/\{/.test(t.msgs[0].text));
+          out.overflow = document.documentElement.scrollWidth <= innerWidth;
+          return out; }""")
+        for k, label in [("allOn", "Ajustos té el calaix dels documents, amb tots tres demanats"), ("two", "es pot deixar de demanar un document"),
+                         ("noImg", "i desapareix de la fitxa i del resum de la plantilla"), ("off", "sense cap document, queden desactivats"),
+                         ("gone", "i desapareixen el filtre, el botó i les pastilles"), ("back", "i es tornen a activar"),
+                         ("absTab", "Gestió té la pestanya «Absències»"), ("mine", "Inici diu «Les meves absències»"),
+                         ("help", "l'ajuda explica què és cada cosa"), ("btn", "Risc té «Escriu-los»"),
+                         ("list", "hi surten els que no arriben, amb una mostra del missatge"), ("count", "es pot treure algú de la llista"),
+                         ("sent", "cadascú rep una conversa privada amb les seves xifres"), ("overflow", "sense eixamplar la pantalla del mòbil")]:
+            check(r.get(k), label, str(r))
+        check(not errors, "sense errors amb els documents, els noms i «Escriu-los»", "; ".join(errors[:3]))
         ctx.close()
 
         print("Mira l'app com…")

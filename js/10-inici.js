@@ -24,7 +24,7 @@ function installCard() {
   let t, act;
   if (installed()) {
     if (!pushSupported() || S.pushOn) return '';
-    t = 'Activa els avisos al mòbil'; act = 'data-act="push-setup"';
+    t = 'Activa les notificacions'; act = 'data-act="push-setup"';
   } else {
     t = 'Posa l’app a la pantalla d’inici'; act = installPrompt ? 'data-act="install-go"' : 'data-act="install-how"';
   }
@@ -35,7 +35,7 @@ function installCard() {
 function installSteps() {
   const inApp = /FBAN|FBAV|Instagram|WhatsApp|Line\//i.test(navigator.userAgent);
   return isiOS()
-    ? [inApp ? 'Obre aquest enllaç amb el <b>Safari</b> (menú «···» › Obre al navegador).' : '', 'Toca <b>Comparteix</b> <span class="ios-share" aria-hidden="true"></span> a la barra del navegador.', 'Tria <b>Afegeix a la pantalla d’inici</b> i toca <b>Afegeix</b>.', 'Obre l’app des de la icona nova i activa els avisos des de les teves inicials.'].filter(Boolean)
+    ? [inApp ? 'Obre aquest enllaç amb el <b>Safari</b> (menú «···» › Obre al navegador).' : '', 'Toca <b>Comparteix</b> <span class="ios-share" aria-hidden="true"></span> a la barra del navegador.', 'Tria <b>Afegeix a la pantalla d’inici</b> i toca <b>Afegeix</b>.', 'Obre l’app des de la icona nova i activa les notificacions des de les teves inicials.'].filter(Boolean)
     : installPrompt ? [] : ['Obre el menú <b>⋮</b> del Chrome.', 'Tria <b>Instal·la l’aplicació</b> (o <b>Afegeix a la pantalla d’inici</b>).', 'Obre l’app des de la icona nova.'];
 }
 const canInstall = () => (isiOS() || isAndroid()) && !installed() && !PREVIEW;
@@ -44,7 +44,7 @@ function sheetInstall() {
   const steps = installSteps();
   openSheet({
     title: 'Instal·la l’app',
-    body: `<p style="margin-top:0">${isiOS() ? 'Al iPhone, posar l’app a la pantalla d’inici és l’única manera de rebre els avisos al mòbil.' : 'La tindràs com una app més, i s’obre més de pressa.'}</p>
+    body: `<p style="margin-top:0">${isiOS() ? 'Al iPhone, posar l’app a la pantalla d’inici és l’única manera de rebre notificacions al mòbil.' : 'La tindràs com una app més, i s’obre més de pressa.'}</p>
       ${steps.length ? `<ol class="install-steps">${steps.map(x => `<li>${x}</li>`).join('')}</ol>` : ''}`,
     foot: installPrompt ? '<span class="spacer"></span><button class="btn btn-primary" data-act="install-go">Instal·la-la</button>' : '',
   });
@@ -82,7 +82,7 @@ function todoItems() {
     const abs = pendingAbsences();
     if (abs.length) {
       const who = [...new Set(abs.map(a => S.members.get(a.memberId)?.name?.split(',').pop().trim()).filter(Boolean))];
-      out.push({ icon: 'abs', t: `${abs.length === 1 ? '1 avís d’absència' : `${abs.length} avisos d’absència`} per veure`, s: esc(who.slice(0, 3).join(', ') + (who.length > 3 ? '…' : '')), btn: 'Revisa', act: 'data-act="manage" data-k="avisos"', n: abs.length });
+      out.push({ icon: 'abs', t: `${abs.length === 1 ? '1 absència' : `${abs.length} absències`} per veure`, s: esc(who.slice(0, 3).join(', ') + (who.length > 3 ? '…' : '')), btn: 'Revisa', act: 'data-act="manage" data-k="avisos"', n: abs.length });
     }
     const lists = mySections().flatMap(sec => pendingSessions(sec).map(x => ({ sec, x })));
     if (lists.length) out.push({ icon: 'roll', t: `${lists.length === 1 ? '1 llista' : `${lists.length} llistes`} per acabar`, s: `${esc(SEC[lists[0].sec].name)}: ${lists.slice(-3).map(l => ddmm(l.x.date)).join(', ')}`, btn: 'Acaba-les', act: `data-act="home-roll" data-sid="${esc(lists[lists.length - 1].x.id)}" data-sec="${esc(lists[0].sec)}"`, n: lists.length });
@@ -91,7 +91,7 @@ function todoItems() {
     const ask = reqsToAnswer();
     if (ask.length) out.push({ icon: 'swap', t: ask.length === 1 ? `${esc(reqMemberName(ask[0]))} et demana canviar l’hora` : `${ask.length} peticions de canvi d’hora`, s: esc(ask.map(r => { const c = S.classes.get(r.classId); return c ? shortDate(c.date) : ''; }).filter(Boolean).join(', ')), btn: 'Respon', act: 'data-act="tab" data-tab="classes"', n: ask.length });
     const teach = teachesClasses() ? reqsForTeacher() : [];
-    if (teach.length) out.push({ icon: 'cls', t: `${teach.length === 1 ? '1 avís' : `${teach.length} avisos`} de les ${esc(V.classes.toLowerCase())}`, s: 'Retards, absències i hores demanades', btn: 'Revisa', act: 'data-act="tab" data-tab="classes"', n: teach.length });
+    if (teach.length) out.push({ icon: 'cls', t: `${teach.length === 1 ? '1 canvi' : `${teach.length} canvis`} de les ${esc(V.classes.toLowerCase())} per revisar`, s: 'Retards, absències i hores demanades', btn: 'Revisa', act: 'data-act="tab" data-tab="classes"', n: teach.length });
     const open = openSwaps();
     if (open.length) out.push({ icon: 'swap', t: `${open.length === 1 ? '1 canvi d’hora obert' : `${open.length} canvis d’hora oberts`}`, s: 'Algú busca qui es quedi la seva hora', btn: 'Mira’ls', act: 'data-act="tab" data-tab="classes"', n: 0 });
   }
@@ -231,7 +231,7 @@ function myNoticesBlock(me) {
   // Els avisos de sessions que ja han passat de fa més d'un mes no hi fan res: queden a «La meva assistència».
   const recent = mine.filter(a => (a.createdAt || '').slice(0, 10) >= addDays(TODAY, -30) || (a.sessionIds || []).some(id => (sessionById(id)?.date || '') >= TODAY));
   // Sense avisos, n'hi ha prou amb el botó: l'explicació és a la finestra d'avisar.
-  return `<div class="section-title"><h2 class="h2">Els meus avisos</h2><button class="btn btn-sm" data-act="absence-new">Avisa d’una absència</button></div>
+  return `<div class="section-title"><h2 class="h2">Les meves absències</h2><button class="btn btn-sm" data-act="absence-new">Avisa d’una absència</button></div>
     ${recent.length ? `<div class="panel">${recent.map(a => absenceCard(a, { mine: true })).join('')}</div>` : ''}`;
 }
 function viewHome() {
@@ -242,7 +242,7 @@ function viewHome() {
   const who = me ? `${esc(SEC[me.section].name)}${me.part ? ` ${esc(me.part)}` : ''}${lv ? ` · ${lv}` : ''}` : (ME() ? esc(rolesText(ME())) : '');
   const head = `<div class="page-head home-head"><div><div class="eyebrow">${esc(longDate(TODAY))}</div><h1 class="h1">Hola${first ? `, ${esc(first)}` : ''}</h1>${who ? `<div class="me-line">${who}</div>` : ''}</div></div>`;
   if (!me && !canEdit() && myMemberId()) return head + `<div class="empty">${staffSvg()}<h2 class="h2">Compte sense fitxa</h2><p>El teu correu encara no està vinculat a cap fitxa de la plantilla. Demana-ho a l’administració ${V.del}.</p></div>`;
-  // Al mòbil, una columna: Per fer, Els meus avisos, Properament, La meva assistència i els missatges (l'ordre el posa el CSS).
+  // Al mòbil, una columna: Per fer, Les meves absències, Properament, La meva assistència i els missatges (l'ordre el posa el CSS).
   // A l'ordinador, dues: a l'esquerra el que cal fer i el que ve; a la dreta els avisos, l'assistència i els missatges.
   const msgs = messagesBlock();
   return `${head}
