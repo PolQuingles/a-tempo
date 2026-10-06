@@ -53,7 +53,8 @@ function viewStats(inBoard) {
   let rule = '';
   const ruleMap = new Map();
   if (scope.kind === 'prod') {
-    for (const r of st.rows) { const rs = ruleStatus(scope.id, r.m); if (rs) ruleMap.set(r.m.id, rs); }
+    // La norma és per a qui encara hi és: les baixes compten a les estadístiques, però no han de fer el concert.
+    for (const r of st.rows) { if (r.m.active === false) continue; const rs = ruleStatus(scope.id, r.m); if (rs) ruleMap.set(r.m.id, rs); }
     const outL = st.rows.filter(r => ruleMap.get(r.m.id)?.status === 'out');
     const riskL = st.rows.filter(r => ruleMap.get(r.m.id)?.status === 'risk');
     const hasConcert = st.all.some(isShow);
@@ -365,7 +366,11 @@ function myAttendanceCard(me) {
   const x = myProdSummary(me, currentProductionId());
   if (!x) return '';
   const { prod, r, rs, counted } = x;
-  const dots = (r?.hist || []).map(({ s, mk }) => `<i class="${mk ? 's-' + mk.s : ''}" title="${ddmm(s.date)} · ${mk ? STATUS[mk.s].label : 'Sense llista'}"></i>`).join('');
+  const seen = new Set((r?.hist || []).map(h => h.s.id));
+  // Després dels fets, en buit, els assajos que encara queden (els mateixos que compta la norma), per veure quant falta.
+  const ahead = allSessions(prod.id).filter(s => s.date > TODAY && !seen.has(s.id) && !RULE_SKIP.has(s.type) && convoked(s, me.section) && !onLeave(me, s.date));
+  const dots = (r?.hist || []).map(({ s, mk }) => `<i class="${mk ? 's-' + mk.s : ''}" title="${ddmm(s.date)} · ${mk ? STATUS[mk.s].label : 'Sense llista'}"></i>`).join('')
+    + ahead.map(s => `<i class="fut" title="${ddmm(s.date)} · Encara ha d’arribar"></i>`).join('');
   return `<div class="section-title prod-tone" style="--ph:${prodHue(prod)}"><h2 class="h2">La meva assistència</h2><span class="eyebrow"><i class="pdot"></i>${esc(prod.name)}</span></div>
     <div class="panel my-att prod-tone tinted" style="--ph:${prodHue(prod)}">
       ${counted ? `<div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span class="big">${Math.round(rate(r) * 100)}<small>%</small></span>

@@ -702,7 +702,7 @@ def main():
           const laia = document.querySelector('.sw-row[data-mid="mS1"] button[data-k="returned"]'); laia.click(); await s(900);
           out.returned = scoreOf('p1', 'w1', S.members.get('mS1')) === 'returned';
           closeSheet(); await s(300); render(); await s(200);
-          out.cardGiven = /Repartida/.test(document.querySelector('.work .sc-pill')?.textContent || '');
+          out.cardGiven = /Recollint · 1\/4/.test(document.querySelector('.work .sc-pill.sc-part')?.textContent || '');
           out.noTodo = !archiveTodos().some(x => /per repartir/.test(x.t));
           sheetArchive('p1'); await s(300);
           out.archive = /a les mans/.test(document.querySelector('.ax-kpis')?.innerText || '') && document.querySelectorAll('.ax-table tbody tr').length === 4;
@@ -722,7 +722,7 @@ def main():
                          ("otherRW", "també pot marcar les d'una altra corda"),
                          ("otherSaved", "i queden desades a aquella corda"),
                          ("returned", "es pot marcar qui l'ha retornada"),
-                         ("cardGiven", "l'obra passa a «Repartida»"),
+                         ("cardGiven", "l'obra passa a «Recollint · 1/4» quan algú la torna"),
                          ("noTodo", "i ja no li queda res per repartir"),
                          ("archive", "les estadístiques de l'arxiu mostren qui té què"),
                          ("overflow", "sense eixamplar la pantalla del mòbil"),
@@ -996,6 +996,83 @@ def main():
                          ("gone", "desactivada, la quota desapareix de la plantilla"), ("csv", "i de l'Excel"), ("back", "i torna en activar-la")]:
             check(r.get(k), label, str(r))
         check(not errors, "sense errors amb la quota opcional", "; ".join(errors[:3]))
+        ctx.close()
+
+        print("Auditoria: baixes, percentatges, llegendes i detalls")
+        ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/assistencia/estadistiques")
+        r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          const txt = q => document.querySelector(q)?.innerText || '';
+          // 1. Una baixa (Jan Pons, que té una falta) ja no surt a la norma de les estadístiques, i qui hi és sí.
+          out.beforeNorm = /Jan Pons/.test(txt('.alerts'));
+          saveMember({ ...S.members.get('mT3'), active: false }); render(); await s(300);
+          out.norm = !/Jan Pons/.test(txt('.alerts')) && /Clara Vila/.test(txt('.alerts'));
+          // 3. Els comptadors de Personal només compten la plantilla en actiu i els seus comptes.
+          ensureStaff(); for (let i = 0; i < 25 && !accountFor('mT1'); i++) await s(200);
+          applyRoute('gestio/personal'); render(); await s(300);
+          out.access = /3 de 15 cantaires tenen accés · 3 hi han entrat/.test(txt('.access-panel'));
+          // 2. La sessió d'avui no té percentatge abans de començar.
+          const p = clone(S.productions.get('p1')), s3 = p.sessions.find(x => x.id === 's3');
+          s3.time = '23:59'; S.productions.set('p1', p);
+          S.attendance.set('s3_S', { sessionId: 's3', section: 'S', marks: { mS1: { s: 'FJ' } } });
+          out.notBegun = !hasBegun(s3);
+          applyRoute('calendari'); ui.calProd = 'p1'; ui.calView = 'list'; render(); await s(300);
+          const row = () => document.querySelector('.cal-row [data-sid="s3"]');
+          out.noPct = !!row() && !row().querySelector('.cal-pct');
+          s3.time = '00:00'; S.productions.set('p1', p); render(); await s(200);
+          out.pctLater = hasBegun(s3) && !!row()?.querySelector('.cal-pct');
+          // 4. La llegenda de la llista només surt si hi ha algun punt a explicar.
+          S.attendance.delete('s3_S');
+          applyRoute('assistencia'); ui.sessionId = 's3'; render(); await s(300);
+          out.noLegend = !/Llista completa/.test(txt('#view'));
+          S.attendance.set('s3_S', { sessionId: 's3', section: 'S', marks: Object.fromEntries(membersOf('S').map(m => [m.id, { s: 'P' }])) }); render(); await s(200);
+          out.legend = /Llista completa/.test(txt('.q-legend'));
+          // 5. Les files de Risc, alineades a l'esquerra.
+          applyRoute('assistencia/risc'); render(); await s(300);
+          const rr = document.querySelector('.risk-row');
+          out.riskLeft = !!rr && getComputedStyle(rr).textAlign === 'left';
+          // 6. Classes: «La teva hora: avui · …» i sense la llegenda «Avui hi ha classe».
+          saveClassDay({ id: 'cdavui', date: TODAY, place: 'Aula 2', note: '', teacher: 'prof@exemple.cat', teacherName: 'Prat, Berta', slots: [{ id: 'qa', time: '17:00', mins: 40, memberId: 'mT1' }] }); await s(300);
+          applyRoute('classes'); render(); await s(300);
+          out.classToday = /La teva hora: avui · 17:00/.test(txt('#view')) && !/Avui hi ha classe/.test(txt('.q-legend') + (document.querySelector('.q-legend') ? '' : ''));
+          // 7. Una obra a mig repartir diu «Repartint» amb el recompte.
+          setScore('p1', 'w1', S.members.get('mS0'), 'given');
+          applyRoute('tauler/repertori'); ui.matProd = 'p1'; render(); await s(300);
+          out.pill = /Repartint · 1\/15/.test(txt('.work .sc-pill.sc-part'));
+          // 8. «No hi puc anar o arribaré tard», arran del títol.
+          applyRoute('inici'); render(); await s(300);
+          const gh = document.querySelector('.soon-a .btn-ghost[data-act="absence-new"]');
+          out.ghost = !!gh && getComputedStyle(gh).paddingLeft === '0px';
+          // 9. La meva assistència: en buit, els assajos que queden.
+          out.ahead = document.querySelectorAll('.my-att .dots i.fut').length === 2;
+          // 10. El Tauler no s'obre a uns anuncis buits, i després recorda on eres.
+          S.announcements.clear(); ui.board = 'anuncis';
+          document.querySelector('[data-act="tab"][data-tab="tauler"]').click(); await s(300);
+          out.boardRep = ui.board === 'materials';
+          document.querySelector('[data-act="board"][data-k="documents"]').click(); await s(200);
+          document.querySelector('[data-act="tab"][data-tab="avisos"]').click(); await s(200);
+          document.querySelector('[data-act="tab"][data-tab="tauler"]').click(); await s(300);
+          out.boardKept = ui.board === 'documents';
+          // 11. Un sol «Calendari al mòbil» al compte, amb les classes a dins.
+          sheetAccount(); await s(300);
+          out.oneCal = !document.querySelector('.acct-item[data-k="classIcs"]') && !!document.querySelector('.acct-item[data-k="calendar"]');
+          sheetCalendar(); await s(300);
+          out.calClasses = !!document.querySelector('.sheet [data-act="acct-open"][data-k="classIcs"]');
+          closeSheet(); await s(200);
+          out.overflow = document.documentElement.scrollWidth <= innerWidth;
+          return out; }""")
+        for k, label in [("beforeNorm", "a la norma hi surt qui no hi arriba"), ("norm", "però no les baixes"),
+                         ("access", "els comptadors d'accés compten només la plantilla en actiu"),
+                         ("notBegun", "una sessió d'avui encara no ha començat abans de l'hora"), ("noPct", "i el calendari no en mostra el percentatge"),
+                         ("pctLater", "un cop començada, sí"), ("noLegend", "sense cap llista completa, no hi ha la llegenda «Llista completa»"),
+                         ("legend", "i surt quan n'hi ha alguna"), ("riskLeft", "les files de Risc van alineades a l'esquerra"),
+                         ("classToday", "a Classes diu «La teva hora: avui · 17:00» i no hi ha la llegenda d'avui"),
+                         ("pill", "una obra a mig repartir diu «Repartint · 1/15»"), ("ghost", "l'enllaç d'absència va arran del títol"),
+                         ("ahead", "la meva assistència mostra en buit els assajos que queden"),
+                         ("boardRep", "el Tauler no s'obre a uns anuncis buits"), ("boardKept", "i recorda la darrera pestanya"),
+                         ("oneCal", "el compte té un sol «Calendari al mòbil»"), ("calClasses", "i a dins, les classes"),
+                         ("overflow", "sense eixamplar la pantalla del mòbil")]:
+            check(r.get(k), label, str(r))
+        check(not errors, "sense errors als canvis de l'auditoria", "; ".join(errors[:3]))
         ctx.close()
 
         print("Mira l'app com…")

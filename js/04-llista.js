@@ -82,6 +82,8 @@ function viewRollOverview(cur, list, pendingBySec) {
     </button>`;
   }).join('');
   const anyPend = SECTIONS.some(x => (pendingBySec[x.id] || []).some(s => s.id !== cur.id));
+  // La llegenda només explica els punts que hi ha: sense cap llista completa, «Llista completa» semblaria un estat.
+  const anyDone = SECTIONS.some(x => { const pr = progress(cur, x.id); return convoked(cur, x.id) && pr.total && pr.done === pr.total; });
   const { c, expected, out } = dayStats(cur);
   const present = c.P + c.R;
   const marked = expected - c.none;
@@ -101,7 +103,7 @@ function viewRollOverview(cur, list, pendingBySec) {
     ${fitxaChip(cur)}
     <div class="roll-grid"><div class="roll-a">
     <div class="quads ${SECTIONS.length === 4 ? '' : `n-other${SECTIONS.length > 6 ? ' n-many' : ''}`}" data-n="${SECTIONS.length}">${quads}</div>
-    <div class="q-legend"><span><i style="background:var(--p)"></i>Llista completa</span>${anyPend ? '<span><i style="background:var(--fnj)"></i>Té llistes pendents</span>' : ''}</div>
+    ${anyDone || anyPend ? `<div class="q-legend">${anyDone ? '<span><i style="background:var(--p)"></i>Llista completa</span>' : ''}${anyPend ? '<span><i style="background:var(--fnj)"></i>Té llistes pendents</span>' : ''}</div>` : ''}
     </div><div class="roll-b">
     ${day}
     ${cur.rsvp && canEdit() ? rsvpPanel(cur) : ''}
