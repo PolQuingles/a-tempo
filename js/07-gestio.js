@@ -6,7 +6,7 @@
 function viewManage() {
   const pend = pendingAbsences().length;
   if (ui.manage === 'cantaires') ui.manage = 'personal';   // es deia així abans
-  const tabs = [['avisos', `Avisos${pend ? ` (${pend})` : ''}`], ['personal', 'Personal'], ['produccions', 'Produccions'], ['config', 'Ajustos']];
+  const tabs = [['avisos', `Absències${pend ? ` (${pend})` : ''}`], ['personal', 'Personal'], ['produccions', 'Produccions'], ['config', 'Ajustos']];
   // S'obre des del menú del compte: la fletxa torna a la pantalla d'on s'ha vingut.
   const from = tabsForRole().includes(ui.gestioFrom) ? ui.gestioFrom : 'avisos';
   const head = `<div class="page-head"><div class="ph-back"><button class="nav-arrow" data-act="tab" data-tab="${from}" aria-label="Torna a ${esc(TAB_LABEL[from])}">${ICON.left}</button><div><div class="eyebrow">El teu compte</div><h1 class="h1">Gestió</h1></div></div></div>
@@ -89,8 +89,8 @@ function managePeople() {
     director: `Passa llista, publica anuncis i convocatòries i puja materials.`,
     gerencia: 'Passa llista, publica anuncis i convocatòries i puja materials i documents.',
     secretaria: 'Passa llista, publica anuncis i convocatòries i puja materials i documents.',
-    leader: `Cada ${V.leader} porta una ${V.section}: hi passa llista i en rep els avisos.`,
-    voice: `Porta les ${V.classes.toLowerCase()}: en fa el calendari i rep els avisos dels ${V.members}.`,
+    leader: `Cada ${V.leader} porta una ${V.section}: hi passa llista i en rep les absències.`,
+    voice: `Porta les ${V.classes.toLowerCase()}: en fa el calendari i rep les absències i els canvis dels ${V.members}.`,
   }[role] || '';
   return `${accessPanel()}${menu}<div class="sec-h" style="margin-top:4px"><span class="muted" style="font-size:calc(13px*var(--ts))">${esc(what)}</span>${add}</div>
     ${list.length ? `<ul class="list">${list.map(personRow).join('')}</ul>`
@@ -160,7 +160,7 @@ function manageAbsences() {
       <button class="pick" aria-pressed="${ui.absFilter === 'all'}" data-act="abs-filter" data-k="all">Tots</button></div>
     <button class="btn btn-sm" data-act="absence-new">+ Nou avís</button></div>
     ${list.length ? `<div class="panel">${list.map(a => absenceCard(a, { staff: true })).join('')}</div>`
-      : `<div class="panel" style="padding:16px;font-size:calc(13.5px*var(--ts));color:var(--muted)">${ui.absFilter === 'all' ? 'Encara no hi ha cap avís.' : 'No hi ha avisos pendents.'} Cada ${V.member} amb accés pot avisar des d’Inici.</div>`}`;
+      : `<div class="panel" style="padding:16px;font-size:calc(13.5px*var(--ts));color:var(--muted)">${ui.absFilter === 'all' ? 'Encara no hi ha cap absència.' : 'No hi ha absències pendents.'} Cada ${V.member} amb accés pot avisar des d’Inici.</div>`}`;
 }
 const BRAND_COLORS = ['#5A3577', '#8E1B3A', '#B0413E', '#1F4E79', '#1B6E6A', '#2E6B34', '#7A5A12', '#333A45'];
 /* ---------- Primers passos d'una agrupació nova ---------- */
@@ -330,6 +330,10 @@ function manageConfig() {
       <label class="switch"><input type="checkbox" id="cfg-classes" ${classesOn() ? 'checked' : ''} data-bind="cfg-classes"><span></span></label></div>
     ${classesOn() ? `<div class="setting"><div><div class="t">Professorat sense compte</div><div class="s">Per posar el calendari d’un ${esc(V.Teacher.toLowerCase())} que encara no entra a l’app. Quan en tingui, dona-li accés amb el rol i passa-li els dies.</div></div>
       <button class="btn btn-sm" data-act="cl-seats">${teacherSeats().length ? `Són ${teacherSeats().length}` : 'Afegeix-ne'}</button></div>` : ''}</div>` : ''}
+  ${isAdmin() ? `${cfgHead('docs', 'Documents', docsOn() ? `Es ${docItems().length === 1 ? 'demana' : 'demanen'} ${docItems().length}: ${esc(docItems().map(([, l]) => l).join(', '))}` : 'Desactivats')}
+  <div class="panel cfg-p"${cfgOpen('docs') ? '' : ' hidden'}><p class="muted" style="margin:2px 2px 8px;font-size:calc(13px*var(--ts))">Els que la secretaria demana a cada ${esc(V.member)} i apunta a la seva fitxa. Si no se’n demana cap, desapareixen de la plantilla.</p>
+    ${DOC_ITEMS.map(([k, l, d]) => `<div class="toggle-row setting"><span><b>${esc(l)}</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">${esc(d)}</span></span>
+      <label class="switch"><input type="checkbox" id="cfg-doc-${k}" ${docItems().some(([x]) => x === k) ? 'checked' : ''} data-bind="cfg-doc" data-k="${k}"><span></span></label></div>`).join('')}</div>` : ''}
   ${isAdmin() ? `${cfgHead('quota', 'Quota', feesOn() ? `Activada${feeAmount() ? ` · ${euros(feeAmount())} per temporada` : ''}` : 'Desactivada')}
   <div class="panel cfg-p"${cfgOpen('quota') ? '' : ' hidden'}><div class="toggle-row setting"><span><b>${feesOn() ? 'Activada' : 'Desactivada'}</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">${feesOn()
       ? `La secretaria i la gerència apunten qui ha pagat la quota de cada temporada, i cada ${esc(V.member)} veu la seva a «La meva fitxa».`
@@ -496,7 +500,7 @@ function sheetAccount() {
   const groups = [
     canEdit() ? [item('gestio', 'Gestió', `data-act="manage" data-k="${pend ? 'avisos' : ROUTE_MANAGE[ui.manage] ? ui.manage : 'personal'}"`, pend)] : [],
     [(myId() || S.threads.size) && item('threads', 'Converses', 'data-act="acct-open" data-k="threads"', unreadThreads().length), open('week', 'La setmana'),
-      myId() && !PREVIEW && open('profile', 'La meva fitxa'), open('calendar', icsOn() ? 'Calendari al mòbil' : 'Exporta el calendari'), pushSupported() && open('push', 'Avisos al mòbil')],
+      myId() && !PREVIEW && open('profile', 'La meva fitxa'), open('calendar', icsOn() ? 'Calendari al mòbil' : 'Exporta el calendari'), pushSupported() && open('push', 'Notificacions')],
     [groupsVisible() && open('groups', 'Agrupacions'), open('theme', 'Aparença'), canInstall() && open('install', 'Instal·la l’app'), open('help', 'Com funciona')],
   ].map(g => g.filter(Boolean)).filter(g => g.length);
   openSheet({

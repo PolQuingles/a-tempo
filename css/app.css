@@ -1117,6 +1117,7 @@ button.mday:hover{background:var(--surface-2)}
 .cs-day > b{padding:8px 12px;background:var(--surface-2);font-size:calc(13px*var(--ts))}
 .cs-row{display:grid;grid-template-columns:22px minmax(0,1fr) auto;align-items:center;gap:10px;padding:10px 12px;background:var(--surface);font-size:calc(14.5px*var(--ts));cursor:pointer}
 .cs-row input{width:18px;height:18px;accent-color:var(--accent)}
+.rw-list{padding:0;margin:4px 0 8px}.rw-list li{padding:0}.rw-list .cs-row{grid-template-columns:22px minmax(0,1fr);width:100%}
 .cs-row .m{color:var(--muted);font-size:calc(13px*var(--ts))}
 /* Arxiu de partitures (18b-arxiu): A repartir (ambre) → Repartida (blau) → Retornada (verd). */
 .sc-pill{justify-self:start;align-self:center;display:inline-flex;align-items:center;gap:4px;font-size:calc(12px*var(--ts));font-weight:700;line-height:20px;padding:0 8px;border-radius:999px;white-space:nowrap}

@@ -243,7 +243,7 @@ const rolesHint = roles => !roles.length ? 'Tria almenys un rol.' : [
   roles.includes('leader') ? `Porta una ${V.section}.` : '',
   roles.includes('archive') ? `Reparteix les partitures (les de la seva ${V.section} i, si cal, les de les altres), les recull en acabar cada producció i pot escriure missatges a la seva ${V.section}.` : '',
   roles.includes('gerencia') || roles.includes('secretaria') ? 'Forma part de l’equip de l’agrupació.' : '',
-  roles.includes('voice') ? `Porta les ${V.classes.toLowerCase()}: en fa el calendari i rep els avisos dels ${V.members}.` : '',
+  roles.includes('voice') ? `Porta les ${V.classes.toLowerCase()}: en fa el calendari i rep les absències i els canvis dels ${V.members}.` : '',
 ].filter(Boolean).join(' ');
 // «Mira l'app com…»: l'administració veu l'app com un cantaire, un cap de corda, la direcció, la gerència, la secretaria
 // o un professor de cant. Només canvia el que es veu en aquest mòbil: no es desa res (vegeu previewBlocked).

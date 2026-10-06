@@ -147,6 +147,63 @@ function riskLine(rs) {
   const n = needed(rs);
   return `Ha de venir a ${n === rs.remaining ? `tots els ${n}` : `${n} dels ${rs.remaining}`} assajos que queden.`;
 }
+/** De les persones que no arriben a la norma, a qui pot escriure qui mira (l'equip, a tothom; un cap de corda, a la seva). */
+const riskWritable = rows => canWriteTo() ? rows.filter(r => writableMembers().some(m => m.id === r.m.id)) : [];
+function riskRows(pid) {
+  const rows = [];
+  for (const x of SECTIONS) for (const m of membersOf(x.id)) { const rs = ruleStatus(pid, m); if (rs && rs.status !== 'ok') rows.push({ m, rs }); }
+  return rows;
+}
+/** «Escriu-los» de Risc: a cadascú, un missatge privat amb el seu percentatge i els assajos que li queden. */
+const RISK_TEXT = {
+  risk: 'Hola, {nom}! A {produccio} portes un {percentatge} d’assistència i cal un {minim} per fer el concert. Si vens als {queden} assajos que queden, hi arribes (fins al {maxim}). Comptem amb tu!',
+  out: 'Hola, {nom}! A {produccio} portes un {percentatge} d’assistència i, encara que vinguis a tots els assajos que queden, no arribaràs al {minim} que cal per fer el concert. En parlem?',
+};
+function riskFill(tpl, prod, { m, rs }) {
+  const v = { nom: firstName(m.name), produccio: prod.name, percentatge: pct(rs.cur), minim: `${minAttendance()}%`, queden: String(rs.remaining), maxim: pct(rs.best) };
+  return tpl.replace(/\{(\w+)\}/g, (all, k) => v[k] ?? all);
+}
+function sheetRiskWrite(pid) {
+  const prod = S.productions.get(pid);
+  const rows = prod ? riskWritable(riskRows(pid)) : [];
+  if (!rows.length) return;
+  const groups = ['out', 'risk'].map(k => [k, rows.filter(r => r.rs.status === k)]).filter(([, l]) => l.length);
+  const title = { out: 'No hi arriben', risk: 'En risc' };
+  openSheet({
+    title: 'Escriu als que no arriben',
+    body: `<div class="kv">
+      <p class="muted" style="margin:0;font-size:calc(13px*var(--ts))">${esc(prod.name)} · cadascú rep un missatge privat amb les seves xifres. Pots canviar el text: {nom}, {percentatge}, {queden}, {maxim} i {minim} s’omplen per a cada persona.</p>
+      ${groups.map(([k, l]) => `<div class="field"><span>${title[k]} · ${l.length}</span>
+        <ul class="mini-list rw-list" style="max-height:none">${l.map(r => `<li><label class="cs-row"><input type="checkbox" value="${esc(r.m.id)}" checked><span><b>${esc(r.m.name)}</b> <span class="m">${esc(SEC[r.m.section].short)} · ${pct(r.rs.cur)}</span></span></label></li>`).join('')}</ul>
+        <textarea class="inp" id="rw-${k}" maxlength="${THREAD_MAX}" style="min-height:110px">${esc(RISK_TEXT[k])}</textarea></div>`).join('')}
+      <p class="muted" id="rw-prev" style="margin:0;font-size:calc(13px*var(--ts))"></p>
+    </div>`,
+    foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="rw-send">Envia</button>`,
+    onMount: el => {
+      const picked = () => rows.filter(r => el.querySelector(`.rw-list input[value="${r.m.id}"]`)?.checked);
+      const paint = () => {
+        const p = picked(), first = p[0];
+        el.querySelector('#rw-send').textContent = p.length ? `Envia a ${p.length === 1 ? '1 persona' : `${p.length} persones`}` : 'Envia';
+        el.querySelector('#rw-prev').innerHTML = first ? `Per exemple, a ${esc(firstName(first.m.name))}: «${esc(riskFill(el.querySelector(`#rw-${first.rs.status}`).value, prod, first))}»` : '';
+      };
+      el.querySelectorAll('.rw-list input, textarea').forEach(x => x.addEventListener('input', paint));
+      el.querySelectorAll('.rw-list input').forEach(x => x.addEventListener('change', paint));
+      paint();
+      el.querySelector('#rw-send').onclick = async e => {
+        const btn = e.currentTarget, p = picked();
+        if (!p.length) { toast('Tria a qui escrius'); return; }
+        if (p.some(r => !el.querySelector(`#rw-${r.rs.status}`).value.trim())) { toast('Escriu el missatge'); return; }
+        btn.disabled = true;
+        let sent = 0;
+        for (const r of p) {
+          try { await sendThreadTo(r.m, riskFill(el.querySelector(`#rw-${r.rs.status}`).value.trim(), prod, r), `Assistència · ${prod.name}`); sent++; } catch {}
+        }
+        closeSheet(); render();
+        toast(sent === p.length ? `Enviat a ${sent === 1 ? '1 persona' : `${sent} persones`}` : `Enviat a ${sent} de ${p.length}: comprova la connexió`);
+      };
+    },
+  });
+}
 function riskView() {
   const prods = riskProductions();
   if (!prods.length) return `<div class="empty">${staffSvg()}<p>No hi ha cap producció en curs ni cap de propera.</p></div>`;
@@ -163,7 +220,7 @@ function riskView() {
     nRisk += rows.filter(r => r.rs.status === 'risk').length;
     const hasConcert = allSessions(pr.id).some(isShow);
     return `<div class="section-title prod-tone" style="--ph:${prodHue(pr)}"><h2 class="h2"><i class="pdot"></i>${esc(pr.name)}</h2>
-        ${hasConcert ? `<button class="btn btn-sm" data-act="concert-list" data-pid="${pr.id}">${V.sh.list}</button>` : ''}</div>
+        <span style="display:flex;gap:6px;flex-wrap:wrap">${riskWritable(rows).length ? `<button class="btn btn-sm" data-act="risk-write" data-pid="${pr.id}">Escriu-los</button>` : ''}${hasConcert ? `<button class="btn btn-sm" data-act="concert-list" data-pid="${pr.id}">${V.sh.list}</button>` : ''}</span></div>
       <div class="panel prod-tone tinted" style="--ph:${prodHue(pr)}">${rows.length ? rows.map(({ m, rs }) => `<button class="risk-row" data-act="member-stats" data-mid="${m.id}">
           <span class="rn">${esc(m.name)}</span><span class="rule ${rs.status}">${rs.status === 'out' ? `${pct(rs.cur)} · no hi arriba` : `${pct(rs.cur)} · en risc`}</span>
           <span class="rm">${esc(SEC[m.section].name)} · ${rs.att} de ${rs.att + rs.abs} assajos · ${riskLine(rs)}</span></button>`).join('')

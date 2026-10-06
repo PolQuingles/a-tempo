@@ -17,6 +17,9 @@ const feeKey = () => { const s = seasonCfg().season; return `${s.from.slice(0, 4
 const feeAmount = () => +S.config.feeAmount || 0;
 /** La quota es pot desactivar a Ajustos (el Cor Jove no en té): llavors no en surt res enlloc. Per defecte, activada. */
 const feesOn = () => S.config.feesOn !== false;
+/** Els documents que demana l'agrupació (Ajustos › Documents): config.askDocs = [claus] (config.documents són els del Tauler); sense res, tots tres. Cap = desactivats. */
+const docItems = () => { const c = S.config.askDocs; return Array.isArray(c) ? DOC_ITEMS.filter(([k]) => c.includes(k)) : DOC_ITEMS; };
+const docsOn = () => docItems().length > 0;
 const euros = n => `${(+n || 0).toLocaleString('ca', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} €`;
 async function loadMemberDocs() {
   if (!canDocs()) return new Map();
@@ -81,7 +84,7 @@ function sheetMemberDocs(mid) {
   openSheet({
     title: `Documents · ${fullName(m.name)}`,
     wide: true,
-    body: `<div class="kv">${DOC_ITEMS.map(row).join('')}</div>`,
+    body: `<div class="kv">${docItems().map(row).join('')}</div>`,
     foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="dc-save">Desa</button>`,
     onMount: el => {
       el.querySelectorAll('.doc-f').forEach(fs => {
@@ -154,10 +157,10 @@ document.addEventListener('toggle', e => {
   const d = e.target;
   if (d instanceof HTMLDetailsElement && d.classList.contains('pm')) { if (d.open) PM_OPEN.add(d.dataset.mid); else PM_OPEN.delete(d.dataset.mid); }
 }, true);
-const PM_FILTERS = () => [['all', 'Tothom'], ['moves', 'Altes i baixes'], ...(canDocs() ? [['docs', 'Documents pendents'], ...(feesOn() ? [['fees', 'Quota pendent']] : [])] : []), ...(isAdmin() ? [['access', 'Sense accés']] : [])];
+const PM_FILTERS = () => [['all', 'Tothom'], ['moves', 'Altes i baixes'], ...(canDocs() ? [...(docsOn() ? [['docs', 'Documents pendents']] : []), ...(feesOn() ? [['fees', 'Quota pendent']] : [])] : []), ...(isAdmin() ? [['access', 'Sense accés']] : [])];
 const seasonMoves = m => { const { season } = seasonCfg(); return (m.history || []).filter(h => h.date >= season.from && h.date <= season.to); };
 const feeOf = m => docsOf(m.id).fees?.[feeKey()] || {};
-const docsPending = m => DOC_ITEMS.some(([k]) => !docState(m.id, k).v);
+const docsPending = m => docItems().some(([k]) => !docState(m.id, k).v);
 function pmMatch(m, f) {
   const on = m.active !== false;
   if (f === 'moves') return seasonMoves(m).length > 0;
@@ -178,7 +181,7 @@ function plantillaSummary(all) {
       const paid = active.filter(m => feeOf(m).paid), total = paid.reduce((n, m) => n + (+feeOf(m).amount || 0), 0);
       if (feesOn()) lines.push(`Quota ${esc(feeKey())}: <b>${paid.length} de ${active.length}</b> han pagat · ${euros(total)}${feeAmount() ? ` de ${euros(feeAmount() * active.length)}` : ''}`);
       const noImg = active.filter(m => docState(m.id, 'imatge').v === 'no');
-      lines.push(noImg.length ? `No poden sortir a fotos: <b>${esc(noImg.map(m => fullName(m.name)).join(', '))}</b> <button class="linkish" data-act="docs-copy-noimg">Copia la llista</button>` : 'Ningú no ha dit que no pugui sortir a fotos ni vídeos.');
+      if (docItems().some(([k]) => k === 'imatge')) lines.push(noImg.length ? `No poden sortir a fotos: <b>${esc(noImg.map(m => fullName(m.name)).join(', '))}</b> <button class="linkish" data-act="docs-copy-noimg">Copia la llista</button>` : 'Ningú no ha dit que no pugui sortir a fotos ni vídeos.');
     }
   }
   return `<div class="panel pm-sum">${lines.map(l => `<p>${l}</p>`).join('')}
@@ -202,16 +205,16 @@ function memberCard(m) {
   const hist = (m.history || []).slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
   const docs = canDocs() && S.memberDocs;
   const fee = docs && feesOn() ? feeOf(m) : null;
-  const w = canDocsWrite();
+  const w = canDocsWrite(), dOn = docsOn();
   const acts = [
     canEdit() ? `<button class="btn btn-sm" data-act="member-edit" data-mid="${m.id}">Edita la fitxa</button>` : '',
-    w ? `<button class="btn btn-sm" data-act="member-docs" data-mid="${m.id}">Documents</button>${feesOn() ? `<button class="btn btn-sm" data-act="fee-edit" data-mid="${m.id}">Quota</button>` : ''}` : '',
+    w ? `${dOn ? `<button class="btn btn-sm" data-act="member-docs" data-mid="${m.id}">Documents</button>` : ''}${feesOn() ? `<button class="btn btn-sm" data-act="fee-edit" data-mid="${m.id}">Quota</button>` : ''}` : '',
     w && fee && !fee.paid && !off ? `<button class="btn btn-sm btn-soft" data-act="fee-paid" data-mid="${m.id}">Marca la quota pagada</button>` : '',
     !off ? `<button class="btn btn-sm" data-act="member-stats" data-mid="${m.id}">Assistència</button>` : '',
     !off && canWriteTo() && writableMembers().some(x => x.id === m.id) ? `<button class="btn btn-sm" data-act="thread-to" data-mid="${m.id}">Escriu-li</button>` : '',
   ].filter(Boolean).join('');
   return `<dl class="fitxa">${rows.map(([l, v]) => `<div><dt>${l}</dt><dd>${v}</dd></div>`).join('')}</dl>
-    ${docs ? `<div class="pm-box"><b>${fee ? 'Documents i quota' : 'Documents'}</b><div class="pm-docs">${DOC_ITEMS.map(([k, l]) => `<span class="dp-i"><small>${esc(l)}</small>${docPill(docState(m.id, k))}</span>`).join('')}
+    ${docs && (dOn || fee) ? `<div class="pm-box"><b>${fee && dOn ? 'Documents i quota' : fee ? 'Quota' : 'Documents'}</b><div class="pm-docs">${docItems().map(([k, l]) => `<span class="dp-i"><small>${esc(l)}</small>${docPill(docState(m.id, k))}</span>`).join('')}
       ${fee ? `<span class="dp-i"><small>Quota ${esc(feeKey())}</small><span class="dp ${fee.paid ? 'ok' : ''}">${fee.paid ? 'Pagada' : 'Pendent'}</span></span>` : ''}</div>
       ${!fee ? '' : fee.paid && (fee.date || fee.method) ? `<p class="pm-note">Quota pagada${fee.date ? ` el ${esc(ddmm(fee.date))}` : ''}${fee.amount ? ` · ${euros(fee.amount)}` : ''}${fee.method ? ` · ${esc(fee.method)}` : ''}</p>` : fee.note ? `<p class="pm-note">${esc(fee.note)}</p>` : ''}</div>` : ''}
     ${hist.length ? `<div class="pm-box"><b>Altes i baixes</b><ul class="pm-hist">${hist.map(h => `<li><span class="hist-k ${h.kind}">${HIST_WORD[h.kind] || esc(h.kind)}</span> ${esc(ddmm(h.date))}/${h.date.slice(2, 4)}${h.note ? ` · ${esc(h.note)}` : ''}</li>`).join('')}</ul></div>` : ''}
@@ -225,7 +228,7 @@ function pmRow(m, f) {
   const short = { imatge: 'Imatge', dades: 'Dades', autoritzacio: 'Autorització' };
   const tags = [
     isAdmin() && !off && (f === 'all' || f === 'access') ? (!acc ? '<span class="acc-tag">Sense accés</span>' : !acc.lastSeen ? '<span class="acc-tag">No ha entrat</span>' : '') : '',
-    docs && f === 'docs' ? DOC_ITEMS.filter(([k]) => !docState(m.id, k).v).map(([k]) => `<span class="dp">${short[k]}</span>`).join('') : '',
+    docs && f === 'docs' ? docItems().filter(([k]) => !docState(m.id, k).v).map(([k]) => `<span class="dp">${short[k]}</span>`).join('') : '',
     docs && f === 'fees' && feesOn() ? `<span class="dp">${feeAmount() ? euros(feeAmount()) : 'Pendent'}</span>` : '',
   ].filter(Boolean).join('');
   const sub = off ? 'Inactiu' : f === 'moves' ? seasonMoves(m).map(h => `${HIST_WORD[h.kind] || esc(h.kind)} ${esc(ddmm(h.date))}${h.note ? ` · ${esc(h.note)}` : ''}`).join(' · ') : leaveText(m) || esc(phoneOf(m));
@@ -262,13 +265,13 @@ async function exportRoster() {
   await Promise.all([loadProfiles(), canDocs() ? loadMemberDocs() : null]);
   const key = feeKey(), docs = canDocs(), fees = docs && feesOn();
   const head = ['Nom i cognoms', capz(V.section), capz(V.part), capz(V.leader), 'Estat', 'Data d’alta', 'Antiguitat', 'Correu', 'Telèfon', 'Talla', 'Contacte d’emergència',
-    ...(docs ? ['Drets d’imatge', 'Protecció de dades', 'Autoritzacions'] : []), ...(fees ? [`Quota ${key}`] : [])];
+    ...(docs ? docItems().map(([, l]) => l) : []), ...(fees ? [`Quota ${key}`] : [])];
   const word = v => v === 'yes' ? 'Sí' : v === 'no' ? 'No' : 'Pendent';
   const rows = membersOf(null, true).sort((a, b) => secIdx(a.section) - secIdx(b.section) || byName(a, b)).map(m => {
     const p = profileOf(m.id), f = docsOf(m.id).fees?.[key];
     return [fullName(m.name), SEC[m.section].name, m.part || '', m.leader ? 'Sí' : '', m.active === false ? 'Inactiu' : leaveText(m) || 'Actiu', m.joined || '', seniority(m), accountFor(m.id)?.email || '', phoneOf(m), p.size || '',
       [p.emergencyName, p.emergencyPhone].filter(Boolean).join(' · '),
-      ...(docs ? DOC_ITEMS.map(([k]) => word(docState(m.id, k).v)) : []), ...(fees ? [f?.paid ? `Pagada${f.date ? ` ${f.date}` : ''}${f.amount ? ` (${f.amount} €)` : ''}` : 'Pendent'] : [])];
+      ...(docs ? docItems().map(([k]) => word(docState(m.id, k).v)) : []), ...(fees ? [f?.paid ? `Pagada${f.date ? ` ${f.date}` : ''}${f.amount ? ` (${f.amount} €)` : ''}` : 'Pendent'] : [])];
   });
   offerCSV(`plantilla-${S.config.shortName || S.config.name || ''}-${TODAY}`, [head, ...rows]);
 }

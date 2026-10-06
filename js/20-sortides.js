@@ -261,7 +261,7 @@ async function sheetMyProfile() {
         if (!box || !d.exists) return;
         const x = d.data(), f = (x.fees || {})[feeKey()];
         box.innerHTML = `<dl class="fitxa">${feesOn() ? `<div><dt>Quota ${esc(feeKey())}</dt><dd>${f?.paid ? `Pagada${f.date ? ` el ${esc(ddmm(f.date))}` : ''}` : 'Pendent'}</dd></div>` : ''}
-          ${DOC_ITEMS.filter(([k]) => x.docs?.[k]?.v).map(([k, l]) => `<div><dt>${esc(l)}</dt><dd>${x.docs[k].v === 'yes' ? 'Sí' : 'No'}${x.docs[k].file ? ' · document signat' : ''}</dd></div>`).join('')}</dl>`;
+          ${docItems().filter(([k]) => x.docs?.[k]?.v).map(([k, l]) => `<div><dt>${esc(l)}</dt><dd>${x.docs[k].v === 'yes' ? 'Sí' : 'No'}${x.docs[k].file ? ' · document signat' : ''}</dd></div>`).join('')}</dl>`;
       }).catch(() => {});
       el.querySelector('#pf-save').onclick = async () => {
         const rec = { memberId: mid, phone: el.querySelector('#pf-phone').value.trim(), size: el.querySelector('#pf-size .pick[aria-pressed="true"]')?.dataset.k || '',

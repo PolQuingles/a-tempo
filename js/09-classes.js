@@ -174,7 +174,7 @@ function classQuads() {
   }).join('');
   const anyPend = teach && list.some(t => classPending(t.key).length);
   return `<div class="quads ${list.length === 4 ? '' : `n-other${list.length > 6 ? ' n-many' : ''}`}" data-n="${list.length}">${quads}</div>
-    ${anyPend ? '<div class="q-legend"><span><i style="background:var(--fnj)"></i>Té avisos per veure</span></div>' : ''}`;
+    ${anyPend ? '<div class="q-legend"><span><i style="background:var(--fnj)"></i>Té canvis per veure</span></div>' : ''}`;
 }
 /** L'espai d'un professor/a: el mes, el dia triat hora per hora i els dies que vénen. */
 function classTeacherSpace(who) {
@@ -280,8 +280,8 @@ function viewClasses() {
   const avisos = `${open.length ? `<div class="section-title"><h2 class="h2">Canvis d’hora oberts</h2><span class="eyebrow">qui vulgui</span></div>
       <div class="panel" style="display:grid;gap:10px;padding:12px">${open.map(openCard).join('')}</div>` : ''}
     ${answer.length ? `<div class="section-title"><h2 class="h2">Et demanen un canvi</h2><span class="eyebrow">respon</span></div><div class="panel" style="display:grid;gap:10px;padding:12px">${answer.map(swapCard).join('')}</div>` : ''}
-    ${pending.length ? `<div class="section-title"><h2 class="h2">Avisos per veure</h2><span class="eyebrow">${pending.length}</span></div><div class="panel" style="display:grid;gap:10px;padding:12px">${pending.map(pendCard).join('')}</div>` : ''}
-    ${mineReq.length ? `<div class="section-title"><h2 class="h2">Els teus avisos</h2></div><ul class="mini-list" style="max-height:none">${mineReq.map(mineCard).join('')}</ul>` : ''}`;
+    ${pending.length ? `<div class="section-title"><h2 class="h2">Absències i canvis per veure</h2><span class="eyebrow">${pending.length}</span></div><div class="panel" style="display:grid;gap:10px;padding:12px">${pending.map(pendCard).join('')}</div>` : ''}
+    ${mineReq.length ? `<div class="section-title"><h2 class="h2">Les teves absències i canvis</h2></div><ul class="mini-list" style="max-height:none">${mineReq.map(mineCard).join('')}</ul>` : ''}`;
   const who = ui.clWho && classTeachers().some(t => t.key === ui.clWho) ? ui.clWho : null;
   if (!who && ui.clWho) ui.clWho = null;
   if (who) return `<div class="page-head" style="margin-bottom:0"><h1 class="h1">${esc(V.classes)}</h1></div>${avisos}${classTeacherSpace(who)}`;
