@@ -54,6 +54,13 @@ function boardBadge() {
   const polls = myId() && !canEdit() ? openPolls().filter(p => !S.pollVotes.get(`${p.id}_${myId()}`)).length : 0;
   return news + polls;
 }
+/** On s'obre el Tauler en tocar-ne la pestanya: als anuncis si n'hi ha de nous; si no, on es va quedar, però mai a uns
+ *  anuncis buits (llavors, al repertori). */
+function boardStart() {
+  if (unreadAnnouncements().length) return 'anuncis';
+  if ((ui.board || 'anuncis') === 'anuncis' && !visibleAnnouncements().length) return 'materials';
+  return ui.board || 'anuncis';
+}
 // Al mòbil, cinc pestanyes amb lletra petita no s'hi llegien bé: ara porten una icona a sobre del nom.
 const BOARD_ICONS = { anuncis: 'ann', materials: 'plan', documents: 'score', enquestes: 'poll', sortides: 'trip' };
 function viewBoard() {

@@ -49,13 +49,20 @@ function scorePill(pid, w) {
   if (seesArchive()) {
     const x = scoreSummary(pid, w.id, archiveSec() && !canEdit() ? archiveSec() : '');
     if (!x.state) return '';
-    const count = x.state === 'todo' ? ` · ${x.given}/${x.n}` : x.state === 'given' && x.returned ? ` · ${x.returned}/${x.n} retornades` : '';
-    return `<span class="sc-pill ${SCORE_CLS[x.state === 'todo' ? '' : x.state]}">${scoreLabel(x.state)}${count}</span>`;
+    return sumPill(x, true);
   }
   const me = S.members.get(myMemberId());
   if (!me || isExcluded(pid, me.id)) return '';
   const s = scoreOf(pid, w.id, me);
   return `<span class="sc-pill ${SCORE_CLS[s]}" title="La teva partitura">${scoreLabel(s)}</span>`;
+}
+/** La pastilla del recompte d'una obra. A mig repartir diu «Repartint» (i a mig recollir, «Recollint»), amb el tros fet pintat.
+ *  Amb count, també el nombre: «Repartint · 51/67». */
+function sumPill(x, count) {
+  const part = x.state === 'todo' && x.given ? ['Repartint', x.given] : x.state === 'given' && x.returned ? ['Recollint', x.returned] : null;
+  const label = part ? part[0] : scoreLabel(x.state);
+  const num = count && x.n && (part || x.state === 'todo') ? ` · ${part ? part[1] : 0}/${x.n}` : '';
+  return `<span class="sc-pill ${SCORE_CLS[x.state === 'todo' ? '' : x.state]}${part ? ' sc-part' : ''}"${part ? ` style="--sp:${Math.round(part[1] / x.n * 100)}%"` : ''}>${label}${num}</span>`;
 }
 const scoreLabel = s => ({ todo: 'A repartir', '': 'A repartir', given: 'Repartida', returned: 'Retornada' }[s] || '');
 /** Sota de les obres: el resum de l'arxiu i el botó per obrir-lo (equip i arxivers). */
@@ -100,7 +107,7 @@ function sheetScoreWork(pid, wid, sec0) {
   const paint = el => {
     const ms = scorePeople(pid, sec), can = canScores(sec), x = scoreSummary(pid, wid, sec);
     el.querySelectorAll('#sw-sec .chip').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.sec === sec)));
-    el.querySelector('#sw-sum').innerHTML = `<span class="sc-pill ${SCORE_CLS[x.state === 'todo' ? '' : x.state]}">${scoreLabel(x.state)}</span>
+    el.querySelector('#sw-sum').innerHTML = `${sumPill(x, false)}
       <span class="muted">${x.given} de ${x.n} repartides · ${x.returned} ${x.returned === 1 ? 'retornada' : 'retornades'}</span>`;
     el.querySelector('#sw-bulk').hidden = !can || !ms.length;
     el.querySelector('#sw-list').innerHTML = ms.length ? ms.map(m => {
@@ -170,7 +177,7 @@ function sheetArchive(pid) {
       <span class="ax-bar" role="img" aria-label="${pctOf(returned)}% retornades, ${pctOf(given - returned)}% repartides, ${pctOf(total - given)}% per repartir"><i class="returned" style="width:${pctOf(returned)}%"></i><i class="given" style="width:${pctOf(given - returned)}%"></i></span>
       <div class="section-title"><h2 class="h2">Obra per obra</h2></div>
       <ul class="ax-works">${works.map(w => { const x = scoreSummary(pid, w.id, sec); return `<li><button data-act="score-work" data-pid="${esc(pid)}" data-id="${esc(w.id)}" data-sec="${esc(sec || archiveSec() || '')}">
-        <span class="ax-w"><b>${esc(w.title)}</b><small>${x.given} de ${x.n} repartides · ${x.returned} ${x.returned === 1 ? 'retornada' : 'retornades'}</small></span><span class="sc-pill ${SCORE_CLS[x.state === 'todo' ? '' : x.state]}">${scoreLabel(x.state)}</span></button></li>`; }).join('')}</ul>
+        <span class="ax-w"><b>${esc(w.title)}</b><small>${x.given} de ${x.n} repartides · ${x.returned} ${x.returned === 1 ? 'retornada' : 'retornades'}</small></span>${sumPill(x, false)}</button></li>`; }).join('')}</ul>
       ${toGive.length ? `<div class="section-title"><h2 class="h2">Falten per repartir</h2><button class="btn btn-sm btn-ghost" id="ax-cp-give">Copia la llista</button></div><ul class="mini-list" style="max-height:none">${who(toGive)}</ul>` : ''}
       ${toReturn.length ? `<div class="section-title"><h2 class="h2">${ended ? 'Falten per retornar' : 'Les tenen ara'}</h2><button class="btn btn-sm btn-ghost" id="ax-cp-ret">Copia la llista</button></div><ul class="mini-list" style="max-height:none">${who(toReturn)}</ul>` : ''}
       <div class="section-title"><h2 class="h2">Qui té què</h2><span class="ax-legend"><i class="pend"></i>A repartir <i class="given"></i>Repartida <i class="returned"></i>Retornada</span></div>

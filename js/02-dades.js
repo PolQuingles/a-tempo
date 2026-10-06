@@ -377,6 +377,8 @@ function progress(session, sec) {
   return { done, total: ms.length };
 }
 const nowHHMM = () => { const d = new Date(); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+/** La sessió ja ha començat (un dia passat, o avui a partir de l'hora d'inici). */
+const hasBegun = s => s.date < TODAY || (s.date === TODAY && (s.time || '00:00') <= nowHHMM());
 function defaultSession(list) {
   if (!list.length) return null;
   const todays = list.filter(s => s.date === TODAY);

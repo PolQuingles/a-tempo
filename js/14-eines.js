@@ -300,6 +300,8 @@ function sheetCalendar() {
       <div class="linkbox">${esc(https)}</div>
       <h3>Només un cop</h3>` : `<p style="margin-top:0">Aquesta agrupació no té el calendari subscrit activat${isAdmin() ? ': el pots activar a Gestió › Ajustos' : ''}.</p>`}
       <p>${on ? 'També' : 'Mentrestant'} pots descarregar el calendari ${me ? 'amb les sessions on estàs convocat/da' : 'actual'} i importar-lo (no s’actualitzarà sol).</p>
+      ${classesOn() && myId() && inClasses() ? `<h3>Les teves classes de cant</h3><p>Van en un calendari a part, només amb les teves hores.</p>
+      <p><button class="btn btn-sm" data-act="acct-open" data-k="classIcs">Afegeix les teves classes</button></p>` : ''}
     </div>`,
     foot: `${on ? '<button class="btn" id="ics-copy">Copia l’adreça</button>' : ''}<button class="btn btn-primary" id="ics-dl">Descarrega .ics</button>`,
     onMount: el => {

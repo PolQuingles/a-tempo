@@ -35,11 +35,12 @@ function personRow(p) {
 /** L'accés a l'app, a dalt de Personal: qui en té, qui ha entrat i les eines per donar-ne (administració). */
 function accessPanel() {
   if (!isAdmin()) return '';
-  const members = membersOf(null, true);
-  const withAccount = members.filter(m => accountFor(m.id)).length;
-  const r = accessReport();
+  // Només la plantilla en actiu, i dels seus comptes, qui ja hi ha entrat (l'equip sense fitxa es mira a «Qui ha entrat»).
+  const members = membersOf(null);
+  const accs = members.map(m => accountFor(m.id)).filter(Boolean);
+  const entered = accs.filter(p => p.lastSeen).length, never = accs.length - entered;
   return `<div class="panel access-panel">
-    <div class="setting"><div><div class="t">${withAccount} de ${members.length} ${esc(V.members)} tenen accés · ${r.inApp.length} han entrat${r.never.length ? `, ${r.never.length} encara no` : ''} ${helpBtn('acces')}</div>
+    <div class="setting"><div><div class="t">${accs.length} de ${members.length} ${esc(V.members)} tenen accés${accs.length ? ` · ${entered} hi han entrat${never ? `, ${never} encara no` : ''}` : ''} ${helpBtn('acces')}</div>
       ${helpText('acces', `Afegeix cada persona un sol cop: el nom, el correu per entrar a l’app i què fa (si canta, també la ${esc(V.section)}). Si algú marxa, treu-li l’accés: el perd a l’instant, però no se n’esborra la fitxa ni les llistes.`)}</div></div>
     <div class="access-acts"><button class="btn btn-sm btn-primary" data-act="staff-new" ${ROLE_KEYS.includes(ui.people) ? `data-role="${esc(ui.people)}"` : ''}>+ Persona</button>
       ${mailProblems().length ? `<button class="btn btn-sm btn-soft" data-act="mail-check">Comprova els correus (${mailProblems().length})</button>` : ''}<button class="btn btn-sm" data-act="people-tools">Més…</button></div>
@@ -487,7 +488,6 @@ const ACCT_SHEETS = {
 };
 function sheetAccount() {
   const name = accountName();
-  const clOn = classesOn() && myId() && inClasses();
   const pend = canEdit() ? pendingAbsences().length : 0;
   const item = (k, t, act, n = 0) => `<button class="acct-item${k === 'gestio' ? ' is-main' : ''}" ${act}>
       <span class="acct-i"><svg viewBox="0 0 24 24" aria-hidden="true">${ACCT_ICONS[k]}</svg></span>
@@ -496,7 +496,7 @@ function sheetAccount() {
   const groups = [
     canEdit() ? [item('gestio', 'Gestió', `data-act="manage" data-k="${pend ? 'avisos' : ROUTE_MANAGE[ui.manage] ? ui.manage : 'personal'}"`, pend)] : [],
     [(myId() || S.threads.size) && item('threads', 'Converses', 'data-act="acct-open" data-k="threads"', unreadThreads().length), open('week', 'La setmana'),
-      myId() && !PREVIEW && open('profile', 'La meva fitxa'), open('calendar', icsOn() ? 'Calendari al mòbil' : 'Exporta el calendari'), clOn && open('classIcs', 'Les teves classes al calendari'), pushSupported() && open('push', 'Avisos al mòbil')],
+      myId() && !PREVIEW && open('profile', 'La meva fitxa'), open('calendar', icsOn() ? 'Calendari al mòbil' : 'Exporta el calendari'), pushSupported() && open('push', 'Avisos al mòbil')],
     [groupsVisible() && open('groups', 'Agrupacions'), open('theme', 'Aparença'), canInstall() && open('install', 'Instal·la l’app'), open('help', 'Com funciona')],
   ].map(g => g.filter(Boolean)).filter(g => g.length);
   openSheet({

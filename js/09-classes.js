@@ -160,7 +160,7 @@ function classQuads() {
     const today = days.find(c => c.date === TODAY && classLive(c));
     const mineDay = mid ? next.find(c => classSlots(c).some(x => x.memberId === mid)) : null;
     const pend = teach ? classPending(t.key).length : 0;
-    const sub = mineDay ? `La teva hora: ${shortDate(mineDay.date)} · ${classSlots(mineDay).find(x => x.memberId === mid).time}`
+    const sub = mineDay ? `La teva hora: ${dayLabel(mineDay.date).toLowerCase() || shortDate(mineDay.date)} · ${classSlots(mineDay).find(x => x.memberId === mid).time}`
       : today ? 'Avui hi ha classe' : classWeekdays(next.slice(0, 10));
     const count = students.size ? `${students.size} ${students.size === 1 ? V.member : V.members}`
       : planRows(t.key).length ? `${planRows(t.key).length} hores fixes` : 'Sense classes';
@@ -172,10 +172,9 @@ function classQuads() {
       ${sub ? `<span class="q-sub">${esc(sub)}</span>` : ''}
     </button>`;
   }).join('');
-  const anyToday = list.some(t => classDays(t.key).some(c => c.date === TODAY && classLive(c)));
   const anyPend = teach && list.some(t => classPending(t.key).length);
   return `<div class="quads ${list.length === 4 ? '' : `n-other${list.length > 6 ? ' n-many' : ''}`}" data-n="${list.length}">${quads}</div>
-    ${anyToday || anyPend ? `<div class="q-legend">${anyToday ? '<span><i style="background:var(--p)"></i>Avui hi ha classe</span>' : ''}${anyPend ? '<span><i style="background:var(--fnj)"></i>Té avisos per veure</span>' : ''}</div>` : ''}`;
+    ${anyPend ? '<div class="q-legend"><span><i style="background:var(--fnj)"></i>Té avisos per veure</span></div>' : ''}`;
 }
 /** L'espai d'un professor/a: el mes, el dia triat hora per hora i els dies que vénen. */
 function classTeacherSpace(who) {

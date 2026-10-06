@@ -138,8 +138,8 @@ function calRow(s, underProd, tone) {
     marks = `<span class="vm-sum ${!any ? '' : full === on.length ? 'full' : 'part'}" title="Llistes completes">${full}/${on.length}</span>`;
   }
   const c = emptyCounts();
-  // El percentatge, només quan la sessió ja s'ha fet: abans, els avisos d'absència ja marcats el farien semblar buit.
-  if (!attHidden() && s.date <= TODAY) for (const x of SECTIONS) if (convoked(s, x.id) && hasData(s, x.id)) for (const m of membersOf(x.id)) { const mk = effMark(s, m); if (mk) countMark(c, s, mk); }
+  // El percentatge, només quan la sessió ja ha començat: abans, els avisos d'absència ja marcats el farien semblar buit.
+  if (!attHidden() && hasBegun(s)) for (const x of SECTIONS) if (convoked(s, x.id) && hasData(s, x.id)) for (const m of membersOf(x.id)) { const mk = effMark(s, m); if (mk) countMark(c, s, mk); }
   const r = rate(c);
   const rv = s.rsvp && canEdit() ? rsvpCounts(s) : null;
   const right = `<span class="cal-right">${marks ? `<span class="vmarks" aria-label="Llista per ${V.sections}">${marks}</span>` : ''}${r != null ? `<span class="cal-pct">${pct(r)}</span>` : rv ? `<span class="cal-badge" title="Confirmacions">${rv.yes}✓ ${rv.no}✗ ${rv.none}?</span>` : ''}</span>`;
