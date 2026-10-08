@@ -163,6 +163,7 @@ const S = {
   uid: null,
   config: { name: '', alertFNJ: 3, minAttendance: 80, demo: false },
   members: new Map(),
+  memberPriv: new Map(), // amb les llistes privades: el que la resta no ha de veure de cada fitxa (vegeu MEMBER_PRIV)
   productions: new Map(),
   attendance: new Map(),
   absences: new Map(),

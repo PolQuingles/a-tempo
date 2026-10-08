@@ -90,6 +90,14 @@ service cloud.firestore {
     // Camps de config/main que fan d'identitat de l'agrupació.
     function identityKeys() { return ['name', 'shortName', 'kind', 'sections', 'brand', 'labels', 'deleted', 'deletedAt']; }
     function mine(c, mid) { return mid == myMember(c) && mid != '-'; }
+    // El vestidor: qui el porta per a tothom, i el que pot escriure la persona quan demana la seva peça.
+    function wardStaff(c) { return staffHas(c, ['admin', 'secretaria', 'gerencia']); }
+    function wardOwn(d) {
+      return d.keys().hasOnly(['id', 'memberId', 'memberName', 'section', 'item', 'size', 'status', 'note', 'history', 'createdAt', 'updatedAt', 'by'])
+        && shortText(d, 'item', 40) && shortText(d, 'size', 12) && shortText(d, 'note', 300) && shortText(d, 'memberName', 120)
+        && shortText(d, 'section', 12) && shortText(d, 'by', 120) && shortText(d, 'createdAt', 40) && shortText(d, 'updatedAt', 40)
+        && (!('history' in d) || (d.history is list && d.history.size() <= 30));
+    }
     // Llistes d'assistència privades (Ajustos): qui no les passa només veu la seva còpia, a attMine/<membre>.
     function attPrivate(c) { return get(/databases/$(database)/documents/cors/$(c)/config/main).data.get('attPrivate', false) == true; }
     // Una conversa privada: la persona de la plantilla i qui té el rol (els caps de corda, només de la seva corda) o el correu a qui ha escrit.
@@ -111,7 +119,7 @@ service cloud.firestore {
     // tools/stamp.py hi escriu l'empremta d'aquest fitxer. La vigilància comprova que les regles publicades són les del
     // repositori demanant reglesVersio/<empremta>: si les publicades són unes altres, la lectura es denega.
     match /reglesVersio/{v} {
-      allow get: if v == 'dcfe581574e5';
+      allow get: if v == '5d5c939ca4f6';
     }
 
     match /plataforma/equip {
@@ -401,6 +409,25 @@ service cloud.firestore {
       match /memberDocs/{mid} {
         allow read: if staffHas(c, ['admin', 'secretaria', 'gerencia', 'director']) || (hasSpace(c) && mine(c, mid)) || hasRole(c, ['backup']) || isService();
         allow create, update, delete: if staffHas(c, ['admin', 'secretaria', 'gerencia']);
+      }
+      // Vestidor: una peça de vestuari per document (vegeu 20b-vestidor). La persona demana la seva («demanat») i, mentre
+      // ningú no l'ha encarregada, en pot canviar la talla o anul·lar-la; la resta la porten la secretaria, la gerència i
+      // l'administració. Cadascú només veu les seves peces.
+      match /wardrobe/{id} {
+        allow read: if wardStaff(c) || (hasSpace(c) && mine(c, resource.data.memberId)) || hasRole(c, ['backup']) || isService();
+        allow create: if wardStaff(c) || (hasSpace(c) && mine(c, request.resource.data.memberId)
+          && request.resource.data.status == 'demanat' && wardOwn(request.resource.data));
+        allow update: if wardStaff(c) || (hasSpace(c) && mine(c, resource.data.memberId) && resource.data.status == 'demanat'
+          && request.resource.data.status == 'demanat' && request.resource.data.memberId == resource.data.memberId
+          && request.resource.data.item == resource.data.item && wardOwn(request.resource.data));
+        allow delete: if wardStaff(c) || (hasSpace(c) && mine(c, resource.data.memberId) && resource.data.status == 'demanat');
+      }
+      // Amb les llistes privades, el que la resta de la plantilla no ha de veure de cada fitxa (telèfon, notes, baixes i
+      // altes amb els motius, targeta per passar llista) va aquí. La llegeixen l'equip i la persona; si les llistes no són
+      // privades, tothom (com la fitxa mateixa).
+      match /memberPriv/{mid} {
+        allow read: if canEdit(c) || (hasSpace(c) && mine(c, mid)) || (isStaff(c) && !attPrivate(c)) || hasRole(c, ['backup']) || isService();
+        allow create, update, delete: if canEdit(c);
       }
       match /memberFiles/{id} {
         allow read: if staffHas(c, ['admin', 'secretaria', 'gerencia', 'director']) || (hasSpace(c) && mine(c, resource.data.memberId)) || hasRole(c, ['backup']) || isService();

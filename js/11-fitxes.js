@@ -453,6 +453,7 @@ function sheetMember(mid, sec) {
         const ok = await confirmSheet(`Esborrar la fitxa?`, `S’esborrarà <b>${esc(existing.name)}</b> i deixarà de sortir a les estadístiques. Si només és una baixa, desactiva’l.`, 'Esborra');
         if (!ok) return;
         S.members.delete(existing.id); persist('members', existing.id, null, 20);
+        if (S.memberPriv.has(existing.id)) { S.memberPriv.delete(existing.id); persist('memberPriv', existing.id, null, 20); }
         bumpEpoch('members');
         toast('Fitxa esborrada');
         render();

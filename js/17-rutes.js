@@ -25,8 +25,10 @@ function routeFromUi() {
     case 'llista':
       if (ui.att === 'stats') return 'assistencia/estadistiques';
       if (ui.att === 'risk') return 'assistencia/risc';
+      if (ui.door) return 'assistencia/porta';
       return ui.rollSec ? `assistencia/${encodeURIComponent(ui.rollSec)}` : 'assistencia';
     case 'calendari': return 'calendari';
+    case 'vestidor': return 'vestidor';
     case 'tauler': return `tauler/${ROUTE_BOARD[ui.board] || 'anuncis'}`;
     case 'classes': return ui.clWho ? `classes/${encodeURIComponent(teacherSlug(ui.clWho))}` : 'classes';
     default: return 'inici';
@@ -47,10 +49,12 @@ function applyRoute(route) {
     ui.tab = 'llista';
     if (sub === 'estadistiques') { ui.att = 'stats'; ui.rollSec = null; }
     else if (sub === 'risc') { ui.att = 'risk'; ui.rollSec = null; }
-    else { ui.att = 'llista'; ui.rollSec = sub && SEC_MAP[sub] ? (ui.section = sub) : null; }
+    else if (sub === 'porta') { ui.att = 'llista'; ui.rollSec = null; ui.door = canEdit(); }
+    else { ui.att = 'llista'; ui.door = false; ui.rollSec = sub && SEC_MAP[sub] ? (ui.section = sub) : null; }
     return true;
   }
   if (a === 'calendari') { ui.tab = 'calendari'; return true; }
+  if (a === 'vestidor') { if (!wardOn()) return false; ui.tab = 'vestidor'; return true; }
   if (a === 'tauler') { ui.tab = 'tauler'; ui.board = sub === 'materials' ? 'materials' : Object.keys(ROUTE_BOARD).find(k => ROUTE_BOARD[k] === sub) || 'anuncis'; return true; }
   if (a === 'classes') {
     ui.tab = 'classes';

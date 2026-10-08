@@ -71,13 +71,16 @@ async function rebuildMirrors(say) {
 async function setAttPrivate(on) {
   if (!on) {
     if (!await confirmSheet('Llistes obertes a tothom?', `Tots els ${esc(V.members)} podran tornar a veure les llistes d’assistència i les estadístiques de tothom.`, 'Obre-les', false)) { render(); return; }
+    try { await moveMemberPriv(false); } catch { toast('No s’ha pogut fer. Comprova la connexió i torna-ho a provar.'); render(); return; }
     saveConfig({ attPrivate: false }); toast('Les llistes tornen a ser visibles per a tothom'); render(); return;
   }
-  if (!await confirmSheet('Llistes privades?', `Cada ${esc(V.member)} només veurà la seva assistència. Les llistes, les estadístiques i el risc de tothom només els veurà l’equip (administració, direcció, gerència, secretaria i ${esc(V.leaders)}).`, 'Fes-les privades', false)) { render(); return; }
+  if (!await confirmSheet('Llistes privades?', `Cada ${esc(V.member)} només veurà la seva assistència. Les llistes, les estadístiques i el risc de tothom, i el telèfon, les notes i els motius de les baixes de cada fitxa, només els veurà l’equip (administració, direcció, gerència, secretaria i ${esc(V.leaders)}).`, 'Fes-les privades', false)) { render(); return; }
   if (PREVIEW) { previewBlocked(); return; }
   try {
     toast('Preparant l’assistència de cadascú…');
     const n = await rebuildMirrors();
+    // I el que la resta no ha de veure de cada fitxa (telèfon, notes, motius de les baixes), a part: vegeu MEMBER_PRIV.
+    await moveMemberPriv(true);
     saveConfig({ attPrivate: true });
     toast(`Llistes privades: cadascú veu només la seva (${n} ${V.members})`);
   } catch { toast('No s’ha pogut fer. Comprova la connexió i torna-ho a provar.'); }

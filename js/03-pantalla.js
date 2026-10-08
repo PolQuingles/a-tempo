@@ -11,6 +11,8 @@ function scheduleRender() {
   requestAnimationFrame(() => {
     renderQueued = false;
     const a = document.activeElement;
+    // A la porta, el cercador gairebé sempre té el focus: es repinta igualment i s'hi torna a posar, amb el que hi hagi escrit.
+    if (a && a.id === 'door-q') { const v = /** @type {HTMLInputElement} */ (a).value; render(); const q = /** @type {HTMLInputElement} */ ($('#door-q')); if (q) { q.value = v; q.focus({ preventScroll: true }); if (v) filterList(q); } return; }
     if (a && $('#view').contains(a) && a.matches('input, textarea, select')) { deferred = true; return; }
     render();
   });
@@ -26,6 +28,8 @@ const TAB_ICONS = {
   tauler: '<rect x="3.5" y="4" width="17" height="16" rx="2.5"/><path d="M7.5 9h9M7.5 13h9M7.5 17h5"/>',
   classes: '<path d="M12 6.6c-2-1.5-4-2-6.5-2v12c2.5 0 4.5.5 6.5 2 2-1.5 4-2 6.5-2v-12c-2.5 0-4.5.5-6.5 2Z"/><path d="M12 6.6v12"/>',
 };
+// El penja-robes del vestidor (al menú del compte, a «Per fer» i al menú lateral de l'ordinador).
+const WARD_ICON = '<path d="M12 8.4V7.2a2 2 0 1 0-2-2"/><path d="M12 8.4 3.7 14.7a1.6 1.6 0 0 0 1 2.9h14.6a1.6 1.6 0 0 0 1-2.9z"/>';
 const TAB_LABEL = { llista: 'Assistència', calendari: 'Calendari', stats: 'Estadístiques', gestio: 'Gestió', avisos: 'Inici', tauler: 'Tauler', classes: 'Classes de cant' };
 // Amb sis pestanyes (qui edita i també és a la plantilla) els noms llargs no hi caben.
 const TAB_SHORT = { stats: 'Estad.', classes: 'Classes', calendari: 'Calend.', llista: 'Assistència' };
@@ -37,12 +41,13 @@ const tabsForRole = () => {
   return ['avisos', ...(attHidden() && !mySubs().length ? [] : ['llista']), 'calendari', 'tauler', ...cl];
 };
 /** La pestanya de baix que s'il·lumina. Gestió no és cap pestanya: s'obre des del menú del compte. */
-const navTab = () => ui.tab === 'gestio' ? '' : ui.tab;
+const navTab = () => ui.tab === 'gestio' || ui.tab === 'vestidor' ? '' : ui.tab;
 function renderTabs() {
   const tabs = tabsForRole();
   if (ui.tab === 'stats' || (ui.tab === 'tauler' && ui.board === 'estadistiques')) { ui.tab = 'llista'; ui.att = 'stats'; ui.board = 'anuncis'; }   // on eren abans
   if (ui.tab === 'gestio' && !canEdit()) ui.tab = tabs[0];
-  if (ui.tab !== 'gestio' && !tabs.includes(ui.tab)) ui.tab = tabs[0];
+  if (ui.tab === 'vestidor' && !(wardOn() && (myId() || wardStaff()))) ui.tab = tabs[0];
+  if (ui.tab !== 'gestio' && ui.tab !== 'vestidor' && !tabs.includes(ui.tab)) ui.tab = tabs[0];
   // Un sol número vermell, a Inici: tot el que espera resposta.
   const badge = todoCount();
   const short = tabs.length > 5;
@@ -57,8 +62,10 @@ function renderTabs() {
   const pend = canEdit() ? pendingAbsences().length : 0;
   const gestio = canEdit() ? `<button class="tab tab-extra" data-act="manage" data-k="${pend ? 'avisos' : ROUTE_MANAGE[ui.manage] ? ui.manage : 'personal'}" aria-current="${ui.tab === 'gestio' ? 'page' : 'false'}">
     <span class="tab-ico"><svg viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>${pend ? `<span class="tab-badge">${pend}</span>` : ''}</span>Gestió</button>` : '';
+  const vest = wardOn() && (myId() || wardStaff()) ? `<button class="tab tab-extra" data-act="ward-open" aria-current="${ui.tab === 'vestidor' ? 'page' : 'false'}">
+    <span class="tab-ico"><svg viewBox="0 0 24 24">${WARD_ICON}</svg></span>Vestidor</button>` : '';
   $('.tabs-in').innerHTML = side + tabs.map(t => `<button class="tab" data-act="tab" data-tab="${t}" aria-current="${t === navTab() ? 'page' : 'false'}"${shortName(t) ? ` aria-label="${TAB_LABEL[t]}"` : ''}>
-    <span class="tab-ico"><svg viewBox="0 0 24 24">${TAB_ICONS[t]}</svg>${t === 'avisos' && badge ? `<span class="tab-badge">${badge > 99 ? '99+' : badge}</span>` : ''}</span>${shortName(t) || TAB_LABEL[t]}</button>`).join('') + gestio;
+    <span class="tab-ico"><svg viewBox="0 0 24 24">${TAB_ICONS[t]}</svg>${t === 'avisos' && badge ? `<span class="tab-badge">${badge > 99 ? '99+' : badge}</span>` : ''}</span>${shortName(t) || TAB_LABEL[t]}</button>`).join('') + gestio + vest;
 }
 /* ---------- Brand: logo and accent colour ---------- */
 function hexToHsl(hex) {
@@ -256,7 +263,7 @@ function render() {
       <div class="sk-grid"><span class="sk sk-tile"></span><span class="sk sk-tile"></span></div></div>`;
     return;
   }
-  const html = { llista: viewRoll, calendari: viewCalendar, stats: () => viewStats(false), gestio: viewManage, avisos: viewHome, tauler: viewBoard, classes: viewClasses }[ui.tab]();
+  const html = { llista: viewRoll, calendari: viewCalendar, stats: () => viewStats(false), gestio: viewManage, avisos: viewHome, tauler: viewBoard, classes: viewClasses, vestidor: viewWardrobe }[ui.tab]();
   v.innerHTML = html;
   const key = [ui.tab, ui.att, ui.board, ui.manage, ui.people, ui.pmFilter, ui.rollSec, ui.clWho, ui.sessionId].join('|');
   if (key !== lastViewKey) { lastViewKey = key; v.classList.remove('view-in'); void v.offsetWidth; v.classList.add('view-in'); }

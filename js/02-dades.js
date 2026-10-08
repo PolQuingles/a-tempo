@@ -94,10 +94,10 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 //    col·lecció sencera. Un dia de classe esborrat queda com a `deleted: true` (el professorat no toca la configuració);
 //    una llista d'una sessió esborrada no cal treure-la, perquè ja no es mostra enlloc;
 //  · la primera vegada, un cop per setmana i si el mòbil no té res desat, es baixa tot sencer.
-const DELTA = ['members', 'productions', 'attendance', 'classes', 'works', 'announcements', 'polls', 'trips', 'rsvp', 'pollVotes', 'scores'];
+const DELTA = ['members', 'memberPriv', 'productions', 'attendance', 'classes', 'works', 'announcements', 'polls', 'trips', 'rsvp', 'pollVotes', 'scores'];
 // En aquestes, esborrar un document fa que els altres mòbils les tornin a baixar senceres (vegeu bumpEpoch). Només
 // n'esborra l'equip, que pot canviar la configuració. Les llistes (attendance) no cal: una d'esborrada ja no es mostra.
-const EPOCH_ON_DELETE = ['announcements', 'polls', 'trips', 'rsvp', 'pollVotes'];
+const EPOCH_ON_DELETE = ['announcements', 'polls', 'trips', 'rsvp', 'pollVotes', 'memberPriv'];
 // Fins aquest dia tothom ho baixa tot, perquè els mòbils que encara tenen oberta l'app d'abans (sense syncAt) s'actualitzin.
 const DELTA_FROM = '2026-09-28';
 const FULL_EVERY = 7 * 864e5;
@@ -241,6 +241,10 @@ function subscribe() {
   // només les dels trimestres que encara no s'han arxivat (vegeu l'arxiu de l'assistència).
   const big = (col, query, err) => BIG.set(col, { query, err: err || (() => markLoaded(col)), done: () => { markLoaded(col); if (S.ready) scheduleRender(); } });
   big('members', () => db.collection('members'), e => { markLoaded('members'); onDbError(e); });
+  // La part privada de les fitxes (vegeu MEMBER_PRIV): l'equip la llegeix sencera i la barreja amb la plantilla.
+  const memDone = BIG.get('members').done;
+  BIG.get('members').done = () => { mergePriv(); memDone(); };
+  if (staff) BIG.set('memberPriv', { query: () => db.collection('memberPriv'), err: () => {}, done: () => { mergePriv(); if (S.ready) scheduleRender(); } });
   big('productions', () => db.collection('productions'), e => { markLoaded('productions'); onDbError(e); });
   big('classes', () => db.collection('classes').where('date', '>=', CLASS_FROM));
   big('works', () => db.collection('works'));
@@ -278,6 +282,8 @@ function subscribe() {
     if (SYNC.started && priv !== SYNC.priv) { location.reload(); return; }
     if (!priv) watchArchive();
     watchChoices();
+    watchWardrobe();
+    if (!staff) watchMyPriv();
     // Les col·leccions grans comencen quan ja se sap si algú n'ha esborrat res (syncEpoch).
     if (!SYNC.started) {
       SYNC.started = true; SYNC.priv = priv; syncLoad();
@@ -619,8 +625,76 @@ function saveAttendance(key, doc) {
   const path = new firebase.firestore.FieldPath('docs', key);
   db.doc(`attArchive/${arch.id}`).update(path, doc).catch(writeFailed);
 }
-function saveMember(m) { S.members.set(m.id, m); persist('members', m.id, m, 50); }
-function saveProduction(p) { S.productions.set(p.id, p); persist('productions', p.id, p, 50); }
+/* ---------- Fitxes privades ---------- */
+// La plantilla (members) la llegeix tothom de l'agrupació: hi ha de ser el nom, la corda i la veu de cadascú. Amb les llistes
+// privades, el que la resta no ha de veure (el telèfon, les notes, les baixes i les altes amb el motiu, la targeta per
+// passar llista a la porta) va a memberPriv/<membre>, que només llegeixen l'equip i la persona. Aquí es tornen a ajuntar.
+const MEMBER_PRIV = ['phone', 'notes', 'leaves', 'history', 'card'];
+const privMembers = () => !!S.config.attPrivate;
+function splitMember(m) {
+  const pub = { ...m }, priv = { memberId: m.id };
+  for (const k of MEMBER_PRIV) {
+    if (!(k in pub)) continue;
+    const v = pub[k];
+    if (v != null && v !== '' && !(Array.isArray(v) && !v.length)) priv[k] = v;
+    delete pub[k];
+  }
+  return { pub, priv };
+}
+/** Cada fitxa amb la seva part privada (la de les fitxes que en tenen; les altres, tal com són). */
+function mergePriv() {
+  for (const [id, p] of S.memberPriv) {
+    const m = S.members.get(id);
+    if (!m) continue;
+    const base = { ...m };
+    for (const k of MEMBER_PRIV) delete base[k];
+    const { memberId, syncAt, ...rest } = p;
+    S.members.set(id, { ...base, ...rest });
+  }
+}
+let privWatch = null;
+/** Qui no és de l'equip només llegeix la seva part privada (les baixes compten a la seva assistència). */
+function watchMyPriv() {
+  if (privWatch || !db || !privMembers() || !S.memberId) return;
+  privWatch = db.doc(`memberPriv/${S.memberId}`).onSnapshot(snap => {
+    S.memberPriv = new Map(snap.exists ? [[snap.id, snap.data()]] : []);
+    mergePriv();
+    if (S.ready) scheduleRender();
+  }, () => {});
+}
+function saveMember(m) {
+  S.members.set(m.id, m);
+  if (!privMembers()) { persist('members', m.id, m, 50); return; }
+  const { pub, priv } = splitMember(m);
+  S.memberPriv.set(m.id, priv);
+  persist('members', m.id, pub, 50);
+  persist('memberPriv', m.id, priv, 50);
+}
+/** En fer (o desfer) les llistes privades: les parts privades de totes les fitxes passen a memberPriv (o hi tornen). */
+async function moveMemberPriv(toPriv) {
+  const all = [...S.members.values()];
+  for (let i = 0; i < all.length; i += 200) {
+    const b = fs.batch();
+    for (const m of all.slice(i, i + 200)) {
+      if (toPriv) {
+        const { pub, priv } = splitMember(m);
+        b.set(db.doc(`memberPriv/${m.id}`), stamped(`memberPriv/${m.id}`, priv));
+        b.set(db.doc(`members/${m.id}`), stamped(`members/${m.id}`, pub));
+        S.memberPriv.set(m.id, priv);
+      } else {
+        b.set(db.doc(`members/${m.id}`), stamped(`members/${m.id}`, m));
+        if (S.memberPriv.has(m.id)) b.delete(db.doc(`memberPriv/${m.id}`));
+      }
+    }
+    await b.commit();
+  }
+  if (!toPriv && S.memberPriv.size) { S.memberPriv.clear(); bumpEpoch('memberPriv'); }
+}
+function saveProduction(p) {
+  S.productions.set(p.id, p); persist('productions', p.id, p, 50);
+  // Si té qui passa llista per corda, les sessions noves (o canviades de dia) també en tenen (vegeu 04b-porta).
+  if (p.roll && Object.keys(p.roll).length) setTimeout(() => syncRollSubs(p.id), 0);
+}
 function saveConfig(patch) { S.config = { ...S.config, ...patch }; persist('config', 'main', S.config, 200); }
 
 async function removeMany(paths, label) {
