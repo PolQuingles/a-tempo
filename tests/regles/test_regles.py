@@ -681,6 +681,16 @@ expect("W3d l'equip les veu totes", lst(f"cors/{F}/memberPriv", T["pau"]), True)
 expect("W3e i els avisos (compte de servei)", lst(f"cors/{F}/memberPriv", T["service"]), True)
 seed(f"cors/{F}/config/main", {"name": "Cor Jove", "alertFNJ": 3, "minAttendance": 80})
 
+print("X. Missatges a qui fa una producció")
+PM = {**MSG, "id": "pm1", "to": ["p:p1"], "prod": "p1", "secs": [], "members": ["m1"], "by": "sec@exemple.cat"}
+expect("X1 la secretaria escriu a qui fa una producció", commit([upd(f"cors/{F}/messages/pm1", PM)], T["sec"]), True)
+expect("X1b qui la fa el llegeix", get(f"cors/{F}/messages/pm1", T["singer"]), True)
+expect("X1c i el troba amb la seva consulta", qry(f"cors/{F}", "messages", [("members", "ARRAY_CONTAINS", "m1")], T["singer"]), True)
+expect("X2 qui no la fa no el llegeix", get(f"cors/{F}/messages/pm1", T["arx"]), False)
+expect("X2b ni el busca amb el nom d'un altre", qry(f"cors/{F}", "messages", [("members", "ARRAY_CONTAINS", "m1")], T["arx"]), False)
+expect("X3 un cap de corda no hi escriu", commit([upd(f"cors/{F}/messages/pm2", {**PM, "id": "pm2", "by": "leader@exemple.cat", "to": ["T"]})], T["leader"]), False)
+expect("X3b ni amb una llista massa llarga", commit([upd(f"cors/{F}/messages/pm3", {**PM, "id": "pm3", "members": [f"m{i}" for i in range(401)]})], T["sec"]), False)
+
 print("M. Registre d'errors")
 ERR = {"kind": "error", "msg": "TypeError: x is undefined", "where": "04-llista.js:10:5", "at": now, "app": "abc123", "gid": F, "route": "inici", "ua": "Mozilla/5.0", "online": True}
 expect("M1 cantaire deixa una nota d'error", commit([upd("errors/e1", ERR)], T["singer"]), True)

@@ -67,7 +67,7 @@ const actions = {
   'account': () => sheetAccount(),
   // Missatges (21).
   'write': () => sheetWrite(),
-  'msg-new': el => sheetMessage(el.dataset.pid ? scoreReminder(el.dataset.pid) : {}),
+  'msg-new': el => sheetMessage(el.dataset.pid ? scoreReminder(el.dataset.pid) : el.dataset.prod ? { prod: el.dataset.prod } : {}),
   'thread-to': el => sheetThreadTo(el.dataset.mid || ''),
   'msg-list': () => sheetMessages(),
   'msg-del': el => deleteMessage(el.dataset.id),

@@ -374,7 +374,7 @@ function sheetHelp() {
       <li><b>Absències</b>: quan algú avisa que no vindrà o que arribarà tard.</li>
       <li><b>Notificacions</b>: el que arriba al mòbil de tot l’anterior, a qui les té activades.</li></ul>
     <h3>Missatges</h3>
-    <p>A Inici, <b>Escriu</b> (administració, direcció, gerència i secretaria) envia un missatge a tothom o a les ${w.sections} que triïs, un anunci al tauler o una enquesta. Cada ${w.leader} hi té <b>Missatge a la ${w.section}</b>, que només arriba a la seva. Arriben a l’app i, a qui té les notificacions activades, al mòbil: sense correus ni WhatsApp.</p>
+    <p>A Inici, <b>Escriu</b> (administració, direcció, gerència i secretaria) envia un missatge a tothom, a les ${w.sections} que triïs o <b>a qui fa una producció</b> (també des del Calendari, «Escriu a qui la fa»), un anunci al tauler o una enquesta. Cada ${w.leader} hi té <b>Missatge a la ${w.section}</b>, que només arriba a la seva. Arriben a l’app i, a qui té les notificacions activades, al mòbil: sense correus ni WhatsApp.</p>
     <h3>Notes de seguiment</h3>
     <p>A les estadístiques de cada ${w.member} (toca-li el nom) la direcció i el seu ${w.leader} hi poden deixar notes de seguiment: afinació, actitud, progressos. No les veu ningú més, ni la persona.</p>
     ${wardOn() ? `<h3>Vestidor</h3>
