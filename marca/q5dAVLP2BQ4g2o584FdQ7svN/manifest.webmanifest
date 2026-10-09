@@ -1,0 +1,31 @@
+{
+  "name": "Orfeó Català",
+  "short_name": "Orfeó",
+  "description": "Assistència, calendari i avisos",
+  "lang": "ca",
+  "display": "standalone",
+  "background_color": "#1F4E99",
+  "theme_color": "#1F4E99",
+  "start_url": "../../?a=q5dAVLP2BQ4g2o584FdQ7svN",
+  "scope": "../../",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
