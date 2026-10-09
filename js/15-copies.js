@@ -58,7 +58,8 @@ function applyData(data, demo) {
     for (const id of [...S[col].keys()]) if (!incoming[col].has(id)) { S[col].delete(id); persist(col, id, null, 10); }
   }
   let i = 0;
-  for (const col of COLS) for (const [id, v] of incoming[col]) { S[col].set(id, v); persist(col, id, v, 10 + (i++ % 40) * 15); }
+  // Les fitxes, amb saveMember: amb les llistes privades, la part privada de cadascuna va a part (vegeu MEMBER_PRIV).
+  for (const col of COLS) for (const [id, v] of incoming[col]) { if (col === 'members') saveMember(v); else { S[col].set(id, v); persist(col, id, v, 10 + (i++ % 40) * 15); } }
   saveConfig({ ...cfg, demo });
   for (const id of ARCH.by.keys()) db.doc(`attArchive/${id}`).delete().catch(() => {});
   bumpEpoch('all');

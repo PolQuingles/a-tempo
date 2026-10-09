@@ -1131,6 +1131,141 @@ def main():
         check(not errors, "sense errors amb els documents, els noms i «Escriu-los»", "; ".join(errors[:3]))
         ctx.close()
 
+        print("Vestidor: demanar el vestuari i portar-lo des de la secretaria")
+        ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/inici")
+        r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          const txt = q => document.querySelector(q)?.innerText || '';
+          out.offMenu = (sheetAccount(), await s(300), !document.querySelector('.acct-item[data-act="ward-open"]')); closeSheet(); await s(200);
+          saveConfig({ wardrobe: { on: true } }); watchWardrobe(); await s(300);
+          sheetAccount(); await s(300);
+          const it = document.querySelector('.acct-item[data-act="ward-open"]'); out.menu = !!it; it.click(); await s(400);
+          out.route = location.hash === '#/vestidor' && /Vestidor/.test(txt('.page-head'));
+          out.empty = /Encara no has demanat res/.test(txt('.ward-empty'));
+          document.querySelector('[data-act="ward-ask"]').click(); await s(300);
+          document.querySelector('#wa-item .pick[data-k="americana"]').click(); await s(100);
+          out.sizes = document.querySelectorAll('#wa-size .pick').length === 10;
+          document.querySelector('#wa-size .pick[data-k="50"]').click(); document.querySelector('#wa-go').click(); await s(800);
+          const fake = () => JSON.parse(localStorage.getItem('fake:db'));
+          const mine = Object.entries(fake()).filter(([k, v]) => k.includes('/wardrobe/') && v.memberId === 'mT1').map(([, v]) => v);
+          out.saved = mine.length === 1 && mine[0].item === 'americana' && mine[0].size === '50' && mine[0].status === 'demanat';
+          out.card = /Americana 50/.test(txt('.ward-card')) && /Demanat/.test(txt('.ward-card .ward-pill'));
+          out.oneOnly = !document.querySelector('.section-title [data-act="ward-ask"]');
+          out.order = /Americana · 50 ×1/.test(txt('.ward-order'));
+          out.todoStaff = todoItems().some(x => x.icon === 'ward' && /per encarregar/.test(x.t));
+          document.querySelector('[data-act="ward-ordered"]').click(); await s(400);
+          const id = mine[0].id;
+          out.ordered = S.wardrobe.get(id).status === 'encarregat' && S.wardrobe.get(id).history.length === 2;
+          document.querySelector(`.ward-row[data-id="${id}"]`).click(); await s(300);
+          document.querySelector('#wi-st button[data-k="emprovar"]').click(); document.querySelector('#wi-note').value = 'Escurçar les mànigues';
+          document.querySelector('#wi-save').click(); await s(500);
+          out.fitting = S.wardrobe.get(id).status === 'emprovar' && S.wardrobe.get(id).note === 'Escurçar les mànigues';
+          out.todoMine = todoItems().some(x => x.icon === 'ward' && /per emprovar/.test(x.t));
+          out.steps = document.querySelectorAll('.ward-card .ward-steps li.done').length === 2 && /Pendent d’emprovar/.test(txt('.ward-card .ward-steps li.cur'));
+          document.querySelector('[data-act="ward-filter"][data-k="none"]').click(); await s(300);
+          out.none = document.querySelectorAll('.ward-list .ward-row').length === membersOf(null).length - 1;
+          document.querySelector('.ward-list [data-act="ward-new"][data-mid="mS0"]').click(); await s(300);
+          document.querySelector('#wn-item .pick[data-k="estola"]').click(); await s(100);
+          document.querySelector('#wn-size .pick[data-k="M"]').click(); document.querySelector('#wn-go').click(); await s(500);
+          out.added = [...S.wardrobe.values()].some(x => x.memberId === 'mS0' && x.item === 'estola' && x.size === 'M');
+          let csv = ''; window.offerFile = (n, t) => { csv = t; }; wardExport();
+          out.csv = /Peça;"Talla";"Estat"/.test(csv.replace(/"Peça"/, 'Peça')) && /Pendent d’emprovar/.test(csv) && /Estola/.test(csv);
+          applyRoute('gestio/ajustos'); render(); await s(300);
+          out.cfg = /Vestidor/.test(txt('.cfg-h[data-k="vestidor"]')) && /Americana, Estola/.test(txt('.cfg-h[data-k="vestidor"]'));
+          out.overflow = document.documentElement.scrollWidth <= innerWidth;
+          return out; }""")
+        switch_user(page, base, "singer")
+        r.update(page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          document.querySelector('#acct-btn').click(); await s(300);
+          document.querySelector('.acct-item[data-act="ward-open"]').click(); await s(400);
+          out.singerMine = /Estola M/.test(document.querySelector('.ward-card')?.innerText || '') && !document.querySelector('.ward-list');
+          out.singerOnlyHers = [...S.wardrobe.values()].every(x => x.memberId === 'mS0');
+          return out; }"""))
+        for k, label in [("offMenu", "sense activar-lo, el vestidor no surt"), ("menu", "activat, surt al menú del compte"), ("route", "i obre la pantalla del vestidor"),
+                         ("empty", "qui no ha demanat res ho veu explicat"), ("sizes", "cada peça té les seves talles"), ("saved", "la petició queda desada amb la peça i la talla"),
+                         ("card", "i surt a «El meu vestuari» com a demanat"), ("oneOnly", "només se'n demana una (americana o estola)"),
+                         ("order", "la secretaria veu què cal encarregar, per talles"), ("todoStaff", "i li surt a «Per fer»"),
+                         ("ordered", "les pot marcar totes com a encarregades"), ("fitting", "i passar-ne una a «Pendent d'emprovar» amb una nota"),
+                         ("todoMine", "a qui l'ha d'emprovar li surt a «Per fer»"), ("steps", "i veu per quins passos ha passat"),
+                         ("none", "es veu qui encara no ha demanat res"), ("added", "la secretaria pot afegir una peça a algú"),
+                         ("csv", "tot el vestuari s'exporta a Excel"), ("cfg", "a Ajustos hi ha el calaix del vestidor"),
+                         ("overflow", "sense eixamplar la pantalla del mòbil"), ("singerMine", "cada cantaire veu només el seu vestuari"),
+                         ("singerOnlyHers", "i no en llegeix el dels altres")]:
+            check(r.get(k), label, str(r))
+        check(not errors, "sense errors al vestidor", "; ".join(errors[:3]))
+        ctx.close()
+
+        print("Cap de corda en funcions quan el cap de corda no fa la producció")
+        ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/assistencia")
+        r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          const txt = q => document.querySelector(q)?.innerText || '';
+          const today = allSessions().find(x => x.date === TODAY);
+          ui.sessionId = today.id; render(); await s(300);
+          out.noDoor = !document.querySelector('[data-act="door-open"]') && typeof viewDoor === 'undefined';
+          out.tools = /Caps de corda en funcions/.test(txt('.roll-tools'));
+          // El cap de corda de tenors (Lluc) no fa la producció.
+          const p = clone(S.productions.get(today.prodId)); p.excluded = ['mT0']; saveProduction(p); await s(300);
+          out.todo = todoItems().some(x => /tria el cap de corda en funcions/.test(x.t) && /tenors/.test(x.s) && !/sopranos/.test(x.s));
+          return out; }""")
+        switch_user(page, base, "leader")
+        r.update(page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          const txt = q => document.querySelector(q)?.innerText || '';
+          const today = allSessions().find(x => x.date === TODAY);
+          out.leaderTodo = todoItems().some(x => /tria el cap de corda en funcions/.test(x.t) && /No fas aquesta producció/.test(x.s));
+          sheetProdRoll(today.prodId); await s(400);
+          out.ownOnly = document.querySelectorAll('.pr-row').length === 1 && !!document.querySelector('.pr-row.warn[data-sec="T"]');
+          out.onlyDoers = ![...document.querySelectorAll('select[data-sec="T"] option')].some(o => o.value === 'mT0');
+          document.querySelector('select[data-sec="T"]').value = 'mT2'; document.querySelector('#pr-save').click(); await s(800);
+          const p = S.productions.get(today.prodId);
+          const subs = [...S.subs.values()].filter(x => x.auto && x.section === 'T' && x.memberId === 'mT2');
+          out.subs = p.roll?.T === 'mT2' && subs.length === p.sessions.filter(x => x.date >= addDays(TODAY, -1)).length && !todoItems().some(x => /en funcions/.test(x.t));
+          const p2 = clone(p); p2.sessions.push({ id: 'snova', date: addDays(TODAY, 4), time: '20:30', end: '22:30', type: 'Assaig', place: '', note: '' }); saveProduction(p2); await s(600);
+          out.newSession = S.subs.get('snova_T')?.memberId === 'mT2';
+          ui.tab = 'llista'; ui.att = 'llista'; ui.sessionId = today.id; ui.rollSec = 'T'; render(); await s(300);
+          out.subLine = /Cap de corda en funcions: Oriol Camps/.test(txt('.sub-line'));
+          return out; }"""))
+        for k, label in [("noDoor", "ja no hi ha el mode porta"), ("tools", "a la llista hi ha «Caps de corda en funcions»"),
+                         ("todo", "si el cap de corda no fa la producció, «Per fer» ho avisa (només de la seva corda)"),
+                         ("leaderTodo", "al cap de corda li demana que triï qui passarà llista"),
+                         ("ownOnly", "i només pot triar el de la seva corda"), ("onlyDoers", "d'entre els que fan la producció"),
+                         ("subs", "el cap de corda en funcions passa llista a totes les sessions"),
+                         ("newSession", "també a les que s'afegeixen després"), ("subLine", "i la llista ho diu: «Cap de corda en funcions»")]:
+            check(r.get(k), label, str(r))
+        check(not errors, "sense errors amb el cap de corda en funcions", "; ".join(errors[:3]))
+        ctx.close()
+
+        print("Fitxes privades amb les llistes privades")
+        ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/gestio/ajustos")
+        r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          const fake = () => JSON.parse(localStorage.getItem('fake:db'));
+          const doc = path => { const f = fake(); return f[Object.keys(f).find(k => k.endsWith(path))]; };
+          saveMember({ ...S.members.get('mT2'), phone: '600111222', notes: 'Treballa de nit', leaves: [{ from: addDays(TODAY, 2), to: addDays(TODAY, 20), note: 'Operació de genoll' }] }); await s(800);
+          const p = setAttPrivate(true); await s(400); document.querySelector('#cf-yes').click(); await p; await s(1500);
+          const pub = doc('/members/mT2'), priv = doc('/memberPriv/mT2');
+          out.split = !('phone' in pub) && !('leaves' in pub) && !('notes' in pub) && !('history' in pub) && priv?.leaves?.[0]?.note === 'Operació de genoll' && priv.phone === '600111222';
+          out.merged = S.members.get('mT2').leaves?.length === 1 && S.members.get('mT2').notes === 'Treballa de nit';
+          saveMember({ ...S.members.get('mT2'), notes: 'Ara de dia' }); await s(800);
+          out.edit = !('notes' in doc('/members/mT2')) && doc('/memberPriv/mT2').notes === 'Ara de dia';
+          return out; }""")
+        switch_user(page, base, "singer")
+        r.update(page.evaluate("""async () => {
+          const t = S.members.get('mT2');
+          return { hidden: !t.phone && !t.notes && !t.leaves && !t.history, own: (S.members.get('mS0').history || []).length > 0 }; }"""))
+        switch_user(page, base, "pol")
+        r.update(page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          await s(600);
+          out.reload = S.members.get('mT2').notes === 'Ara de dia' && S.members.get('mT2').leaves?.length === 1;
+          const p = setAttPrivate(false); await s(400); document.querySelector('#cf-yes').click(); await p; await s(1500);
+          const f = JSON.parse(localStorage.getItem('fake:db'));
+          const pub = f[Object.keys(f).find(k => k.endsWith('/members/mT2'))];
+          out.back = pub.notes === 'Ara de dia' && pub.leaves?.length === 1 && !Object.keys(f).some(k => k.endsWith('/memberPriv/mT2'));
+          return out; }"""))
+        for k, label in [("split", "amb les llistes privades, el telèfon, les notes i les baixes van a part"), ("merged", "l'equip ho continua veient tot junt"),
+                         ("edit", "i en desar una fitxa, la part privada continua a part"), ("hidden", "una cantaire no veu les dades privades de ningú més"),
+                         ("own", "però sí les seves"), ("reload", "en tornar a entrar, l'equip ho torna a tenir tot"), ("back", "i en desfer-les, tot torna a la fitxa")]:
+            check(r.get(k), label, str(r))
+        check(not errors, "sense errors amb les fitxes privades", "; ".join(errors[:3]))
+        ctx.close()
+
         print("Mira l'app com…")
         ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/gestio/personal")
         page.wait_for_function("S.staffReady", timeout=5000)

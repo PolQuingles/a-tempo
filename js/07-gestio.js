@@ -250,7 +250,7 @@ async function deleteGroup(el) {
   const at = new Date().toISOString();
   try {
     const refs = [];
-    for (const col of ['members', 'productions', 'attendance', 'attArchive', 'attMine', 'prodChoice', 'scores', 'absences', 'subs', 'rsvp', 'announcements', 'polls', 'pollVotes', 'push', 'classes', 'classReq', 'classPlan', 'classNotes', 'classFiles', 'classIcs', 'students', 'works', 'trips', 'tripSignups', 'profiles', 'messages', 'threads', 'nudges', 'memberNotes', 'memberDocs', 'memberFiles', 'config']) {
+    for (const col of ['members', 'memberPriv', 'wardrobe', 'productions', 'attendance', 'attArchive', 'attMine', 'prodChoice', 'scores', 'absences', 'subs', 'rsvp', 'announcements', 'polls', 'pollVotes', 'push', 'classes', 'classReq', 'classPlan', 'classNotes', 'classFiles', 'classIcs', 'students', 'works', 'trips', 'tripSignups', 'profiles', 'messages', 'threads', 'nudges', 'memberNotes', 'memberDocs', 'memberFiles', 'config']) {
       say('Preparant…');
       const snap = await db.collection(col).get();
       for (const d of snap.docs) if (!(col === 'config' && d.id === 'main')) refs.push(d.ref);
@@ -334,6 +334,8 @@ function manageConfig() {
   <div class="panel cfg-p"${cfgOpen('docs') ? '' : ' hidden'}><p class="muted" style="margin:2px 2px 8px;font-size:calc(13px*var(--ts))">Els que la secretaria demana a cada ${esc(V.member)} i apunta a la seva fitxa. Si no se’n demana cap, desapareixen de la plantilla.</p>
     ${DOC_ITEMS.map(([k, l, d]) => `<div class="toggle-row setting"><span><b>${esc(l)}</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">${esc(d)}</span></span>
       <label class="switch"><input type="checkbox" id="cfg-doc-${k}" ${docItems().some(([x]) => x === k) ? 'checked' : ''} data-bind="cfg-doc" data-k="${k}"><span></span></label></div>`).join('')}</div>` : ''}
+  ${isAdmin() ? `${cfgHead('vestidor', 'Vestidor', wardOn() ? `Activat · ${esc(wardItems().map(x => x.name).join(', '))}` : 'Desactivat')}
+  <div class="panel cfg-p"${cfgOpen('vestidor') ? '' : ' hidden'}>${wardConfigPanel()}</div>` : ''}
   ${isAdmin() ? `${cfgHead('quota', 'Quota', feesOn() ? `Activada${feeAmount() ? ` · ${euros(feeAmount())} per temporada` : ''}` : 'Desactivada')}
   <div class="panel cfg-p"${cfgOpen('quota') ? '' : ' hidden'}><div class="toggle-row setting"><span><b>${feesOn() ? 'Activada' : 'Desactivada'}</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">${feesOn()
       ? `La secretaria i la gerència apunten qui ha pagat la quota de cada temporada, i cada ${esc(V.member)} veu la seva a «La meva fitxa».`
@@ -482,6 +484,7 @@ const ACCT_ICONS = {
   install: '<rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M12 7.5v7M9 11.5l3 3 3-3"/>',
   profile: '<rect x="3.5" y="5" width="17" height="14" rx="2.5"/><circle cx="9" cy="11" r="2.2"/><path d="M5.8 16.2a3.4 3.4 0 016.4 0M14 10h4M14 13.5h3"/>',
   threads: '<path d="M4 5.5h11v8H8l-4 3.5z"/><path d="M15 9.5h5v8l-3-2.5h-6.5v-2"/>',
+  wardrobe: WARD_ICON,
   week: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4M7 14h2M11 14h2M15 14h2M7 17h2M11 17h2"/>',
 };
 /** Les finestres del menú. S'obren amb una fletxa per tornar-hi (vegeu openSheet). */
@@ -500,13 +503,13 @@ function sheetAccount() {
   const groups = [
     canEdit() ? [item('gestio', 'Gestió', `data-act="manage" data-k="${pend ? 'avisos' : ROUTE_MANAGE[ui.manage] ? ui.manage : 'personal'}"`, pend)] : [],
     [(myId() || S.threads.size) && item('threads', 'Converses', 'data-act="acct-open" data-k="threads"', unreadThreads().length), open('week', 'La setmana'),
-      myId() && !PREVIEW && open('profile', 'La meva fitxa'), open('calendar', icsOn() ? 'Calendari al mòbil' : 'Exporta el calendari'), pushSupported() && open('push', 'Notificacions')],
+      myId() && !PREVIEW && open('profile', 'La meva fitxa'), wardOn() && (myId() || wardStaff()) && item('wardrobe', 'Vestidor', 'data-act="ward-open"', myId() ? wardOf(myId()).filter(x => x.status === 'emprovar').length : 0), open('calendar', icsOn() ? 'Calendari al mòbil' : 'Exporta el calendari'), pushSupported() && open('push', 'Notificacions')],
     [groupsVisible() && open('groups', 'Agrupacions'), open('theme', 'Aparença'), canInstall() && open('install', 'Instal·la l’app'), open('help', 'Com funciona')],
   ].map(g => g.filter(Boolean)).filter(g => g.length);
   openSheet({
     title: 'El teu compte',
     body: `<div class="acct-head"><span class="acct-btn" aria-hidden="true">${esc(personInitials(name))}</span>
-        <span><b>${esc(name.includes(',') ? name.split(',').reverse().join(' ').trim() : name)}</b><small>${esc(S.email || '')}${S.me ? ` · ${esc(rolesText(S.me))}` : ''}</small></span></div>
+        <span><b>${esc(name.includes(',') ? name.split(',').reverse().join(' ').trim() : name)}</b><small>${esc(S.email || '')}${S.me ? ` · ${esc(rolesText(S.me))}` : ''}${actingNow().length ? ` · ${esc(capz(V.leader))} en funcions (${esc(actingNow().join(', '))})` : ''}</small></span></div>
       <nav class="acct-menu" aria-label="El teu compte">${groups.map(g => `<div class="acct-grp">${g.join('')}</div>`).join('')}</nav>`,
     foot: `<span class="spacer"></span><button class="btn btn-danger-ghost" data-act="sign-out">Tanca la sessió</button>`,
   });

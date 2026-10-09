@@ -355,6 +355,8 @@ function sheetHelp() {
     <li>Un punt vermell al quadre vol dir que hi ha llistes d’altres dies pendents.</li></ul>
     <h3>Si no hi ets: substitut</h3>
     <p>Dins la ${w.section}, <b>Substitut per avui</b>: tria qui passarà llista. Rebrà permís per fer-ho des del seu compte fins l’endemà.</p>
+    <h3>${capz(w.leader)} en funcions</h3>
+    <p>Si el ${w.leader} no fa una producció, a <b>Assistència › ${capz(w.leaders)} en funcions</b> tria una persona de la seva ${w.section} que sí la fa: en serà <b>${w.leader} en funcions</b> i passarà llista a tots els assajos i ${w.sh.els.replace(/^(els|les) /, '')} d’aquella producció. Mentre no hi hagi ningú triat, li surt a «Per fer».</p>
     <h3>Absències</h3>
     <p>Els ${w.members} avisen des d’Inici. Surten a <b>Gestió › Absències</b> i a la llista del dia. En acceptar-los, els dies queden com a falta justificada.</p>
     <h3>Convocatòries</h3>
@@ -375,6 +377,8 @@ function sheetHelp() {
     <p>A Inici, <b>Escriu</b> (administració, direcció, gerència i secretaria) envia un missatge a tothom o a les ${w.sections} que triïs, un anunci al tauler o una enquesta. Cada ${w.leader} hi té <b>Missatge a la ${w.section}</b>, que només arriba a la seva. Arriben a l’app i, a qui té les notificacions activades, al mòbil: sense correus ni WhatsApp.</p>
     <h3>Notes de seguiment</h3>
     <p>A les estadístiques de cada ${w.member} (toca-li el nom) la direcció i el seu ${w.leader} hi poden deixar notes de seguiment: afinació, actitud, progressos. No les veu ningú més, ni la persona.</p>
+    ${wardOn() ? `<h3>Vestidor</h3>
+    <p>Al menú del compte, <b>Vestidor</b>: cadascú hi demana el seu vestuari amb la talla. La secretaria, la gerència i l’administració hi veuen tot el que cal <b>encarregar</b> (per peça i talla, per copiar la comanda), i passen cada peça per <b>Encarregat</b>, <b>Pendent d’emprovar</b>, <b>A arreglar</b>, <b>Entregat</b> i <b>Retornat</b>. Hi ha la llista de qui encara no ha demanat res i s’exporta a Excel. Les peces i les talles es trien a Ajustos.</p>` : ''}
     <h3>Secretaria</h3>
     <p>A <b>Gestió › Personal</b>, toca una persona de la plantilla i se’n desplega tot: les dades, l’antiguitat, les altes i baixes${docsOn() ? `, els documents (${esc(docItems().map(([, l]) => l.toLowerCase()).join(', '))})` : ''}${feesOn() ? ' i la quota' : ''}. A dalt hi ha el resum de la temporada i els filtres <b>Altes i baixes</b>${docsOn() ? ', <b>Documents pendents</b>' : ''}${feesOn() ? ' i <b>Quota pendent</b>' : ''}. A Ajustos es tria quins documents es demanen i si hi ha quota. La plantilla sencera s’exporta a Excel.</p>
     <h3>Repertori i pla d’assaig</h3>
@@ -433,6 +437,8 @@ function sheetHelp() {
       <li><b>Notificacions</b>: el que arriba al mòbil de tot l’anterior, a qui les té activades.</li></ul>
     <h3>Missatges</h3>
     <p>Els missatges del teu ${w.leader} i de l’equip surten a Inici i t’arriben al mòbil si tens les notificacions activades.</p>
+    ${wardOn() ? `<h3>Vestidor</h3>
+    <p>A les teves inicials, <b>Vestidor</b>: demana el teu vestuari (${esc(wardItems().map(x => x.name.toLowerCase()).join(' o '))}) amb la teva talla i segueix com va: demanat, encarregat, pendent d’emprovar, entregat. Quan l’hagis d’anar a emprovar, et sortirà a «Per fer».</p>` : ''}
     <h3>Pla d’assaig i la meva fitxa</h3>
     <p>A cada assaig veus què s’hi farà (obres i compassos) per preparar-ho, i si hi has faltat, què s’hi va fer. A les teves inicials, <b>La meva fitxa</b>: el telèfon, la talla de vestuari, un contacte d’emergència i els consentiments (drets d’imatge i protecció de dades), que només veu l’equip. Hi veus també si tens la quota pagada.</p>
     <h3>Fitxa ${w.sh.del}</h3>

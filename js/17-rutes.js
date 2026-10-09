@@ -27,6 +27,7 @@ function routeFromUi() {
       if (ui.att === 'risk') return 'assistencia/risc';
       return ui.rollSec ? `assistencia/${encodeURIComponent(ui.rollSec)}` : 'assistencia';
     case 'calendari': return 'calendari';
+    case 'vestidor': return 'vestidor';
     case 'tauler': return `tauler/${ROUTE_BOARD[ui.board] || 'anuncis'}`;
     case 'classes': return ui.clWho ? `classes/${encodeURIComponent(teacherSlug(ui.clWho))}` : 'classes';
     default: return 'inici';
@@ -51,6 +52,7 @@ function applyRoute(route) {
     return true;
   }
   if (a === 'calendari') { ui.tab = 'calendari'; return true; }
+  if (a === 'vestidor') { if (!wardOn()) return false; ui.tab = 'vestidor'; return true; }
   if (a === 'tauler') { ui.tab = 'tauler'; ui.board = sub === 'materials' ? 'materials' : Object.keys(ROUTE_BOARD).find(k => ROUTE_BOARD[k] === sub) || 'anuncis'; return true; }
   if (a === 'classes') {
     ui.tab = 'classes';

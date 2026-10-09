@@ -4,12 +4,12 @@
 
 /* ================= Events ================= */
 const SUB_OK = new Set(['mark', 'min', 'mark-rest']);
-const ADMIN_ONLY = new Set(['people-tools', 'staff-new', 'staff-edit', 'staff-bulk', 'staff-link', 'preview-on', 'who-in', 'mail-check', 'wipe-all', 'share-app', 'onboard-hide', 'cl-seats', 'legacy-clean']);
+const ADMIN_ONLY = new Set(['ward-cfg-add', 'ward-cfg-del', 'ward-cfg-save', 'people-tools', 'staff-new', 'staff-edit', 'staff-bulk', 'staff-link', 'preview-on', 'who-in', 'mail-check', 'wipe-all', 'share-app', 'onboard-hide', 'cl-seats', 'legacy-clean']);
 // La identitat de l'agrupació i esborrar-la: només un Usuari Pro que l'administri.
 const PRO_ONLY = new Set(['brand-color', 'logo-remove', 'kind-set', 'group-delete', 'sections-save', 'sections-undo']);
 // El calendari de les classes: només el professorat de cant i l'administració.
 const CLASS_ONLY = new Set(['cl-new', 'cl-edit', 'cl-review', 'cl-paste', 'cl-plan', 'cl-note', 'cl-mark', 'cl-stats', 'cl-cancel-day']);
-const EDIT_ONLY = new Set(['mark', 'min', 'mark-rest', 'session-new', 'sub-set', 'ann-new', 'ann-edit', 'mat-new', 'mat-edit', 'poll-new', 'poll-edit', 'poll-results', 'poll-remind', 'rsvp-remind', 'doc-new', 'doc-edit', 'share-app', 'staff-bulk', 'preview-on', 'who-in', 'mail-check', 'concert-list', 'concert-toggle', 'session-edit', 'member-edit', 'member-new', 'member-bulk', 'prod-new', 'prod-edit',
+const EDIT_ONLY = new Set(['prod-roll', 'mark', 'min', 'mark-rest', 'session-new', 'sub-set', 'ann-new', 'ann-edit', 'mat-new', 'mat-edit', 'poll-new', 'poll-edit', 'poll-results', 'poll-remind', 'rsvp-remind', 'doc-new', 'doc-edit', 'share-app', 'staff-bulk', 'preview-on', 'who-in', 'mail-check', 'concert-list', 'concert-toggle', 'session-edit', 'member-edit', 'member-new', 'member-bulk', 'prod-new', 'prod-edit',
   'wipe-demo', 'wipe-all', 'load-demo', 'export-json', 'abs-accept', 'abs-reject', 'abs-delete', 'manage',
   'roster-export', 'docs-copy-noimg',
   'choices-overview', 'work-new', 'work-edit', 'work-link', 'plan-edit', 'seating-edit', 'participants', 'certificate', 'season-report', 'trip-new', 'trip-edit', 'trip-admin', 'trip-remind']);
@@ -139,6 +139,21 @@ const actions = {
   'trip-remind': el => remindTrip(el.dataset.id),
   'cal-subscribe': () => sheetCalendar(),
   'risk-write': el => sheetRiskWrite(el.dataset.pid),
+  // Cap de corda en funcions, per producció (04b-en-funcions).
+  'prod-roll': el => sheetProdRoll(el.dataset.pid),
+  // El vestidor (20b-vestidor).
+  'ward-open': () => { if (ui.tab !== 'vestidor') ui.wardFrom = ui.tab === 'gestio' ? ui.gestioFrom || 'avisos' : ui.tab; ui.tab = 'vestidor'; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
+  'ward-ask': el => sheetWardAsk(el.dataset.id),
+  'ward-cancel': el => wardCancel(el.dataset.id),
+  'ward-item': el => sheetWardItem(el.dataset.id),
+  'ward-new': el => sheetWardNew(el.dataset.mid),
+  'ward-filter': el => { ui.wardFilter = el.dataset.k; render(); },
+  'ward-copy': () => { if (wardStaff()) copyText(wardOrderText(), 'Comanda copiada'); },
+  'ward-ordered': () => { if (wardStaff()) wardMarkOrdered(); },
+  'ward-export': () => { if (wardStaff()) wardExport(); },
+  'ward-cfg-add': () => { const items = wardCfgRead(); items.push({ id: `peca${Date.now().toString(36)}`, name: 'Peça nova', sizes: [] }); wardCfgSave(items); },
+  'ward-cfg-del': el => wardCfgSave(wardCfgRead(+el.dataset.i)),
+  'ward-cfg-save': () => wardCfgSave(wardCfgRead()),
   'board': el => { ui.board = el.dataset.k; saveUI(); render(); },
   'board-polls': () => { ui.tab = 'tauler'; ui.board = 'enquestes'; render(); window.scrollTo({ top: 0 }); },
   'board-news': () => { ui.tab = 'tauler'; ui.board = 'anuncis'; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
@@ -391,6 +406,10 @@ document.addEventListener('change', e => {
     saveConfig({ askDocs: DOC_ITEMS.map(([k]) => k).filter(k => on.has(k)) });
     if (!on.size && ui.pmFilter === 'docs') ui.pmFilter = 'all';
     toast(!on.size ? 'Documents desactivats' : docSw.checked ? 'Ara es demana' : 'Ja no es demana'); render();
+  }
+  if (e.target.closest('[data-bind="cfg-ward"]') && isAdmin()) {
+    saveConfig({ wardrobe: { items: wardItems(), ...(S.config.wardrobe || {}), on: e.target.checked } });
+    toast(e.target.checked ? 'Vestidor activat' : 'Vestidor desactivat'); watchWardrobe(); render();
   }
   if (e.target.closest('[data-bind="cfg-fees"]') && isAdmin()) { saveConfig({ feesOn: e.target.checked }); if (!e.target.checked && ui.pmFilter === 'fees') ui.pmFilter = 'all'; toast(e.target.checked ? 'Quota activada' : 'Quota desactivada'); render(); }
   if (e.target.closest('[data-bind="cfg-classes"]') && isAdmin()) { saveConfig({ classesOn: e.target.checked }); toast(e.target.checked ? `${V.classes} activades` : `${V.classes} desactivades`); render(); }

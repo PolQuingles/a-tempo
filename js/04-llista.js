@@ -77,7 +77,7 @@ function viewRollOverview(cur, list, pendingBySec) {
       ${pend ? '<i class="q-dot pend"></i>' : ''}${complete ? '<i class="q-dot done"></i>' : ''}
       <span class="q-l${x.short.length > 1 ? ' long' : ''}">${esc(x.short)}</span><span class="q-n">${esc(x.name)}</span>
       <span class="q-c">${on ? `${pr.done}/${pr.total}` : 'No convocats'}</span>
-      ${on && subFor(cur.id, x.id) ? `<span class="q-sub">Passa llista: ${esc(subFor(cur.id, x.id).memberName || '')}</span>` : ''}
+      ${on && subFor(cur.id, x.id) ? `<span class="q-sub">${subFor(cur.id, x.id).auto ? 'En funcions' : 'Passa llista'}: ${esc(subFor(cur.id, x.id).memberName || '')}</span>` : ''}
       ${on ? `<span class="q-bar"><span style="width:${pr.total ? (pr.done / pr.total) * 100 : 0}%"></span></span>` : ''}
     </button>`;
   }).join('');
@@ -103,6 +103,7 @@ function viewRollOverview(cur, list, pendingBySec) {
     ${fitxaChip(cur)}
     <div class="roll-grid"><div class="roll-a">
     <div class="quads ${SECTIONS.length === 4 ? '' : `n-other${SECTIONS.length > 6 ? ' n-many' : ''}`}" data-n="${SECTIONS.length}">${quads}</div>
+    ${canEdit() && cur.prodId && S.productions.has(cur.prodId) && SECTIONS.some(x => membersOf(x.id).some(m => m.leader)) ? `<div class="roll-tools"><button class="btn btn-sm btn-ghost" data-act="prod-roll" data-pid="${esc(cur.prodId)}">${esc(capz(V.leaders))} en funcions</button></div>` : ''}
     ${anyDone || anyPend ? `<div class="q-legend">${anyDone ? '<span><i style="background:var(--p)"></i>Llista completa</span>' : ''}${anyPend ? '<span><i style="background:var(--fnj)"></i>Té llistes pendents</span>' : ''}</div>` : ''}
     </div><div class="roll-b">
     ${day}
@@ -197,7 +198,7 @@ function viewRollSection(cur, list, sec, pendingBySec) {
 }
 function subLine(cur, sec, leader) {
   const sub = subFor(cur.id, sec);
-  if (sub) return `<div class="sub-line"><span>Avui passa llista: <b>${esc(sub.memberName || '')}</b></span>${canEdit() ? `<button class="btn btn-sm btn-ghost" data-act="sub-set" data-sid="${cur.id}" data-sec="${sec}">Canvia</button>` : ''}</div>`;
+  if (sub) return `<div class="sub-line"><span>${sub.auto ? `${capz(V.leader)} en funcions` : 'Avui passa llista'}: <b>${esc(sub.memberName || '')}</b></span>${canEdit() ? `<button class="btn btn-sm btn-ghost" data-act="sub-set" data-sid="${cur.id}" data-sec="${sec}">Canvia</button>` : ''}</div>`;
   if (!canEdit() || cur.date < TODAY) return '';
   const lm = leader && effMark(cur, leader);
   const away = lm && ['FJ', 'FNJ', 'NP'].includes(lm.s);

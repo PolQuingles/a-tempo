@@ -30,6 +30,8 @@ import dades
 import norma
 
 VAPID = os.environ["PUSH_PRIVATE_KEY"]
+# Els camps de cada fitxa que, amb les llistes privades, van a memberPriv (vegeu js/02-dades.js).
+MEMBER_PRIV = ("phone", "notes", "leaves", "history")
 APP_URL = os.environ.get("APP_URL", "https://polquingles.github.io/a-tempo/")
 # Adreça de contacte que demana l'estàndard, per si el servei de push ha d'avisar de res.
 # Es pot canviar amb el secret PUSH_CONTACT; no cal que sigui personal.
@@ -125,6 +127,13 @@ class Group:
     def members(self):
         if self._members is None:
             self._members = r.list(f"{self.base}/members")
+            # Amb les llistes privades, les baixes (i el telèfon i les notes) de cada fitxa són a part: vegeu MEMBER_PRIV
+            # a js/02-dades.js. Aquí es tornen a ajuntar, com fa l'app.
+            if self.config.get("attPrivate"):
+                for mid, p in r.list(f"{self.base}/memberPriv").items():
+                    if mid in self._members:
+                        base = {k: v for k, v in self._members[mid].items() if k not in MEMBER_PRIV}
+                        self._members[mid] = {**base, **{k: v for k, v in p.items() if k not in ("memberId", "syncAt")}}
         return self._members
 
     def active(self):

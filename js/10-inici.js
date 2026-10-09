@@ -65,6 +65,7 @@ const TODO_ICONS = {
   msg: '<path d="M4 5.5h16v10.5H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/>',
   thread: '<path d="M4 5.5h11v8H8l-4 3.5z"/><path d="M15 9.5h5v8l-3-2.5h-6.5v-2"/>',
   plan: '<path d="M9 18V6.5l10-2.5v11.5"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="15.5" r="2.5"/>',
+  ward: WARD_ICON,
   score: '<path d="M6 3.5h9l3 3v14H6z"/><path d="M15 3.5v3h3M9 11h6M9 14h6M9 17h4"/>',
 };
 const unreadAnnouncements = () => { const seen = lsGet(LS_SEEN) || ''; return visibleAnnouncements().filter(a => (a.createdAt || '') > seen && (!a.until || a.until >= TODAY)); };
@@ -76,7 +77,7 @@ function todoItems() {
   const out = [];
   for (const x of mySubs()) {
     const s = sessionById(x.sessionId);
-    if (s) out.push({ icon: 'roll', t: `Avui passes llista de ${esc(SEC[x.section].name.toLowerCase())}`, s: `${esc(s.type || 'Assaig')}${s.time ? ` · ${esc(timeRange(s))}` : ''}`, btn: 'Passa llista', act: `data-act="home-roll" data-sid="${esc(s.id)}" data-sec="${esc(x.section)}"`, n: 1 });
+    if (s) out.push({ icon: 'roll', t: x.auto ? `Ets ${esc(V.leader)} en funcions de ${esc(SEC[x.section].name.toLowerCase())}: passa llista` : `Avui passes llista de ${esc(SEC[x.section].name.toLowerCase())}`, s: `${esc(s.type || 'Assaig')}${s.time ? ` · ${esc(timeRange(s))}` : ''}`, btn: 'Passa llista', act: `data-act="home-roll" data-sid="${esc(s.id)}" data-sec="${esc(x.section)}"`, n: 1 });
   }
   if (canEdit()) {
     const abs = pendingAbsences();
@@ -108,6 +109,8 @@ function todoItems() {
   const plan = planTodo();
   if (plan) out.push(plan);
   out.push(...archiveTodos());
+  out.push(...wardTodos());
+  out.push(...rollTodos());
   const th = unreadThreads();
   if (th.length) out.push({ icon: 'thread', t: `${th.length === 1 ? '1 conversa' : `${th.length} converses`} amb resposta nova`, s: esc(th.map(threadWho).slice(0, 2).join(', ')), btn: 'Llegeix', act: th.length === 1 ? `data-act="thread" data-id="${esc(th[0].id)}"` : 'data-act="threads"', n: th.length });
   const msgs = unreadMessages();
