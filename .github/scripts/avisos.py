@@ -250,10 +250,12 @@ class Group:
             to = m.get("to") or ["*"]
             head = m.get("byName") or "Missatge"
             text = m.get("title") or m.get("body") or ""
-            for did, d in self.targets("missatges"):
+            # A qui fa una producció: només als aparells de qui és a la llista (members).
+            only = set(m.get("members") or []) if m.get("members") is not None else None
+            for did, d in self.targets("missatges", only):
                 if d.get("email") and d.get("email") == m.get("by"):
                     continue
-                if "*" not in to and d.get("section") not in to:
+                if only is None and "*" not in to and d.get("section") not in to:
                     continue
                 self.deliver(f"msg:{mid_}:{did}", d, f"{head}: {text[:140]}", f"msg-{mid_}")
             self.state["messages"].append(mid_)

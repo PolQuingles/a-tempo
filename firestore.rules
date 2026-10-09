@@ -119,7 +119,7 @@ service cloud.firestore {
     // tools/stamp.py hi escriu l'empremta d'aquest fitxer. La vigilància comprova que les regles publicades són les del
     // repositori demanant reglesVersio/<empremta>: si les publicades són unes altres, la lectura es denega.
     match /reglesVersio/{v} {
-      allow get: if v == '880521d1689c';
+      allow get: if v == 'b5e2c289f320';
     }
 
     match /plataforma/equip {
@@ -384,16 +384,20 @@ service cloud.firestore {
         allow delete: if teaches(c) || (hasSpace(c) && mine(c, mid));
       }
       // Missatges dins l'app: el cap de corda escriu només a la seva corda; administració, direcció, gerència i
-      // secretaria, a tothom ('*') o a les cordes que triïn. Cadascú llegeix els de la seva corda i els de tothom.
+      // secretaria, a tothom ('*'), a les cordes que triïn o a qui fa una producció (members: la llista de qui la fa).
+      // Cadascú llegeix els de la seva corda, els de tothom i els que porten el seu nom a members.
       match /messages/{id} {
         allow read: if canEdit(c) || hasRole(c, ['backup']) || isService()
-          || (isStaff(c) && ('*' in resource.data.to || memberSection(c) in resource.data.to));
+          || (isStaff(c) && ('*' in resource.data.to || memberSection(c) in resource.data.to))
+          || (isStaff(c) && myMember(c) in resource.data.get('members', []));
         // Els arxivers també escriuen a la seva corda (p. ex. per recordar que cal tornar les partitures).
         allow create: if (canEdit(c) || staffHas(c, ['archive']))
           && request.resource.data.by == email()
           && request.resource.data.to is list && request.resource.data.to.size() > 0 && request.resource.data.to.size() <= 20
           && request.resource.data.body is string && request.resource.data.body.size() <= 2000
-          && (staffHas(c, ['admin', 'director', 'gerencia', 'secretaria']) || request.resource.data.to == [staffSection(c)]);
+          && (!('members' in request.resource.data) || (request.resource.data.members is list && request.resource.data.members.size() <= 400))
+          && (staffHas(c, ['admin', 'director', 'gerencia', 'secretaria'])
+              || (request.resource.data.to == [staffSection(c)] && !('members' in request.resource.data)));
         allow delete: if isAdmin(c) || ((canEdit(c) || staffHas(c, ['archive'])) && resource.data.by == email());
       }
       // Notes de seguiment de cada persona: només la direcció, l'administració i els caps de corda (de la seva corda).

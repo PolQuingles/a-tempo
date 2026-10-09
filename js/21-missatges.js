@@ -4,6 +4,7 @@
 
 /* ---------- Missatges ---------- */
 // messages/<id> = { id, to: ['*'] (tothom) o [corda…], title, body, by (correu), byName, byRole, createdAt }.
+// A qui fa una producció: to: ['p:<producció>'], prod, secs (les cordes, o cap = totes) i members (qui la fa en enviar-lo).
 // Els caps de corda i els arxivers escriuen només a la seva corda; administració, direcció, gerència i secretaria, a tothom o a les
 // cordes que triïn. Les regles només deixen llegir cada missatge a qui és de la corda (i a l'equip), i arriba al mòbil
 // com un avís (avisos.py, «missatges»).
@@ -18,12 +19,17 @@ const myArchSection = () => { const me = ME(); return hasRole(me, 'archive') && 
 const mySecWrite = () => myLeadSection() || myArchSection();
 const canMessage = () => canWriteAll() || !!mySecWrite();
 const mySectionNow = () => S.members.get(myMemberId())?.section || null;
-const msgTo = m => (m.to || []).includes('*') ? 'A tothom' : `A ${(m.to || []).map(x => SEC_MAP[x] ? SEC[x].name.toLowerCase() : x).join(', ')}`;
+const msgTo = m => m.prod ? `A qui fa ${S.productions.get(m.prod)?.name || 'una producció'}${(m.secs || []).length ? ` (${m.secs.map(x => SEC[x]?.name.toLowerCase() || x).join(', ')})` : ''}`
+  : (m.to || []).includes('*') ? 'A tothom' : `A ${(m.to || []).map(x => SEC_MAP[x] ? SEC[x].name.toLowerCase() : x).join(', ')}`;
+/** Qui fa una producció (de totes les cordes o de les triades): a qui arriba un missatge «a qui fa la producció». */
+const prodRecipients = (pid, secs = []) => membersOf(null).filter(m => !isExcluded(pid, m.id) && (!secs.length || secs.includes(m.section)));
+/** Les produccions a qui es pot escriure: les que encara no s'han acabat. */
+const msgProds = () => productionsSorted().filter(p => allSessions(p.id).some(s => s.date >= TODAY));
 /** Els missatges que són per a mi: a tothom, a la meva corda (o la que porto) i els que he escrit. */
 function messagesForMe(all) {
   const secs = [mySectionNow(), mySecWrite()].filter(Boolean);
   return [...S.messages.values()]
-    .filter(m => all || m.by === myEmail() || (m.to || []).includes('*') || (m.to || []).some(x => secs.includes(x)))
+    .filter(m => all || m.by === myEmail() || (m.to || []).includes('*') || (m.to || []).some(x => secs.includes(x)) || (!!myId() && (m.members || []).includes(myId())))
     .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
 }
 const unreadMessages = () => { const seen = lsGet(LS_MSG) || ''; return messagesForMe().filter(m => (m.createdAt || '') > seen && m.by !== myEmail()); };
@@ -38,9 +44,11 @@ function watchMessages() {
     return;
   }
   const sec = mySectionNow();
-  const got = [new Map(), new Map()];
+  const got = [new Map(), new Map(), new Map()];
   const on = (i, q) => q.onSnapshot(snap => { got[i] = new Map(snap.docs.map(d => [d.id, d.data()]).filter(([, m]) => (m.createdAt || '') >= since)); take(got); }, () => {});
-  msgWatch = [on(0, db.collection('messages').where('to', 'array-contains', '*')), sec ? on(1, db.collection('messages').where('to', 'array-contains', sec)) : null];
+  msgWatch = [on(0, db.collection('messages').where('to', 'array-contains', '*')), sec ? on(1, db.collection('messages').where('to', 'array-contains', sec)) : null,
+    // Els que són per a qui fa una producció: hi ha la llista de qui la fa.
+    S.memberId ? on(2, db.collection('messages').where('members', 'array-contains', S.memberId)) : null];
 }
 function msgCard(m, full) {
   const seen = lsGet(LS_MSG) || '';
@@ -106,10 +114,13 @@ function sheetMessage(preset = {}) {
   const all = canWriteAll();
   if (!all && !lead) return;
   const reach = to => to.includes('*') ? membersOf(null).length : membersOf(null).filter(m => to.includes(m.section)).length;
+  const prods = all ? msgProds() : [];
+  let prod = all && preset.prod && prods.some(p => p.id === preset.prod) ? preset.prod : '';
   openSheet({
     title: all ? 'Nou missatge' : `Missatge a la ${V.section}`,
     body: `<div class="kv">
-      ${all ? `<div class="field"><span>Per a</span><div class="pickers" id="mg-to"><button type="button" class="pick" data-sec="*" aria-pressed="${!lead}">Tothom</button>${SECTIONS.map(x => secPick(x, x.id === lead)).join('')}</div></div>`
+      ${all && prods.length ? `<label class="field"><span>Qui</span><select class="inp" id="mg-prod"><option value="">Tota la plantilla</option>${prods.map(p => `<option value="${esc(p.id)}" ${p.id === prod ? 'selected' : ''}>Qui fa ${esc(p.name)}</option>`).join('')}</select></label>` : ''}
+      ${all ? `<div class="field"><span id="mg-to-l">Per a</span><div class="pickers" id="mg-to"><button type="button" class="pick" data-sec="*" aria-pressed="${!lead}">Tothom</button>${SECTIONS.map(x => secPick(x, x.id === lead)).join('')}</div></div>`
         : `<p style="margin:0">Per a tota la <b>${esc(SEC[lead].name.toLowerCase())}</b> (${membersOf(lead).length} persones). Els arribarà a l’app i, a qui tingui les notificacions activades, al mòbil.</p>`}
       <label class="field"><span>Assumpte (opcional)</span><input class="inp" id="mg-title" maxlength="80" value="${esc(preset.title || '')}" placeholder="p. ex. Assaig parcial de dijous"></label>
       <label class="field"><span>Missatge</span><textarea class="inp" id="mg-body" maxlength="1500" style="min-height:140px" placeholder="Escriu aquí…">${esc(preset.body || '')}</textarea></label>
@@ -118,7 +129,14 @@ function sheetMessage(preset = {}) {
     foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="mg-send">Envia</button>`,
     onMount: el => {
       const to = () => all ? (() => { const v = $$('#mg-to .pick[aria-pressed="true"]', el).map(b => b.dataset.sec); return v.includes('*') || !v.length ? ['*'] : v; })() : [lead];
-      const paint = () => { const t = to(); el.querySelector('#mg-reach').textContent = `Arribarà a ${reach(t)} ${V.members}${t.includes('*') ? ' i a tot l’equip' : ''}.`; };
+      const secsOf = t => t.includes('*') ? [] : t;
+      const paint = () => {
+        const t = to();
+        if (all) el.querySelector('#mg-to-l').textContent = prod ? `De quines ${V.sections}` : 'Per a';
+        el.querySelector('#mg-reach').textContent = prod ? `Arribarà als ${prodRecipients(prod, secsOf(t)).length} ${V.members} que fan ${S.productions.get(prod).name}${secsOf(t).length ? ' d’aquestes ' + V.sections : ''} (i l’equip ho veurà).`
+          : `Arribarà a ${reach(t)} ${V.members}${t.includes('*') ? ' i a tot l’equip' : ''}.`;
+      };
+      el.querySelector('#mg-prod')?.addEventListener('change', e => { prod = /** @type {HTMLSelectElement} */ (e.target).value; paint(); });
       el.querySelectorAll('#mg-to .pick').forEach(b => b.onclick = () => {
         const on = b.getAttribute('aria-pressed') !== 'true';
         if (b.dataset.sec === '*') el.querySelectorAll('#mg-to .pick').forEach(x => x.setAttribute('aria-pressed', x === b && on));
@@ -131,8 +149,14 @@ function sheetMessage(preset = {}) {
         if (!body) { toast('Escriu el missatge'); return; }
         const rec = { id: uid('ms'), to: to(), title: el.querySelector('#mg-title').value.trim(), body, by: S.email || '', byName: fullName(S.me?.name || S.userName || S.email || ''),
           byRole: lead && !all ? `${myLeadSection() ? capz(V.leader) : 'Arxiver'} de ${SEC[lead].name.toLowerCase()}` : (rolesText(S.me).split(' · ')[0] || ''), createdAt: new Date().toISOString() };
+        // A qui fa una producció: la llista de qui la fa ara (qui hi entri després no el rebrà; qui en surti, el conserva).
+        if (prod) {
+          const secs = secsOf(rec.to), ms = prodRecipients(prod, secs);
+          if (!ms.length) { toast('Ningú no fa aquesta producció'); return; }
+          Object.assign(rec, { to: [`p:${prod}`], prod, secs, members: ms.map(m => m.id) });
+        }
         S.messages.set(rec.id, rec); persist('messages', rec.id, rec, 10);
-        closeSheet(); toast(`Missatge enviat a ${reach(rec.to)} ${V.members}`); render();
+        closeSheet(); toast(`Missatge enviat a ${rec.members ? rec.members.length : reach(rec.to)} ${V.members}`); render();
       };
     },
   });

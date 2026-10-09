@@ -1266,6 +1266,34 @@ def main():
         check(not errors, "sense errors amb les fitxes privades", "; ".join(errors[:3]))
         ctx.close()
 
+        print("Missatges a qui fa una producció")
+        ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/calendari")
+        r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          const p = clone(S.productions.get('p1')); p.excluded = ['mS1']; saveProduction(p); await s(300);
+          ui.calProd = 'all'; ui.calView = 'list'; render(); await s(300);
+          const b = document.querySelector('[data-act="msg-new"][data-prod="p1"]'); out.btn = !!b; b.click(); await s(400);
+          out.preset = document.querySelector('#mg-prod')?.value === 'p1';
+          // (l'administrador també és cap de corda: la seva corda ja surt triada; primer «Tothom», després només sopranos)
+          document.querySelector('#mg-to .pick[data-sec="*"]').click(); document.querySelector('#mg-to .pick[data-sec="S"]').click(); await s(100);
+          out.reach = /Arribarà als 3 cantaires que fan Concert de tardor d’aquestes cordes/.test(document.querySelector('#mg-reach').textContent);
+          document.querySelector('#mg-body').value = 'Sopranos del concert: dijous, assaig parcial.';
+          document.querySelector('#mg-send').click(); await s(800);
+          const m = [...S.messages.values()].find(x => x.prod === 'p1');
+          out.saved = !!m && m.to.join() === 'p:p1' && m.secs.join() === 'S' && m.members.length === 3 && !m.members.includes('mS1') && m.members.includes('mS0');
+          out.label = /A qui fa Concert de tardor \(sopranos\)/.test(msgTo(m));
+          return out; }""")
+        switch_user(page, base, "singer")
+        r.update(page.evaluate("""async () => ({ singerSees: messagesForMe().some(x => x.prod === 'p1' && /assaig parcial/.test(x.body)) })"""))
+        switch_user(page, base, "leader")
+        r.update(page.evaluate("""async () => ({ otherNot: !messagesForMe().some(x => x.prod === 'p1') })"""))
+        for k, label in [("btn", "al calendari, cada producció té «Escriu a qui la fa»"), ("preset", "i obre el missatge amb la producció triada"),
+                         ("reach", "diu a quanta gent arribarà (només qui la fa, i de les cordes triades)"),
+                         ("saved", "el missatge porta la llista de qui la fa, sense qui no la fa"), ("label", "i diu a qui va"),
+                         ("singerSees", "qui la fa el rep"), ("otherNot", "i a qui no, no li surt")]:
+            check(r.get(k), label, str(r))
+        check(not errors, "sense errors amb els missatges a qui fa una producció", "; ".join(errors[:3]))
+        ctx.close()
+
         print("Mira l'app com…")
         ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/gestio/personal")
         page.wait_for_function("S.staffReady", timeout=5000)
