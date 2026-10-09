@@ -11,8 +11,6 @@ function scheduleRender() {
   requestAnimationFrame(() => {
     renderQueued = false;
     const a = document.activeElement;
-    // A la porta, el cercador gairebé sempre té el focus: es repinta igualment i s'hi torna a posar, amb el que hi hagi escrit.
-    if (a && a.id === 'door-q') { const v = /** @type {HTMLInputElement} */ (a).value; render(); const q = /** @type {HTMLInputElement} */ ($('#door-q')); if (q) { q.value = v; q.focus({ preventScroll: true }); if (v) filterList(q); } return; }
     if (a && $('#view').contains(a) && a.matches('input, textarea, select')) { deferred = true; return; }
     render();
   });

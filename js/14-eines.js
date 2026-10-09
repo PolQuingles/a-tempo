@@ -355,10 +355,8 @@ function sheetHelp() {
     <li>Un punt vermell al quadre vol dir que hi ha llistes d’altres dies pendents.</li></ul>
     <h3>Si no hi ets: substitut</h3>
     <p>Dins la ${w.section}, <b>Substitut per avui</b>: tria qui passarà llista. Rebrà permís per fer-ho des del seu compte fins l’endemà.</p>
-    <h3>Qui passa llista a cada producció</h3>
-    <p>Si el ${w.leader} no fa una producció, a <b>Assistència › Qui passa llista</b> tria qui la passarà de la seva ${w.section} a tots els assajos i ${w.sh.els.replace(/^(els|les) /, '')} (ha de fer la producció). Si en una producció que comença aviat no hi ha ningú, surt a «Per fer».</p>
-    <h3>Passar llista a la porta</h3>
-    <p><b>Assistència › Passa llista a la porta</b>: una sola persona marca qui arriba, de totes les ${w.sections}. Toca el nom, o escriu-lo i prem Retorn. Fins a 5 minuts després de l’hora compta com a puntual; després, com a retard amb els minuts. Amb un lector de targetes (USB o Bluetooth) o amb l’NFC d’un mòbil Android, cadascú només passa la seva targeta: la primera vegada l’app pregunta de qui és. En acabar, <b>Els que falten: falta</b>.</p>
+    <h3>${capz(w.leader)} en funcions</h3>
+    <p>Si el ${w.leader} no fa una producció, a <b>Assistència › ${capz(w.leaders)} en funcions</b> tria una persona de la seva ${w.section} que sí la fa: en serà <b>${w.leader} en funcions</b> i passarà llista a tots els assajos i ${w.sh.els.replace(/^(els|les) /, '')} d’aquella producció. Mentre no hi hagi ningú triat, li surt a «Per fer».</p>
     <h3>Absències</h3>
     <p>Els ${w.members} avisen des d’Inici. Surten a <b>Gestió › Absències</b> i a la llista del dia. En acceptar-los, els dies queden com a falta justificada.</p>
     <h3>Convocatòries</h3>

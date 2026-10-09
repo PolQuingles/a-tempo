@@ -25,7 +25,6 @@ function routeFromUi() {
     case 'llista':
       if (ui.att === 'stats') return 'assistencia/estadistiques';
       if (ui.att === 'risk') return 'assistencia/risc';
-      if (ui.door) return 'assistencia/porta';
       return ui.rollSec ? `assistencia/${encodeURIComponent(ui.rollSec)}` : 'assistencia';
     case 'calendari': return 'calendari';
     case 'vestidor': return 'vestidor';
@@ -49,8 +48,7 @@ function applyRoute(route) {
     ui.tab = 'llista';
     if (sub === 'estadistiques') { ui.att = 'stats'; ui.rollSec = null; }
     else if (sub === 'risc') { ui.att = 'risk'; ui.rollSec = null; }
-    else if (sub === 'porta') { ui.att = 'llista'; ui.rollSec = null; ui.door = canEdit(); }
-    else { ui.att = 'llista'; ui.door = false; ui.rollSec = sub && SEC_MAP[sub] ? (ui.section = sub) : null; }
+    else { ui.att = 'llista'; ui.rollSec = sub && SEC_MAP[sub] ? (ui.section = sub) : null; }
     return true;
   }
   if (a === 'calendari') { ui.tab = 'calendari'; return true; }

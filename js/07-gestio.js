@@ -509,7 +509,7 @@ function sheetAccount() {
   openSheet({
     title: 'El teu compte',
     body: `<div class="acct-head"><span class="acct-btn" aria-hidden="true">${esc(personInitials(name))}</span>
-        <span><b>${esc(name.includes(',') ? name.split(',').reverse().join(' ').trim() : name)}</b><small>${esc(S.email || '')}${S.me ? ` · ${esc(rolesText(S.me))}` : ''}</small></span></div>
+        <span><b>${esc(name.includes(',') ? name.split(',').reverse().join(' ').trim() : name)}</b><small>${esc(S.email || '')}${S.me ? ` · ${esc(rolesText(S.me))}` : ''}${actingNow().length ? ` · ${esc(capz(V.leader))} en funcions (${esc(actingNow().join(', '))})` : ''}</small></span></div>
       <nav class="acct-menu" aria-label="El teu compte">${groups.map(g => `<div class="acct-grp">${g.join('')}</div>`).join('')}</nav>`,
     foot: `<span class="spacer"></span><button class="btn btn-danger-ghost" data-act="sign-out">Tanca la sessió</button>`,
   });

@@ -77,7 +77,7 @@ function todoItems() {
   const out = [];
   for (const x of mySubs()) {
     const s = sessionById(x.sessionId);
-    if (s) out.push({ icon: 'roll', t: `Avui passes llista de ${esc(SEC[x.section].name.toLowerCase())}`, s: `${esc(s.type || 'Assaig')}${s.time ? ` · ${esc(timeRange(s))}` : ''}`, btn: 'Passa llista', act: `data-act="home-roll" data-sid="${esc(s.id)}" data-sec="${esc(x.section)}"`, n: 1 });
+    if (s) out.push({ icon: 'roll', t: x.auto ? `Ets ${esc(V.leader)} en funcions de ${esc(SEC[x.section].name.toLowerCase())}: passa llista` : `Avui passes llista de ${esc(SEC[x.section].name.toLowerCase())}`, s: `${esc(s.type || 'Assaig')}${s.time ? ` · ${esc(timeRange(s))}` : ''}`, btn: 'Passa llista', act: `data-act="home-roll" data-sid="${esc(s.id)}" data-sec="${esc(x.section)}"`, n: 1 });
   }
   if (canEdit()) {
     const abs = pendingAbsences();

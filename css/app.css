@@ -1347,27 +1347,8 @@ svg{stroke-linecap:round;stroke-linejoin:round}
   .tab.tab-extra + .tab.tab-extra::before{display:none}
 }
 
-/* ---------- Passar llista: la porta i qui la passa a cada producció (04b-porta) ---------- */
+/* ---------- Cap de corda en funcions (04b-en-funcions) ---------- */
 .roll-tools{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:12px}
-.door-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:12px 0 4px}
-.door-count{font-size:calc(15px*var(--ts));color:var(--ink-2);font-variant-numeric:tabular-nums}
-.door-count b{font-family:var(--f-display);font-size:30px;font-weight:600;color:var(--ink);margin-right:2px}
-.door-hint{margin:0 2px 10px;font-size:calc(13px*var(--ts));color:var(--muted)}
-.door-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
-.door-find{flex:1;min-width:min(100%,220px)}
-.door-find .inp{min-height:52px;font-size:calc(17px*var(--ts))}
-.door-list{padding:0;margin:0}
-.door-list > li{list-style:none}
-.door-row{display:flex;align-items:center;gap:12px;width:100%;text-align:left;min-height:60px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--surface)}
-.door-list > li:last-child .door-row{border-bottom:0}
-.door-row:active{background:var(--accent-soft)}
-.dr-n{flex:1;min-width:0;display:grid}
-.dr-n b{font-size:calc(16px*var(--ts));font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.dr-n small{color:var(--muted);font-size:calc(13px*var(--ts))}
-.door-go{flex:none;font-weight:700;font-size:calc(13px*var(--ts));color:var(--accent);padding:6px 10px;border-radius:999px;background:var(--accent-soft)}
-.door-st{flex:none;font-size:calc(13px*var(--ts));color:var(--muted);font-family:var(--f-mono)}
-.door-st.ok{color:var(--p-text)}
-.door-grp{margin-top:12px}
 .pr-row.warn select{border-color:var(--fnj)}
 .pr-row.warn > span{color:var(--fnj-text)}
 

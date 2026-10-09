@@ -9,12 +9,12 @@ const ADMIN_ONLY = new Set(['ward-cfg-add', 'ward-cfg-del', 'ward-cfg-save', 'pe
 const PRO_ONLY = new Set(['brand-color', 'logo-remove', 'kind-set', 'group-delete', 'sections-save', 'sections-undo']);
 // El calendari de les classes: només el professorat de cant i l'administració.
 const CLASS_ONLY = new Set(['cl-new', 'cl-edit', 'cl-review', 'cl-paste', 'cl-plan', 'cl-note', 'cl-mark', 'cl-stats', 'cl-cancel-day']);
-const EDIT_ONLY = new Set(['door-open', 'door-in', 'door-undo', 'door-nfc', 'door-rest', 'prod-roll', 'mark', 'min', 'mark-rest', 'session-new', 'sub-set', 'ann-new', 'ann-edit', 'mat-new', 'mat-edit', 'poll-new', 'poll-edit', 'poll-results', 'poll-remind', 'rsvp-remind', 'doc-new', 'doc-edit', 'share-app', 'staff-bulk', 'preview-on', 'who-in', 'mail-check', 'concert-list', 'concert-toggle', 'session-edit', 'member-edit', 'member-new', 'member-bulk', 'prod-new', 'prod-edit',
+const EDIT_ONLY = new Set(['prod-roll', 'mark', 'min', 'mark-rest', 'session-new', 'sub-set', 'ann-new', 'ann-edit', 'mat-new', 'mat-edit', 'poll-new', 'poll-edit', 'poll-results', 'poll-remind', 'rsvp-remind', 'doc-new', 'doc-edit', 'share-app', 'staff-bulk', 'preview-on', 'who-in', 'mail-check', 'concert-list', 'concert-toggle', 'session-edit', 'member-edit', 'member-new', 'member-bulk', 'prod-new', 'prod-edit',
   'wipe-demo', 'wipe-all', 'load-demo', 'export-json', 'abs-accept', 'abs-reject', 'abs-delete', 'manage',
   'roster-export', 'docs-copy-noimg',
   'choices-overview', 'work-new', 'work-edit', 'work-link', 'plan-edit', 'seating-edit', 'participants', 'certificate', 'season-report', 'trip-new', 'trip-edit', 'trip-admin', 'trip-remind']);
 const actions = {
-  'tab': el => { if (el.dataset.tab === 'gestio' && ui.tab !== 'gestio') ui.gestioFrom = ui.tab; ui.tab = el.dataset.tab; ui.door = false; if (ui.tab === 'tauler') ui.board = boardStart(); ui.rollSec = null; ui._calScrolled = false; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
+  'tab': el => { if (el.dataset.tab === 'gestio' && ui.tab !== 'gestio') ui.gestioFrom = ui.tab; ui.tab = el.dataset.tab; if (ui.tab === 'tauler') ui.board = boardStart(); ui.rollSec = null; ui._calScrolled = false; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
   'reload': () => location.reload(),
   'google-in': () => signInGoogle(),
   'cl-new': el => sheetClassDay(null, { teacher: el.dataset.k || '', date: el.dataset.date || '' }),
@@ -139,14 +139,8 @@ const actions = {
   'trip-remind': el => remindTrip(el.dataset.id),
   'cal-subscribe': () => sheetCalendar(),
   'risk-write': el => sheetRiskWrite(el.dataset.pid),
-  // Passar llista: qui la passa a cada producció i la porta (04b-porta).
+  // Cap de corda en funcions, per producció (04b-en-funcions).
   'prod-roll': el => sheetProdRoll(el.dataset.pid),
-  'door-open': () => { ui.door = true; ui.rollSec = null; ui.att = 'llista'; render(); window.scrollTo({ top: 0 }); $('#door-q')?.focus({ preventScroll: true }); },
-  'door-close': () => { ui.door = false; if (DOOR.nfc) { DOOR.nfc.abort(); DOOR.nfc = null; } render(); window.scrollTo({ top: 0 }); },
-  'door-in': el => doorArrive(el.dataset.mid),
-  'door-undo': el => doorUndo(el.dataset.mid),
-  'door-nfc': () => doorNfc(),
-  'door-rest': () => doorRest(),
   // El vestidor (20b-vestidor).
   'ward-open': () => { if (ui.tab !== 'vestidor') ui.wardFrom = ui.tab === 'gestio' ? ui.gestioFrom || 'avisos' : ui.tab; ui.tab = 'vestidor'; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
   'ward-ask': el => sheetWardAsk(el.dataset.id),
@@ -361,7 +355,7 @@ document.addEventListener('input', e => {
   const el = e.target.closest('[data-bind]');
   if (!el) return;
   const kind = el.dataset.bind;
-  if (kind === 'find' || kind === 'door-q') { filterList(el); return; }
+  if (kind === 'find') { filterList(el); return; }
   if (kind === 'cr' && CREATE) { CREATE[el.dataset.f] = el.value; return; }
   if (kind === 'cr-sec' || kind === 'cfg-sec') { const list = secList(kind.slice(0, -4)); if (list && list[+el.dataset.i]) list[+el.dataset.i][el.dataset.f] = el.value; if (kind === 'cfg-sec') markSectionsDirty(); return; }
   if (kind === 'min' || kind === 'note') {
@@ -436,9 +430,4 @@ document.addEventListener('keydown', e => {
   if (S.mode !== 'shared' || !S.ready || sheetClose) return;
   const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable;
   if ((e.key === '/' && !typing) || ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k')) { e.preventDefault(); sheetSearch(); }
-});
-// A la porta, el lector de targetes escriu el número i prem Retorn (i qui escriu un nom, també): vegeu doorEnter.
-document.addEventListener('keydown', e => {
-  const t = /** @type {HTMLInputElement} */ (e.target);
-  if (e.key === 'Enter' && t && t.id === 'door-q') { e.preventDefault(); doorEnter(t.value); }
 });

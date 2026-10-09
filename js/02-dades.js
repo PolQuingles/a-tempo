@@ -627,9 +627,9 @@ function saveAttendance(key, doc) {
 }
 /* ---------- Fitxes privades ---------- */
 // La plantilla (members) la llegeix tothom de l'agrupació: hi ha de ser el nom, la corda i la veu de cadascú. Amb les llistes
-// privades, el que la resta no ha de veure (el telèfon, les notes, les baixes i les altes amb el motiu, la targeta per
-// passar llista a la porta) va a memberPriv/<membre>, que només llegeixen l'equip i la persona. Aquí es tornen a ajuntar.
-const MEMBER_PRIV = ['phone', 'notes', 'leaves', 'history', 'card'];
+// privades, el que la resta no ha de veure (el telèfon, les notes, les baixes i les altes amb el motiu) va a
+// memberPriv/<membre>, que només llegeixen l'equip i la persona. Aquí es tornen a ajuntar.
+const MEMBER_PRIV = ['phone', 'notes', 'leaves', 'history'];
 const privMembers = () => !!S.config.attPrivate;
 function splitMember(m) {
   const pub = { ...m }, priv = { memberId: m.id };
@@ -692,7 +692,7 @@ async function moveMemberPriv(toPriv) {
 }
 function saveProduction(p) {
   S.productions.set(p.id, p); persist('productions', p.id, p, 50);
-  // Si té qui passa llista per corda, les sessions noves (o canviades de dia) també en tenen (vegeu 04b-porta).
+  // Si té caps de corda en funcions, les sessions noves (o canviades de dia) també en tenen (vegeu 04b-en-funcions).
   if (p.roll && Object.keys(p.roll).length) setTimeout(() => syncRollSubs(p.id), 0);
 }
 function saveConfig(patch) { S.config = { ...S.config, ...patch }; persist('config', 'main', S.config, 200); }

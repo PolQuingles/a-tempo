@@ -1194,57 +1194,43 @@ def main():
         check(not errors, "sense errors al vestidor", "; ".join(errors[:3]))
         ctx.close()
 
-        print("Passar llista a la porta i qui la passa a cada producció")
+        print("Cap de corda en funcions quan el cap de corda no fa la producció")
         ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/assistencia")
         r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
           const txt = q => document.querySelector(q)?.innerText || '';
           const today = allSessions().find(x => x.date === TODAY);
           ui.sessionId = today.id; render(); await s(300);
-          out.tools = !!document.querySelector('.roll-tools [data-act="door-open"]');
-          document.querySelector('[data-act="door-open"]').click(); await s(400);
-          out.route = location.hash === '#/assistencia/porta' && document.activeElement?.id === 'door-q';
-          const total = doorPeople(today).length;
-          out.list = document.querySelectorAll('#door-wait .door-row').length === total - doorPeople(today).filter(m => doorAway(today, m)).length;
-          document.querySelector('#door-wait .door-row[data-mid="mS2"]').click(); await s(400);
-          out.tap = ['P', 'R'].includes(effMark(today, S.members.get('mS2'))?.s) && !document.querySelector('#door-wait .door-row[data-mid="mS2"]');
-          const q = () => document.querySelector('#door-q');
-          q().value = 'pere f'; q().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); await s(400);
-          out.byName = ['P', 'R'].includes(effMark(today, S.members.get('mB0'))?.s);
-          q().value = '04:A1:B2:C3'; q().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); await s(500);
-          out.newCard = /Targeta nova/.test(txt('.sheet .h2'));
-          document.querySelector('#dc-who').value = 'mC1'; document.querySelector('#dc-ok').click(); await s(800);
-          out.cardSaved = S.members.get('mC1').card === '04A1B2C3' && ['P', 'R'].includes(effMark(today, S.members.get('mC1'))?.s);
-          setMark(today, S.members.get('mC1'), null); await s(200); render(); await s(200);
-          doorEnter('04a1b2c3'); await s(400);
-          out.cardAgain = ['P', 'R'].includes(effMark(today, S.members.get('mC1'))?.s);
-          out.count = new RegExp(`^3 de ${doorPeople(today).filter(m => !doorAway(today, m)).length} ja hi són`).test(txt('.door-count'));
-          document.querySelector('.door-grp [data-act="door-undo"][data-mid="mS2"]').click(); await s(300);
-          out.undo = !effMark(today, S.members.get('mS2'));
-          document.querySelector('[data-act="door-close"]').click(); await s(300);
-          out.closed = !ui.door && !document.querySelector('.door-head');
-          // El cap de corda de tenors no fa la producció: «Per fer» demana qui passa llista, i qui es tria en fa de substitut.
+          out.noDoor = !document.querySelector('[data-act="door-open"]') && typeof viewDoor === 'undefined';
+          out.tools = /Caps de corda en funcions/.test(txt('.roll-tools'));
+          // El cap de corda de tenors (Lluc) no fa la producció.
           const p = clone(S.productions.get(today.prodId)); p.excluded = ['mT0']; saveProduction(p); await s(300);
-          out.todo = todoItems().some(x => /tria qui passa llista/.test(x.t) && /tenors/.test(x.s) && !/sopranos/.test(x.s));
-          sheetProdRoll(p.id); await s(400);
-          out.warn = !!document.querySelector('.pr-row.warn[data-sec="T"]') && !document.querySelector('.pr-row.warn[data-sec="S"]');
-          document.querySelector('select[data-sec="T"]').value = 'mT2'; document.querySelector('#pr-save').click(); await s(800);
-          const subs = [...S.subs.values()].filter(x => x.auto && x.section === 'T' && x.memberId === 'mT2');
-          out.subs = subs.length === S.productions.get(p.id).sessions.filter(x => x.date >= addDays(TODAY, -1)).length && !todoItems().some(x => /tria qui passa llista/.test(x.t));
-          const p2 = clone(S.productions.get(p.id)); p2.sessions.push({ id: 'snova', date: addDays(TODAY, 4), time: '20:30', end: '22:30', type: 'Assaig', place: '', note: '' }); saveProduction(p2); await s(600);
-          out.newSession = S.subs.get('snova_T')?.memberId === 'mT2';
-          ui.sessionId = today.id; ui.rollSec = 'T'; render(); await s(300);
-          out.subLine = /En aquesta producció passa llista: Oriol Camps/.test(txt('.sub-line'));
+          out.todo = todoItems().some(x => /tria el cap de corda en funcions/.test(x.t) && /tenors/.test(x.s) && !/sopranos/.test(x.s));
           return out; }""")
-        for k, label in [("tools", "a la llista hi ha «Passa llista a la porta»"), ("route", "la porta té adreça pròpia i el cercador a punt"),
-                         ("list", "hi surten tots els que han de venir, de totes les cordes"), ("tap", "tocar un nom el marca com a arribat"),
-                         ("byName", "escriure el nom i prémer Retorn també"), ("newCard", "una targeta desconeguda demana de qui és"),
-                         ("cardSaved", "i la desa i el marca"), ("cardAgain", "la pròxima vegada, només cal passar-la"),
-                         ("count", "el comptador diu quants hi són"), ("undo", "es pot desfer"), ("closed", "i se'n surt"),
-                         ("todo", "si el cap de corda no fa la producció, «Per fer» demana qui passa llista"),
-                         ("warn", "la finestra marca la corda que no té ningú"), ("subs", "qui es tria passa llista a totes les sessions"),
-                         ("newSession", "també a les sessions que s'afegeixen després"), ("subLine", "i la llista de la corda ho diu")]:
+        switch_user(page, base, "leader")
+        r.update(page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          const txt = q => document.querySelector(q)?.innerText || '';
+          const today = allSessions().find(x => x.date === TODAY);
+          out.leaderTodo = todoItems().some(x => /tria el cap de corda en funcions/.test(x.t) && /No fas aquesta producció/.test(x.s));
+          sheetProdRoll(today.prodId); await s(400);
+          out.ownOnly = document.querySelectorAll('.pr-row').length === 1 && !!document.querySelector('.pr-row.warn[data-sec="T"]');
+          out.onlyDoers = ![...document.querySelectorAll('select[data-sec="T"] option')].some(o => o.value === 'mT0');
+          document.querySelector('select[data-sec="T"]').value = 'mT2'; document.querySelector('#pr-save').click(); await s(800);
+          const p = S.productions.get(today.prodId);
+          const subs = [...S.subs.values()].filter(x => x.auto && x.section === 'T' && x.memberId === 'mT2');
+          out.subs = p.roll?.T === 'mT2' && subs.length === p.sessions.filter(x => x.date >= addDays(TODAY, -1)).length && !todoItems().some(x => /en funcions/.test(x.t));
+          const p2 = clone(p); p2.sessions.push({ id: 'snova', date: addDays(TODAY, 4), time: '20:30', end: '22:30', type: 'Assaig', place: '', note: '' }); saveProduction(p2); await s(600);
+          out.newSession = S.subs.get('snova_T')?.memberId === 'mT2';
+          ui.tab = 'llista'; ui.att = 'llista'; ui.sessionId = today.id; ui.rollSec = 'T'; render(); await s(300);
+          out.subLine = /Cap de corda en funcions: Oriol Camps/.test(txt('.sub-line'));
+          return out; }"""))
+        for k, label in [("noDoor", "ja no hi ha el mode porta"), ("tools", "a la llista hi ha «Caps de corda en funcions»"),
+                         ("todo", "si el cap de corda no fa la producció, «Per fer» ho avisa (només de la seva corda)"),
+                         ("leaderTodo", "al cap de corda li demana que triï qui passarà llista"),
+                         ("ownOnly", "i només pot triar el de la seva corda"), ("onlyDoers", "d'entre els que fan la producció"),
+                         ("subs", "el cap de corda en funcions passa llista a totes les sessions"),
+                         ("newSession", "també a les que s'afegeixen després"), ("subLine", "i la llista ho diu: «Cap de corda en funcions»")]:
             check(r.get(k), label, str(r))
-        check(not errors, "sense errors a la porta", "; ".join(errors[:3]))
+        check(not errors, "sense errors amb el cap de corda en funcions", "; ".join(errors[:3]))
         ctx.close()
 
         print("Fitxes privades amb les llistes privades")

@@ -119,7 +119,7 @@ service cloud.firestore {
     // tools/stamp.py hi escriu l'empremta d'aquest fitxer. La vigilància comprova que les regles publicades són les del
     // repositori demanant reglesVersio/<empremta>: si les publicades són unes altres, la lectura es denega.
     match /reglesVersio/{v} {
-      allow get: if v == '5d5c939ca4f6';
+      allow get: if v == '880521d1689c';
     }
 
     match /plataforma/equip {
@@ -423,7 +423,7 @@ service cloud.firestore {
         allow delete: if wardStaff(c) || (hasSpace(c) && mine(c, resource.data.memberId) && resource.data.status == 'demanat');
       }
       // Amb les llistes privades, el que la resta de la plantilla no ha de veure de cada fitxa (telèfon, notes, baixes i
-      // altes amb els motius, targeta per passar llista) va aquí. La llegeixen l'equip i la persona; si les llistes no són
+      // altes amb els motius) va aquí. La llegeixen l'equip i la persona; si les llistes no són
       // privades, tothom (com la fitxa mateixa).
       match /memberPriv/{mid} {
         allow read: if canEdit(c) || (hasSpace(c) && mine(c, mid)) || (isStaff(c) && !attPrivate(c)) || hasRole(c, ['backup']) || isService();

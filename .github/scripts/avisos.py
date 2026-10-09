@@ -31,7 +31,7 @@ import norma
 
 VAPID = os.environ["PUSH_PRIVATE_KEY"]
 # Els camps de cada fitxa que, amb les llistes privades, van a memberPriv (vegeu js/02-dades.js).
-MEMBER_PRIV = ("phone", "notes", "leaves", "history", "card")
+MEMBER_PRIV = ("phone", "notes", "leaves", "history")
 APP_URL = os.environ.get("APP_URL", "https://polquingles.github.io/a-tempo/")
 # Adreça de contacte que demana l'estàndard, per si el servei de push ha d'avisar de res.
 # Es pot canviar amb el secret PUSH_CONTACT; no cal que sigui personal.
