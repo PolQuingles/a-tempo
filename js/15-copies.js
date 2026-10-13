@@ -25,13 +25,13 @@ function exportCSV() {
   const prod = { name: scope.name };
   const st = computeStats(scope, '');
   const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  const head = ['Nom', V.Section, 'Assistència %', 'Assisteix', 'Retard', 'Minuts retard', 'Falta no justificada', 'Falta justificada', 'No fa', ...st.sessions.map(s => `${s.date} ${s.type || ''}`)];
+  const head = ['Nom', V.Section, 'Assistència %', 'Assisteix', 'Retard', 'Minuts retard', 'Marxa abans', 'Minuts marxa abans', 'Falta no justificada', 'Falta justificada', 'No fa', ...st.sessions.map(s => `${s.date} ${s.type || ''}`)];
   const lines = [head.map(q).join(';')];
   for (const r of st.rows.sort((a, b) => a.m.section.localeCompare(b.m.section) || byName(a.m, b.m))) {
     const byS = new Map(r.hist.map(h => [h.s.id, h.mk]));
     const rt = rate(r);
-    lines.push([r.m.name, SEC[r.m.section].name, rt == null ? '' : Math.round(rt * 100), r.P, r.R, r.min, r.FNJ, r.FJ, r.NP,
-      ...st.sessions.map(s => { const mk = byS.get(s.id); return mk ? (mk.s === 'R' && mk.min ? `R${mk.min}` : mk.s) : ''; })].map(q).join(';'));
+    lines.push([r.m.name, SEC[r.m.section].name, rt == null ? '' : Math.round(rt * 100), r.P, r.R, r.min, r.left, r.leftMin, r.FNJ, r.FJ, r.NP,
+      ...st.sessions.map(s => { const mk = byS.get(s.id); return mk ? `${mk.s === 'R' && mk.min ? `R${mk.min}` : mk.s}${+mk.early > 0 ? ` (marxa ${mk.early}′ abans)` : ''}` : ''; })].map(q).join(';'));
   }
   const slug = prod.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   offerFile(`assistencia-${slug}.csv`, '﻿' + lines.join('\r\n'), 'text/csv');

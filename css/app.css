@@ -239,6 +239,11 @@ summary::-webkit-details-marker{display:none}
 
 .extra{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px;padding:10px;border-radius:10px}
 .extra.x-R{background:var(--r-soft)}
+.extra.x-E{background:var(--r-soft)}
+.extra .m{font-size:calc(13px*var(--ts));color:var(--muted)}
+.early-add{display:block;margin:6px 0 0 auto;min-height:32px;padding:0 6px;font-size:calc(13px*var(--ts));font-weight:600;color:var(--muted);text-decoration:underline;text-underline-offset:3px}
+.early-add:hover{color:var(--ink)}
+.roster.compact .early-add{display:none}
 .extra.x-FJ{background:var(--fj-soft)}
 .extra.x-FNJ{background:var(--fnj-soft)}
 .extra label{font-size:calc(13px*var(--ts));font-weight:600;color:var(--ink-2)}

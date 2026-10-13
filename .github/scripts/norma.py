@@ -9,7 +9,8 @@ Les dades tenen la forma de Firestore:
   · attendance: {<sessió>_<corda>: {marks: {membre: {s: P | R | FJ | FNJ | NP, min?: minuts de retard}}}};
   · el membre, amb section i leaves (baixes temporals {from, to}).
 
-Es compta en minuts, com a l'app: cada sessió hi pesa pel que dura, i un retard, pels minuts que s'hi ha estat.
+Es compta en minuts, com a l'app: cada sessió hi pesa pel que dura, i un retard o marxar abans d'hora (early), pels minuts
+que s'hi ha estat.
 """
 import re
 
@@ -33,6 +34,14 @@ def session_mins(s):
 def late_mins(mk):
     try:
         return float(mk.get("min") or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def early_mins(mk):
+    """«Ha marxat abans»: els minuts del final que s'ha perdut."""
+    try:
+        return float(mk.get("early") or 0)
     except (TypeError, ValueError):
         return 0
 
@@ -118,7 +127,7 @@ def rule_status(productions, sessions, attendance, pid, mid, m, today, min_frac,
         if marked["s"] == "NP":
             continue
         d = session_mins(s)
-        done_m = d if marked["s"] == "P" else d - min(d, late_mins(marked)) if marked["s"] == "R" else 0
+        done_m = d - min(d, (late_mins(marked) if marked["s"] == "R" else 0) + early_mins(marked)) if marked["s"] in ("P", "R") else 0
         if marked["s"] in ("P", "R"):
             att += 1
         else:

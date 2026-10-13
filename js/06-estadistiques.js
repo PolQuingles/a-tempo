@@ -45,7 +45,7 @@ function viewStats(inBoard) {
     <div class="kpi ${t.FNJ ? 'alert' : ''}"><div class="kpi-v">${t.FNJ}</div><div class="kpi-l">Faltes no justificades · ${t.FJ} just.</div></div>
   </div>
   <p class="muted" style="font-size:calc(13px*var(--ts));margin:10px 2px 0">${st.counted.length} de ${st.all.length} ${st.all.length === 1 ? 'sessió' : 'sessions'} amb llista ${helpBtn('assist')}</p>
-  ${helpText('assist', 'L’assistència es compta en minuts: els minuts que cadascú ha estat a l’assaig dividits pels minuts que ha durat (si una sessió no té hora de final, compta dues hores). Un retard hi resta els minuts que s’ha fet tard, i una falta, justificada o no, hi resta tota la sessió. No compten «no fa» ni les baixes.')}`;
+  ${helpText('assist', 'L’assistència es compta en minuts: els minuts que cadascú ha estat a l’assaig dividits pels minuts que ha durat (si una sessió no té hora de final, compta dues hores). Un retard hi resta els minuts que s’ha fet tard; marxar abans d’hora, els minuts que s’ha perdut del final; i una falta, justificada o no, hi resta tota la sessió. No compten «no fa» ni les baixes.')}`;
 
   const dist = `<div class="panel" style="padding:14px;margin-top:14px">${stackBar(t)}<div class="legend">${ORDER.map(k => `<span><i class="i-${k}"></i>${STATUS[k].label} <b>${t[k]}</b></span>`).join('')}</div></div>`;
 
@@ -110,19 +110,19 @@ function viewStats(inBoard) {
         ${stackBar(r)}
         <span class="mcounts">
           <span><i class="i-P"></i><b>${r.P}</b></span>
-          <span><i class="i-R"></i><b>${r.R}</b>${r.min ? ` · ${r.min}′` : ''}</span>
+          <span><i class="i-R"></i><b>${r.R}</b>${r.min ? ` · ${r.min}′` : ''}${r.left ? ` · marxa ${r.leftMin}′` : ''}</span>
           <span><i class="i-FNJ"></i><b>${r.FNJ}</b></span>
           <span><i class="i-FJ"></i><b>${r.FJ}</b></span>
           ${r.NP ? `<span><i class="i-NP"></i><b>${r.NP}</b></span>` : ''}
         </span></button></li>`;
     }).join('')}</ul></div>
-    <div class="only-wide table-wrap"><table class="dtable"><thead><tr><th>${esc(V.Section)}</th><th>Nom</th><th class="n">Assistència</th><th class="n">Presents</th><th class="n">Retards</th><th class="n">Minuts</th><th class="n">Justif.</th><th class="n">No just.</th><th class="n">No fa</th><th>Norma</th></tr></thead><tbody>
+    <div class="only-wide table-wrap"><table class="dtable"><thead><tr><th>${esc(V.Section)}</th><th>Nom</th><th class="n">Assistència</th><th class="n">Presents</th><th class="n">Retards</th><th class="n">Minuts</th><th class="n">Marxa abans</th><th class="n">Justif.</th><th class="n">No just.</th><th class="n">No fa</th><th>Norma</th></tr></thead><tbody>
       ${rows.map(r => {
         const counted = r.P + r.R + r.FJ + r.FNJ;
         const rs = ruleMap.get(r.m.id);
         return `<tr data-act="member-stats" data-mid="${r.m.id}" data-find="${esc(normText(r.m.name))}">
           <td class="m">${esc(SEC[r.m.section].name)}</td><td><b>${esc(r.m.name)}</b></td>
-          <td class="n"><b>${counted ? pct(rate(r)) : (r.NP ? 'No fa' : '—')}</b></td><td class="n">${r.P}</td><td class="n">${r.R}</td><td class="n">${r.min ? `${r.min}′` : ''}</td>
+          <td class="n"><b>${counted ? pct(rate(r)) : (r.NP ? 'No fa' : '—')}</b></td><td class="n">${r.P}</td><td class="n">${r.R}</td><td class="n">${r.min ? `${r.min}′` : ''}</td><td class="n">${r.leftMin ? `${r.leftMin}′` : ''}</td>
           <td class="n">${r.FJ}</td><td class="n" ${r.FNJ ? 'style="color:var(--fnj-text);font-weight:700"' : ''}>${r.FNJ}</td><td class="n">${r.NP || ''}</td>
           <td>${rs && rs.status !== 'ok' ? `<span class="rule ${rs.status}">${rs.status === 'out' ? `&lt;${minAttendance()}%` : 'En risc'}</span>` : ''}</td></tr>`;
       }).join('')}</tbody></table></div>
@@ -434,7 +434,7 @@ function myAttendanceCard(me) {
   return `<div class="section-title prod-tone" style="--ph:${prodHue(prod)}"><h2 class="h2">La meva assistència</h2><span class="eyebrow"><i class="pdot"></i>${esc(prod.name)}</span></div>
     <div class="panel my-att prod-tone tinted" style="--ph:${prodHue(prod)}">
       ${counted ? `<div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span class="big">${Math.round(rate(r) * 100)}<small>%</small></span>
-        <span class="muted" style="font-size:calc(13px*var(--ts))">${minsText(r.mDone)} de ${minsText(r.mAll)} d’assaig${r.R ? ` · ${r.R === 1 ? '1 retard' : `${r.R} retards`}` : ''}${r.FJ ? ` · ${r.FJ} just.` : ''}${r.FNJ ? ` · ${r.FNJ} no just.` : ''}</span></div>
+        <span class="muted" style="font-size:calc(13px*var(--ts))">${minsText(r.mDone)} de ${minsText(r.mAll)} d’assaig${r.R ? ` · ${r.R === 1 ? '1 retard' : `${r.R} retards`}` : ''}${r.left ? ` · ${r.left === 1 ? 'ha marxat abans 1 cop' : `ha marxat abans ${r.left} cops`}` : ''}${r.FJ ? ` · ${r.FJ} just.` : ''}${r.FNJ ? ` · ${r.FNJ} no just.` : ''}</span></div>
         ${normHint(me, prod.id) || `<div>${ruleSentence(rs)}</div>`}
         <div class="dots" aria-label="Sessió a sessió">${dots}</div>`
       : `<span class="muted" style="font-size:calc(13.5px*var(--ts))">Encara no hi ha cap llista passada en aquesta producció.</span>`}

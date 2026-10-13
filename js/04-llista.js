@@ -93,6 +93,7 @@ function viewRollOverview(cur, list, pendingBySec) {
       ${stackBar({ ...c, NP: 0 })}
       <div class="day-grid">
         <div><i class="i-R"></i><b>${c.R}</b><span>Retards${c.min ? ` · ${c.min}′` : ''}</span></div>
+        ${c.left ? `<div><i class="i-R"></i><b>${c.left}</b><span>Han marxat abans · ${c.leftMin}′</span></div>` : ''}
         <div><i class="i-FJ"></i><b>${c.FJ}</b><span>Faltes justificades</span></div>
         <div><i class="i-FNJ"></i><b>${c.FNJ}</b><span>Faltes injustificades</span></div>
         <div><i class="i-none"></i><b>${c.none}</b><span>Sense marcar</span></div>
@@ -215,7 +216,7 @@ function tallyInner(c, pendingInRoll) {
   return `${stackBar(c)}
     <div class="legend">${legend}</div>
     <div class="tally-foot">
-      <span class="progress-txt">${c.min ? `Retard acumulat <b>${c.min}′</b>` : (c.R ? 'Retards sense minuts' : 'Sense retards')}</span>
+      <span class="progress-txt">${c.min ? `Retard acumulat <b>${c.min}′</b>` : (c.R ? 'Retards sense minuts' : 'Sense retards')}${c.left ? ` · ${c.left === 1 ? 'n’ha marxat 1' : `n’han marxat ${c.left}`} abans (<b>${c.leftMin}′</b>)` : ''}</span>
       <span style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-sm" data-act="summary">Resum</button>
         ${canMark(sessionById(ui.sessionId), ui.rollSec || ui.section) ? `<button class="btn btn-sm btn-primary" data-act="mark-rest" ${pendingInRoll ? '' : 'disabled'}>Resta com a presents</button>` : ''}
@@ -253,6 +254,7 @@ function rowHtml(session, m) {
     if (s === 'R') { if (mk.min) state = `Retard ${mk.min}′`; else { state = 'Indica els minuts'; warn = true; } }
     else if (mk.auto) state = mk.why === 'leave' ? `De baixa${mk.leave?.to ? ` fins al ${ddmm(mk.leave.to)}` : ''}` : 'No fa la producció';
     else state = STATUS[s].label;
+    if ((s === 'P' || s === 'R') && +mk.early > 0) state += ` · ha marxat ${mk.early}′ abans`;
   }
   let body = '';
   const editable = canMark(session, m.section);
@@ -263,7 +265,9 @@ function rowHtml(session, m) {
       body += `<div class="extra x-R"><label for="min-${m.id}">Minuts</label>
         <div class="mins"><button class="min-chip now" data-act="min" data-min="${now}" aria-pressed="${!!now && +mk.min === now}" ${now ? '' : `disabled title="Calcula els minuts des de l’hora d’inici: només funciona mentre dura la sessió"`}>Arriba ara${now ? ` · ${now}′` : ''}</button></div>
         <input class="min-input" id="min-${m.id}" type="number" inputmode="numeric" min="1" max="240" placeholder="—" value="${mk.min || ''}" data-bind="min" aria-label="Minuts de retard"></div>`;
-    } else if ((s === 'FJ' || s === 'FNJ') && !mk.auto) {
+    }
+    if (s === 'P' || s === 'R') body += earlyHtml(session, m, mk);
+    else if ((s === 'FJ' || s === 'FNJ') && !mk.auto) {
       body += `<div class="extra x-${s}"><label for="note-${m.id}">Motiu</label>
         <input class="note-input" id="note-${m.id}" type="text" maxlength="120" placeholder="Opcional" value="${esc(mk.note || '')}" data-bind="note"></div>`;
     }
@@ -275,6 +279,17 @@ function rowHtml(session, m) {
     <div class="row-top" ${editable ? '' : 'style="margin-bottom:4px"'}><span class="who">${avatar(m)}<span class="name">${esc(m.name)}</span>${m.part ? `<span class="part" title="${V.Part}">${esc(partTag(m))}</span>` : ''}${m.leader ? `<span class="tag">${V.Leader}</span>` : ''}${mk?.auto || !canEdit() ? '' : ruleTag(session, m)}${session.rsvp && canEdit() && !mk?.auto ? rsvpPill(session, m) : ''}</span>
       <span class="state ${warn ? 'warn' : ''}">${editable ? '' : dot}${state}</span></div>
     ${body}${noticeHtml(session, m, mk && !mk.auto ? mk : null)}</li>`;
+}
+/** «Ha marxat abans»: els minuts del final que s'ha perdut (es resten del temps d'assaig, com un retard). Mentre no se n'hagi
+ *  marxat ningú, només un botó petit; en tocar-lo, o si ja té minuts, el quadre per posar-los. */
+let EARLY_OPEN = null;
+function earlyHtml(session, m, mk) {
+  const left = +mk.early || 0;
+  if (!left && EARLY_OPEN !== m.id) return `<button type="button" class="early-add" data-act="early-open">Ha marxat abans</button>`;
+  const now = earlyNow(session);
+  return `<div class="extra x-E"><label for="early-${m.id}">Ha marxat abans</label>
+      <div class="mins"><button class="min-chip now" data-act="early" data-min="${now}" aria-pressed="${!!now && left === now}" ${now ? '' : 'disabled title="Calcula els minuts fins a l’hora de final: només funciona mentre dura la sessió"'}>Marxa ara${now ? ` · ${now}′` : ''}</button></div>
+      <input class="min-input" id="early-${m.id}" type="number" inputmode="numeric" min="1" max="${sessionMins(session)}" placeholder="—" value="${left || ''}" data-bind="early" aria-label="Minuts que s’ha perdut del final"><span class="m">min abans d’acabar</span></div>`;
 }
 function refreshRow(mid) {
   const cur = sessionById(ui.sessionId);

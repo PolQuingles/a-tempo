@@ -412,6 +412,14 @@ function pendingSessions(sec) {
     && (() => { const pr = progress(s, sec); return pr.done < pr.total; })());
 }
 /** Minutes late if someone arrives right now (only for today's session, once started). */
+/** «Marxa ara»: els minuts que falten per acabar la sessió (només mentre dura i si té hora de final). */
+function earlyNow(session) {
+  if (!session || session.date !== TODAY || !session.end) return 0;
+  const [h, m] = session.end.split(':').map(Number);
+  const end = new Date(); end.setHours(h, m, 0, 0);
+  const mins = Math.ceil((end.getTime() - Date.now()) / 60000);
+  return mins > 0 && mins <= sessionMins(session) ? mins : 0;
+}
 function lateNow(session) {
   if (!session || session.date !== TODAY || !session.time) return 0;
   const [h, m] = session.time.split(':').map(Number);
@@ -436,8 +444,9 @@ function myProductionId(me) {
   if (next) return next.id;
   return ps.at(-1)?.id || null;   // no en fa cap: no hi ha res a ensenyar
 }
-// mAll = minuts de les sessions on se l'esperava; mDone = minuts que hi ha estat (un retard hi resta els minuts que ha fet tard).
-const emptyCounts = () => ({ P: 0, R: 0, FJ: 0, FNJ: 0, NP: 0, min: 0, mAll: 0, mDone: 0 });
+// mAll = minuts de les sessions on se l'esperava; mDone = minuts que hi ha estat (un retard hi resta els minuts que ha fet tard,
+// i marxar abans d'hora, els que s'ha perdut del final). left = quantes vegades ha marxat abans, i leftMin, quants minuts.
+const emptyCounts = () => ({ P: 0, R: 0, FJ: 0, FNJ: 0, NP: 0, min: 0, left: 0, leftMin: 0, mAll: 0, mDone: 0 });
 const clockMins = t => /^\d{1,2}:\d{2}$/.test(t || '') ? +t.slice(0, -3) * 60 + +t.slice(-2) : null;
 /** Minuts que compta una sessió: el temps d'assaig, si s'ha posat (un cap de setmana amb pauses i àpats); si no, de l'hora
  *  d'inici a la de final; i si no en té, dues hores (com al calendari). */
@@ -446,16 +455,19 @@ function sessionMins(s) {
   const a = clockMins(s.time), b = clockMins(s.end);
   return a != null && b != null && b > a ? b - a : 120;
 }
-/** Minuts que compten d'una marca: els que dura la sessió i els que hi ha estat. «No fa» no hi compta. */
+/** Minuts que compten d'una marca: els que dura la sessió i els que hi ha estat (sense el retard ni el que ha marxat abans).
+ *  «No fa» no hi compta. */
 function markMins(s, mk) {
   if (!mk || mk.s === 'NP') return null;
   const all = sessionMins(s);
-  return { all, done: mk.s === 'P' ? all : mk.s === 'R' ? all - Math.min(all, +mk.min || 0) : 0 };
+  if (mk.s !== 'P' && mk.s !== 'R') return { all, done: 0 };
+  return { all, done: all - Math.min(all, (mk.s === 'R' ? +mk.min || 0 : 0) + (+mk.early || 0)) };
 }
 /** Suma una marca als comptadors. */
 function countMark(c, s, mk) {
   c[mk.s]++;
   if (mk.s === 'R') c.min += +mk.min || 0;
+  if ((mk.s === 'P' || mk.s === 'R') && +mk.early > 0) { c.left++; c.leftMin += +mk.early; }
   const mm = markMins(s, mk);
   if (mm) { c.mAll += mm.all; c.mDone += mm.done; }
 }
@@ -627,6 +639,7 @@ function setMark(session, member, patch) {
   const m = doc.marks[member.id];
   if (m) {
     if (m.s !== 'R') delete m.min;
+    if (m.s !== 'P' && m.s !== 'R') delete m.early;   // «Ha marxat abans»: només qui hi era
     if (m.s !== 'FJ' && m.s !== 'FNJ') delete m.note;
     for (const k of Object.keys(m)) if (m[k] === undefined || m[k] === '') delete m[k];
   }

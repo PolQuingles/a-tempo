@@ -1443,6 +1443,20 @@ def main():
           saveProduction({ id: 'p9', name: 'Un sol concert', sessions: [{ id: 's9', date: d(40), time: '19:00', end: '', type: 'Concert', place: '', note: '' }], excluded: [] });
           applyRoute('calendari'); render(); await s(400);
           out.one = [...document.querySelectorAll('.cph-m .mono')].some(x => x.textContent.trim() === '1 sessió') && ![...document.querySelectorAll('.cph-m .mono')].some(x => /^1 sessions/.test(x.textContent.trim()));
+          // «Ha marxat abans», a la llista d'avui dels tenors.
+          applyRoute('inici'); render(); await s(300);
+          document.querySelector('[data-act="home-roll"]').click(); await s(500);
+          const row = () => document.querySelector('#roster .row[data-mid="mT2"]');
+          row().querySelector('[data-act="mark"][data-s="P"]').click(); await s(200);
+          out.addBtn = !!row().querySelector('.early-add');
+          row().querySelector('.early-add').click(); await s(200);
+          const inp = row().querySelector('[data-bind="early"]');
+          inp.value = '30'; inp.dispatchEvent(new Event('input', { bubbles: true })); inp.dispatchEvent(new Event('change', { bubbles: true })); await s(300);
+          const mk = () => attDoc('s3', 'T')?.marks?.mT2 || {};
+          out.early = mk().s === 'P' && mk().early === 30 && /ha marxat 30′ abans/.test(row().querySelector('.state').textContent);
+          out.earlyMins = markMins(sessionById('s3'), mk()).done === 90;
+          row().querySelector('[data-act="mark"][data-s="FJ"]').click(); await s(200);
+          out.earlyGone = mk().s === 'FJ' && !('early' in mk());
           return out; }"""))
         for k, label in [("week", "Inici ensenya tots els assajos dels set dies que vénen (també el general), i el proper concert"),
                          ("ini", "les inicials són la del nom i la del primer cognom"),
@@ -1455,7 +1469,11 @@ def main():
                          ("noLine", "la cantaire no veu quanta gent l'ha obert"),
                          ("line", "l'equip veu quanta gent l'ha obert, per cordes"),
                          ("author", "qui l'ha escrit no compta"),
-                         ("one", "«1 sessió», no «1 sessions»")]:
+                         ("one", "«1 sessió», no «1 sessions»"),
+                         ("addBtn", "a la llista, qui hi és té el botó «Ha marxat abans»"),
+                         ("early", "i s'hi posen els minuts que s'ha perdut del final"),
+                         ("earlyMins", "que es resten del temps d'assaig"),
+                         ("earlyGone", "si passa a ser una falta, ja no compta que ha marxat abans")]:
             check(r.get(k), label, str(r))
         check(not errors, "sense errors amb la setmana, el material i els anuncis vistos", "; ".join(errors[:3]))
         ctx.close()
