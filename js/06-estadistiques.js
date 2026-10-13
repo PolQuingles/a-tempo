@@ -420,7 +420,7 @@ function normHint(me, pid) {
   return `<p class="norm-hint">Et pots permetre <b>${k} ${k === 1 ? 'falta' : 'faltes'} més</b> ${show ? `abans ${V.sh.del} del ${esc(shortDate(show.date))}` : 'fins al final de la producció'} (queden ${rs.remaining} assajos).</p>`;
 }
 function myAttendanceCard(me) {
-  const x = myProdSummary(me, currentProductionId());
+  const x = myProdSummary(me, myProductionId(me));
   if (!x) return '';
   const { prod, r, rs, counted } = x;
   const seen = new Set((r?.hist || []).map(h => h.s.id));

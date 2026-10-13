@@ -145,7 +145,7 @@ function absenceCard(a, opts = {}) {
     btns = `<button class="btn btn-sm btn-danger-ghost" data-act="abs-cancel" data-aid="${a.id}">Retira l’avís</button>`;
   }
   return `<div class="abs-card">
-    <div class="a-h"><span><b>${esc(m?.name || a.memberName || '—')}</b> <span class="muted">· ${esc(SEC[a.section]?.name || '')} · ${what}</span></span><span class="st-pill st-${a.status}">${label}</span></div>
+    <div class="a-h"><span><b>${esc(m?.name || fullName(a.memberName) || '—')}</b> <span class="muted">· ${esc(SEC[a.section]?.name || '')} · ${what}</span></span><span class="st-pill st-${a.status}">${label}</span></div>
     <div class="a-d">${dates.map(s => `<span>${wdShort(s.date)} ${ddmm(s.date)}</span>`).join('') || '<span>Sessió esborrada</span>'}</div>
     ${a.reason ? `<div class="a-r">${esc(a.reason)}</div>` : ''}
     <div class="muted mono" style="font-size:calc(12px*var(--ts))">Enviat el ${a.createdAt ? (d => `${pad(d.getDate())}/${pad(d.getMonth() + 1)} a les ${pad(d.getHours())}:${pad(d.getMinutes())}`)(new Date(a.createdAt)) : '—'}</div>

@@ -1294,6 +1294,74 @@ def main():
         check(not errors, "sense errors amb els missatges a qui fa una producció", "; ".join(errors[:3]))
         ctx.close()
 
+        print("Qui no fa la producció, llistes privades i noms")
+        ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/assistencia")
+        r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          const d = n => { const x = new Date(); x.setDate(x.getDate() + n); return isoDate(x); };
+          const p = clone(S.productions.get('p1')); p.excluded = ['mS0', 'mS1']; saveProduction(p);
+          saveProduction({ id: 'p2', name: 'Concert de Nadal', start: d(30), end: d(40), excluded: [],
+            sessions: [{ id: 'n1', date: d(35), time: '19:00', end: '21:00', type: 'Concert', place: 'Palau', note: '' }] });
+          await s(300);
+          ui.tab = 'llista'; ui.att = 'llista'; ui.rollSec = null; ui.sessionId = 's3'; render(); await s(300);
+          // Dues de les quatre sopranos no fan la producció: abans de passar llista, «0/2», no «2/4».
+          out.quad = document.querySelector('.quad[data-sec="S"] .q-c')?.textContent.trim() === '0/2'
+            && document.querySelector('.quad[data-sec="S"] .q-bar span')?.style.width === '0%';
+          ui.rollSec = 'S'; render(); await s(300);
+          out.head = document.querySelector('.leader .mono')?.textContent.trim() === '0/2 marcats';
+          ui.tab = 'calendari'; ui.calProd = 'all'; ui.calView = 'list'; render(); await s(300);
+          const h = document.querySelector('.cal-prod-h .cph-b'), t = h?.querySelector('.h2'), m = h?.querySelector('.cph-m');
+          out.title = !!(t && m) && m.getBoundingClientRect().top >= t.getBoundingClientRect().bottom - 1
+            && t.getBoundingClientRect().width >= h.getBoundingClientRect().width - 2;
+          // Noms: «Cognoms, Nom» es desa i es mostra «Nom Cognoms», i s'ordena igualment per cognom.
+          saveMember({ ...S.members.get('mS2'), name: 'Soler Vila, Marta' }); await s(400);
+          const mm = S.members.get('mS2');
+          out.saved = mm.name === 'Marta Soler Vila' && mm.sortName === 'Soler Vila, Marta';
+          const f = JSON.parse(localStorage.getItem('fake:db'));
+          const doc = f[Object.keys(f).find(k => k.endsWith('/members/mS2'))];
+          out.stored = doc.name === 'Marta Soler Vila' && doc.sortName === 'Soler Vila, Marta';
+          out.order = [{ name: 'Pol Quingles', sortName: 'Quingles, Pol' }, { name: 'Anna Vidal' }, { name: 'Marc Bosch' }].sort(byName).map(x => x.name).join() === 'Marc Bosch,Pol Quingles,Anna Vidal';
+          saveMember({ ...S.members.get('mS2'), name: 'Marta Soler' }); await s(300);
+          out.renamed = S.members.get('mS2').name === 'Marta Soler' && !S.members.get('mS2').sortName;
+          // Llistes privades: una marca i, tot seguit, l'app es tanca. La còpia de la cantaire es desa igualment.
+          const pr = setAttPrivate(true); await s(400); document.querySelector('#cf-yes')?.click(); await pr; await s(1500);
+          setMark(allSessions().find(x => x.id === 's3'), S.members.get('mT2'), { s: 'P' });
+          out.pending = pendingWrites() > 0;
+          Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true });
+          document.dispatchEvent(new Event('visibilitychange')); await s(400);
+          delete document.visibilityState;
+          const f2 = JSON.parse(localStorage.getItem('fake:db'));
+          out.mirror = f2[Object.keys(f2).find(k => k.endsWith('/attMine/mT2'))]?.marks?.s3?.s === 'P';
+          const p2 = setAttPrivate(false); await s(400); document.querySelector('#cf-yes')?.click(); await p2; await s(1500);
+          const f3 = JSON.parse(localStorage.getItem('fake:db'));
+          f3[Object.keys(f3).find(k => k.endsWith('/members/mC1'))].name = 'Roca, Neus';
+          localStorage.setItem('fake:db', JSON.stringify(f3));
+          return out; }""")
+        switch_user(page, base, "pol")
+        r.update(page.evaluate("""async () => { const n = S.members.get('mC1');
+          return { old: n.name === 'Neus Roca' && n.sortName === 'Roca, Neus' }; }"""))
+        switch_user(page, base, "singer")
+        r.update(page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          ui.tab = 'avisos'; render(); await s(400);
+          const rows = [...document.querySelectorAll('#view .soon-row.is-now, #view .concert-day')];
+          out.noToday = !rows.some(li => /Concert de tardor/.test(li.textContent));
+          const att = [...document.querySelectorAll('#view .section-title')].find(x => /La meva assistència/.test(x.textContent));
+          out.myProd = !!att && /Concert de Nadal/.test(att.textContent);
+          return out; }"""))
+        for k, label in [("quad", "a la llista, qui no fa la producció no compta: la corda surt «0/2», sense barra"),
+                         ("head", "i dins la corda, «0/2 marcats»"),
+                         ("title", "al calendari, el títol de la producció té tota l'amplada i les sessions van a sota"),
+                         ("saved", "un nom «Cognoms, Nom» passa a «Nom Cognoms» i guarda l'original per ordenar"),
+                         ("stored", "i es desa així"), ("order", "els noms s'ordenen per cognom"),
+                         ("renamed", "si se li canvia el nom, l'ordre antic ja no hi compta"),
+                         ("old", "les fitxes antigues amb coma també es mostren «Nom Cognoms»"),
+                         ("pending", "amb les llistes privades, la còpia que espera compta com a pendent de desar"),
+                         ("mirror", "i si es tanca l'app just després de marcar, es desa igualment"),
+                         ("noToday", "qui no fa la producció no veu el concert d'avui a Inici"),
+                         ("myProd", "«La meva assistència» ensenya la producció que sí que fa")]:
+            check(r.get(k), label, str(r))
+        check(not errors, "sense errors amb els noms i les produccions que no es fan", "; ".join(errors[:3]))
+        ctx.close()
+
         print("Mira l'app com…")
         ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/gestio/personal")
         page.wait_for_function("S.staffReady", timeout=5000)

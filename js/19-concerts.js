@@ -201,7 +201,6 @@ function seatingPrint(rows) {
 }
 
 /* ---------- Llista de participants d'un concert ---------- */
-const fullName = n => String(n || '').includes(',') ? String(n).split(',').reverse().join(' ').trim() : String(n || '');
 function concertPeople(s, onlyYes) {
   return stageMembers(s).filter(m => !onlyYes || !s.rsvp || S.rsvp.get(`${s.id}_${m.id}`)?.answer === 'yes')
     .sort((a, b) => secIdx(a.section) - secIdx(b.section) || (a.part || '').localeCompare(b.part || '') || byName(a, b));

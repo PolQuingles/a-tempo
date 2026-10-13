@@ -21,7 +21,7 @@ const teacherOptions = () => {
 };
 const teacherName = key => (ME() && ME().email === key && ME().name) || S.staff.get(key || '')?.name || teacherSeats().find(t => t.id === key)?.name || '';
 /** Com es diu qui fa aquest dia de classe: el nom desat al dia serveix a qui no veu les fitxes de l'equip. */
-const teacherOf = c => teacherName(c && c.teacher) || (c && c.teacherName) || (String(c && c.teacher || '').includes('@') ? V.Teacher : (c && c.teacher) || '');
+const teacherOf = c => fullName(teacherName(c && c.teacher) || (c && c.teacherName)) || (String(c && c.teacher || '').includes('@') ? V.Teacher : (c && c.teacher) || '');
 /** De qui és l'horari fix que es toca: el meu si en soc, si no el primer professor/a de l'agrupació. */
 function planWho() {
   const me = ME();
@@ -40,7 +40,7 @@ function savePlan(who, rows, places = planPlaces(who)) {
 // El calendari de les classes, hora per hora. El professorat el fa i el manté; cada persona pot
 // avisar que arribarà tard o que no hi anirà, i demanar el canvi d'hora d'un dia a un company.
 const REQ_WORD = { late: 'Arribarà tard', absent: 'No hi anirà', swap: 'Canvi d’hora' };
-const reqMemberName = r => S.members.get(r.memberId)?.name || r.memberName || '';
+const reqMemberName = r => S.members.get(r.memberId)?.name || fullName(r.memberName);
 const slotAt = (c, id) => (c.slots || []).find(x => x.id === id);
 const slotTime = (c, id) => c ? slotAt(c, id)?.time || '' : '';
 /** L'hora de l'altra persona d'un canvi: «18:30» o, si és un altre dia, «dimecres 18:30». */
@@ -58,7 +58,7 @@ function classReqLine(r) {
   const otherTime = swapOther(r);
   if (!r.withMemberId && r.to) return `${esc(reqMemberName(r))} (${esc(slotTime(c, r.slotId) || '')}) demana canviar l’hora a ${esc(r.to.map(id => S.members.get(id)?.name || '').filter(Boolean).join(', '))} · ${esc(when)}`;
   if (!r.withMemberId) return `${esc(reqMemberName(r))} (${esc(slotTime(c, r.slotId) || '')}) busca algú per canviar l’hora · ${esc(when)}`;
-  return `${esc(reqMemberName(r))} (${esc(slotTime(c, r.slotId) || '')}) vol canviar l’hora amb ${esc(S.members.get(r.withMemberId)?.name || r.withName || '')} (${esc(otherTime)}) · ${esc(when)}`;
+  return `${esc(reqMemberName(r))} (${esc(slotTime(c, r.slotId) || '')}) vol canviar l’hora amb ${esc(S.members.get(r.withMemberId)?.name || fullName(r.withName))} (${esc(otherTime)}) · ${esc(when)}`;
 }
 function classSlotRow(c, x, past) {
   const m = S.members.get(x.memberId);

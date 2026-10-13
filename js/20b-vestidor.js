@@ -214,7 +214,7 @@ function sheetWardItem(id) {
   };
   const it = wardItem(x.item);
   openSheet({
-    title: `${it.name} · ${m ? m.name : x.memberName || ''}`,
+    title: `${it.name} · ${m ? m.name : fullName(x.memberName)}`,
     body: `<div class="kv">
       <p class="muted" style="margin:0">${m ? `${esc(SEC[m.section]?.name || '')}${m.part ? ` · ${esc(partTag(m))}` : ''} · ` : ''}demanat el ${esc(wardDay(x.createdAt))}</p>
       <div class="field"><span>Estat</span><div class="ward-st" id="wi-st" role="radiogroup" aria-label="Estat">${WARD_STATES.map(([k, l]) => `<button type="button" role="radio" data-k="${k}" aria-checked="${x.status === k}">${esc(l)}</button>`).join('')}</div><small id="wi-hint"></small></div>

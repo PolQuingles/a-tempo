@@ -46,7 +46,7 @@ async function resolveStaff(gid) {
     fs.doc(`agrupacions/${gid}`).get().catch(() => null),
   ]);
   if (!me.exists) throw Object.assign(new Error('no-staff'), { code: 'no-staff' });
-  S.me = me.data();
+  S.me = personNameOnly('staff', me.data());
   S.group = { id: gid, ...(dir && dir.exists ? dir.data() : {}) };
   const g = S.groups.find(x => x.id === gid);
   if (g && dir && dir.exists) { Object.assign(g, { name: S.group.name || g.name, kind: S.group.kind, status: S.group.status }); saveGroupsCache(); }
@@ -69,7 +69,7 @@ async function enterGroup(gid) {
       toast('Ja no tens accés a aquella agrupació');
       return;
     }
-    if (cached) { LINK = cached; S.me = cached.me || null; S.group = cached.group || { id: gid }; }
+    if (cached) { LINK = cached; S.me = cached.me ? personNameOnly('staff', cached.me) : null; S.group = cached.group || { id: gid }; }
     else { S.mode = 'nokey'; render(); return; }
   }
   connect();

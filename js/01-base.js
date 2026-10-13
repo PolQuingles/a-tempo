@@ -152,7 +152,27 @@ const wdShort = s => fmtD(s, { weekday: 'short' });
 const monthYear = s => capz(fmtD(s, { month: 'long', year: 'numeric' }));
 const pct = v => v == null ? '—' : Math.round(v * 100) + '%';
 const kpiPct = v => v == null ? '—' : `${Math.round(v * 100)}<small>%</small>`;
-const byName = (a, b) => a.name.localeCompare(b.name, 'ca');
+/* ---------- Noms de persona ---------- */
+// Els noms es mostren «Nom Cognoms» (Pol Quingles). Les fitxes es van crear «Cognoms, Nom» (Quingles, Pol): en carregar-les
+// i en desar-les passen a «Nom Cognoms», i la forma amb coma es guarda a sortName per continuar ordenant per cognom.
+const fullName = n => { const t = String(n || '').trim(); return t.includes(',') ? t.split(',').reverse().map(x => x.trim()).filter(Boolean).join(' ') : t; };
+/** Per ordenar per cognom: la forma «Cognoms, Nom» (si no se sap, tot el que va després de la primera paraula). */
+function nameSortKey(o) {
+  if (o.sortName) return o.sortName;
+  const t = String(o.name || '').trim();
+  if (t.includes(',')) return t;
+  const w = t.split(/\s+/);
+  return w.length > 1 ? `${w.slice(1).join(' ')}, ${w[0]}` : t;
+}
+/** Una fitxa o un compte amb el nom «Cognoms, Nom» passa a «Nom Cognoms»; si se li ha canviat el nom, sortName ja no val. */
+function normPersonName(o) {
+  if (!o || typeof o.name !== 'string') return o;
+  const t = o.name.trim();
+  if (t.includes(',')) return { ...o, name: fullName(t), sortName: t.split(',').map(x => x.trim()).filter(Boolean).join(', ') };
+  if (o.sortName && fullName(o.sortName) !== t) { const { sortName, ...rest } = o; return rest; }
+  return o;
+}
+const byName = (a, b) => nameSortKey(a).localeCompare(nameSortKey(b), 'ca');
 
 /* ================= State ================= */
 const S = {

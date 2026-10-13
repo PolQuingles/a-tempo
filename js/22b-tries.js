@@ -21,6 +21,7 @@ function queueMirror(mid, sid, mark) {
   MIRROR.q.set(mid, cur);
   clearTimeout(MIRROR.timer);
   MIRROR.timer = setTimeout(flushMirrors, 1500);
+  updateSync();
 }
 const mirrorMark = mk => Object.fromEntries(['s', 'min', 'note'].filter(k => mk[k] != null && mk[k] !== '').map(k => [k, mk[k]]));
 function flushMirrors() {
@@ -33,8 +34,15 @@ function flushMirrors() {
     b.set(db.doc(`attMine/${mid}`), data, { mergeFields: fields });
   }
   MIRROR.q.clear();
-  b.commit().catch(writeFailed);
+  clearTimeout(MIRROR.timer);
+  inflight++;
+  updateSync();
+  b.commit().catch(writeFailed).finally(() => { inflight--; updateSync(); });
 }
+// Si es tanca l'app (o es canvia d'app) just després de marcar, les còpies es desen igualment. Aquests escoltadors van
+// després dels de 02-dades, que desen primer les llistes (i n'apunten les còpies).
+window.addEventListener('pagehide', flushMirrors);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushMirrors(); });
 /** Les marques que han canviat entre dues versions d'una llista, per a les còpies de cadascú. */
 function mirrorDiff(prev, doc) {
   const a = (prev && prev.marks) || {}, b = (doc && doc.marks) || {}, out = [];

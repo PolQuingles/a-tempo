@@ -77,7 +77,7 @@ function viewRollOverview(cur, list, pendingBySec) {
       ${pend ? '<i class="q-dot pend"></i>' : ''}${complete ? '<i class="q-dot done"></i>' : ''}
       <span class="q-l${x.short.length > 1 ? ' long' : ''}">${esc(x.short)}</span><span class="q-n">${esc(x.name)}</span>
       <span class="q-c">${on ? `${pr.done}/${pr.total}` : 'No convocats'}</span>
-      ${on && subFor(cur.id, x.id) ? `<span class="q-sub">${subFor(cur.id, x.id).auto ? 'En funcions' : 'Passa llista'}: ${esc(subFor(cur.id, x.id).memberName || '')}</span>` : ''}
+      ${on && subFor(cur.id, x.id) ? `<span class="q-sub">${subFor(cur.id, x.id).auto ? 'En funcions' : 'Passa llista'}: ${esc(fullName(subFor(cur.id, x.id).memberName))}</span>` : ''}
       ${on ? `<span class="q-bar"><span style="width:${pr.total ? (pr.done / pr.total) * 100 : 0}%"></span></span>` : ''}
     </button>`;
   }).join('');
@@ -184,7 +184,7 @@ function viewRollSection(cur, list, sec, pendingBySec) {
   return head + pendHtml + `
   <div class="leader">
     <span>${V.Leader}: <b>${leaders.length ? leaders.map(m => esc(m.name)).join(' i ') : '—'}</b></span>
-    <span class="leader-r"><span class="mono">${all.length - c.none}/${all.length} marcats</span>${canMark(cur, sec) ? `<button class="btn btn-sm btn-ghost" data-act="roll-compact" aria-pressed="${rollCompact()}">${rollCompact() ? 'Vista detallada' : 'Vista compacta'}</button>` : ''}</span>
+    <span class="leader-r"><span class="mono">${pr.done}/${pr.total} marcats</span>${canMark(cur, sec) ? `<button class="btn btn-sm btn-ghost" data-act="roll-compact" aria-pressed="${rollCompact()}">${rollCompact() ? 'Vista detallada' : 'Vista compacta'}</button>` : ''}</span>
   </div>
   ${subLine(cur, sec, leader)}
   <div class="tally" id="tally">${tallyInner(c, inRoll.some(m => !effMark(cur, m)))}</div>
@@ -198,7 +198,7 @@ function viewRollSection(cur, list, sec, pendingBySec) {
 }
 function subLine(cur, sec, leader) {
   const sub = subFor(cur.id, sec);
-  if (sub) return `<div class="sub-line"><span>${sub.auto ? `${capz(V.leader)} en funcions` : 'Avui passa llista'}: <b>${esc(sub.memberName || '')}</b></span>${canEdit() ? `<button class="btn btn-sm btn-ghost" data-act="sub-set" data-sid="${cur.id}" data-sec="${sec}">Canvia</button>` : ''}</div>`;
+  if (sub) return `<div class="sub-line"><span>${sub.auto ? `${capz(V.leader)} en funcions` : 'Avui passa llista'}: <b>${esc(fullName(sub.memberName))}</b></span>${canEdit() ? `<button class="btn btn-sm btn-ghost" data-act="sub-set" data-sid="${cur.id}" data-sec="${sec}">Canvia</button>` : ''}</div>`;
   if (!canEdit() || cur.date < TODAY) return '';
   const lm = leader && effMark(cur, leader);
   const away = lm && ['FJ', 'FNJ', 'NP'].includes(lm.s);
@@ -289,7 +289,7 @@ function refreshRow(mid) {
   const tally = $('#tally');
   if (tally) tally.innerHTML = tallyInner(c, all.some(x => !isOut(cur, x) && !effMark(cur, x)));
   const lead = $('.leader .mono');
-  if (lead) lead.textContent = `${all.length - c.none}/${all.length} marcats`;
+  if (lead) { const pr = progress(cur, ui.section); lead.textContent = `${pr.done}/${pr.total} marcats`; }
   const sb = $('#secbar-count');
   if (sb) { const pr = progress(cur, ui.section); const done = pr.total > 0 && pr.done === pr.total; sb.classList.toggle('is-done', done); sb.innerHTML = done ? doneCount(pr) : `${pr.done}/${pr.total}`; }
 }
