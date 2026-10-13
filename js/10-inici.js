@@ -82,7 +82,7 @@ function todoItems() {
   if (canEdit()) {
     const abs = pendingAbsences();
     if (abs.length) {
-      const who = [...new Set(abs.map(a => S.members.get(a.memberId)?.name?.split(',').pop().trim()).filter(Boolean))];
+      const who = [...new Set(abs.map(a => firstName(S.members.get(a.memberId)?.name)).filter(Boolean))];
       out.push({ icon: 'abs', t: `${abs.length === 1 ? '1 absència' : `${abs.length} absències`} per veure`, s: esc(who.slice(0, 3).join(', ') + (who.length > 3 ? '…' : '')), btn: 'Revisa', act: 'data-act="manage" data-k="avisos"', n: abs.length });
     }
     const lists = mySections().flatMap(sec => pendingSessions(sec).map(x => ({ sec, x })));
@@ -209,7 +209,8 @@ function soonBlock(me) {
   const mineS = s => !me || canEdit() || convoked(s, me.section);
   const rows = [];
   // Avui: totes les sessions del dia (el que abans era el requadre gran).
-  for (const s of allSessions().filter(s => s.date === TODAY && mineS(s))) rows.push({ key: `${s.date} ${s.time || ''}`, html: sessionSoon(s, me, s.type || 'Assaig') });
+  // Qui no fa la producció (o és de baixa) no la veu com si hi anés; l'equip sí, perquè n'ha de passar llista.
+  for (const s of allSessions().filter(s => s.date === TODAY && mineS(s) && (canEdit() || !(me && isOut(s, me))))) rows.push({ key: `${s.date} ${s.time || ''}`, html: sessionSoon(s, me, s.type || 'Assaig') });
   const nx = nextClass();
   if (nx) {
     const clash = classClash(nx.c, nx.slot);
@@ -298,7 +299,7 @@ function weekHtml(d) {
     ${block('Què farem', d.next.length ? d.next.map(s => weekSession(s, d, false)).join('') : '<p class="m">No hi ha cap sessió els pròxims deu dies.</p>')}
     ${d.classes.length ? block(esc(V.classes), `<ul class="tasks">${d.classes.map(({ c, x }) => `<li><span><b>${esc(longDate(c.date))} · ${esc(x.time || '')}</b><small>${esc([teacherOf(c), c.place].filter(Boolean).join(' · '))}</small></span></li>`).join('')}</ul>`) : ''}
     ${block('Per respondre', ask.length ? `<ul class="tasks">${ask.join('')}</ul>` : '')}
-    ${block('Nou al tauler', d.news.length || d.mats.length ? `<ul class="tasks">${d.news.map(a => `<li><span><b>${esc(a.title)}</b><small>Anunci${a.author ? ` · ${esc(a.author)}` : ''}</small></span></li>`).join('')}${d.mats.map(({ p, x }) => `<li><span><b>${esc(x.title)}</b><small>${esc(MAT_KINDS[x.kind] || 'Material')} · ${esc(p.name)}</small></span></li>`).join('')}</ul>` : '')}
+    ${block('Nou al tauler', d.news.length || d.mats.length ? `<ul class="tasks">${d.news.map(a => `<li><span><b>${esc(a.title)}</b><small>Anunci${a.author ? ` · ${esc(fullName(a.author))}` : ''}</small></span></li>`).join('')}${d.mats.map(({ p, x }) => `<li><span><b>${esc(x.title)}</b><small>${esc(MAT_KINDS[x.kind] || 'Material')} · ${esc(p.name)}</small></span></li>`).join('')}</ul>` : '')}
     ${block('Què vam fer', d.past.length ? d.past.slice().reverse().map(s => weekSession(s, d, true)).join('') : '')}`;
 }
 function weekText(d) {

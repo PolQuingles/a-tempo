@@ -33,6 +33,12 @@ KINDS = {
 }
 
 
+def full_name(n):
+    """«Quingles, Pol» → «Pol Quingles», com a l'app; un nom sense coma queda igual."""
+    t = str(n or "").strip()
+    return " ".join(x.strip() for x in reversed(t.split(",")) if x.strip()) if "," in t else t
+
+
 def kind(cfg):
     return cfg.get("kind") if cfg.get("kind") in KINDS else "cor"
 

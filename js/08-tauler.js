@@ -83,9 +83,9 @@ function annCard(a, board) {
       ${a.body ? `<div class="ann-b rich">${richText(long ? cutText(a.body, ANN_LONG) : a.body)}</div>` : ''}
       ${long ? `<button class="btn btn-sm btn-ghost ann-more" data-act="ann-read" data-id="${esc(a.id)}">Llegeix-lo sencer</button>` : ''}
       ${attachList(a.files, 'ann-file', a.id)}
-      <div class="ann-m">${a.pinned ? '<span class="pin">Fixat</span>' : ''}<span>${esc(a.author || '')}</span><span class="mono">${a.createdAt ? ddmm(a.createdAt.slice(0, 10)) : ''}</span>
+      <div class="ann-m">${a.pinned ? '<span class="pin">Fixat</span>' : ''}<span>${esc(fullName(a.author))}</span><span class="mono">${a.createdAt ? ddmm(a.createdAt.slice(0, 10)) : ''}</span>
         ${a.sections?.length ? `<span>Per a: ${esc(a.sections.map(x => SEC[x].name).join(', '))}</span>` : ''}${a.until ? `<span>Fins al ${ddmm(a.until)}</span>` : ''}</div>
-      ${canReply(a.by) ? `<div class="ann-acts"><button class="btn btn-sm" data-act="reply" data-ref="ann:${esc(a.id)}">Respon a ${esc(firstName(a.author || '') || 'l’equip')}</button></div>` : ''}
+      ${canReply(a.by) ? `<div class="ann-acts"><button class="btn btn-sm" data-act="reply" data-ref="ann:${esc(a.id)}">Respon a ${esc(firstName(fullName(a.author)) || 'l’equip')}</button></div>` : ''}
     </article>`;
 }
 function sheetAnnouncementRead(id) {

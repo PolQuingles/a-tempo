@@ -64,7 +64,9 @@ function writeFailed(e) {
   else toast('Un canvi no s’ha pogut desar. Torna-ho a provar.');
   S.syncErr = true; updateSync();
 }
-const pendingWrites = () => queue.size + inflight;
+// També les còpies de les llistes privades que esperen (MIRROR, a 22b-tries, que es carrega després d'aquest fitxer).
+const mirrorsPending = () => { try { return MIRROR.q.size; } catch { return 0; } };
+const pendingWrites = () => queue.size + inflight + mirrorsPending();
 
 function updateSync() {
   const el = $('#sync');
@@ -137,7 +139,7 @@ function take(col, map, d) {
   if (isDirty(path)) { if (S[col].has(d.id)) map.set(d.id, S[col].get(d.id)); return; }
   const { syncAt, ...data } = d.data();
   if (col === 'classes' && (data.deleted || (data.date || '') < CLASS_FROM)) { map.delete(d.id); return; }
-  map.set(d.id, data);
+  map.set(d.id, col === 'members' ? normPersonName(data) : data);
 }
 /** Una col·lecció gran: sencera o només el que ha canviat (vegeu a dalt). */
 function syncCol(col) {
@@ -209,12 +211,14 @@ function checkEpochs() {
 }
 
 /** Un document que arriba d'una consulta normal (no de les grans): el que s'està desant en aquest mòbil té preferència. */
+/** Els comptes de l'equip només canvien el nom de lloc (no s'ordenen per cognom); les fitxes guarden també sortName. */
+const personNameOnly = (col, o) => col === 'staff' ? (o && typeof o.name === 'string' ? { ...o, name: fullName(o.name) } : o) : normPersonName(o);
 function takeSnap(col, snap) {
   const next = new Map();
   for (const d of snap.docs) {
     const path = `${col}/${d.id}`;
     if (isDirty(path)) { if (S[col].has(d.id)) next.set(d.id, S[col].get(d.id)); }
-    else next.set(d.id, d.data());
+    else next.set(d.id, col === 'members' || col === 'staff' ? personNameOnly(col, d.data()) : d.data());
   }
   for (const [id, v] of S[col]) if (!next.has(id) && isDirty(`${col}/${id}`) && queue.get(`${col}/${id}`)?.data !== null) next.set(id, v);
   S[col] = next;
@@ -376,11 +380,16 @@ function effMark(session, member, ctxProd) {
   return null;
 }
 const hasData = (s, sec) => { const d = attDoc(s.id, sec); return !!(d && d.marks && Object.keys(d.marks).length); };
+/** Quantes persones de la corda s'han marcat, d'entre les que hi han de ser: qui és de baixa o no fa la producció no hi
+ * compta (si no, una corda amb molta gent fora de la producció sortiria mig marcada abans de passar llista). */
 function progress(session, sec) {
-  const ms = membersOf(sec);
-  let done = 0;
-  for (const m of ms) if (effMark(session, m)) done++;
-  return { done, total: ms.length };
+  let done = 0, total = 0;
+  for (const m of membersOf(sec)) {
+    if (isOut(session, m)) continue;
+    total++;
+    if (effMark(session, m)) done++;
+  }
+  return { done, total };
 }
 const nowHHMM = () => { const d = new Date(); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
 /** La sessió ja ha començat (un dia passat, o avui a partir de l'hora d'inici). */
@@ -416,6 +425,16 @@ function currentProductionId() {
   if (now) return now.id;
   const withData = ps.filter(p => allSessions(p.id).some(s => SECTIONS.some(x => hasData(s, x.id))));
   return (withData.pop() || ps[0])?.id || null;
+}
+/** La producció d'una persona: la que fa ara; si no, la propera que farà; si no, l'última que ha fet. Una producció que
+ * ha dit que no fa (o de la qual l'han tret) no hi compta, encara que sigui la del cor. */
+function myProductionId(me) {
+  const ps = productionsSorted().filter(p => !isExcluded(p.id, me.id) && allSessions(p.id).length);
+  const now = ps.find(p => p.start <= TODAY && (p.end || '9999') >= TODAY);
+  if (now) return now.id;
+  const next = ps.find(p => (p.start || '') > TODAY);
+  if (next) return next.id;
+  return ps.at(-1)?.id || null;   // no en fa cap: no hi ha res a ensenyar
 }
 // mAll = minuts de les sessions on se l'esperava; mDone = minuts que hi ha estat (un retard hi resta els minuts que ha fet tard).
 const emptyCounts = () => ({ P: 0, R: 0, FJ: 0, FNJ: 0, NP: 0, min: 0, mAll: 0, mDone: 0 });
@@ -663,6 +682,7 @@ function watchMyPriv() {
   }, () => {});
 }
 function saveMember(m) {
+  m = normPersonName(m);
   S.members.set(m.id, m);
   if (!privMembers()) { persist('members', m.id, m, 50); return; }
   const { pub, priv } = splitMember(m);

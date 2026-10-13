@@ -48,6 +48,7 @@ function staffLoading() {
 }
 /** Desa el compte d'una persona. Si li han canviat el correu, treu el vell (i les classes passen al nou). */
 async function writeAccount(rec, oldEmail = '') {
+  if (rec && typeof rec.name === 'string') rec = { ...rec, name: fullName(rec.name) };
   const moved = !!oldEmail && oldEmail !== rec.email;
   const b = fs.batch();
   b.set(db.doc(`staff/${rec.email}`), rec);

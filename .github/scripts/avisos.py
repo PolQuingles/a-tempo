@@ -577,7 +577,7 @@ class Group:
         days = r.list(f"{self.base}/classes")
         members = self.members()
         teachers = self.teachers()
-        name = lambda mid: (members.get(mid or "") or {}).get("name") or "Algú"
+        name = lambda mid: dades.full_name((members.get(mid or "") or {}).get("name")) or "Algú"
 
         def when(req):
             day = days.get(req.get("classId") or "")
@@ -751,7 +751,7 @@ class Group:
                 if previous is None or rs["status"] == "ok" or rs["status"] == before or before == "out":
                     continue
                 pct = round(rs["cur"] * 100)
-                name = m.get("name", "")
+                name = dades.full_name(m.get("name", ""))
                 sec_name = self.sec_names.get(m.get("section"), m.get("section") or "")
                 if rs["status"] == "risk":
                     n = max(0, math.ceil(minimum * (rs["att"] + rs["ab"] + rs["remaining"]) - rs["att"] - 1e-9))

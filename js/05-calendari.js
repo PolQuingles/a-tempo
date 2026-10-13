@@ -36,7 +36,8 @@ function viewCalendar() {
     }
     if (rows) rows += '</ul>';
     body += `<section class="cal-prod prod-tone" style="--ph:${prodHue(p)}">
-      <div class="cal-prod-h">${posterThumb(p)}<h2 class="h2" style="flex:1;min-width:0"><i class="pdot"></i>${esc(p.name)}</h2><span class="mono muted" style="font-size:calc(13px*var(--ts));white-space:nowrap">${total} sessions</span>${canWriteAll() && msgProds().some(x => x.id === p.id) ? `<button class="btn btn-sm btn-ghost" data-act="msg-new" data-prod="${esc(p.id)}" title="Un missatge a qui fa ${esc(p.name)}">Escriu a qui la fa</button>` : ''}</div>
+      <div class="cal-prod-h">${posterThumb(p)}<div class="cph-b"><h2 class="h2"><i class="pdot"></i>${esc(p.name)}</h2>
+        <div class="cph-m"><span class="mono muted">${total} sessions</span>${canWriteAll() && msgProds().some(x => x.id === p.id) ? `<button class="btn btn-sm btn-ghost" data-act="msg-new" data-prod="${esc(p.id)}" title="Un missatge a qui fa ${esc(p.name)}">Escriu a qui la fa</button>` : ''}</div></div></div>
       ${rows || `<p class="muted">No queden sessions pendents. ${ui.calPast ? '' : 'Mostra les passades per veure-les.'}</p>`}
     </section>`;
   }
