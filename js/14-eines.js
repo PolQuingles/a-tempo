@@ -766,7 +766,7 @@ function searchAll(q) {
     act: x.file ? act : `data-act="search-link" data-url="${esc(x.url || '')}"` })));
   add('Anuncis', visibleAnnouncements().filter(a => has(a.title, a.body)).map(a => ({ t: a.title, s: `${fullName(a.author)}${a.createdAt ? ` · ${ddmm(a.createdAt.slice(0, 10))}` : ''}`, act: 'data-act="search-go" data-tab="tauler" data-board="anuncis"' })));
   add('Sortides', tripsSorted().filter(t => has(t.title, t.place)).map(t => ({ t: t.title, s: `${capz(tripDates(t))}${t.place ? ` · ${t.place}` : ''}`, act: 'data-act="search-go" data-tab="tauler" data-board="sortides"' })));
-  add('Produccions', productionsSorted().filter(p => has(p.name)).map(p => ({ t: p.name, s: `${allSessions(p.id).length} sessions`, act: `data-act="search-go" data-tab="calendari" data-prod="${esc(p.id)}"` })));
+  add('Produccions', productionsSorted().filter(p => has(p.name)).map(p => ({ t: p.name, s: `${allSessions(p.id).length} ${allSessions(p.id).length === 1 ? 'sessió' : 'sessions'}`, act: `data-act="search-go" data-tab="calendari" data-prod="${esc(p.id)}"` })));
   return out;
 }
 /** Marca el tros que coincideix (sense tenir en compte els accents). */

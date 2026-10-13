@@ -35,7 +35,7 @@ function viewStats(inBoard) {
 
   if (!st.counted.length) {
     const first = st.all[0];
-    return top + `<div class="empty"><p>Encara no s’ha passat llista en cap sessió d’aquest període${st.all.length ? ` (${st.all.length} sessions programades, la primera el ${shortDate(first.date)})` : ''}.</p></div>`;
+    return top + `<div class="empty"><p>Encara no s’ha passat llista en cap sessió d’aquest període${st.all.length ? ` (${st.all.length === 1 ? '1 sessió programada' : `${st.all.length} sessions programades`}, la primera el ${shortDate(first.date)})` : ''}.</p></div>`;
   }
   const t = st.tot;
   const kpis = `<div class="kpis">
@@ -44,8 +44,8 @@ function viewStats(inBoard) {
     <div class="kpi"><div class="kpi-v">${t.min}<small>min</small></div><div class="kpi-l">Retard acumulat · ${t.R} retards</div></div>
     <div class="kpi ${t.FNJ ? 'alert' : ''}"><div class="kpi-v">${t.FNJ}</div><div class="kpi-l">Faltes no justificades · ${t.FJ} just.</div></div>
   </div>
-  <p class="muted" style="font-size:calc(13px*var(--ts));margin:10px 2px 0">${st.counted.length} de ${st.all.length} sessions amb llista ${helpBtn('assist')}</p>
-  ${helpText('assist', 'L’assistència són els minuts d’assaig fets sobre els convocats: un retard compta pels minuts que s’hi ha estat. No compten «no fa» ni les baixes.')}`;
+  <p class="muted" style="font-size:calc(13px*var(--ts));margin:10px 2px 0">${st.counted.length} de ${st.all.length} ${st.all.length === 1 ? 'sessió' : 'sessions'} amb llista ${helpBtn('assist')}</p>
+  ${helpText('assist', 'L’assistència es compta en minuts: els minuts que cadascú ha estat a l’assaig dividits pels minuts que ha durat (si una sessió no té hora de final, compta dues hores). Un retard hi resta els minuts que s’ha fet tard, i una falta, justificada o no, hi resta tota la sessió. No compten «no fa» ni les baixes.')}`;
 
   const dist = `<div class="panel" style="padding:14px;margin-top:14px">${stackBar(t)}<div class="legend">${ORDER.map(k => `<span><i class="i-${k}"></i>${STATUS[k].label} <b>${t[k]}</b></span>`).join('')}</div></div>`;
 
@@ -64,7 +64,7 @@ function viewStats(inBoard) {
         ${outL.length || riskL.length ? `<ul class="alerts">${outL.map(r => item(r, ruleMap.get(r.m.id))).join('')}${riskL.map(r => item(r, ruleMap.get(r.m.id))).join('')}</ul>`
           : `<p style="margin:0;padding:14px;font-size:calc(13.5px*var(--ts))">Ara mateix tothom compleix la norma.</p>`}
       </div>
-      ${helpText('norma', `Compten tots els assajos de la producció (no ${V.sh.els} ni les sessions «Altres»). «En risc» vol dir que ara està per sota però encara hi pot arribar amb els assajos que queden.`)}`;
+      ${helpText('norma', `Es compta en minuts: el temps que s’ha estat a tots els assajos de la producció (no ${V.sh.els} ni les sessions «Altres») dividit pel temps que han durat. «En risc» vol dir que ara està per sota però encara hi pot arribar amb els assajos que queden.`)}`;
   }
 
   const secBars = !ui.statsSec ? `<div class="section-title"><h2 class="h2">Per ${V.sections}</h2><span class="eyebrow">assistència</span></div>
@@ -137,15 +137,16 @@ function riskProductions() {
   return productionsSorted().filter(p => p.id === cur || allSessions(p.id).some(s => s.date >= TODAY));
 }
 /** How many of the remaining rehearsals they must attend to reach the minimum (en minuts, amb la durada mitjana dels que queden). */
+/** Els minuts d'assaig que encara li calen per arribar a la norma (com a molt, tots els que queden). */
 function needed(rs) {
   if (!rs.remaining) return 0;
-  const min = minAttendance() / 100, avg = rs.remM / rs.remaining;
-  return Math.min(rs.remaining, Math.max(0, Math.ceil((min * (rs.attM + rs.absM + rs.remM) - rs.attM) / avg - 1e-9)));
+  const min = minAttendance() / 100;
+  return Math.min(rs.remM, Math.max(0, Math.ceil(min * (rs.attM + rs.absM + rs.remM) - rs.attM - 1e-9)));
 }
 function riskLine(rs) {
   if (rs.status === 'out') return `No hi arriba: encara que vingui a tot, es queda al ${pct(rs.best)}.`;
   const n = needed(rs);
-  return `Ha de venir a ${n === rs.remaining ? `tots els ${n}` : `${n} dels ${rs.remaining}`} assajos que queden.`;
+  return n >= rs.remM ? `Ha de venir a tot el que queda (${minsText(rs.remM)} d’assaig).` : `Li calen ${minsText(n)} d’assaig més: en queden ${minsText(rs.remM)}.`;
 }
 /** De les persones que no arriben a la norma, a qui pot escriure qui mira (l'equip, a tothom; un cap de corda, a la seva). */
 const riskWritable = rows => canWriteTo() ? rows.filter(r => writableMembers().some(m => m.id === r.m.id)) : [];
@@ -223,7 +224,7 @@ function riskView() {
         <span style="display:flex;gap:6px;flex-wrap:wrap">${riskWritable(rows).length ? `<button class="btn btn-sm" data-act="risk-write" data-pid="${pr.id}">Escriu-los</button>` : ''}${hasConcert ? `<button class="btn btn-sm" data-act="concert-list" data-pid="${pr.id}">${V.sh.list}</button>` : ''}</span></div>
       <div class="panel prod-tone tinted" style="--ph:${prodHue(pr)}">${rows.length ? rows.map(({ m, rs }) => `<button class="risk-row" data-act="member-stats" data-mid="${m.id}">
           <span class="rn">${esc(m.name)}</span><span class="rule ${rs.status}">${rs.status === 'out' ? `${pct(rs.cur)} · no hi arriba` : `${pct(rs.cur)} · en risc`}</span>
-          <span class="rm">${esc(SEC[m.section].name)} · ${rs.att} de ${rs.att + rs.abs} assajos · ${riskLine(rs)}</span></button>`).join('')
+          <span class="rm">${esc(SEC[m.section].name)} · ${minsText(rs.attM)} de ${minsText(rs.attM + rs.absM)} d’assaig · ${riskLine(rs)}</span></button>`).join('')
         : '<p style="margin:0;padding:14px;font-size:calc(13.5px*var(--ts))">Tothom compleix la norma.</p>'}</div>`;
   }).join('');
   const text = () => {
@@ -403,21 +404,23 @@ function ruleSentence(rs) {
   if (!rs) return '';
   const min = minAttendance();
   if (rs.status === 'ok') return `<span class="rsvp yes">Compleixes la norma del ${min}%</span>`;
-  if (rs.status === 'risk') return `<span class="rsvp none" style="background:var(--fj-soft);color:var(--fj-ink)">Per sota del ${min}%</span> <span class="muted" style="font-size:calc(13px*var(--ts))">Encara hi pots arribar: si vens als ${rs.remaining} assajos que queden, arribaràs al ${pct(rs.best)}.</span>`;
+  if (rs.status === 'risk') return `<span class="rsvp none" style="background:var(--fj-soft);color:var(--fj-ink)">Per sota del ${min}%</span> <span class="muted" style="font-size:calc(13px*var(--ts))">Encara hi pots arribar: si vens a tot el que queda (${minsText(rs.remM)} d’assaig), arribaràs al ${pct(rs.best)}.</span>`;
   return `<span class="rsvp no">No arribes al ${min}%</span> <span class="muted" style="font-size:calc(13px*var(--ts))">Parla amb el teu ${V.leader}.</span>`;
 }
-/** «Et pots permetre 2 faltes més abans del concert del 12 d’oct.»: quantes faltes queden fins a no arribar a la norma. */
+/** «Encara pots perdre 1 h 50 min d’assaig abans del concert del 17 d’oct.»: els minuts que pot faltar (o arribar tard)
+ *  i continuar arribant a la norma, que es compta en minuts. */
 function normHint(me, pid) {
   const rs = ruleStatus(pid, me);
   if (!rs || !rs.remaining) return '';
-  const min = minAttendance() / 100, avg = rs.remM / rs.remaining;
-  const k = Math.floor((rs.attM + rs.remM - min * (rs.attM + rs.absM + rs.remM)) / avg + 1e-9);
+  const min = minAttendance() / 100;
+  const spare = Math.floor(rs.attM + rs.remM - min * (rs.attM + rs.absM + rs.remM) + 1e-9);
   const show = allSessions(pid).find(s => isShow(s) && s.date >= TODAY);
   const when = show ? `${V.sh.el} del ${shortDate(show.date)}` : 'el final de la producció';
-  if (k < 0 || rs.status === 'out') return `<p class="norm-hint out">Ja no arribes al ${minAttendance()}% dels assajos per fer ${esc(when)}. Parla amb el teu ${V.leader}.</p>`;
-  if (k >= rs.remaining) return `<p class="norm-hint ok">Ja tens assegurat el ${minAttendance()}% per fer ${esc(when)}.</p>`;
-  if (k === 0) return `<p class="norm-hint zero">No et pots permetre <b>cap falta més</b> si vols fer ${esc(when)}: queden ${rs.remaining} assajos.</p>`;
-  return `<p class="norm-hint">Et pots permetre <b>${k} ${k === 1 ? 'falta' : 'faltes'} més</b> ${show ? `abans ${V.sh.del} del ${esc(shortDate(show.date))}` : 'fins al final de la producció'} (queden ${rs.remaining} assajos).</p>`;
+  const left = `en queden ${minsText(rs.remM)}, en ${rs.remaining === 1 ? '1 assaig' : `${rs.remaining} assajos`}`;
+  if (spare < 0 || rs.status === 'out') return `<p class="norm-hint out">Ja no arribes al ${minAttendance()}% del temps d’assaig per fer ${esc(when)}. Parla amb el teu ${V.leader}.</p>`;
+  if (spare >= rs.remM) return `<p class="norm-hint ok">Ja tens assegurat el ${minAttendance()}% del temps d’assaig per fer ${esc(when)}.</p>`;
+  if (spare < 1) return `<p class="norm-hint zero">No pots perdre <b>ni un minut més</b> d’assaig si vols fer ${esc(when)} (${left}).</p>`;
+  return `<p class="norm-hint">Encara pots perdre <b>${minsText(spare)}</b> d’assaig ${show ? `abans ${V.sh.del} del ${esc(shortDate(show.date))}` : 'fins al final de la producció'} (${left}).</p>`;
 }
 function myAttendanceCard(me) {
   const x = myProdSummary(me, myProductionId(me));
@@ -431,7 +434,7 @@ function myAttendanceCard(me) {
   return `<div class="section-title prod-tone" style="--ph:${prodHue(prod)}"><h2 class="h2">La meva assistència</h2><span class="eyebrow"><i class="pdot"></i>${esc(prod.name)}</span></div>
     <div class="panel my-att prod-tone tinted" style="--ph:${prodHue(prod)}">
       ${counted ? `<div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span class="big">${Math.round(rate(r) * 100)}<small>%</small></span>
-        <span class="muted" style="font-size:calc(13px*var(--ts))">${r.P + r.R} de ${counted} assajos${r.R ? ` · ${r.R} retards` : ''}${r.FJ ? ` · ${r.FJ} just.` : ''}${r.FNJ ? ` · ${r.FNJ} no just.` : ''}</span></div>
+        <span class="muted" style="font-size:calc(13px*var(--ts))">${minsText(r.mDone)} de ${minsText(r.mAll)} d’assaig${r.R ? ` · ${r.R === 1 ? '1 retard' : `${r.R} retards`}` : ''}${r.FJ ? ` · ${r.FJ} just.` : ''}${r.FNJ ? ` · ${r.FNJ} no just.` : ''}</span></div>
         ${normHint(me, prod.id) || `<div>${ruleSentence(rs)}</div>`}
         <div class="dots" aria-label="Sessió a sessió">${dots}</div>`
       : `<span class="muted" style="font-size:calc(13.5px*var(--ts))">Encara no hi ha cap llista passada en aquesta producció.</span>`}

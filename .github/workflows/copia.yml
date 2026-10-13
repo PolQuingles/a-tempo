@@ -8,9 +8,9 @@ permissions:
 concurrency: copia
 jobs:
   copia:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Obre el repositori privat de còpies
         env:
           SSH_KEY: ${{ secrets.BACKUP_SSH_KEY }}

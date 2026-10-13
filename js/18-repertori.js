@@ -41,7 +41,7 @@ function boardRepertoire() {
     return `<button class="work" data-act="work-open" data-id="${esc(w.id)}">
       <span class="work-t">${esc(w.title)}</span>${prod ? scorePill(prod.id, w) : ''}
       ${facts ? `<span class="work-f">${facts}</span>` : ''}
-      <span class="work-k">${kinds.map(([k, n]) => `<span class="mat-k ${k}">${MAT_KINDS[k].slice(0, 4)}${n > 1 ? ` ${n}` : ''}</span>`).join('')}${(w.roles || []).length ? `<span class="work-r">${(w.roles || []).length} ${(w.roles || []).length === 1 ? 'solo o grup' : 'solos i grups'}</span>` : ''}</span>
+      <span class="work-k">${kinds.map(([k, n]) => matTag(k, n)).join('')}${(w.roles || []).length ? `<span class="work-r">${(w.roles || []).length} ${(w.roles || []).length === 1 ? 'solo o grup' : 'solos i grups'}</span>` : ''}</span>
     </button>`;
   };
   const total = works.reduce((n, w) => n + durSecs(w.duration), 0);
@@ -59,7 +59,7 @@ function boardMaterialsOf(prod, onlyMine, me) {
   const items = (prod.materials || []).filter(x => !onlyMine || forMyVoice(x, me));
   const order = Object.keys(MAT_KINDS);
   const sorted = [...items].sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind) || a.title.localeCompare(b.title, 'ca'));
-  const row = x => `<div class="mat"><span class="mat-k ${x.kind}">${MAT_KINDS[x.kind]?.slice(0, 4) || ''}</span>
+  const row = x => `<div class="mat">${matTag(x.kind)}
       <span class="mat-i">${itemLink(x, `data-act="file-open" data-src="mat" data-pid="${prod.id}" data-id="${x.id}"`)}<small>${[MAT_KINDS[x.kind], x.section ? esc(SEC[x.section].name) : capz(V.tot), x.part ? `${V.part} ${esc(x.part)}` : '', fileNote(x), x.file && offlineSaved().has(x.file.id) ? 'desat al mòbil' : ''].filter(Boolean).join(' · ')}</small></span>
       ${canEdit() ? `<button class="icon-btn" data-act="mat-edit" data-pid="${prod.id}" data-id="${x.id}" aria-label="Edita">${ICON.more}</button>` : ''}</div>`;
   if (!sorted.length && !canEdit()) return '';
@@ -76,7 +76,7 @@ function sheetWork(id) {
   const draw = el => {
     const mats = (w.materials || []).filter(x => !onlyMine || forMyVoice(x, me));
     const saved = offlineSaved();
-    el.querySelector('#wk-mats').innerHTML = mats.length ? mats.map(x => `<div class="mat"><span class="mat-k ${x.kind}">${MAT_KINDS[x.kind]?.slice(0, 4) || ''}</span>
+    el.querySelector('#wk-mats').innerHTML = mats.length ? mats.map(x => `<div class="mat">${matTag(x.kind)}
         <span class="mat-i">${itemLink(x, `data-act="file-open" data-src="work" data-pid="${esc(w.id)}" data-id="${esc(x.id)}"`)}<small>${[MAT_KINDS[x.kind], x.section ? esc(SEC[x.section].name) : capz(V.tot), x.part ? `${V.part} ${esc(x.part)}` : '', fileNote(x), x.file && saved.has(x.file.id) ? 'desat al mòbil' : ''].filter(Boolean).join(' · ')}</small></span></div>`).join('')
       : `<p class="muted" style="margin:0;padding:12px 14px;font-size:calc(13px*var(--ts))">${onlyMine ? `No hi ha material per a la teva ${V.part}.` : 'Encara no hi ha partitures ni àudios.'}</p>`;
     const tog = el.querySelector('#wk-mine');
@@ -129,8 +129,8 @@ function sheetWorkEdit(id, presetProd) {
     });
   };
   const paintMats = el => {
-    el.querySelector('#wk-matlist').innerHTML = w.materials.length ? w.materials.map(x => `<div class="mat"><span class="mat-k ${x.kind}">${MAT_KINDS[x.kind]?.slice(0, 4) || ''}</span>
-        <span class="mat-i"><b style="font-weight:600">${esc(x.title)}</b><small>${[MAT_KINDS[x.kind], x.section ? esc(SEC[x.section].name) : capz(V.tot), x.part ? `${V.part} ${esc(x.part)}` : '', fileNote(x) || 'enllaç'].filter(Boolean).join(' · ')}</small></span>
+    el.querySelector('#wk-matlist').innerHTML = w.materials.length ? w.materials.map(x => `<div class="mat">${matTag(x.kind)}
+        <span class="mat-i"><b style="font-weight:600">${esc(x.title)}</b><small>${[MAT_KINDS[x.kind], x.section ? esc(SEC[x.section].name) : capz(V.tot), x.part ? `${V.part} ${esc(x.part)}` : '', fileNote(x)].filter(Boolean).join(' · ')}</small></span>
         <button type="button" class="icon-btn" data-mrm="${esc(x.id)}" aria-label="Treu aquest material">${ICON.close}</button></div>`).join('')
       : '<p class="muted" style="margin:0;padding:12px 14px;font-size:calc(13px*var(--ts))">Encara no n’hi ha.</p>';
     el.querySelectorAll('[data-mrm]').forEach(b => b.onclick = () => { const x = w.materials.find(m => m.id === b.dataset.mrm); w.materials = w.materials.filter(m => m.id !== b.dataset.mrm); if (x?.file) w._drop = [...(w._drop || []), x.file]; paintMats(el); });

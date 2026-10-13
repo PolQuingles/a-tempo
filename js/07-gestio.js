@@ -457,11 +457,14 @@ function sheetLegacyClean() {
 const SEC_HUES = [330, 28, 205, 145, 265, 52, 185, 5];
 const secHue = sec => SEC_HUES[Math.max(0, SECTIONS.findIndex(x => x.id === sec)) % SEC_HUES.length];
 /** Les inicials de la persona en un cercle del color de la seva corda: ajuda a trobar-la d'un cop d'ull. */
-const avatar = m => m ? `<span class="pav" style="--sh:${secHue(m.section)}" aria-hidden="true">${esc(personInitials(m.name))}</span>` : '';
-function personInitials(name) {
-  const n = String(name || '').includes(',') ? String(name).split(',').reverse().join(' ') : String(name || '');
-  const w = n.split(/\s+/).filter(x => x && !['de', 'del', 'la', 'i'].includes(x.toLowerCase()));
-  return ((w[0] || '?')[0] + (w.length > 1 ? w[w.length - 1][0] : '')).toUpperCase();
+const avatar = m => m ? `<span class="pav" style="--sh:${secHue(m.section)}" aria-hidden="true">${esc(personInitials(m))}</span>` : '';
+/** Les inicials d'una persona: la del nom i la del primer cognom («Laia Dalmau Tomàs» → LD, no LT). Accepta la fitxa (amb
+ *  sortName, «Dalmau Tomàs, Laia») o només el nom; sense sortName, el primer cognom és la paraula que va després del nom. */
+function personInitials(o) {
+  const key = nameSortKey(typeof o === 'string' || !o ? { name: o || '' } : o);
+  const [sur, given] = key.includes(',') ? key.split(',').map(x => x.trim()) : ['', key];
+  const first = t => String(t || '').split(/\s+/).map(x => x.replace(/^[dl][’']/i, '')).find(x => x && !['de', 'del', 'la', 'i'].includes(x.toLowerCase())) || '';
+  return ((first(given)[0] || '?') + (first(sur)[0] || '')).toUpperCase();
 }
 const accountName = () => S.me?.name || S.members.get(myMemberId())?.name || S.userName || S.email || '';
 function paintAccount() {

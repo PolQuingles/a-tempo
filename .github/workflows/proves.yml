@@ -18,29 +18,29 @@ concurrency:
 jobs:
   regles:
     name: Regles de seguretat
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '21'
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-          node-version: '20'
-      - uses: actions/setup-python@v5
+          node-version: '22'
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
       - name: Emulador de Firestore i proves de les regles
         run: npx --yes firebase-tools@13 emulators:exec --only firestore --project demo-cor "python3 tests/regles/test_regles.py firestore.rules"
   interficie:
     name: Interfície
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
       - name: Navegador sense pantalla
@@ -51,14 +51,14 @@ jobs:
         run: python3 tests/interficie/run.py
   codi:
     name: Revisió del codi i lògica
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
-          node-version: '20'
-      - uses: actions/setup-python@v5
+          node-version: '22'
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
       - name: Tipus (TypeScript revisa el JavaScript de l'app)
@@ -71,11 +71,11 @@ jobs:
         run: python3 tests/logica/test_avisos.py
   estructura:
     name: Empremtes i scripts
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
       - name: Empremtes dels fitxers al dia

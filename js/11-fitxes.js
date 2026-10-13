@@ -575,7 +575,7 @@ function sheetProduction(pid) {
           d.sessions.push({ id: uid('s'), date: iso, time, end, type, place, note: '' }); n++;
         }
         el.querySelector('#pe-slist').innerHTML = sessionsList(); bindRm();
-        toast(n ? `${n} sessions afegides. Recorda desar.` : 'No s’ha afegit cap sessió nova');
+        toast(n ? `${n === 1 ? '1 sessió afegida' : `${n} sessions afegides`}. Recorda desar.` : 'No s’ha afegit cap sessió nova');
       };
       el.querySelector('#pe-save').onclick = () => {
         const name = el.querySelector('#pe-name').value.trim();
@@ -596,7 +596,7 @@ function sheetProduction(pid) {
       };
       const del = el.querySelector('#pe-del');
       if (del) del.onclick = async () => {
-        const ok = await confirmSheet('Esborrar la producció?', `S’esborraran <b>${esc(existing.name)}</b>, les seves ${(existing.sessions || []).length} sessions i tota l’assistència registrada.`, 'Esborra la producció');
+        const ok = await confirmSheet('Esborrar la producció?', `S’esborraran <b>${esc(existing.name)}</b>, ${(existing.sessions || []).length === 1 ? 'la seva sessió' : `les seves ${(existing.sessions || []).length} sessions`} i tota l’assistència registrada.`, 'Esborra la producció');
         if (!ok) return;
         const att = (existing.sessions || []).flatMap(s => SECTIONS.map(x => ['attendance', attKey(s.id, x.id)])).filter(([, k]) => S.attendance.has(k));
         S.productions.delete(existing.id); persist('productions', existing.id, null, 20);

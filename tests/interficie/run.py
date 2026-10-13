@@ -1410,6 +1410,56 @@ def main():
         check(not [e for e in errors if "in-progress transaction" not in e], "sense errors amb les llistes pendents i Personal", "; ".join(errors[:3]))
         ctx.close()
 
+        print("La setmana sencera a Inici, inicials, material, anuncis vistos i assistència en minuts")
+        ctx, page, errors = open_app(browser, base, "singer", MOBILE)
+        r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          applyRoute('inici'); render(); await s(300);
+          const kinds = [...document.querySelectorAll('.soon-row .soon-k')].map(x => x.textContent);
+          out.week = kinds.some(t => /Proper assaig/.test(t)) && kinds.some(t => /Assaig general/.test(t)) && kinds.some(t => /Proper concert/.test(t));
+          out.ini = personInitials({ name: 'Laia Dalmau Tomàs', sortName: 'Dalmau Tomàs, Laia' }) === 'LD' && personInitials('Laia Dalmau Tomàs') === 'LD'
+            && personInitials('Pau Diport i Feliu') === 'PD' && personInitials('Quingles, Pol') === 'PQ' && personInitials('') === '?';
+          const card = document.querySelector('.my-att')?.innerText || '';
+          out.mins = /6 h de 6 h d’assaig/.test(card) && !/de \\d+ assajos/.test(card);
+          out.hint = /Encara pots perdre 2 h 24 min d’assaig/.test(card);
+          applyRoute('tauler/repertori'); ui.board = 'materials'; render(); await s(300);
+          const chips = [...document.querySelectorAll('.work-k .mat-k')];
+          out.icons = chips.length > 0 && chips.every(x => x.querySelector('svg') && !/PART|ÀUDI|ALTR/i.test(x.textContent)) && chips.some(x => x.getAttribute('aria-label') === 'Partitura');
+          out.site = linkSite('https://open.spotify.com/album/x') === 'Spotify' && linkSite('https://youtu.be/x') === 'YouTube' && linkSite('https://example.com/a.pdf') === 'enllaç';
+          ui.board = 'anuncis'; applyRoute('tauler/anuncis'); render(); await s(400);
+          render(); await s(400);
+          const doc = await firebase.firestore().doc(`cors/${GID}/annSeen/n1`).get();
+          out.seen = doc.exists && doc.data().S === 1 && Object.keys(doc.data()).length === 1;
+          out.mark = (await firebase.firestore().doc(`cors/${GID}/annSeen/n1/by/uid-singer`).get()).exists;
+          out.noLine = !document.querySelector('.ann-seen');
+          return out; }""")
+        switch_user(page, base, "pol")
+        r.update(page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          ui.board = 'anuncis'; applyRoute('tauler/anuncis'); render(); await s(500);
+          const line = document.querySelector('.ann[data-ann="n1"] .ann-seen')?.innerText || '';
+          out.line = /L’han obert a l’app 1 de 16/.test(line) && /S 1\/4/.test(line) && /T 0\/4/.test(line);
+          const doc = await firebase.firestore().doc(`cors/${GID}/annSeen/n1`).get();
+          out.author = !('T' in doc.data());
+          const d = n => { const x = new Date(); x.setDate(x.getDate() + n); return isoDate(x); };
+          saveProduction({ id: 'p9', name: 'Un sol concert', sessions: [{ id: 's9', date: d(40), time: '19:00', end: '', type: 'Concert', place: '', note: '' }], excluded: [] });
+          applyRoute('calendari'); render(); await s(400);
+          out.one = [...document.querySelectorAll('.cph-m .mono')].some(x => x.textContent.trim() === '1 sessió') && ![...document.querySelectorAll('.cph-m .mono')].some(x => /^1 sessions/.test(x.textContent.trim()));
+          return out; }"""))
+        for k, label in [("week", "Inici ensenya tots els assajos dels set dies que vénen (també el general), i el proper concert"),
+                         ("ini", "les inicials són la del nom i la del primer cognom"),
+                         ("mins", "«La meva assistència» diu les hores d'assaig fetes, no quants assajos"),
+                         ("hint", "i quants minuts d'assaig es poden perdre encara"),
+                         ("icons", "el material porta una icona per tipus, no quatre lletres"),
+                         ("site", "els enllaços diuen d'on són (Spotify, YouTube…)"),
+                         ("seen", "en obrir els anuncis, la cantaire suma 1 a la seva corda, un sol cop"),
+                         ("mark", "i en deixa constància a nom seu"),
+                         ("noLine", "la cantaire no veu quanta gent l'ha obert"),
+                         ("line", "l'equip veu quanta gent l'ha obert, per cordes"),
+                         ("author", "qui l'ha escrit no compta"),
+                         ("one", "«1 sessió», no «1 sessions»")]:
+            check(r.get(k), label, str(r))
+        check(not errors, "sense errors amb la setmana, el material i els anuncis vistos", "; ".join(errors[:3]))
+        ctx.close()
+
         print("Mira l'app com…")
         ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/gestio/personal")
         page.wait_for_function("S.staffReady", timeout=5000)

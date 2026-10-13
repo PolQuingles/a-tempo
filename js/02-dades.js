@@ -461,6 +461,8 @@ function countMark(c, s, mk) {
 }
 // L'assistència es compta en minuts: un retard de 30′ en un assaig de 3 h compta com 2 h 30′ de les 3 h.
 const rate = c => c.mAll ? c.mDone / c.mAll : null;
+/** Minuts en hores i minuts: «18 h 30 min», «2 h», «45 min». */
+const minsText = n => { const t = Math.max(0, Math.round(+n || 0)), h = Math.floor(t / 60), m = t % 60; return h ? `${h} h${m ? ` ${m} min` : ''}` : `${m} min`; };
 const punctuality = c => { const d = c.P + c.R; return d ? c.P / d : null; };
 
 /* ---------- Season ---------- */

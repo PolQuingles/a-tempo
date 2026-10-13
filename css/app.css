@@ -809,12 +809,18 @@ button.rule,button.pill{cursor:pointer}
 .ann-m{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:calc(13px*var(--ts));color:var(--muted)}
 .ann.pinned{background:var(--accent-soft)}
 .pin{font-size:calc(12px*var(--ts));font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent)}
+.ann-seen{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:10px;padding-top:8px;border-top:1px dashed var(--line);font-size:calc(13px*var(--ts));color:var(--muted)}
+.ann-seen b{color:var(--ink);font-weight:700}
 .mat{display:flex;align-items:center;gap:12px;padding:11px 14px;border-top:1px solid var(--line)}
 .mat:first-child{border-top:0}
 .mat-k{flex:none;width:38px;height:38px;border-radius:10px;display:grid;place-items:center;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;background:var(--surface-2);color:var(--ink-2)}
 .mat-k.partitura{background:var(--accent-soft);color:var(--accent)}
 .mat-k.audio{background:var(--r-soft);color:var(--r-ink)}
 .mat-k.video{background:var(--fj-soft);color:var(--fj-ink)}
+.mat-k svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.work-k .mat-k{width:auto;min-width:30px;height:26px;padding:0 7px;border-radius:8px;display:inline-flex;gap:4px}
+.work-k .mat-k svg{width:15px;height:15px}
+.work-k .mat-k b{font-size:calc(12px*var(--ts));font-weight:700;font-family:var(--f-mono);letter-spacing:0}
 .mat-i{flex:1;min-width:0}
 .mat-i a{font-weight:600;color:var(--ink);text-decoration:none;display:block;overflow-wrap:anywhere}
 .mat-i a:hover{text-decoration:underline}

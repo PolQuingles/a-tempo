@@ -159,7 +159,8 @@ function todoBlock(me) {
       <button class="btn btn-sm ${x.n ? 'btn-soft' : ''}" ${x.act}>${x.btn}</button></div>`).join('')}</div>`;
 }
 /* ---------- Properament ---------- */
-// Una sola llista, per ordre: el d'avui (amb passar llista o avisar), la propera classe, el proper assaig i el proper concert.
+// Una sola llista, per ordre: el d'avui (amb passar llista o avisar), la propera classe, les sessions dels set dies que vénen i,
+// si són més enllà, el proper assaig i el proper concert.
 // Cada fila és com les del calendari: la data a l'esquerra i, a la dreta, què és, on i el que s'hi pot fer.
 const dayLabel = d => d === TODAY ? 'Avui' : d === addDays(TODAY, 1) ? 'Demà' : '';
 const daysTo = d => Math.round((parseISO(d).getTime() - parseISO(TODAY).getTime()) / 864e5);
@@ -232,11 +233,14 @@ function soonBlock(me) {
   }
   const later = allSessions().filter(s => s.date > TODAY && mineS(s) && !(me && isOut(s, me)));
   const next = later[0];
-  if (next) rows.push({ key: `${next.date} ${next.time || ''}`, html: sessionSoon(next, me, isShow(next) ? V.sh.next : 'Proper assaig') });
   const show = later.find(x => isShow(x));
-  if (show && show.id !== next?.id) rows.push({ key: `${show.date} ${show.time || ''}`, html: sessionSoon(show, me, V.sh.next) });
+  // Els set dies que vénen, sencers: la setmana del concert hi ha la pregeneral i el general, sovint en un altre lloc i a una
+  // altra hora, i abans només hi sortien el proper assaig i el concert. Més enllà, només el proper assaig i el proper concert.
+  const ahead = later.filter(s => s.date <= addDays(TODAY, 7));
+  for (const s of [next, show]) if (s && !ahead.includes(s)) ahead.push(s);
+  for (const s of ahead) rows.push({ key: `${s.date} ${s.time || ''}`, html: sessionSoon(s, me, s === next ? (isShow(s) ? V.sh.next : 'Proper assaig') : s === show ? V.sh.next : s.type || 'Assaig') });
   // Les convocatòries que ja ha respost (les que falten són a «Per fer»): per canviar la resposta, l'autocar i els voluntaris.
-  const shown = new Set([next?.id, show?.id]);
+  const shown = new Set(ahead.map(s => s.id));
   if (me) for (const s of openConvocations(me).filter(s => S.rsvp.get(`${s.id}_${me.id}`) && !shown.has(s.id) && s.date > TODAY)) rows.push({ key: `${s.date} ${s.time || ''}`, html: sessionSoon(s, me, 'Convocatòria') });
   rows.sort((a, b) => a.key.localeCompare(b.key));
   return `<div class="section-title"><h2 class="h2">Properament</h2><button class="btn btn-sm" data-act="week">La setmana</button></div>
