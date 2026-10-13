@@ -82,7 +82,7 @@ function todoItems() {
   if (canEdit()) {
     const abs = pendingAbsences();
     if (abs.length) {
-      const who = [...new Set(abs.map(a => S.members.get(a.memberId)?.name?.split(',').pop().trim()).filter(Boolean))];
+      const who = [...new Set(abs.map(a => firstName(S.members.get(a.memberId)?.name)).filter(Boolean))];
       out.push({ icon: 'abs', t: `${abs.length === 1 ? '1 absència' : `${abs.length} absències`} per veure`, s: esc(who.slice(0, 3).join(', ') + (who.length > 3 ? '…' : '')), btn: 'Revisa', act: 'data-act="manage" data-k="avisos"', n: abs.length });
     }
     const lists = mySections().flatMap(sec => pendingSessions(sec).map(x => ({ sec, x })));

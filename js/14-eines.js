@@ -11,7 +11,7 @@ function maybeWelcome() {
   lsSet(LS_WELCOME, new Date().toISOString());
   if (onboardingPanel()) return;
   const me = S.members.get(myMemberId());
-  const first = me ? me.name.split(',').pop().trim() : '';
+  const first = me ? firstName(me.name) : '';
   const body = canEdit()
     ? `<p style="margin-top:0">Hola${first ? `, ${esc(first)}` : ''}. Des d’aquí passaràs llista i gestionaràs ${esc(S.config.name || V.el)}.</p>
        <ul class="welcome"><li><b>Inici</b> · el que tens per fer (absències per acceptar, llistes per acabar…) i la sessió d’avui.</li>
@@ -65,7 +65,7 @@ function accessReport() {
 }
 function sheetWhoIn() {
   const { people, inApp, never, roster, noAccount, pushBy } = accessReport();
-  const first = n => String(n || '').split(',').pop().trim();
+  const first = n => firstName(n);
   const memberOfEmail = p => p.memberId && S.members.get(p.memberId);
   const row = p => `<li><span>${esc(p.name || p.email)}<br><span class="m mono">${esc(p.email)}</span>${p.invitedAt ? `<br><span class="m">Convidat ${esc(agoText(p.invitedAt).toLowerCase())}</span>` : ''}</span>
       <button class="btn btn-sm" data-invite="${esc(p.email)}">${p.invitedAt ? 'Torna a convidar' : 'Convida'}</button></li>`;
@@ -685,7 +685,7 @@ async function sendNudge(kind, ref, title, members) {
 function sheetReminder(title, pending, messageFor, nudge) {
   ensureStaff();
   const bySec = SECTIONS.map(x => [x, pending.filter(m => m.section === x.id)]).filter(([, l]) => l.length);
-  const first = m => m.name.split(',').pop().trim();
+  const first = m => firstName(m.name);
   const phone = m => (m.phone || '').replace(/[^0-9]/g, '').replace(/^(\d{9})$/, '34$1');
   const group = `${title}\n\nFalten per respondre:\n${bySec.map(([x, l]) => `${x.name}: ${l.map(first).join(', ')}`).join('\n')}\n\nPodeu respondre a l’app: ${appUrl()}`;
   openSheet({
@@ -719,7 +719,7 @@ function remindRsvp(sid) {
   const pending = SECTIONS.filter(x => convoked(s, x.id)).flatMap(x => membersOf(x.id)).filter(m => !isOut(s, m) && !S.rsvp.get(`${sid}_${m.id}`));
   const what = `${s.type} del ${longDate(s.date).toLowerCase()}${s.place ? ` (${s.place})` : ''}`;
   sheetReminder(`Recordatori: confirmeu si veniu al ${what}${s.rsvpBy ? `, abans del ${ddmm(s.rsvpBy)}` : ''}.`, pending,
-    m => `Hola ${m.name.split(',').pop().trim()}! Recorda confirmar si vens al ${what}${s.rsvpBy ? ` abans del ${ddmm(s.rsvpBy)}` : ''}. Respon aquí: ${appUrl()}`,
+    m => `Hola ${firstName(m.name)}! Recorda confirmar si vens al ${what}${s.rsvpBy ? ` abans del ${ddmm(s.rsvpBy)}` : ''}. Respon aquí: ${appUrl()}`,
     { kind: 'rsvp', ref: sid, title: `Encara no has dit si vens al ${what}${s.rsvpBy ? ` (fins al ${ddmm(s.rsvpBy)})` : ''}.` });
 }
 function remindPoll(id) {
@@ -727,7 +727,7 @@ function remindPoll(id) {
   if (!p) return;
   const pending = pollExpected(p).filter(m => !S.pollVotes.get(`${id}_${m.id}`));
   sheetReminder(`Recordatori: responeu l’enquesta «${p.title}»${p.closesAt ? ` abans del ${ddmm(p.closesAt)}` : ''}.`, pending,
-    m => `Hola ${m.name.split(',').pop().trim()}! Tens pendent l’enquesta «${p.title}»${p.closesAt ? ` (fins al ${ddmm(p.closesAt)})` : ''}. Respon-la aquí, a Tauler › Enquestes: ${appUrl()}`,
+    m => `Hola ${firstName(m.name)}! Tens pendent l’enquesta «${p.title}»${p.closesAt ? ` (fins al ${ddmm(p.closesAt)})` : ''}. Respon-la aquí, a Tauler › Enquestes: ${appUrl()}`,
     { kind: 'poll', ref: id, title: `Tens pendent l’enquesta «${p.title}»${p.closesAt ? ` (fins al ${ddmm(p.closesAt)})` : ''}.` });
 }
 function remindTrip(id) {
@@ -735,7 +735,7 @@ function remindTrip(id) {
   if (!t) return;
   const pending = tripPeople(t).filter(m => !signupOf(t, m.id));
   sheetReminder(`Recordatori: digueu si veniu a «${t.title}»${t.deadline ? ` abans del ${ddmm(t.deadline)}` : ''}, encara que no hi pugueu anar.`, pending,
-    m => `Hola ${m.name.split(',').pop().trim()}! Encara no has dit si vens a «${t.title}»${t.deadline ? ` (fins al ${ddmm(t.deadline)})` : ''}. Respon aquí, a Tauler › Sortides: ${appUrl()}`,
+    m => `Hola ${firstName(m.name)}! Encara no has dit si vens a «${t.title}»${t.deadline ? ` (fins al ${ddmm(t.deadline)})` : ''}. Respon aquí, a Tauler › Sortides: ${appUrl()}`,
     { kind: 'trip', ref: id, title: `Encara no has dit si vens a «${t.title}»${t.deadline ? ` (fins al ${ddmm(t.deadline)})` : ''}. Cal respondre encara que no hi vagis.` });
 }
 
