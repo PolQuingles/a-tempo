@@ -291,7 +291,7 @@ def main():
           out.cert = certificateHtml({ m: S.members.get(myMemberId()), from: seasonCfg().season.from, to: seasonCfg().season.to, label: 'la temporada', signer: 'X', role: 'Secretaria', place: 'Barcelona' }).includes('CERTIFICA');
           const f = await seasonFigures();
           out.season = f.active === 16 && seasonRows(f).length > 20;
-          out.norm = /Et pots permetre|No et pots permetre|assegurat/.test(normHint(S.members.get(myMemberId()), 'p1'));
+          out.norm = /Encara pots perdre .+ d’assaig|ni un minut més|assegurat/.test(normHint(S.members.get(myMemberId()), 'p1'));
           out.week = timetableHtml([{ label: 'Dilluns', sub: 'Aula 2', cells: { '17:00': 'Anna' } }]).includes('Aula 2');
           return out;
         }""")
@@ -299,7 +299,7 @@ def main():
                          ("planText", "el pla d'assaig es mostra amb les obres"), ("tenorsShort", "l'equilibri de veus avisa si una corda no arriba al mínim"),
                          ("seat", "la col·locació diu a cadascú el seu lloc"), ("participants", "la llista de participants porta el telèfon, la talla i l'emergència"),
                          ("cert", "el certificat d'assistència es genera"), ("season", "la memòria de la temporada té les xifres"),
-                         ("norm", "el cantaire veu quantes faltes es pot permetre"), ("week", "l'horari per imprimir porta l'aula")]:
+                         ("norm", "el cantaire veu quant temps d'assaig es pot perdre encara"), ("week", "l'horari per imprimir porta l'aula")]:
             check(r.get(k) if k != "works" else r.get(k, 0) >= 1, label, str(r))
         check(not errors, "sense errors al repertori i als concerts", "; ".join(errors[:3]))
         ctx.close()

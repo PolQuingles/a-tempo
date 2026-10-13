@@ -17,6 +17,7 @@ const matTag = (kind, n) => `<span class="mat-k ${esc(kind)}" role="img" aria-la
 /** D'on és un enllaç, perquè se sàpiga què s'obrirà: Spotify, YouTube…; si no se sap, «enllaç». */
 function linkSite(url) {
   const h = (String(url || '').match(/^https?:\/\/([^/?#]+)/i)?.[1] || '').toLowerCase().replace(/^www\./, '');
+  /** @type {[RegExp, string][]} */
   const known = [[/(^|\.)spotify\.com$/, 'Spotify'], [/(^|\.)(youtube\.com|youtu\.be)$/, 'YouTube'], [/(^|\.)drive\.google\.com$|(^|\.)docs\.google\.com$/, 'Google Drive'],
     [/(^|\.)dropbox\.com$/, 'Dropbox'], [/(^|\.)soundcloud\.com$/, 'SoundCloud'], [/(^|\.)music\.apple\.com$/, 'Apple Music'], [/(^|\.)vimeo\.com$/, 'Vimeo']];
   return known.find(([re]) => re.test(h))?.[1] || 'enllaç';
