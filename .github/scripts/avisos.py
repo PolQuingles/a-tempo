@@ -20,7 +20,7 @@ donat d'alta es miren en dues lectures, i la plantilla i les llistes només quan
 L'estat («què ja s'ha enviat») es desa al repositori privat de còpies, perquè el compte de servei no pot
 escriure a la base de dades: la primera agrupació a l'arrel i la resta a agrupacions/<agrupació>/.
 """
-import datetime, hashlib, json, math, os, sys
+import datetime, hashlib, json, math, os, subprocess, sys, time
 from zoneinfo import ZoneInfo
 
 from pywebpush import WebPushException, webpush
@@ -48,6 +48,18 @@ FRESH = (UTC_NOW - datetime.timedelta(hours=36)).isoformat().replace("+00:00", "
 TODAY = NOW.date()
 QUIET = NOW.hour < 8 or NOW.hour >= 22          # de nit no s'envia res
 EVENING = 18 <= NOW.hour < 21                   # finestra dels recordatoris del vespre
+
+
+def set_clock(fresh_minutes=None):
+    """Torna a posar l'hora (entre passades). fresh_minutes: entre passades, només es mira el que ha arribat fa poc."""
+    global NOW, UTC_NOW, FRESH, TODAY, QUIET
+    NOW = datetime.datetime.now(TZ)
+    UTC_NOW = NOW.astimezone(datetime.timezone.utc)
+    FRESH = (UTC_NOW - datetime.timedelta(minutes=fresh_minutes or 36 * 60)).isoformat().replace("+00:00", "Z")
+    TODAY = NOW.date()
+    QUIET = NOW.hour < 8 or NOW.hour >= 22
+
+
 # La norma d'assistència només canvia quan es passa llista: es revisa dos cops al dia.
 RISK_TIME = os.environ.get("AVISOS_RISK") == "1" or (NOW.hour in (10, 19) and NOW.minute < 30)
 
@@ -313,7 +325,9 @@ class Group:
                 for did, d in self.targets("missatges", member_ids={t.get("memberId")}):
                     self.deliver(f"th:{tid}:{last}:{did}", d, body, f"th-{tid}")
             seen[tid] = last
-        self.state["threads"] = {k: v for k, v in seen.items() if k in fresh}
+        # Entre passades només es miren les converses de fa poc: les altres de l'últim dia i mig no s'obliden.
+        keep = (UTC_NOW - datetime.timedelta(hours=36)).isoformat().replace("+00:00", "Z")
+        self.state["threads"] = {k: v for k, v in seen.items() if k in fresh or v >= keep}
 
     # ---------- 1d. Recordatoris que envia l'equip («Recorda-ho») ----------
     def nudges(self):
@@ -786,6 +800,24 @@ class Group:
         self.risk()
         self.save()
 
+    def quick(self):
+        """Entre dues passades senceres: només el que escriu algú i s'espera de seguida (anuncis, missatges, converses,
+        recordatoris de l'equip, enquestes i sortides noves, respostes a les absències i peticions de classe). Si no hi ha
+        res de nou, són unes poques lectures. Torna quants avisos ha enviat."""
+        if self.first_run:
+            return 0
+        before = self.count
+        self.announcements()
+        self.messages()
+        self.threads()
+        self.nudges()
+        self.new_polls()
+        self.trips()
+        self.absences()
+        self.classes()
+        self.save()
+        return self.count - before
+
     def save(self):
         cut = (NOW - datetime.timedelta(days=35)).isoformat(timespec="seconds")
         self.state["sent"] = {k: v for k, v in self.sent.items() if v >= cut}
@@ -800,29 +832,81 @@ class Group:
             json.dump(self.state, f, ensure_ascii=False, indent=1, sort_keys=True)
 
 
-total = subscribed = 0
-for gid in groups:
-    before = r.reads
-    try:
-        config = r.get(f"cors/{gid}/config/main") or {}
-        if config.get("deleted"):
+
+def full_pass():
+    """Totes les agrupacions, tot el que toca. Torna les agrupacions amb aparells, per a les passades curtes."""
+    total = subscribed = 0
+    live = []
+    for gid in groups:
+        before = r.reads
+        try:
+            config = r.get(f"cors/{gid}/config/main") or {}
+            if config.get("deleted"):
+                continue
+            devices = r.list(f"cors/{gid}/push")
+            if not devices:
+                continue
+            # Qui ja no té accés a l'agrupació tampoc no ha de rebre avisos.
+            emails = sorted({d["email"] for d in devices.values() if d.get("email")})
+            found = r.batch_get([f"cors/{gid}/staff/{e}" for e in emails]) if emails else {}
+            people = {e: found.get(f"cors/{gid}/staff/{e}") for e in emails if found.get(f"cors/{gid}/staff/{e}")}
+            devices = {k: v for k, v in devices.items() if not v.get("email") or v["email"] in people}
+            if not devices:
+                continue
+            g = Group(gid, config, devices, people)
+            g.run()
+        except dades.Forbidden:
+            print(f"{gid}: sense permís de lectura")
             continue
-        devices = r.list(f"cors/{gid}/push")
-        if not devices:
-            continue
-        # Qui ja no té accés a l'agrupació tampoc no ha de rebre avisos.
-        emails = sorted({d["email"] for d in devices.values() if d.get("email")})
-        found = r.batch_get([f"cors/{gid}/staff/{e}" for e in emails]) if emails else {}
-        people = {e: found.get(f"cors/{gid}/staff/{e}") for e in emails if found.get(f"cors/{gid}/staff/{e}")}
-        devices = {k: v for k, v in devices.items() if not v.get("email") or v["email"] in people}
-        if not devices:
-            continue
-        g = Group(gid, config, devices, people)
-        g.run()
-    except dades.Forbidden:
-        print(f"{gid}: sense permís de lectura")
-        continue
-    total += g.count
-    subscribed += len(devices)
-    print(f"{g.name}: {g.count} avisos · {len(devices)} aparells · {r.reads - before} lectures{' · primera execució' if g.first_run else ''}")
-print(f"{total} avisos enviats · {subscribed} aparells · {len(groups)} agrupacions · {r.reads} lectures")
+        live.append(g)
+        total += g.count
+        subscribed += len(devices)
+        print(f"{g.name}: {g.count} avisos · {len(devices)} aparells · {r.reads - before} lectures{' · primera execució' if g.first_run else ''}")
+    print(f"{total} avisos enviats · {subscribed} aparells · {len(groups)} agrupacions · {r.reads} lectures")
+    return live
+
+
+def keep_state(message):
+    """Desa al repositori de còpies el que ja s'ha enviat, perquè si la feina s'atura no es torni a enviar."""
+    git = lambda *a: subprocess.run(["git", "-C", ROOT, *a], capture_output=True, text=True)
+    if git("rev-parse", "--git-dir").returncode != 0:
+        return
+    git("add", "-A")
+    if git("diff", "--cached", "--quiet").returncode == 0:
+        return
+    git("commit", "-q", "-m", message)
+    for _ in range(3):
+        if git("push", "-q", "origin", "HEAD:main").returncode == 0:
+            return
+        git("pull", "-q", "--rebase", "origin", "main")
+        time.sleep(3)
+    print("  l'estat no s'ha pogut desar ara (es desarà en acabar)")
+
+
+# Els avisos de la gent (missatges, converses, absències…) no poden esperar mitja hora: GitHub comença aquesta feina
+# cada mitja hora, i amb retard. Després de la passada sencera, la feina es queda oberta (AVISOS_LOOP_MIN minuts) i
+# cada AVISOS_EVERY segons fa una passada curta. De nit no cal: s'acaba de seguida.
+LOOP_MIN = float(os.environ.get("AVISOS_LOOP_MIN") or 0)
+EVERY = int(os.environ.get("AVISOS_EVERY") or 180)
+STARTED = time.monotonic()
+live = full_pass()
+if LOOP_MIN and live and not QUIET:
+    keep_state(f"Avisos {UTC_NOW:%Y-%m-%dT%H:%M}")
+    reads, rounds, sent = r.reads, 0, 0
+    while time.monotonic() - STARTED + EVERY < LOOP_MIN * 60:
+        time.sleep(EVERY)
+        set_clock(fresh_minutes=15)
+        if QUIET:
+            break
+        n = 0
+        for g in live:
+            try:
+                n += g.quick()
+            except Exception as e:   # una agrupació que falla no atura les altres ni la feina
+                print(f"  {g.name}: {e}")
+        rounds += 1
+        sent += n
+        if n:
+            print(f"{NOW:%H:%M} · {n} avisos")
+            keep_state(f"Avisos {UTC_NOW:%Y-%m-%dT%H:%M}")
+    print(f"Passades curtes: {rounds} · {sent} avisos · {r.reads - reads} lectures")

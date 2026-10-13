@@ -536,7 +536,7 @@ def main():
                          ("preview", "la llista enganxada mostra què farà amb cada línia"),
                          ("bulk", "la llista fa les fitxes noves, vincula les que ja hi eren i dona els accessos"),
                          ("moved", "es pot canviar el correu d'una persona"),
-                         ("unlinked", "«Comprova els correus» troba els comptes sense vincular a la seva fitxa"),
+                         ("unlinked", "«Revisa els accessos» troba els comptes sense vincular a la seva fitxa"),
                          ("linked", "«Vincula» els uneix, amb la marca de cap de corda"),
                          ("rosterButton", "«Afegeix» d'una corda obre la mateixa finestra, amb la corda triada")]:
             check(r.get(k), label, str(r))
@@ -1360,6 +1360,54 @@ def main():
                          ("myProd", "«La meva assistència» ensenya la producció que sí que fa")]:
             check(r.get(k), label, str(r))
         check(not errors, "sense errors amb els noms i les produccions que no es fan", "; ".join(errors[:3]))
+        ctx.close()
+
+        print("Llistes pendents de tot el cor, Personal lleuger i error de Safari")
+        ctx, page, errors = open_app(browser, base, "pol", MOBILE)
+        r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          const d = n => { const x = new Date(); x.setDate(x.getDate() + n); return isoDate(x); };
+          // Una sessió d'ahir sense cap llista: la del tenor (la seva corda) i les de les altres tres cordes.
+          const p = clone(S.productions.get('p1'));
+          p.sessions.push({ id: 'sahir', date: d(-1), time: '20:30', end: '22:30', type: 'Assaig', place: 'Sala', note: '' });
+          saveProduction(p); await s(300);
+          const items = todoItems();
+          out.own = items.some(x => /1 llista per acabar/.test(x.t) && /Tenors/.test(x.s));
+          const all = items.find(x => /sense acabar a les altres cordes/.test(x.t));
+          out.others = !!all && /^3 llistes/.test(all.t) && /Sopranos 1/.test(all.s) && /Contralts 1/.test(all.s) && /Baixos 1/.test(all.s) && !/Tenors/.test(all.s);
+          ui.people = 'singer'; applyRoute('gestio/personal'); render(); await s(400);
+          const rows = [...document.querySelectorAll('details.pm')];
+          out.lazy = rows.length > 10 && rows.every(x => !x.open && !x.querySelector('.pm-b').childElementCount);
+          rows[0].open = true; await s(200);
+          out.opens = rows[0].querySelector('.pm-b').childElementCount > 0 && /Alta/.test(rows[0].querySelector('.pm-b').innerText);
+          document.querySelector('[data-act="people-tools"]').click(); await s(300);
+          out.label = /Revisa els accessos/.test(document.querySelector('.sheet [data-act="mail-check"]')?.textContent || '');
+          closeSheet(); await s(200);
+          return out; }""")
+        # L'error de Safari amb la còpia del mòbil: l'app es torna a obrir sola, i només un cop cada deu minuts.
+        r.update(page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms));
+          const reason = new Error('Attempt to get records from database without an in-progress transaction');
+          window.dispatchEvent(new PromiseRejectionEvent('unhandledrejection', { promise: Promise.resolve(), reason }));
+          await s(200);
+          return { noted: FAILURES.queue.concat([]).some(x => x.where.startsWith('safari-idb')) || FAILURES.sent > 0,
+                   marked: !!sessionStorage.getItem('atempo:idb-recarrega') }; }"""))
+        page.wait_for_timeout(1500)
+        page.wait_for_function(READY, timeout=20000)
+        r.update(page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms));
+          window.__encara = 1;
+          const reason = new Error('Attempt to get records from database without an in-progress transaction');
+          window.dispatchEvent(new PromiseRejectionEvent('unhandledrejection', { promise: Promise.resolve(), reason }));
+          await s(1500);
+          return { once: window.__encara === 1 }; }"""))
+        for k, label in [("own", "el cap de corda veu les llistes per acabar de la seva corda"),
+                         ("others", "i l'administració, les de les altres cordes, amb quantes n'hi ha a cadascuna"),
+                         ("lazy", "a Personal, la fitxa de cada persona no es pinta fins que s'obre"),
+                         ("opens", "i en obrir-la hi és tota"),
+                         ("label", "el botó diu «Revisa els accessos»"),
+                         ("noted", "l'error de Safari amb la còpia del mòbil queda apuntat i marcat"),
+                         ("marked", "i l'app es torna a obrir sola"),
+                         ("once", "però no més d'un cop cada deu minuts")]:
+            check(r.get(k), label, str(r))
+        check(not [e for e in errors if "in-progress transaction" not in e], "sense errors amb les llistes pendents i Personal", "; ".join(errors[:3]))
         ctx.close()
 
         print("Mira l'app com…")

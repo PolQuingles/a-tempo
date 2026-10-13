@@ -35,9 +35,28 @@ window.addEventListener('error', e => {
   if (!e || !e.message) return;   // un recurs que no carrega (una imatge…) no és un error de l'app
   noteFailure('error', e.message, `${String(e.filename || '').split('/').pop().split('?')[0]}:${e.lineno || 0}:${e.colno || 0}`);
 });
+/* Un error conegut de Safari (WebKit): si l'iPhone posa l'app en segon pla mentre Firestore llegeix la còpia desada al
+ * mòbil (IndexedDB), en tornar-hi aquesta còpia ja no respon («Attempt to get records from database without an in-progress
+ * transaction») i les dades poden quedar aturades. No ho arregla cap versió de Firebase: el que funciona és tornar a obrir
+ * l'app. Es fa sol, un cop cada deu minuts com a molt, i només si no hi ha res a mitges (una finestra oberta o canvis per
+ * desar). La nota d'error es desa igualment, marcada, i la vigilància no n'avisa. */
+const IDB_LOST = /without an in-progress transaction|database connection is closing/i;
+const LS_IDB = 'atempo:idb-recarrega';
+function recoverStorage() {
+  try {
+    const last = +(sessionStorage.getItem(LS_IDB) || 0);
+    if (Date.now() - last < 10 * 60 * 1000) return;
+    const busy = () => { try { return !!sheetClose || pendingWrites() > 0; } catch { return false; } };
+    const go = () => { try { sessionStorage.setItem(LS_IDB, String(Date.now())); } catch {} flushFailures(); setTimeout(() => location.reload(), 800); };
+    if (!busy()) { go(); return; }
+    let tries = 0;
+    const t = setInterval(() => { if (!busy()) { clearInterval(t); go(); } else if (++tries >= 30) clearInterval(t); }, 2000);
+  } catch {}
+}
 window.addEventListener('unhandledrejection', e => {
   const r = e && e.reason;
   if (r && (r.code === 'permission-denied' || r.code === 'unavailable' || r.name === 'AbortError')) return;   // sense permís o sense xarxa: no és una fallada de l'app
+  if (IDB_LOST.test(String((r && r.message) || r || ''))) { noteFailure('promesa', r.message || String(r), 'safari-idb · l’app es torna a obrir'); recoverStorage(); return; }
   noteFailure('promesa', (r && (r.message || r.code)) || String(r), r && r.stack ? String(r.stack).split('\n').slice(0, 3).join(' ← ') : '');
 });
 window.addEventListener('online', () => setTimeout(flushFailures, 2000));
