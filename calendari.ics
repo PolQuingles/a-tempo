@@ -139,6 +139,8 @@ DTSTAMP:20260101T000000Z
 DTSTART;TZID=Europe/Madrid:20261007T203000
 DTEND;TZID=Europe/Madrid:20261007T223000
 SUMMARY:Assaig · Dido i Eneas · Purcell
+LOCATION:Petit Palau
+DESCRIPTION:Assaig CJ · escena
 END:VEVENT
 BEGIN:VEVENT
 UID:cj-dido-10@a-tempo
@@ -146,6 +148,7 @@ DTSTAMP:20260101T000000Z
 DTSTART;TZID=Europe/Madrid:20261012T203000
 DTEND;TZID=Europe/Madrid:20261012T223000
 SUMMARY:Assaig · Dido i Eneas · Purcell
+LOCATION:Espai Palau
 DESCRIPTION:Assaig d’escena
 END:VEVENT
 BEGIN:VEVENT
@@ -154,29 +157,46 @@ DTSTAMP:20260101T000000Z
 DTSTART;TZID=Europe/Madrid:20261015T203000
 DTEND;TZID=Europe/Madrid:20261015T223000
 SUMMARY:Assaig · Dido i Eneas · Purcell
-DESCRIPTION:Assaig d’escena
+LOCATION:Petit Palau
+DESCRIPTION:Convocatòria: 20:00\nVestuari: Vestuari de concert: roba blava
+  (vegeu el document del vestuari)\nPunt de trobada: Entreu per recepció (
+ carrer d’Amadeu Vives) i baixeu les escales que donen a l’escenari. No
+  entreu pel vestíbul del públic.\nHorari del dia:\n20:00 Arribada i canv
+ iar-se amb el vestuari de concert\n20:30 Vocalització o Acte 1\n21:15 Pau
+ sa\n21:30 Actes 2 i 3\nAssaig CJ + solistes · escena\, amb el vestuari de
+  concert (prova de vestuari). Substitueix l’assaig de dimecres 14/10\, q
+ ue no es fa.
 END:VEVENT
 BEGIN:VEVENT
 UID:cj-dido-12@a-tempo
 DTSTAMP:20260101T000000Z
-DTSTART;TZID=Europe/Madrid:20261016T180000
-DTEND;TZID=Europe/Madrid:20261016T210000
+DTSTART;TZID=Europe/Madrid:20261016T190000
+DTEND;TZID=Europe/Madrid:20261016T220000
 SUMMARY:Assaig pregeneral · Dido i Eneas · Purcell
+LOCATION:Espai Palau
+DESCRIPTION:Horari del dia:\n19:00 Dido\n20:20 Pausa\n20:40 Dido (i al fina
+ l\, O sing unto the Lord)\nCor + orquestra + solistes
 END:VEVENT
 BEGIN:VEVENT
 UID:cj-dido-13@a-tempo
 DTSTAMP:20260101T000000Z
 DTSTART;TZID=Europe/Madrid:20261017T100000
-DTEND;TZID=Europe/Madrid:20261017T133000
+DTEND;TZID=Europe/Madrid:20261017T140000
 SUMMARY:Assaig general · Dido i Eneas · Purcell
+LOCATION:Petit Palau
+DESCRIPTION:Horari del dia:\n10:00 Vocalització i canviar-se\n10:30 Assaig
+ \n12:00 Pausa\n12:30 Assaig general
 END:VEVENT
 BEGIN:VEVENT
 UID:cj-dido-14@a-tempo
 DTSTAMP:20260101T000000Z
-DTSTART;TZID=Europe/Madrid:20261017T170000
-DTEND;TZID=Europe/Madrid:20261017T190000
+DTSTART;TZID=Europe/Madrid:20261017T183000
+DTEND;TZID=Europe/Madrid:20261017T203000
 SUMMARY:Concert · Dido i Eneas · Purcell
 LOCATION:Petit Palau
+DESCRIPTION:Convocatòria: 17:00\nVestuari: Roba blava (vestuari del cor)\n
+ Horari del dia:\n17:00 Prova de so\, concentració\, vocalització i vestu
+ ari (aprox.)\n18:30 Concert
 END:VEVENT
 BEGIN:VEVENT
 UID:cj-oratori-01@a-tempo
