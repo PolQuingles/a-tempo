@@ -55,7 +55,7 @@ function renderTabs() {
   const shortName = t => (short || (tabs.length === 5 && t !== 'calendari')) && TAB_SHORT[t];
   const logo = S.config.brand?.logo || MARCA?.logo;
   const gname = S.config.shortName || S.config.name || MARCA?.short || '';
-  const side = `<div class="side-brand" aria-hidden="true">${logo ? `<img src="${esc(logo)}" alt="">` : `<span class="sb-ini">${esc(personInitials(gname))}</span>`}<span><b>${esc(gname)}</b><small>A Tempo</small></span></div>`;
+  const side = `<div class="side-brand" aria-hidden="true">${logo ? `<img src="${esc(logo)}" alt="">` : `<span class="sb-ini">${esc(initials(gname))}</span>`}<span><b>${esc(gname)}</b><small>A Tempo</small></span></div>`;
   // A l'ordinador, Gestió també és al menú lateral (al mòbil s'obre des del menú del compte).
   const pend = canEdit() ? pendingAbsences().length : 0;
   const gestio = canEdit() ? `<button class="tab tab-extra" data-act="manage" data-k="${pend ? 'avisos' : ROUTE_MANAGE[ui.manage] ? ui.manage : 'personal'}" aria-current="${ui.tab === 'gestio' ? 'page' : 'false'}">

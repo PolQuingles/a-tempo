@@ -108,6 +108,14 @@ service cloud.firestore {
         || (d.toRole == 'leader' && staffHas(c, ['leader']) && staffSection(c) == d.section);
     }
 
+    // Un compte de la plantilla que compta per primer cop que ha vist un anunci que existeix (vegeu annSeen).
+    function seenOnce(c, aid) {
+      return isStaff(c) && myMember(c) != '-' && memberSection(c) != '-'
+        && exists(/databases/$(database)/documents/cors/$(c)/announcements/$(aid))
+        && !exists(/databases/$(database)/documents/cors/$(c)/annSeen/$(aid)/by/$(request.auth.uid))
+        && existsAfter(/databases/$(database)/documents/cors/$(c)/annSeen/$(aid)/by/$(request.auth.uid));
+    }
+
     // Es crea una agrupació nova en aquest mateix lot d'escriptures: abans no hi havia res i després sí.
     function creating(c) {
       return !exists(dirDoc(c)) && existsAfter(dirDoc(c))
@@ -119,7 +127,7 @@ service cloud.firestore {
     // tools/stamp.py hi escriu l'empremta d'aquest fitxer. La vigilància comprova que les regles publicades són les del
     // repositori demanant reglesVersio/<empremta>: si les publicades són unes altres, la lectura es denega.
     match /reglesVersio/{v} {
-      allow get: if v == 'b5e2c289f320';
+      allow get: if v == 'a3c1f0867ec8';
     }
 
     match /plataforma/equip {
@@ -274,6 +282,25 @@ service cloud.firestore {
           && request.resource.data.prods is map && request.resource.data.prods.size() <= 200
           && shortText(request.resource.data, 'at', 40) && shortText(request.resource.data, 'by', 120));
         allow delete: if canEdit(c);
+      }
+      // Quanta gent ha vist cada anunci, per cordes i sense noms: annSeen/<anunci> = { S: 12, C: 9… }, que només llegeix l'equip.
+      // Cada compte amb fitxa a la plantilla hi suma 1 a la seva corda, un sol cop: en el mateix lot ha de crear
+      // annSeen/<anunci>/by/<uid>, que encara no hi era i que només pot llegir ell mateix (així ningú no sap qui l'ha vist).
+      match /annSeen/{aid} {
+        allow read: if canEdit(c) || hasRole(c, ['backup']) || isService();
+        allow create: if seenOnce(c, aid)
+          && request.resource.data.keys().hasOnly([memberSection(c)])
+          && request.resource.data[memberSection(c)] == 1;
+        allow update: if seenOnce(c, aid)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([memberSection(c)])
+          && request.resource.data[memberSection(c)] == resource.data.get(memberSection(c), 0) + 1;
+        allow delete: if isAdmin(c);
+        match /by/{u} {
+          allow read: if signedIn() && request.auth.uid == u;
+          allow create: if signedIn() && request.auth.uid == u && isStaff(c)
+            && request.resource.data.keys().hasOnly(['at']) && shortText(request.resource.data, 'at', 40)
+            && existsAfter(/databases/$(database)/documents/cors/$(c)/annSeen/$(aid));
+        }
       }
       // Arxiu de partitures: un document per producció, obra i corda, amb qui té la seva partitura i qui l'ha tornada.
       // El llegeix tothom de l'agrupació (cadascú hi veu la seva); el canvia l'equip o qualsevol arxiver (tots porten les partitures de totes les cordes).

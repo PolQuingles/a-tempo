@@ -5,6 +5,23 @@
 /* ---------- View: Board (announcements, materials, polls) ---------- */
 const LS_SEEN = 'atempo:tauler-vist';
 const MAT_KINDS = { partitura: 'Partitura', audio: 'Àudio', video: 'Vídeo', altres: 'Altres' };
+// Cada tipus de material, amb una icona (abans eren les quatre primeres lletres: «ÀUDI», «ALTR», «PART»).
+const MAT_ICONS = {
+  partitura: '<path d="M6 3.5h9l3 3v14H6z"/><path d="M15 3.5v3h3M9 11h6M9 14h6M9 17h4"/>',
+  audio: '<path d="M4.5 15v-2.5a7.5 7.5 0 0115 0V15"/><rect x="3.5" y="14" width="4" height="6.5" rx="1.5"/><rect x="16.5" y="14" width="4" height="6.5" rx="1.5"/>',
+  video: '<rect x="3.5" y="5.5" width="17" height="13" rx="2.5"/><path d="M10.5 9.5v5l4-2.5z"/>',
+  altres: '<path d="M6 3.5h9l3 3v14H6z"/><path d="M15 3.5v3h3"/>',
+};
+/** La icona d'un tipus de material (n: quants n'hi ha, a la fitxa de l'obra). */
+const matTag = (kind, n) => `<span class="mat-k ${esc(kind)}" role="img" aria-label="${esc(MAT_KINDS[kind] || 'Material')}${n > 1 ? ` (${n})` : ''}"><svg viewBox="0 0 24 24" aria-hidden="true">${MAT_ICONS[kind] || MAT_ICONS.altres}</svg>${n > 1 ? `<b>${n}</b>` : ''}</span>`;
+/** D'on és un enllaç, perquè se sàpiga què s'obrirà: Spotify, YouTube…; si no se sap, «enllaç». */
+function linkSite(url) {
+  const h = (String(url || '').match(/^https?:\/\/([^/?#]+)/i)?.[1] || '').toLowerCase().replace(/^www\./, '');
+  /** @type {[RegExp, string][]} */
+  const known = [[/(^|\.)spotify\.com$/, 'Spotify'], [/(^|\.)(youtube\.com|youtu\.be)$/, 'YouTube'], [/(^|\.)drive\.google\.com$|(^|\.)docs\.google\.com$/, 'Google Drive'],
+    [/(^|\.)dropbox\.com$/, 'Dropbox'], [/(^|\.)soundcloud\.com$/, 'SoundCloud'], [/(^|\.)music\.apple\.com$/, 'Apple Music'], [/(^|\.)vimeo\.com$/, 'Vimeo']];
+  return known.find(([re]) => re.test(h))?.[1] || 'enllaç';
+}
 const linkify = t => esc(t).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
 /** Un text llarg (anuncis, converses) amb una mica de format, sense haver d'aprendre res: els paràgrafs se separen amb una
  *  línia en blanc; les línies que comencen amb «-», «*» o «•» fan una llista; una línia en MAJÚSCULES és un títol; el que
@@ -86,17 +103,66 @@ function annCard(a, board) {
       <div class="ann-m">${a.pinned ? '<span class="pin">Fixat</span>' : ''}<span>${esc(fullName(a.author))}</span><span class="mono">${a.createdAt ? ddmm(a.createdAt.slice(0, 10)) : ''}</span>
         ${a.sections?.length ? `<span>Per a: ${esc(a.sections.map(x => SEC[x].name).join(', '))}</span>` : ''}${a.until ? `<span>Fins al ${ddmm(a.until)}</span>` : ''}</div>
       ${canReply(a.by) ? `<div class="ann-acts"><button class="btn btn-sm" data-act="reply" data-ref="ann:${esc(a.id)}">Respon a ${esc(firstName(fullName(a.author)) || 'l’equip')}</button></div>` : ''}
+      ${board && canEdit() && (!a.until || a.until >= TODAY) ? annSeenLine(a) : ''}
     </article>`;
 }
 function sheetAnnouncementRead(id) {
   const a = S.announcements.get(id);
-  if (a) openSheet({ title: 'Anunci', wide: true, body: annCard(a, false) });
+  if (!a) return;
+  markAnnSeen([a]);
+  openSheet({ title: 'Anunci', wide: true, body: annCard(a, false) });
+}
+/* ---------- Quanta gent ha vist cada anunci ---------- */
+// L'equip veu quanta gent ha obert cada anunci a l'app, per cordes i sense noms: annSeen/<anunci> = { S: 12, C: 9… }. Cada
+// compte amb fitxa a la plantilla hi suma 1 a la seva corda un sol cop, quan obre els anuncis del tauler o l'anunci sencer
+// (n'ha de deixar constància a annSeen/<anunci>/by/<uid>, que només pot llegir ell mateix: vegeu les regles). Qui l'ha
+// escrit no compta, ni qui mira l'app com una altra persona. El mòbil se'n recorda per no tornar-ho a provar.
+const LS_ANN_SEEN = 'atempo:anuncis-vistos';
+const ANN_SEEN = { map: new Map(), at: 0, busy: false };
+function markAnnSeen(list) {
+  const me = S.members.get(myMemberId()), uidNow = auth?.currentUser?.uid;
+  if (PREVIEW || S.mode !== 'shared' || !me?.section || !uidNow) return;
+  let done;
+  try { done = new Set(JSON.parse(lsGet(LS_ANN_SEEN) || '[]')); } catch { done = new Set(); }
+  const todo = list.filter(a => a?.id && a.by !== S.email && !done.has(a.id) && (!a.until || a.until >= TODAY));
+  if (!todo.length) return;
+  for (const a of todo) {
+    done.add(a.id);
+    const b = fs.batch();
+    b.set(db.doc(`annSeen/${a.id}/by/${uidNow}`), { at: new Date().toISOString() });
+    b.set(db.doc(`annSeen/${a.id}`), { [me.section]: firebase.firestore.FieldValue.increment(1) }, { merge: true });
+    b.commit().catch(() => {});   // ja s'havia comptat des d'un altre aparell: les regles no ho deixen fer dos cops
+  }
+  lsSet(LS_ANN_SEEN, JSON.stringify([...done].slice(-300)));
+}
+/** Els comptes dels anuncis vigents, per a l'equip: una lectura per anunci, com a molt un cop per minut. */
+function loadAnnSeen(list) {
+  if (!canEdit() || ANN_SEEN.busy || Date.now() - ANN_SEEN.at < 60e3 || !list.length) return;
+  ANN_SEEN.busy = true; ANN_SEEN.at = Date.now();
+  Promise.all(list.map(a => db.doc(`annSeen/${a.id}`).get().then(d => [a.id, d.exists ? d.data() : {}]).catch(() => null)))
+    .then(rows => { for (const r of rows) if (r) ANN_SEEN.map.set(r[0], r[1]); scheduleRender(); })
+    .finally(() => { ANN_SEEN.busy = false; });
+}
+/** «L'han obert a l'app 23 de 68 · S 8/19 · C 5/15…»: de qui és a la plantilla (de les cordes a qui va l'anunci). */
+function annSeenLine(a) {
+  const c = ANN_SEEN.map.get(a.id);
+  if (!c) return '';
+  const secs = a.sections?.length ? a.sections : SECTIONS.map(x => x.id);
+  const per = secs.map(sec => {
+    const total = [...S.members.values()].filter(m => m.active !== false && m.section === sec).length;
+    return { sec, n: Math.min(+c[sec] || 0, total), total };
+  }).filter(x => x.total);
+  const n = per.reduce((t, x) => t + x.n, 0), total = per.reduce((t, x) => t + x.total, 0);
+  return `<div class="ann-seen" title="Es compta un cop per persona, sense noms. No hi surt qui no té accés a l’app.">
+      <span>L’han obert a l’app <b class="mono">${n}</b> de ${total}</span>${per.length > 1 ? per.map(x => `<span class="mono">${esc(SEC[x.sec]?.short || x.sec)} ${x.n}/${x.total}</span>`).join('') : ''}</div>`;
 }
 function boardAnnouncements() {
   const list = visibleAnnouncements();
   const active = list.filter(a => !a.until || a.until >= TODAY);
   const expired = list.filter(a => a.until && a.until < TODAY);
   const card = a => annCard(a, true);
+  markAnnSeen(active);
+  loadAnnSeen(active);
   return `${canEdit() ? `<div class="sec-h end" style="margin-top:6px"><button class="btn btn-sm btn-primary" data-act="ann-new">+ Anunci</button></div>` : ''}
     ${active.length ? `<div class="panel">${active.map(card).join('')}</div>` : `<div class="empty"><p>No hi ha anuncis.</p></div>`}
     ${canEdit() && expired.length ? `<details class="np-group"><summary><span>Caducats (${expired.length})</span>${ICON.chev}</summary><div class="panel">${expired.map(card).join('')}</div></details>` : ''}`;
@@ -339,7 +405,7 @@ async function resolveSource(src, previous, btn) {
 const itemLink = (x, act) => x.file
   ? `<button class="mat-link" ${act}>${esc(x.title)}</button>`
   : `<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.title)}</a>`;
-const fileNote = x => x.file ? `${fileKind(x.file)} · ${fmtSize(x.file.size)}` : '';
+const fileNote = x => x.file ? `${fileKind(x.file)} · ${fmtSize(x.file.size)}` : x.url ? linkSite(x.url) : '';
 
 /* ---------- Documents de l'agrupació (per a tota la temporada, fora de les produccions) ---------- */
 const DOC_KINDS = { normativa: ['Normativa', 'Norm'], calendari: ['Calendari', 'Cal'], formulari: ['Formulari', 'Form'], altres: ['Altres', 'Doc'] };

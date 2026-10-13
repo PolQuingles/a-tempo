@@ -58,6 +58,17 @@ prova('assistència en minuts: un retard compta pels minuts que s’hi ha estat,
   prop(r.best, 450 / 540, 'si ve al que queda');
   igual([r.att, r.abs, r.remaining], [2, 0, 1], 'i els assajos, en nombre');
 });
+prova('«Ha marxat abans»: es resten els minuts del final, com un retard', () => {
+  const c = emptyCounts();
+  countMark(c, { time: '19:00', end: '22:00' }, { s: 'P', early: 45 });           // 2 h 15′ de 3 h
+  countMark(c, { time: '19:00', end: '22:00' }, { s: 'R', min: 30, early: 30 });  // 2 h de 3 h
+  countMark(c, { time: '19:00', end: '20:00' }, { s: 'R', min: 40, early: 40 });  // no pot restar més del que dura
+  prop(rate(c), (135 + 120 + 0) / (180 + 180 + 60), 'minuts');
+  igual([c.left, c.leftMin, c.min], [3, 115, 70], 'quants cops i quants minuts ha marxat abans, a part dels retards');
+  const d = emptyCounts();
+  countMark(d, { time: '19:00', end: '20:00' }, { s: 'FNJ', early: 30 });
+  igual([d.left, d.mDone], [0, 0], 'una falta no té «marxa abans»');
+});
 prova('tria de produccions: qui diu que no, no la fa; el mínim només es pot incomplir dient que no', () => {
   const ps = [['a', -40], ['b', 10], ['c', 40], ['d', 80], ['e', 120]].map(([id, off]) => ({ id, name: id.toUpperCase(), start: D(off), end: D(off + 7),
     sessions: [{ id: id + '1', date: D(off), type: 'Assaig' }, { id: id + '2', date: D(off + 7), type: 'Concert' }] }));

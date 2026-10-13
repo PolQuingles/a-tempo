@@ -210,7 +210,7 @@ function sheetProdChoice(mid) {
     const when = ss.length ? `${ddmm(ss[0].date)}${ss.length > 1 ? ` – ${ddmm(ss[ss.length - 1].date)}` : ''}` : '';
     const shows = ss.filter(isShow).length;
     return `<li class="ch-row prod-tone" style="--ph:${prodHue(p)}" data-pid="${esc(p.id)}">
-      <span class="ch-n"><i class="pdot"></i><b>${esc(p.name)}</b><small>${esc([when, `${ss.length} sessions`, shows ? `${shows} ${shows === 1 ? V.sh.show : V.sh.els.replace(/^(els|les) /, '')}` : '', locked ? 'ja ha començat' : ''].filter(Boolean).join(' · '))}</small></span>
+      <span class="ch-n"><i class="pdot"></i><b>${esc(p.name)}</b><small>${esc([when, `${ss.length} ${ss.length === 1 ? 'sessió' : 'sessions'}`, shows ? `${shows} ${shows === 1 ? V.sh.show : V.sh.els.replace(/^(els|les) /, '')}` : '', locked ? 'ja ha començat' : ''].filter(Boolean).join(' · '))}</small></span>
       <span class="seg3 ch-seg" role="radiogroup" aria-label="${esc(p.name)}">${[['yes', 'La faré'], ['no', 'No']].map(([k, l]) => `<button type="button" role="radio" aria-checked="${a === k}" data-k="${k}" ${locked ? 'disabled' : ''}>${l}</button>`).join('')}</span></li>`;
   };
   openSheet({

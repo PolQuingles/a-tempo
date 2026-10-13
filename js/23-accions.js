@@ -3,13 +3,13 @@
 'use strict';
 
 /* ================= Events ================= */
-const SUB_OK = new Set(['mark', 'min', 'mark-rest']);
+const SUB_OK = new Set(['mark', 'min', 'early', 'early-open', 'mark-rest']);
 const ADMIN_ONLY = new Set(['ward-cfg-add', 'ward-cfg-del', 'ward-cfg-save', 'people-tools', 'staff-new', 'staff-edit', 'staff-bulk', 'staff-link', 'preview-on', 'who-in', 'mail-check', 'wipe-all', 'share-app', 'onboard-hide', 'cl-seats', 'legacy-clean']);
 // La identitat de l'agrupació i esborrar-la: només un Usuari Pro que l'administri.
 const PRO_ONLY = new Set(['brand-color', 'logo-remove', 'kind-set', 'group-delete', 'sections-save', 'sections-undo']);
 // El calendari de les classes: només el professorat de cant i l'administració.
 const CLASS_ONLY = new Set(['cl-new', 'cl-edit', 'cl-review', 'cl-paste', 'cl-plan', 'cl-note', 'cl-mark', 'cl-stats', 'cl-cancel-day']);
-const EDIT_ONLY = new Set(['prod-roll', 'mark', 'min', 'mark-rest', 'session-new', 'sub-set', 'ann-new', 'ann-edit', 'mat-new', 'mat-edit', 'poll-new', 'poll-edit', 'poll-results', 'poll-remind', 'rsvp-remind', 'doc-new', 'doc-edit', 'share-app', 'staff-bulk', 'preview-on', 'who-in', 'mail-check', 'concert-list', 'concert-toggle', 'session-edit', 'member-edit', 'member-new', 'member-bulk', 'prod-new', 'prod-edit',
+const EDIT_ONLY = new Set(['prod-roll', 'mark', 'min', 'early', 'early-open', 'mark-rest', 'session-new', 'sub-set', 'ann-new', 'ann-edit', 'mat-new', 'mat-edit', 'poll-new', 'poll-edit', 'poll-results', 'poll-remind', 'rsvp-remind', 'doc-new', 'doc-edit', 'share-app', 'staff-bulk', 'preview-on', 'who-in', 'mail-check', 'concert-list', 'concert-toggle', 'session-edit', 'member-edit', 'member-new', 'member-bulk', 'prod-new', 'prod-edit',
   'wipe-demo', 'wipe-all', 'load-demo', 'export-json', 'abs-accept', 'abs-reject', 'abs-delete', 'manage',
   'roster-export', 'docs-copy-noimg',
   'choices-overview', 'work-new', 'work-edit', 'work-link', 'plan-edit', 'seating-edit', 'participants', 'certificate', 'season-report', 'trip-new', 'trip-edit', 'trip-admin', 'trip-remind']);
@@ -263,6 +263,19 @@ const actions = {
     refreshRow(mid);
     if (!wasDone && rollDone(cur, m.section)) celebrateRoll(cur, m.section);
   },
+  'early-open': el => {
+    const mid = el.closest('.row').dataset.mid;
+    EARLY_OPEN = mid; refreshRow(mid);
+    document.getElementById(`early-${mid}`)?.focus();
+  },
+  'early': el => {
+    const mid = el.closest('.row').dataset.mid;
+    const cur = sessionById(ui.sessionId); const m = S.members.get(mid);
+    const s = attDoc(cur.id, m.section)?.marks?.[mid]?.s;
+    if (s !== 'P' && s !== 'R') return;
+    setMark(cur, m, { s, early: +el.dataset.min || undefined });
+    refreshRow(mid);
+  },
   'mark-rest': () => {
     const cur = sessionById(ui.sessionId);
     const pending = membersOf(ui.section).filter(m => !isOut(cur, m) && !effMark(cur, m));
@@ -358,6 +371,17 @@ document.addEventListener('input', e => {
   if (kind === 'find') { filterList(el); return; }
   if (kind === 'cr' && CREATE) { CREATE[el.dataset.f] = el.value; return; }
   if (kind === 'cr-sec' || kind === 'cfg-sec') { const list = secList(kind.slice(0, -4)); if (list && list[+el.dataset.i]) list[+el.dataset.i][el.dataset.f] = el.value; if (kind === 'cfg-sec') markSectionsDirty(); return; }
+  if (kind === 'early') {
+    const mid = el.closest('.row').dataset.mid;
+    const cur = sessionById(ui.sessionId); const m = S.members.get(mid);
+    const s = attDoc(cur.id, m.section)?.marks?.[mid]?.s;
+    if (s !== 'P' && s !== 'R') return;
+    const v = Math.max(0, Math.min(sessionMins(cur), parseInt(el.value, 10) || 0));
+    EARLY_OPEN = mid;
+    setMark(cur, m, { s, early: v || undefined });
+    el.closest('.row').querySelectorAll('[data-act="early"]').forEach(c => c.setAttribute('aria-pressed', String(!!v && +c.dataset.min === v)));
+    return;
+  }
   if (kind === 'min' || kind === 'note') {
     const mid = el.closest('.row').dataset.mid;
     const cur = sessionById(ui.sessionId); const m = S.members.get(mid);
@@ -419,7 +443,7 @@ document.addEventListener('change', e => {
   const chMin = e.target.closest('[data-bind="cfg-choice-min"]');
   if (chMin && isAdmin()) { const v = parseInt(chMin.value, 10); if (v >= 0 && v <= 100) { saveConfig({ prodChoiceMin: v }); toast('Mínim desat'); render(); } }
   if (e.target.closest('[data-bind="cfg-ics"]') && isAdmin()) { saveConfig({ icsOn: e.target.checked }); toast(e.target.checked ? 'Calendari subscrit activat: funcionarà d’aquí a unes hores' : 'Calendari subscrit desactivat'); render(); }
-  if (e.target.closest('[data-bind="min"]')) refreshRow(e.target.closest('.row').dataset.mid);
+  if (e.target.closest('[data-bind="min"], [data-bind="early"]')) refreshRow(e.target.closest('.row').dataset.mid);
   const fa = e.target.closest('[data-bind="fee-amount"]');
   if (fa && canDocsWrite()) { saveConfig({ feeAmount: Math.max(0, +fa.value || 0) }); toast('Quota desada'); render(); }
   const vm = e.target.closest('[data-bind="cfg-vmin"]');

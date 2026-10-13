@@ -357,7 +357,7 @@ function seasonHtml(f) {
     <table class="pr-table"><tbody>${f.bySec.map(b => `<tr><td>${esc(b.x.name)}</td><td>${b.n}</td><td>${b.rate == null ? '—' : pct(b.rate)} d’assistència</td></tr>`).join('')}
       <tr><td>Baixes</td><td colspan="2">${f.inactive} fitxes desactivades · ${f.leaves} amb baixa temporal</td></tr></tbody></table>
     <h2>Activitat</h2>
-    <table class="pr-table"><tbody>${f.prods.map(p => `<tr><td>${esc(p.name)}</td><td>${allSessions(p.id).filter(s => s.date <= TODAY).length} sessions</td></tr>`).join('')}
+    <table class="pr-table"><tbody>${f.prods.map(p => `<tr><td>${esc(p.name)}</td><td>${(n => `${n} ${n === 1 ? 'sessió' : 'sessions'}`)(allSessions(p.id).filter(s => s.date <= TODAY).length)}</td></tr>`).join('')}
       ${Object.entries(f.types).map(([t, n]) => `<tr><td class="muted">${esc(t)}</td><td>${n}</td></tr>`).join('')}</tbody></table>
     ${f.shows.length ? `<h2>${esc(capz(V.sh.els))}</h2><ul class="pr-list">${f.shows.map(s => `<li>${esc(fmtD(s.date, { day: 'numeric', month: 'long' }))} · ${esc(prodNames(s))}${s.place ? ` · ${esc(s.place)}` : ''}</li>`).join('')}</ul>` : ''}
     ${f.classes ? `<h2>${esc(V.classes)}</h2><p>${f.classes.teachers} professors, ${f.classes.students} ${esc(V.members)} amb classe, ${f.classes.days} dies i ${f.classes.hours} hores de classe${f.classes.rate != null ? `, amb un ${pct(f.classes.rate)} d’assistència` : ''}.</p>` : ''}

@@ -60,6 +60,8 @@ def cases(n, seed):
                     for mk in ms.values():   # retards amb minuts, sense, o més llargs que la sessió
                         if mk["s"] == "R" and rnd.random() < .8:
                             mk["min"] = rnd.choice([5, 10, 15, 30, 45, 90, 400])
+                        if mk["s"] in ("P", "R") and rnd.random() < .2:
+                            mk["early"] = rnd.choice([10, 30, 60, 300])
                     if ms or rnd.random() < .1:   # també alguna llista buida
                         attendance[f"{s['id']}_{sec}"] = {"sessionId": s["id"], "section": sec, "marks": ms}
         config = {}

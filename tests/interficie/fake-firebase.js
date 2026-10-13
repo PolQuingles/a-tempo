@@ -48,7 +48,9 @@
     }
     return out;
   };
-  const write = (path, data, opts) => { DB[path] = stamp(clone(opts && opts.mergeFields ? mergeFields(DB[path], data, opts.mergeFields) : opts && opts.merge ? merge(DB[path], data) : data)); save(); notify(); };
+  // FieldValue.increment(n): es desa com a { __inc: n } i aquí se suma al que hi havia (només als camps de primer nivell).
+  const incr = (cur, d) => { if (d && typeof d === 'object') for (const k of Object.keys(d)) if (d[k] && typeof d[k] === 'object' && '__inc' in d[k]) d[k] = (+(cur || {})[k] || 0) + d[k].__inc; return d; };
+  const write = (path, data, opts) => { DB[path] = incr(DB[path], stamp(clone(opts && opts.mergeFields ? mergeFields(DB[path], data, opts.mergeFields) : opts && opts.merge ? merge(DB[path], data) : data))); save(); notify(); };
   const del = path => { delete DB[path]; save(); notify(); };
 
   function docRef(path) {
@@ -111,7 +113,7 @@
   const firestore = () => fsApi;
   firestore.FieldPath = FieldPath;
   firestore.Blob = { fromUint8Array: a => ({ toUint8Array: () => a }) };
-  firestore.FieldValue = { delete: () => undefined, serverTimestamp: () => ({ __serverTs: 1 }) };
+  firestore.FieldValue = { delete: () => undefined, serverTimestamp: () => ({ __serverTs: 1 }), increment: n => ({ __inc: n }) };
   firestore.Timestamp = { fromMillis: ms => new Ts(ms) };
   // A les proves, la lectura per canvis funciona des del primer dia (vegeu DELTA_FROM a js/02-dades.js).
   window.COR_DELTA_FROM = '2000-01-01';

@@ -691,6 +691,40 @@ expect("X2b ni el busca amb el nom d'un altre", qry(f"cors/{F}", "messages", [("
 expect("X3 un cap de corda no hi escriu", commit([upd(f"cors/{F}/messages/pm2", {**PM, "id": "pm2", "by": "leader@exemple.cat", "to": ["T"]})], T["leader"]), False)
 expect("X3b ni amb una llista massa llarga", commit([upd(f"cors/{F}/messages/pm3", {**PM, "id": "pm3", "members": [f"m{i}" for i in range(401)]})], T["sec"]), False)
 
+print("Y. Quanta gent ha vist un anunci (per cordes, sense noms)")
+seed(f"cors/{F}/announcements/a1", {"id": "a1", "title": "Assaig al Petit Palau", "by": "sec@exemple.cat", "createdAt": now})
+
+
+def seen(aid, uid, sec, *, by=True, n=None):
+    """El lot que envia l'app: annSeen/<anunci>/by/<uid> i +1 a la corda (amb increment, o amb un valor fix si n)."""
+    w = [upd(f"cors/{F}/annSeen/{aid}/by/{uid}", {"at": now})] if by else []
+    if n is None:
+        w.append({"update": {"name": f"{ROOT}/cors/{F}/annSeen/{aid}", "fields": {}}, "updateMask": {"fieldPaths": []},
+                  "updateTransforms": [{"fieldPath": sec, "increment": {"integerValue": "1"}}]})
+    else:
+        w.append(upd(f"cors/{F}/annSeen/{aid}", {sec: n}, [sec]))
+    return w
+
+
+expect("Y1 una cantaire compta que l'ha vist (a la seva corda)", commit(seen("a1", "uid-singer", "S"), T["singer"]), True)
+expect("Y2 l'equip veu els comptes", get(f"cors/{F}/annSeen/a1", T["pau"]), True)
+expect("Y3 la cantaire no els veu", get(f"cors/{F}/annSeen/a1", T["singer"]), False)
+expect("Y4 la mateixa persona no compta dos cops", commit(seen("a1", "uid-singer", "S"), T["singer"]), False)
+expect("Y5 ningú no suma a una altra corda", commit(seen("a1", "uid-pau", "S"), T["pau"]), False)
+expect("Y6 un cap de corda compta a la seva", commit(seen("a1", "uid-pau", "B"), T["pau"]), True)
+expect("Y7 sense deixar-ne constància no compta", commit(seen("a1", "uid-pol", "T", by=False), T["pol"]), False)
+expect("Y8 no es pot sumar més d'un", commit(seen("a1", "uid-pol", "T", n=2), T["pol"]), False)
+expect("Y8b ni deixar-ne constància a nom d'un altre", commit(seen("a1", "uid-singer", "T"), T["pol"]), False)
+expect("Y9 qui no és a la plantilla no compta", commit(seen("a1", "uid-dir", "T"), T["dir"]), False)
+expect("Y10 un anunci que no existeix", commit(seen("a404", "uid-pol", "T"), T["pol"]), False)
+expect("Y11 l'admin compta a la seva corda", commit(seen("a1", "uid-pol", "T"), T["pol"]), True)
+expect("Y12 cadascú veu la seva constància", get(f"cors/{F}/annSeen/a1/by/uid-singer", T["singer"]), True)
+expect("Y12b però ningú més, ni l'equip", get(f"cors/{F}/annSeen/a1/by/uid-singer", T["pau"]), False)
+expect("Y12c ni en pot fer la llista", lst(f"cors/{F}/annSeen/a1/by", T["pol"]), False)
+code, body = req("GET", f"{BASE}/cors/{F}/annSeen/a1", tok=OWNER)
+got = {k: int(v.get("integerValue", 0)) for k, v in (body.get("fields") or {}).items()} if code == 200 else {}
+expect(f"Y13 els comptes són S 1 · B 1 · T 1 ({got})", 200 if got == {"S": 1, "B": 1, "T": 1} else 403, True)
+
 print("M. Registre d'errors")
 ERR = {"kind": "error", "msg": "TypeError: x is undefined", "where": "04-llista.js:10:5", "at": now, "app": "abc123", "gid": F, "route": "inici", "ua": "Mozilla/5.0", "online": True}
 expect("M1 cantaire deixa una nota d'error", commit([upd("errors/e1", ERR)], T["singer"]), True)

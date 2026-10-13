@@ -8,14 +8,14 @@ permissions:
 concurrency: avisos
 jobs:
   avisos:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # La feina comença cada mitja hora i es queda oberta 26 minuts fent passades curtes cada 3 minuts (vegeu avisos.py),
     # perquè els missatges, les converses i les respostes a les absències arribin en pocs minuts. Al repositori públic, els
     # minuts de GitHub són gratuïts; si mai passa a privat, cal posar AVISOS_LOOP_MIN a 0 (vegeu el README).
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
       - run: pip install --quiet pywebpush
