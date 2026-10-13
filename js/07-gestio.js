@@ -43,7 +43,7 @@ function accessPanel() {
     <div class="setting"><div><div class="t">${accs.length} de ${members.length} ${esc(V.members)} tenen accés${accs.length ? ` · ${entered} hi han entrat${never ? `, ${never} encara no` : ''}` : ''} ${helpBtn('acces')}</div>
       ${helpText('acces', `Afegeix cada persona un sol cop: el nom, el correu per entrar a l’app i què fa (si canta, també la ${esc(V.section)}). Si algú marxa, treu-li l’accés: el perd a l’instant, però no se n’esborra la fitxa ni les llistes.`)}</div></div>
     <div class="access-acts"><button class="btn btn-sm btn-primary" data-act="staff-new" ${ROLE_KEYS.includes(ui.people) ? `data-role="${esc(ui.people)}"` : ''}>+ Persona</button>
-      ${mailProblems().length ? `<button class="btn btn-sm btn-soft" data-act="mail-check">Comprova els correus (${mailProblems().length})</button>` : ''}<button class="btn btn-sm" data-act="people-tools">Més…</button></div>
+      ${mailProblems().length ? `<button class="btn btn-sm btn-soft" data-act="mail-check">Revisa els accessos (${mailProblems().length})</button>` : ''}<button class="btn btn-sm" data-act="people-tools">Més…</button></div>
   </div>`;
 }
 /** «Més…» de Personal: les eines de l'accés que no es fan servir cada dia. */
@@ -56,7 +56,7 @@ function sheetPeopleTools() {
       ${o('staff-bulk', 'Enganxa una llista', 'Unes quantes persones d’un cop, amb el nom i el correu (també d’un full de càlcul).')}
       ${o('share-app', 'Enllaç de l’app', 'L’adreça i un missatge per enviar a qui ha de començar a fer-la servir.')}
       ${o('who-in', 'Qui ha entrat', 'Qui ja fa servir l’app, qui encara no i a qui li falta el correu.')}
-      ${o('mail-check', `Comprova els correus${n ? ` (${n})` : ''}`, 'Correus repetits, comptes sense fitxa i caps de corda sense permís.')}
+      ${o('mail-check', `Revisa els accessos${n ? ` (${n})` : ''}`, 'Correus repetits, comptes sense fitxa i caps de corda que no poden passar llista.')}
       ${o('preview-on', 'Mira l’app com…', 'Com la veu un cantaire, un cap de corda, la direcció o un professor de cant.')}
     </div>`,
   });

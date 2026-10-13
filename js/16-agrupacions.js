@@ -224,7 +224,9 @@ async function createGroup() {
   try {
     const b = fs.batch();
     b.set(fs.doc(`agrupacions/${gid}`), { name, kind: c.kind, status: 'active', createdAt: at, createdBy: email });
-    b.set(fs.doc(`cors/${gid}/config/main`), { name, ...(short ? { shortName: short } : {}), kind: c.kind, sections: r.list, alertFNJ: 3, minAttendance: 80, demo: false, createdAt: at });
+    b.set(fs.doc(`cors/${gid}/config/main`), { name, ...(short ? { shortName: short } : {}), kind: c.kind, sections: r.list, alertFNJ: 3, minAttendance: 80, demo: false, createdAt: at,
+      // La quota i els documents comencen apagats: cada agrupació els activa a Ajustos si els fa servir.
+      feesOn: false, askDocs: [] });
     b.set(fs.doc(`cors/${gid}/staff/${email}`), { email, name: S.userName || '', role: 'admin', roles: ['admin'], addedAt: at });
     b.set(fs.doc(`staffIndex/${email}/agrupacions/${gid}`), { at, name });
     await b.commit();

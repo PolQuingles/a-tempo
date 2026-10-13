@@ -152,10 +152,16 @@ function sheetFee(mid) {
 /* ---------- La plantilla: cada persona, amb tota la seva informació ---------- */
 // Abans eren quatre llistes (Plantilla, Altes i baixes, Documents i Quotes). Ara n'és una: el resum de la temporada a dalt,
 // uns filtres i, en tocar una persona, se'n desplega tot (dades, la seva fitxa, l'historial, els documents i la quota).
+// La fitxa de dins (dades, historial, documents, quota) es pinta en obrir la persona: amb 120 persones, pintar-les totes
+// d'entrada eren més de 6.000 elements a la pantalla.
 const PM_OPEN = new Set();
 document.addEventListener('toggle', e => {
   const d = e.target;
-  if (d instanceof HTMLDetailsElement && d.classList.contains('pm')) { if (d.open) PM_OPEN.add(d.dataset.mid); else PM_OPEN.delete(d.dataset.mid); }
+  if (!(d instanceof HTMLDetailsElement) || !d.classList.contains('pm')) return;
+  if (!d.open) { PM_OPEN.delete(d.dataset.mid); return; }
+  PM_OPEN.add(d.dataset.mid);
+  const b = d.querySelector('.pm-b'), m = S.members.get(d.dataset.mid);
+  if (b && m && !b.childElementCount) b.innerHTML = memberCard(m);
 }, true);
 const PM_FILTERS = () => [['all', 'Tothom'], ['moves', 'Altes i baixes'], ...(canDocs() ? [...(docsOn() ? [['docs', 'Documents pendents']] : []), ...(feesOn() ? [['fees', 'Quota pendent']] : [])] : []), ...(isAdmin() ? [['access', 'Sense accés']] : [])];
 const seasonMoves = m => { const { season } = seasonCfg(); return (m.history || []).filter(h => h.date >= season.from && h.date <= season.to); };
@@ -235,7 +241,7 @@ function pmRow(m, f) {
   return `<details class="pm" data-mid="${m.id}" data-find="${esc(normText(m.name))}"${PM_OPEN.has(m.id) ? ' open' : ''}>
     <summary>${avatar(m)}<span class="pm-n${off ? ' dim' : ''}"><span class="t">${esc(m.name)}</span>${m.part ? ` <span class="part">${esc(partTag(m))}</span>` : ''}${m.leader ? ` <span class="tag">${V.Leader}</span>` : ''}${sub ? `<span class="s">${sub}</span>` : ''}</span>
       ${tags ? `<span class="pm-tags">${tags}</span>` : ''}${ICON.chev}</summary>
-    <div class="pm-b">${memberCard(m)}</div></details>`;
+    <div class="pm-b">${PM_OPEN.has(m.id) ? memberCard(m) : ''}</div></details>`;
 }
 function managePlantilla() {
   // Les fitxes (talla, emergència…), els documents i les quotes es llegeixen un sol cop, en obrir la plantilla.

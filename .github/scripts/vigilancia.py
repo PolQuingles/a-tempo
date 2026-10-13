@@ -127,6 +127,11 @@ if reader:
         errors = [dades.dec({"mapValue": r["document"]}) for r in rows if r.get("document")]
     except Exception as e:   # regles encara sense publicar, o sense xarxa
         print(f"No s'han pogut llegir els errors: {e}")
+    # L'error conegut de Safari amb la còpia del mòbil: l'app ja es torna a obrir sola (js/00-errors.js). Es compta, però no s'avisa.
+    known = [e for e in errors if str(e.get("where", "")).startswith("safari-idb")]
+    errors = [e for e in errors if e not in known]
+    if known:
+        print(f"Errors coneguts de Safari, ja recuperats: {len(known)}")
     print(f"Errors a l'app l'última hora: {len(errors)}")
     if errors:
         kinds = {}

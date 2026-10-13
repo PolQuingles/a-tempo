@@ -288,7 +288,7 @@ function memberAccessHtml(acc) {
   return `<label class="field"><span>Correu per entrar a l’app <span class="muted" style="font-weight:500">· opcional</span></span>
     <input class="inp" id="me-email" type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="nom@exemple.com"><small id="me-email-hint">${MEMBER_MAIL_HINT}</small></label>`;
 }
-/** «Comprova els correus»: el compte d'algú que ja és a la plantilla, però que no hi estava vinculat. */
+/** «Revisa els accessos»: el compte d'algú que ja és a la plantilla, però que no hi estava vinculat. */
 async function linkAccount(email, mid) {
   const p = S.staff.get(email), m = S.members.get(mid);
   if (!p || !m) return;

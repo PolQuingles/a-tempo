@@ -1,16 +1,19 @@
 name: Proves
 # A cada canvi: les regles de seguretat de Firestore (a l'emulador), la interfície sencera en un navegador
 # sense pantalla, la revisió de tipus del codi (TypeScript) i les proves de la lògica, i que les empremtes dels
-# fitxers i els scripts estiguin bé.
+# fitxers i els scripts estiguin bé. També cada matí, encara que no hi hagi canvis: algunes proves depenen del dia
+# (de la setmana, del trimestre…) i així, si una falla un dia concret, se sap aquell mateix dia. Si falla, GitHub envia un correu.
 on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    - cron: '23 5 * * *'
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
-  group: proves-${{ github.ref }}
+  group: proves-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   regles:
@@ -64,6 +67,8 @@ jobs:
         run: node tests/logica/run.js
       - name: La norma de l'app i la dels avisos diuen el mateix
         run: python3 tests/logica/test_norma.py
+      - name: Avisos al mòbil entre passades (dades inventades, sense enviar res)
+        run: python3 tests/logica/test_avisos.py
   estructura:
     name: Empremtes i scripts
     runs-on: ubuntu-latest

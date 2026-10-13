@@ -87,6 +87,18 @@ function todoItems() {
     }
     const lists = mySections().flatMap(sec => pendingSessions(sec).map(x => ({ sec, x })));
     if (lists.length) out.push({ icon: 'roll', t: `${lists.length === 1 ? '1 llista' : `${lists.length} llistes`} per acabar`, s: `${esc(SEC[lists[0].sec].name)}: ${lists.slice(-3).map(l => ddmm(l.x.date)).join(', ')}`, btn: 'Acaba-les', act: `data-act="home-roll" data-sid="${esc(lists[lists.length - 1].x.id)}" data-sec="${esc(lists[0].sec)}"`, n: lists.length });
+    // Qui porta tot el cor (administració, direcció, gerència, secretaria): les llistes sense acabar de les altres cordes,
+    // de l'últim mes (les més velles ja són història, no feina per fer).
+    if (rollAll()) {
+      const mine = new Set(mySections()), month = isoDate(new Date(Date.now() - 30 * 864e5));
+      const others = SECTIONS.filter(x => !mine.has(x.id)).map(x => ({ x, ss: pendingSessions(x.id).filter(s => s.date >= month) })).filter(o => o.ss.length);
+      const n = others.reduce((a, o) => a + o.ss.length, 0);
+      if (n) {
+        const last = others.flatMap(o => o.ss).sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || ''))).pop();
+        out.push({ icon: 'roll', t: `${n === 1 ? '1 llista' : `${n} llistes`} sense acabar${mine.size ? ' a les altres cordes' : ''}`,
+          s: esc(others.map(o => `${o.x.name} ${o.ss.length}`).join(' · ')), btn: 'Mira-les', act: `data-act="home-roll" data-sid="${esc(last.id)}" data-sec=""`, n });
+      }
+    }
   }
   if (classesOn()) {
     const ask = reqsToAnswer();

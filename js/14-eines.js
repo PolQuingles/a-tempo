@@ -147,7 +147,7 @@ function sheetMailCheck() {
   const probs = mailProblems();
   const { noAccount, roster } = accessReport();
   openSheet({
-    title: 'Comprovació dels correus',
+    title: 'Revisió dels accessos',
     wide: true,
     body: probs.length || noAccount.length
       ? `${probs.length ? `<div class="section-title" style="margin-top:0"><h2 class="h2">Per revisar</h2><span class="eyebrow">${probs.length}</span></div>
@@ -397,7 +397,7 @@ function sheetHelp() {
     <h3>Fitxa ${w.sh.del} i calendari</h3>
     <p>A la fitxa d’una sessió pots posar l’<b>hora de convocatòria</b>, el <b>vestuari</b>, el <b>punt de trobada</b> i què cal portar. La veuen tots els convocats i es pot copiar per al grup. Al <b>Calendari</b>, el botó <b>Mes</b> mostra la graella mensual.</p>
     <h3>${w.Members} i persones</h3>
-    <p>A <b>Gestió › Personal</b> hi ha tothom, rol per rol: administració, direcció, gerència, secretaria, ${w.leaders}, ${esc(V.kind === 'cor' ? 'professors de cant' : 'professors')} i ${w.members}. De cada ${w.member}: ${w.section}, ${w.part}, baixes temporals amb dates i telèfon. L’accés a l’app es dona amb el correu, a dalt de tot de <b>Personal</b> (<b>+ Persona</b> o <b>Enganxa una llista</b>); la llista <b>Amb accés</b> diu qui pot entrar i qui encara no ho ha fet. Amb <b>Mira-ho com un ${w.member}</b> comproves què veu cadascú; <b>Qui ha entrat</b> i <b>Comprova els correus</b> t’ajuden a fer que tothom hi entri.</p>
+    <p>A <b>Gestió › Personal</b> hi ha tothom, rol per rol: administració, direcció, gerència, secretaria, ${w.leaders}, ${esc(V.kind === 'cor' ? 'professors de cant' : 'professors')} i ${w.members}. De cada ${w.member}: ${w.section}, ${w.part}, baixes temporals amb dates i telèfon. L’accés a l’app es dona amb el correu, a dalt de tot de <b>Personal</b> (<b>+ Persona</b> o <b>Enganxa una llista</b>); la llista <b>Amb accés</b> diu qui pot entrar i qui encara no ho ha fet. Amb <b>Mira-ho com un ${w.member}</b> comproves què veu cadascú; <b>Qui ha entrat</b> i <b>Revisa els accessos</b> t’ajuden a fer que tothom hi entri.</p>
     <h3>Tipus d’agrupació i ${w.sections}</h3>
     <p>A <b>Ajustos › Agrupació</b> tries si és un cor, una orquestra, una banda, una cobla, un grup de cambra o una altra agrupació: canvien les paraules de l’app i els tipus de sessió. A <b>Ajustos › ${w.Sections}</b> en canvies els noms i les abreviatures, n’afegeixes o en treus. El nom, el tipus, les ${w.sections} i la imatge només els pot canviar un <b>Usuari Pro</b> que administri l’agrupació.</p>
     <h3>${esc(V.classes)}</h3>

@@ -9,6 +9,10 @@ concurrency: avisos
 jobs:
   avisos:
     runs-on: ubuntu-latest
+    # La feina comença cada mitja hora i es queda oberta 26 minuts fent passades curtes cada 3 minuts (vegeu avisos.py),
+    # perquè els missatges, les converses i les respostes a les absències arribin en pocs minuts. Al repositori públic, els
+    # minuts de GitHub són gratuïts; si mai passa a privat, cal posar AVISOS_LOOP_MIN a 0 (vegeu el README).
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -24,11 +28,15 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
           git clone --depth 1 git@github.com:PolQuingles/a-tempo-copies.git copies
+          git -C copies config user.name "github-actions[bot]"
+          git -C copies config user.email "41898282+github-actions[bot]@users.noreply.github.com"
       - name: Envia els avisos
         env:
           SERVICE_REFRESH_TOKEN: ${{ secrets.SERVICE_REFRESH_TOKEN }}
           BACKUP_REFRESH_TOKEN: ${{ secrets.BACKUP_REFRESH_TOKEN }}
           PUSH_PRIVATE_KEY: ${{ secrets.PUSH_PRIVATE_KEY }}
+          AVISOS_LOOP_MIN: '26'
+          AVISOS_EVERY: '180'
         run: python3 .github/scripts/avisos.py copies
       - name: Desa què s'ha enviat
         working-directory: copies
