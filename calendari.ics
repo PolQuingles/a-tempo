@@ -408,7 +408,8 @@ DTSTART;TZID=Europe/Madrid:20261218T190000
 DTEND;TZID=Europe/Madrid:20261218T210000
 SUMMARY:Concert · Oratori de Nadal · J.S. Bach
 LOCATION:L’Auditori
-DESCRIPTION:Vocalització a les 18:30
+DESCRIPTION:Convocatòria: 18:30\nHorari del dia:\n18:30 Vocalització\n19:
+ 00 Concert
 END:VEVENT
 BEGIN:VEVENT
 UID:cj-oratori-20@a-tempo
@@ -417,7 +418,8 @@ DTSTART;TZID=Europe/Madrid:20261219T190000
 DTEND;TZID=Europe/Madrid:20261219T210000
 SUMMARY:Concert · Oratori de Nadal · J.S. Bach
 LOCATION:L’Auditori
-DESCRIPTION:Vocalització a les 18:30
+DESCRIPTION:Convocatòria: 18:30\nHorari del dia:\n18:30 Vocalització\n19:
+ 00 Concert
 END:VEVENT
 BEGIN:VEVENT
 UID:cj-santesteve-02@a-tempo
@@ -439,8 +441,8 @@ DTSTAMP:20260101T000000Z
 DTSTART;TZID=Europe/Madrid:20261226T190000
 DTEND;TZID=Europe/Madrid:20261226T210000
 SUMMARY:Concert · Concert de Sant Esteve
-DESCRIPTION:Convocatòria a les 18:00 · Amb l’Orfeó Català\, cors de l
- ’Escola Coral i Cor de Cambra
+DESCRIPTION:Convocatòria: 18:00\nAmb l’Orfeó Català\, cors de l’Esco
+ la Coral i Cor de Cambra
 END:VEVENT
 BEGIN:VEVENT
 UID:cj-nadales-01@a-tempo
