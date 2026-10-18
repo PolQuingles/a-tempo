@@ -189,6 +189,13 @@ function sheetSessionInfo(sid) {
   const s = sessionById(sid);
   if (!s) return;
   const prod = S.productions.get(s.prodId);
+  // Qui hi és convocat pot avisar des d'aquí que no hi anirà o que arribarà tard (les files d'Inici obren aquesta fitxa).
+  const me = S.members.get(myMemberId());
+  const canWarn = me && s.date >= TODAY && convoked(s, me.section) && !isOut(s, me) && !s.rsvp;
+  const mineAb = canWarn ? myAbsence(s, me) : undefined;
+  const absenceAct = canWarn
+    ? mineAb ? `<span class="st-pill st-${mineAb.status}">${mineAb.kind === 'late' ? 'Has avisat que arribaràs tard' : 'Has avisat que no hi vas'}</span>`
+      : `<button class="btn btn-primary" data-act="absence-new" data-sid="${esc(s.id)}">No hi puc anar o arribaré tard</button>` : '';
   const text = [`${s.type || 'Assaig'} · ${prodNames(s)}`, `${longDate(s.date)}${s.time ? ` · ${timeRange(s)}` : ''}`, s.place ? `Lloc: ${s.place}` : '',
     ...INFO_FIELDS.filter(([k]) => s.info?.[k]).map(([k, l]) => `${l}: ${s.info[k]}`), infoSteps(s).length ? `Horari:\n${stepsText(s)}` : '', s.note || ''].filter(Boolean).join('\n');
   openSheet({
@@ -201,7 +208,7 @@ function sheetSessionInfo(sid) {
         ${planHtml(s, false, planSec(s)) || `<p class="muted" style="font-size:calc(13px*var(--ts));margin:0">${isShow(s) ? 'Encara no hi ha programa: quines obres es cantaran i en quin ordre.' : 'Encara no hi ha pla: quines obres i quins compassos s’assajaran.'}</p>`}` : ''}
       ${tasksBlock(s)}
       ${isShow(s) ? balanceBlock(s) + seatingBlock(s) : ''}`,
-    foot: `${canEdit() ? `<button class="btn" data-act="session-edit" data-sid="${s.id}">Edita</button>` : ''}${canEdit() && isShow(s) ? `<button class="btn" data-act="participants" data-sid="${s.id}">Llista de participants</button>` : ''}<span class="spacer"></span><button class="btn btn-primary" id="fx-copy">Copia per al grup</button>`,
+    foot: `${canEdit() ? `<button class="btn" data-act="session-edit" data-sid="${s.id}">Edita</button>` : ''}${canEdit() && isShow(s) ? `<button class="btn" data-act="participants" data-sid="${s.id}">Llista de participants</button>` : ''}<span class="spacer"></span>${absenceAct ? `<button class="btn" id="fx-copy">Copia per al grup</button>${absenceAct}` : '<button class="btn btn-primary" id="fx-copy">Copia per al grup</button>'}`,
     onMount: el => {
       el.querySelector('#fx-copy').onclick = () => copyText(text + (planOf(s) ? `\n\nPla d’assaig:\n${planText(s)}` : ''), 'Fitxa copiada');
     },
