@@ -1469,6 +1469,13 @@ def main():
           out.earlyMins = markMins(sessionById('s3'), mk()).done === 90;
           row().querySelector('[data-act="mark"][data-s="FJ"]').click(); await s(200);
           out.earlyGone = mk().s === 'FJ' && !('early' in mk());
+          // «No fa» en una llista: deixa de fer tota la producció (i es pot desfer desmarcant-ho).
+          const row3 = () => document.querySelector('#roster .row[data-mid="mT3"], .np-group .row[data-mid="mT3"]');
+          row3().querySelector('[data-act="mark"][data-s="NP"]').click(); await s(400);
+          out.npProd = (S.productions.get('p1').excluded || []).includes('mT3') && !!document.querySelector('.np-group .row[data-mid="mT3"]') && !document.querySelector('#roster .row[data-mid="mT3"]');
+          out.npNext = isOut(sessionById('s4'), S.members.get('mT3'));
+          row3().querySelector('[data-act="mark"][data-s="NP"]').click(); await s(400);
+          out.npBack = !(S.productions.get('p1').excluded || []).includes('mT3') && !!document.querySelector('#roster .row[data-mid="mT3"]');
           return out; }"""))
         for k, label in [("week", "Inici ensenya tots els assajos dels set dies que vénen (també el general), i el proper concert"),
                          ("ini", "les inicials són la del nom i la del primer cognom"),
@@ -1485,7 +1492,10 @@ def main():
                          ("addBtn", "a la llista, qui hi és té el botó «Ha marxat abans»"),
                          ("early", "i s'hi posen els minuts que s'ha perdut del final"),
                          ("earlyMins", "que es resten del temps d'assaig"),
-                         ("earlyGone", "si passa a ser una falta, ja no compta que ha marxat abans")]:
+                         ("earlyGone", "si passa a ser una falta, ja no compta que ha marxat abans"),
+                         ("npProd", "marcar «No fa» el treu de tota la producció i passa a «De baixa o no fan la producció»"),
+                         ("npNext", "i a les sessions que vénen ja no hi és"),
+                         ("npBack", "desmarcant-ho, torna a fer la producció")]:
             check(r.get(k), label, str(r))
         check(not errors, "sense errors amb la setmana, el material i els anuncis vistos", "; ".join(errors[:3]))
         ctx.close()

@@ -252,6 +252,9 @@ const actions = {
     else if (s === 'R' && !current?.min && lateNow(cur)) setMark(cur, m, { s, min: lateNow(cur) });
     else setMark(cur, m, { s });
     buzz(8);
+    // «No fa»: deixa de fer la producció sencera (vegeu dropFromProduction); si es desmarca aquí mateix, la torna a fer.
+    if (s === 'NP' && current?.s !== 'NP' && dropFromProduction(cur, m)) return;
+    if (s === 'NP' && current?.s === 'NP' && backToProduction(cur, m)) return;
     refreshRow(mid);
     if (!wasDone && rollDone(cur, m.section)) celebrateRoll(cur, m.section);
   },

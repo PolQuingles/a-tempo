@@ -291,6 +291,28 @@ function earlyHtml(session, m, mk) {
       <div class="mins"><button class="min-chip now" data-act="early" data-min="${now}" aria-pressed="${!!now && left === now}" ${now ? '' : 'disabled title="Calcula els minuts fins a l’hora de final: només funciona mentre dura la sessió"'}>Marxa ara${now ? ` · ${now}′` : ''}</button></div>
       <input class="min-input" id="early-${m.id}" type="number" inputmode="numeric" min="1" max="${sessionMins(session)}" placeholder="—" value="${left || ''}" data-bind="early" aria-label="Minuts que s’ha perdut del final"><span class="m">min abans d’acabar</span></div>`;
 }
+/* ---------- «No fa»: tota la producció ---------- */
+// Quan algú deixa de fer una producció a mig camí, marcar-li «No fa» en una llista el treu de la producció sencera
+// (production.excluded, com si s'hagués triat a la fitxa de la producció): ja no surt a les llistes que vénen (va a «De baixa o
+// no fan la producció»), no compta a les estadístiques ni a la norma, i no rep els avisos d'aquella producció. Les llistes
+// d'abans es queden com estaven. Si es desmarca a la mateixa llista, torna a fer-la. Només l'equip pot canviar la producció.
+function dropFromProduction(s, m) {
+  const p = S.productions.get(s.prodId);
+  if (!p || !canEdit() || PREVIEW || (p.excluded || []).includes(m.id)) return false;
+  saveProduction({ ...clone(p), excluded: [...(p.excluded || []), m.id] });
+  render();
+  toast(`${firstName(fullName(m.name))} ja no fa ${p.name}: no sortirà a les llistes que vénen`, { label: 'Desfés', run: () => backToProduction(s, m, true) });
+  return true;
+}
+function backToProduction(s, m, unmark) {
+  const p = S.productions.get(s.prodId);
+  if (!p || !canEdit() || PREVIEW || !(p.excluded || []).includes(m.id)) return false;
+  saveProduction({ ...clone(p), excluded: (p.excluded || []).filter(x => x !== m.id) });
+  if (unmark && attDoc(s.id, m.section)?.marks?.[m.id]?.s === 'NP') setMark(s, m, null);
+  render();
+  toast(`${firstName(fullName(m.name))} torna a fer ${p.name}`);
+  return true;
+}
 function refreshRow(mid) {
   const cur = sessionById(ui.sessionId);
   const m = S.members.get(mid);
