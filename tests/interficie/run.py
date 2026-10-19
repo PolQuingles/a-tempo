@@ -767,7 +767,7 @@ def main():
           out.others = ids.includes('mS0') && ids.includes('mS1') && !document.querySelector('.sw-row[data-mid="mS0"] .sc-out');
           closeSheet(); await s(200);
           sheetArchive('p1'); await s(300);
-          const ax = document.querySelector('.sheet')?.innerText || '';
+          const ax = document.querySelector('.sheet')?.textContent || '';   // textContent: els títols es pinten en majúscules
           out.axBack = /Ja no fan la producció/.test(ax) && /Marta Soler/.test(ax) && !/Clara Vila/.test(ax);
           closeSheet(); await s(200);
           out.todo = archiveTodos().some(x => /Marta ha de tornar 1 partitura/.test(x.t));
