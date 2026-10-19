@@ -1505,8 +1505,14 @@ def main():
           out.qr = !!document.querySelector('#jn-qr svg') || /QR/.test(document.querySelector('#jn-qr')?.textContent || '');
           closeSheet(); return { ...out, codeValue: code, gidValue: GID }; }""")
         code, gid = r.pop("codeValue"), r.pop("gidValue")
-        page.goto(f"{base}/index.html?u=nou&a={gid}&uneix={code}")
-        page.wait_for_function("S.mode === 'join' && JOIN && JOIN.step === 'pick'", timeout=20000)
+        # La pàgina d'abans encara pot estar desant (i el navegador talla la càrrega): si passa, s'hi torna.
+        for i in range(3):
+            try:
+                page.goto(f"{base}/index.html?u=nou&a={gid}&uneix={code}")
+                break
+            except Exception:
+                page.wait_for_timeout(800)
+        page.wait_for_function("typeof S !== 'undefined' && S.mode === 'join' && JOIN && JOIN.step === 'pick'", timeout=20000)
         r.update(page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
           out.screen = !!document.querySelector('.join-card') && /Entra a l’app/.test(document.querySelector('.join-card').innerText);
           const q = document.querySelector('#jn-q'); q.value = 'oriol'; q.dispatchEvent(new Event('input')); await s(100);
