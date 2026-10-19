@@ -1382,10 +1382,10 @@ def main():
           saveProduction(p); await s(300);
           const items = todoItems();
           // Quantes en surten depèn de l'hora: passades les 22:30, la d'avui també és per acabar.
-          const n = sec => pendingSessions(sec).length;
-          out.own = items.some(x => new RegExp(`^${n('T')} llistes? per acabar`).test(x.t) && /Tenors/.test(x.s));
+          const month = isoDate(new Date(Date.now() - 30 * 864e5)), n = sec => pendingSessions(sec).filter(x => x.date >= month).length;
+          out.own = items.some(x => /^\d+ llistes? per acabar/.test(x.t) && /Tenors/.test(x.s) && x.s.includes(ddmm(d(-1))));
           const all = items.find(x => /sense acabar a les altres cordes/.test(x.t));
-          out.others = !!all && new RegExp(`^${n('S') + n('C') + n('B')} llistes`).test(all.t) && ['S', 'C', 'B'].every(k => all.s.includes(`${SEC[k].name} ${n(k)}`)) && !/Tenors/.test(all.s);
+          out.others = !!all && ['S', 'C', 'B'].every(k => n(k) > 0 && all.s.includes(`${SEC[k].name} ${n(k)}`)) && all.t.startsWith(`${n('S') + n('C') + n('B')} llistes`) && !/Tenors/.test(all.s);
           ui.people = 'singer'; applyRoute('gestio/personal'); render(); await s(400);
           const rows = [...document.querySelectorAll('details.pm')];
           out.lazy = rows.length > 10 && rows.every(x => !x.open && !x.querySelector('.pm-b').childElementCount);
