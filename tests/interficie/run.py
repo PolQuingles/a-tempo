@@ -1381,9 +1381,11 @@ def main():
           p.sessions.push({ id: 'sahir', date: d(-1), time: '20:30', end: '22:30', type: 'Assaig', place: 'Sala', note: '' });
           saveProduction(p); await s(300);
           const items = todoItems();
-          out.own = items.some(x => /1 llista per acabar/.test(x.t) && /Tenors/.test(x.s));
+          // Quantes en surten depèn de l'hora: passades les 22:30, la d'avui també és per acabar.
+          const n = sec => pendingSessions(sec).length;
+          out.own = items.some(x => new RegExp(`^${n('T')} llistes? per acabar`).test(x.t) && /Tenors/.test(x.s));
           const all = items.find(x => /sense acabar a les altres cordes/.test(x.t));
-          out.others = !!all && /^3 llistes/.test(all.t) && /Sopranos 1/.test(all.s) && /Contralts 1/.test(all.s) && /Baixos 1/.test(all.s) && !/Tenors/.test(all.s);
+          out.others = !!all && new RegExp(`^${n('S') + n('C') + n('B')} llistes`).test(all.t) && ['S', 'C', 'B'].every(k => all.s.includes(`${SEC[k].name} ${n(k)}`)) && !/Tenors/.test(all.s);
           ui.people = 'singer'; applyRoute('gestio/personal'); render(); await s(400);
           const rows = [...document.querySelectorAll('details.pm')];
           out.lazy = rows.length > 10 && rows.every(x => !x.open && !x.querySelector('.pm-b').childElementCount);
