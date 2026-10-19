@@ -204,6 +204,7 @@ const S = {
   trips: new Map(),       // <id> -> una sortida o gira: dates, transport i habitacions
   tripSignups: new Map(), // <tripId>_<memberId> -> qui hi va, amb quin transport i a quina habitació
   threads: new Map(),     // <id> -> una conversa privada entre algú de la plantilla i l'equip (25-converses)
+  joinReq: null,          // <correu> -> qui ha obert l'enllaç del cor i espera accés (només l'administració; 12c-entrar)
   me: null,               // la fitxa d'accés de qui ha entrat (staff/<correu>)
   memberId: null,         // la seva fitxa de la plantilla, si en té
   profiles: null,         // equip: les fitxes que omple cadascú (es llegeixen quan cal: llistes i sortides)
