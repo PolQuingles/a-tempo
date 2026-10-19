@@ -734,6 +734,59 @@ def main():
         check(not errors, "sense errors a l'arxiu de partitures", "; ".join(errors[:3]))
         ctx.close()
 
+        print("Arxivers: porten el repertori, i a l'arxiu només hi surt qui fa la producció (o qui ha de tornar la partitura)")
+        ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/tauler/repertori")
+        page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms));
+          ensureStaff(); for (let i = 0; i < 20 && !S.staffReady; i++) await s(200);
+          await writeAccount({ email: 'arx@exemple.cat', name: 'Laia Ferrer', roles: ['archive', 'singer'], role: 'archive', section: 'S', memberId: 'mS1', addedAt: new Date().toISOString() });
+          // La Clara està de baixa tota la producció (mai no n'ha tingut la partitura); la Marta la tenia i ha deixat de fer-la.
+          saveMember({ ...S.members.get('mS3'), leaves: [{ from: addDays(TODAY, -30), to: addDays(TODAY, 40), note: '' }] });
+          setScore('p1', 'w1', S.members.get('mS2'), 'given');
+          const p = S.productions.get('p1'); saveProduction({ ...clone(p), excluded: [...(p.excluded || []), 'mS2'] });
+          await s(900); }""")
+        switch_user(page, base, "arx")
+        r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          const fake = () => JSON.parse(localStorage.getItem('fake:db')), find = (db, end) => db[Object.keys(db).find(k => k.endsWith(end))];
+          ui.tab = 'tauler'; ui.board = 'materials'; ui.matProd = 'p1'; render(); await s(300);
+          out.tools = !!document.querySelector('[data-act="work-new"]') && !!document.querySelector('[data-act="work-link"]') && !!document.querySelector('[data-act="mat-new"]');
+          document.querySelector('[data-act="work-new"]').click(); await s(300);
+          document.querySelector('#wk-title').value = 'Magnificat'; document.querySelector('#wk-composer').value = 'J. S. Bach';
+          document.querySelector('#wk-save').click(); await s(900);
+          const w = [...S.works.values()].find(x => x.title === 'Magnificat');
+          out.added = !!w && (w.prods || []).includes('p1') && !!find(fake(), `/works/${w.id}`) && !S.error;
+          sheetWork('w1'); await s(300);
+          out.editBtn = !!document.querySelector('.sheet [data-act="work-edit"]');
+          closeSheet(); await s(200);
+          sheetWorkEdit(w.id); await s(300);
+          document.querySelector('#wk-del').click(); await s(900);
+          out.deleted = !S.works.has(w.id) && !find(fake(), `/works/${w.id}`) && !!find(fake(), '/config/main').syncEpoch?.works && !S.error;
+          sheetScoreWork('p1', 'w1', 'S'); await s(300);
+          const ids = [...document.querySelectorAll('.sw-row')].map(x => x.dataset.mid);
+          out.noLeave = !ids.includes('mS3');
+          out.leaver = ids.includes('mS2') && /però té la partitura: l’ha de retornar/.test(document.querySelector('.sw-row[data-mid="mS2"] .sc-out')?.textContent || '');
+          out.others = ids.includes('mS0') && ids.includes('mS1') && !document.querySelector('.sw-row[data-mid="mS0"] .sc-out');
+          closeSheet(); await s(200);
+          sheetArchive('p1'); await s(300);
+          const ax = document.querySelector('.sheet')?.innerText || '';
+          out.axBack = /Ja no fan la producció/.test(ax) && /Marta Soler/.test(ax) && !/Clara Vila/.test(ax);
+          closeSheet(); await s(200);
+          out.todo = archiveTodos().some(x => /Marta ha de tornar 1 partitura/.test(x.t));
+          out.overflow = document.documentElement.scrollWidth <= innerWidth;
+          return out; }""")
+        for k, label in [("tools", "l'arxiver pot afegir obres, enllaçar-ne i afegir materials"),
+                         ("added", "afegeix una obra al repertori i queda desada"),
+                         ("editBtn", "pot editar les obres que hi ha"),
+                         ("deleted", "i esborrar-les (i els mòbils ho saben)"),
+                         ("noLeave", "qui està de baixa tota la producció i no l'ha rebuda no surt a la llista"),
+                         ("leaver", "qui ha deixat la producció i té la partitura hi surt amb el recordatori"),
+                         ("others", "la resta de la corda hi surt com sempre"),
+                         ("axBack", "les estadístiques de l'arxiu diuen qui ja no la fa i l'ha de tornar"),
+                         ("todo", "i a «Per fer» li surt que l'ha de recollir"),
+                         ("overflow", "sense eixamplar la pantalla del mòbil")]:
+            check(r.get(k), label, str(r))
+        check(not errors, "sense errors amb el repertori dels arxivers", "; ".join(errors[:3]))
+        ctx.close()
+
         print("Canvis d'hora de classe entre els dos dies i a unes quantes persones")
         ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/classes")
         r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms));

@@ -129,6 +129,36 @@ prova('arxiu de partitures: A repartir, Repartida i Retornada, per corda i per a
   igual(scoreOf('p', 'w', m('c')), '', 'es pot desfer');
   S.scores = new Map();
 });
+prova('arxiu de partitures: qui no fa la producció no hi surt, tret que tingui la partitura (llavors, amb el recordatori)', () => {
+  escenari({ members: [{ id: 'a', name: 'Puig, Anna', section: 'S' },
+    { id: 'b', name: 'Vila, Clara', section: 'S', leaves: [{ from: D(-10), to: D(30) }] },        // de baixa tota la producció
+    { id: 'c', name: 'Bosch, Marc', section: 'T' },                                               // «No fa» a mig camí
+    { id: 'd', name: 'Font, Pere', section: 'B' },                                                // «No fa» des del principi
+    { id: 'e', name: 'Mas, Laia', section: 'S', active: false },                                  // ja no és al cor
+    { id: 'f', name: 'Roca, Neus', section: 'C', leaves: [{ from: D(-10), to: D(2) }] },          // de baixa uns dies i torna
+    { id: 'g', name: 'Soler, Pau', section: 'T', leaves: [{ from: D(3) }] }],                     // de baixa fins al final
+    productions: [{ id: 'p', name: 'Tardor', sessions: [{ id: 's1', date: D(-5), type: 'Assaig' }, { id: 's2', date: D(5), type: 'Assaig' }, { id: 's3', date: D(10), type: 'Assaig' }], excluded: ['c', 'd'] }] });
+  S.scores = new Map();
+  const m = id => S.members.get(id), why = prodOut('p');
+  igual(['a', 'b', 'c', 'd', 'e', 'f', 'g'].map(id => why(m(id))), ['', 'baixa', 'prod', 'prod', 'cor', '', 'baixa'], 'per què no la fa cadascú');
+  igual(scorePeople('p', '').map(x => x.id).sort(), ['a', 'f'], 'només qui la fa n’ha de tenir');
+  igual(scoreSummary('p', 'w', '').n, 2, 'qui no l’ha rebuda i no la fa no compta');
+  setScore('p', 'w', m('c'), 'given'); setScore('p', 'w', m('e'), 'given'); setScore('p', 'w', m('g'), 'given');
+  const rows = scoreRows('p', '', ['w']);
+  igual(rows.map(r => `${r.m.id}:${r.out}`).sort(), ['a:', 'c:prod', 'e:cor', 'f:', 'g:baixa'], 'qui la té, encara que ja no la faci, hi surt');
+  igual(scoreRows('p', 'S', ['w']).map(r => r.m.id).sort(), ['a', 'e'], 'per corda: les sopranos (la que ja no és al cor hi és perquè la té)');
+  const x = scoreSummary('p', 'w', '');
+  igual([x.n, x.given, x.state], [5, 3, 'todo'], 'compten per recollir-les');
+  cert(/però té la partitura: l’ha de retornar/.test(outNote('prod', 'given')), 'el recordatori diu que l’ha de retornar');
+  cert(/^Ja no és/.test(outNote('cor', 'given')), 'qui ha deixat el cor');
+  igual(outNote('', 'given'), '', 'qui la fa no té recordatori');
+  setScore('p', 'w', m('c'), 'returned');
+  cert(/ja l’ha retornada/.test(outNote('prod', 'returned')), 'un cop tornada, ho diu');
+  igual(scoreRows('p', '', ['w']).some(r => r.m.id === 'c'), true, 'i encara hi surt (per si cal desfer-ho)');
+  setScore('p', 'w', m('c'), '');
+  igual(scoreRows('p', '', ['w']).some(r => r.m.id === 'c'), false, 'si mai l’ha tinguda, ja no hi surt');
+  S.scores = new Map();
+});
 prova('arxiver: el rol porta la seva corda, també si la fitxa en canvia', () => {
   escenari({ members: [{ id: 'a', name: 'Puig, Anna', section: 'S' }] });
   const acc = { email: 'a@x.cat', roles: ['archive', 'singer'], role: 'archive', section: 'S', memberId: 'a' };

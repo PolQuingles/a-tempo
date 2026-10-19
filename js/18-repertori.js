@@ -10,6 +10,8 @@
 const worksSorted = () => [...S.works.values()].sort((a, b) => (a.title || '').localeCompare(b.title || '', 'ca'));
 const worksOf = pid => worksSorted().filter(w => (w.prods || []).includes(pid));
 function saveWork(w) { S.works.set(w.id, w); persist('works', w.id, w, 50); }
+/** Qui porta el repertori (obres, solos, partitures, àudios i altres materials): l'equip i els arxivers (vegeu 18b-arxiu). */
+const canRepertoire = () => canEdit() || isArchivist();
 const durSecs = d => { const m = String(d || '').match(/^(\d{1,3})(?:[:'.](\d{1,2}))?$/); return m ? +m[1] * 60 + (+m[2] || 0) : 0; };
 const fmtDur = secs => secs ? `${Math.floor(secs / 60)}:${pad(secs % 60)}` : '';
 /** El material que és per a aquesta persona: de la seva corda (o de tots) i de la seva veu (o de totes). */
@@ -22,12 +24,12 @@ function boardRepertoire() {
   const all = ui.matProd === 'all';
   const prod = all ? null : S.productions.get(ui.matProd);
   const me = S.members.get(myMemberId());
-  const onlyMine = !!me && !canEdit() && ui.matMine !== false;
+  const onlyMine = !!me && !canRepertoire() && ui.matMine !== false;
   const works = all ? worksSorted() : worksOf(prod.id);
   const chips = `<div class="filters"><label class="sel"><span class="sr">Producció</span><select data-pick="mat-prod">
       <option value="all" ${all ? 'selected' : ''}>Tot el repertori · ${S.works.size}</option>
       ${prods.map(p => `<option value="${p.id}" ${prod && p.id === prod.id ? 'selected' : ''}>${esc(p.name)}${worksOf(p.id).length ? ` · ${worksOf(p.id).length}` : ''}</option>`).join('')}</select></label></div>`;
-  const tools = canEdit()
+  const tools = canRepertoire()
     ? `<div class="sec-h end" style="margin-top:4px">
         <span style="display:flex;gap:6px;flex-wrap:wrap">${prod ? '<button class="btn btn-sm" data-act="work-link">Afegeix-ne una que ja hi és</button>' : ''}<button class="btn btn-sm btn-primary" data-act="work-new">+ Obra</button></span></div>`
     : me ? `<div class="sec-h" style="margin-top:4px"><span class="muted" style="font-size:calc(13px*var(--ts))">${onlyMine ? `Mostrant el material per a ${esc(SEC[me.section].name.toLowerCase())}${me.part ? ` ${esc(me.part)}` : ''}` : 'Mostrant tot el material'}</span><button class="btn btn-sm btn-ghost" data-act="mat-mine">${onlyMine ? 'Mostra-ho tot' : `Només la meva ${V.part}`}</button></div>` : '';
@@ -61,16 +63,16 @@ function boardMaterialsOf(prod, onlyMine, me) {
   const sorted = [...items].sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind) || a.title.localeCompare(b.title, 'ca'));
   const row = x => `<div class="mat">${matTag(x.kind)}
       <span class="mat-i">${itemLink(x, `data-act="file-open" data-src="mat" data-pid="${prod.id}" data-id="${x.id}"`)}<small>${[MAT_KINDS[x.kind], x.section ? esc(SEC[x.section].name) : capz(V.tot), x.part ? `${V.part} ${esc(x.part)}` : '', fileNote(x), x.file && offlineSaved().has(x.file.id) ? 'desat al mòbil' : ''].filter(Boolean).join(' · ')}</small></span>
-      ${canEdit() ? `<button class="icon-btn" data-act="mat-edit" data-pid="${prod.id}" data-id="${x.id}" aria-label="Edita">${ICON.more}</button>` : ''}</div>`;
-  if (!sorted.length && !canEdit()) return '';
-  return `<div class="section-title"><h2 class="h2">Altres materials</h2>${canEdit() ? '<button class="btn btn-sm" data-act="mat-new">+ Material</button>' : ''}</div>
+      ${canRepertoire() ? `<button class="icon-btn" data-act="mat-edit" data-pid="${prod.id}" data-id="${x.id}" aria-label="Edita">${ICON.more}</button>` : ''}</div>`;
+  if (!sorted.length && !canRepertoire()) return '';
+  return `<div class="section-title"><h2 class="h2">Altres materials</h2>${canRepertoire() ? '<button class="btn btn-sm" data-act="mat-new">+ Material</button>' : ''}</div>
     ${sorted.length ? `<div class="panel prod-tone tinted" style="--ph:${prodHue(prod)}">${sorted.map(row).join('')}</div>` : '<p class="muted" style="font-size:calc(13px*var(--ts));margin:0 2px">El programa, horaris, enllaços…</p>'}`;
 }
 function sheetWork(id) {
   const w = S.works.get(id);
   if (!w) return;
   const me = S.members.get(myMemberId());
-  let onlyMine = !!me && !canEdit();
+  let onlyMine = !!me && !canRepertoire();
   const facts = [['Compositor', w.composer], ['Arranjament', w.arranger], ['Durada', fmtDur(durSecs(w.duration))], ['Formació', w.voicing],
     ['Produccions', (w.prods || []).map(p => S.productions.get(p)?.name).filter(Boolean).join(', ')]].filter(([, v]) => v);
   const draw = el => {
@@ -91,9 +93,9 @@ function sheetWork(id) {
       ${(w.roles || []).length ? `<ul class="mini-list" style="max-height:none">${w.roles.map(r => `<li class="${me && (r.memberIds || []).includes(me.id) ? 'is-me' : ''}"><span><b>${esc(r.name)}</b><br>${roleNames(r).length ? `<span class="who-sings">${(r.memberIds || []).map(id => S.members.get(id)).filter(Boolean).map(x => `<span class="ws">${avatar(x)}${esc(fullName(x.name))}</span>`).join('')}</span>` : '<span class="m">Encara per decidir</span>'}</span></li>`).join('')}</ul>`
         : '<p class="muted" style="font-size:calc(13px*var(--ts));margin:0">No hi ha solos ni petits grups.</p>'}
       ${scoreBox(ui.matProd !== 'all' ? ui.matProd : '', w)}
-      <div class="section-title" style="margin-top:14px"><h2 class="h2">Partitures i àudios</h2>${me && !canEdit() ? '<button class="btn btn-sm btn-ghost" id="wk-mine"></button>' : ''}</div>
+      <div class="section-title" style="margin-top:14px"><h2 class="h2">Partitures i àudios</h2>${me && !canRepertoire() ? '<button class="btn btn-sm btn-ghost" id="wk-mine"></button>' : ''}</div>
       <div class="panel" id="wk-mats"></div>`,
-    foot: `${canEdit() ? `<button class="btn" data-act="work-edit" data-id="${esc(w.id)}">Edita</button>` : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Tanca</button>`,
+    foot: `${canRepertoire() ? `<button class="btn" data-act="work-edit" data-id="${esc(w.id)}">Edita</button>` : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Tanca</button>`,
     onMount: el => {
       draw(el);
       el.querySelector('#wk-mine')?.addEventListener('click', () => { onlyMine = !onlyMine; draw(el); });
@@ -296,7 +298,7 @@ async function offlineSaveAll() {
   const all = ui.matProd === 'all';
   const prod = all ? null : S.productions.get(ui.matProd);
   const me = S.members.get(myMemberId());
-  const onlyMine = !!me && !canEdit() && ui.matMine !== false;
+  const onlyMine = !!me && !canRepertoire() && ui.matMine !== false;
   const files = offlineCandidates(all ? worksSorted() : worksOf(prod?.id), prod, onlyMine ? me : null).filter(f => !offlineSaved().has(f.id));
   if (!navigator.onLine) { toast('Cal connexió per desar-los'); return; }
   let done = 0;
