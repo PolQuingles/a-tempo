@@ -30,6 +30,7 @@ function afterReady() {
   if (g && S.config.name && g.name !== S.config.name) { g.name = S.config.name; saveGroupsCache(); }
   touchLastSeen();
   watchMessages();
+  watchJoinReqs();
   watchThreads();
   // Qui edita arxiva els trimestres acabats (vegeu 02-dades), quan ja ha llegit totes les llistes del servidor.
   setTimeout(archiveTerms, window.COR_ARCHIVE_WAIT || 8000);
@@ -110,7 +111,11 @@ async function init() {
     try { S.groups = await myGroups(S.email); saveGroupsCache(); }
     catch { S.groups = cachedGroups(); }
     if (takeIntent() === 'create') { await platform; if (S.pro) { startCreate(); return; } }
-    const want = urlGroup() || rememberedGroup();
+    // L'enllaç del cor (vegeu 12c-entrar): qui encara no hi té accés tria el seu nom i el demana; qui ja en té, hi entra.
+    const join = joinIntent();
+    if (join && !S.groups.some(g => g.id === join.gid)) { startJoin(join); return; }
+    if (join) dropJoinIntent();
+    const want = (join && join.gid) || urlGroup() || rememberedGroup();
     const pick = S.groups.find(g => g.id === want) || (S.groups.length === 1 ? S.groups[0] : null);
     if (!S.groups.length) { S.mode = 'nostaff'; render(); return; }
     if (!pick) { S.mode = 'pick'; render(); refreshGroupInfo().then(() => { if (S.mode === 'pick') render(); }); return; }

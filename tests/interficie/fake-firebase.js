@@ -10,6 +10,7 @@
     dir: { uid: 'uid-dir', email: 'dir@exemple.cat', displayName: 'Dídac Director' },
     ger: { uid: 'uid-ger', email: 'ger@exemple.cat', displayName: 'Gemma Gerent' },
     arx: { uid: 'uid-arx', email: 'arx@exemple.cat', displayName: 'Laia Ferrer' },
+    nou: { uid: 'uid-nou', email: 'nou@exemple.cat', displayName: 'Oriol Camps' },   // encara no té accés: entra amb l'enllaç del cor
   };
   const m = location.search.match(/[?&]u=(\w+)/);
   if (m) localStorage.setItem('fake:user', m[1]);

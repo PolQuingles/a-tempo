@@ -196,7 +196,7 @@ function render() {
   applyBrand();
   paintBrandName();
   document.title = shownName() || PLATFORM.name;
-  document.body.classList.toggle('is-login', ['badlink', 'nokey', 'nostaff', 'loading', 'pick', 'create', 'suspended'].includes(S.mode));
+  document.body.classList.toggle('is-login', ['badlink', 'nokey', 'nostaff', 'loading', 'pick', 'create', 'suspended', 'join'].includes(S.mode));
   updateSync();
   paintAccount();
   renderBanner();
@@ -221,8 +221,12 @@ function render() {
     mailMount(v);
     return;
   }
+  if (S.mode === 'join') { v.innerHTML = viewJoin(hero()); mountJoin(v); return; }
   if (S.mode === 'badlink' || S.mode === 'nokey') {
-    const intro = S.mode === 'badlink'
+    // Amb l'enllaç del cor: primer s'entra amb el compte, i després es tria el nom (vegeu 12c-entrar).
+    const joining = S.mode === 'nokey' && !!joinIntent();
+    const intro = joining ? `<h2 class="h2">Entra per unir-t’hi</h2><p>Entra amb el teu compte de Google (o amb un altre correu). Després triaràs el teu nom de la llista i l’administració et donarà accés.</p>`
+      : S.mode === 'badlink'
       ? `<h2 class="h2">Aquest enllaç ja no funciona</h2><p>Ara tothom entra amb el seu correu, el mateix que has donat a l’agrupació.</p>`
       : `<h2 class="h2">Entra-hi</h2><p>Fes servir el correu que has donat a la teva agrupació.</p>`;
     v.innerHTML = `<section class="entry">${hero()}

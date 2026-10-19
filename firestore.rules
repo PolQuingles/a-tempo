@@ -127,7 +127,7 @@ service cloud.firestore {
     // tools/stamp.py hi escriu l'empremta d'aquest fitxer. La vigilància comprova que les regles publicades són les del
     // repositori demanant reglesVersio/<empremta>: si les publicades són unes altres, la lectura es denega.
     match /reglesVersio/{v} {
-      allow get: if v == 'a3c1f0867ec8';
+      allow get: if v == '45073814aca4';
     }
 
     match /plataforma/equip {
@@ -282,6 +282,29 @@ service cloud.firestore {
           && request.resource.data.prods is map && request.resource.data.prods.size() <= 200
           && shortText(request.resource.data, 'at', 40) && shortText(request.resource.data, 'by', 120));
         allow delete: if canEdit(c);
+      }
+      // L'enllaç del cor (12c-entrar): join/<codi> porta el nom de l'agrupació, les cordes i la llista de qui encara no té
+      // accés, perquè qui obre l'enllaç s'hi trobi. Només el pot llegir qui sap el codi (get, mai la llista de codis) i
+      // mentre l'enllaç està actiu; l'administració el fa, el canvia i el desactiva.
+      match /join/{code} {
+        allow get: if verified() && resource.data.get('active', false) == true;
+        allow read: if isAdmin(c) || hasRole(c, ['backup']) || isService();
+        allow create, update, delete: if isAdmin(c);
+      }
+      // La petició de qui ha obert l'enllaç: la fa la persona mateixa (amb el seu correu i un codi actiu), només si encara no
+      // té accés. La veuen ella i l'administració, que hi dona accés (crea staff/<correu>) o la rebutja (l'esborra).
+      match /joinReq/{e} {
+        allow read: if isAdmin(c) || (verified() && email() == e) || hasRole(c, ['backup']) || isService();
+        allow create, update: if verified() && email() == e && groupOk(c) && !exists(staffPath(c))
+          && request.resource.data.keys().hasOnly(['email', 'name', 'account', 'memberId', 'section', 'code', 'at'])
+          && request.resource.data.email == e
+          && request.resource.data.code is string && request.resource.data.code.size() <= 40
+          && exists(/databases/$(database)/documents/cors/$(c)/join/$(request.resource.data.code))
+          && get(/databases/$(database)/documents/cors/$(c)/join/$(request.resource.data.code)).data.get('active', false) == true
+          && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 120
+          && shortText(request.resource.data, 'account', 120) && shortText(request.resource.data, 'memberId', 60)
+          && shortText(request.resource.data, 'section', 20) && shortText(request.resource.data, 'at', 40);
+        allow delete: if isAdmin(c) || (verified() && email() == e);
       }
       // Quanta gent ha vist cada anunci, per cordes i sense noms: annSeen/<anunci> = { S: 12, C: 9… }, que només llegeix l'equip.
       // Cada compte amb fitxa a la plantilla hi suma 1 a la seva corda, un sol cop: en el mateix lot ha de crear

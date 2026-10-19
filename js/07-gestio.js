@@ -43,6 +43,7 @@ function accessPanel() {
     <div class="setting"><div><div class="t">${accs.length} de ${members.length} ${esc(V.members)} tenen accés${accs.length ? ` · ${entered} hi han entrat${never ? `, ${never} encara no` : ''}` : ''} ${helpBtn('acces')}</div>
       ${helpText('acces', `Afegeix cada persona un sol cop: el nom, el correu per entrar a l’app i què fa (si canta, també la ${esc(V.section)}). Si algú marxa, treu-li l’accés: el perd a l’instant, però no se n’esborra la fitxa ni les llistes.`)}</div></div>
     <div class="access-acts"><button class="btn btn-sm btn-primary" data-act="staff-new" ${ROLE_KEYS.includes(ui.people) ? `data-role="${esc(ui.people)}"` : ''}>+ Persona</button>
+      <button class="btn btn-sm btn-soft" data-act="join-link">Enllaç i QR per entrar</button>${joinRequests().length ? `<button class="btn btn-sm btn-soft" data-act="join-reqs">Peticions (${joinRequests().length})</button>` : ''}
       ${mailProblems().length ? `<button class="btn btn-sm btn-soft" data-act="mail-check">Revisa els accessos (${mailProblems().length})</button>` : ''}<button class="btn btn-sm" data-act="people-tools">Més…</button></div>
   </div>`;
 }
@@ -53,6 +54,7 @@ function sheetPeopleTools() {
   openSheet({
     title: 'Eines de l’accés',
     body: `<div class="write-opts">
+      ${o('join-link', 'Enllaç i QR per entrar', 'Cadascú entra amb el seu compte, tria el seu nom i et demana l’accés: no cal recollir els correus.')}
       ${o('staff-bulk', 'Enganxa una llista', 'Unes quantes persones d’un cop, amb el nom i el correu (també d’un full de càlcul).')}
       ${o('share-app', 'Enllaç de l’app', 'L’adreça i un missatge per enviar a qui ha de començar a fer-la servir.')}
       ${o('who-in', 'Qui ha entrat', 'Qui ja fa servir l’app, qui encara no i a qui li falta el correu.')}

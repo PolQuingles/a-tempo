@@ -67,6 +67,7 @@ const TODO_ICONS = {
   plan: '<path d="M9 18V6.5l10-2.5v11.5"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="15.5" r="2.5"/>',
   ward: WARD_ICON,
   score: '<path d="M6 3.5h9l3 3v14H6z"/><path d="M15 3.5v3h3M9 11h6M9 14h6M9 17h4"/>',
+  join: '<circle cx="10" cy="8" r="3.5"/><path d="M3.5 19.5a6.5 6.5 0 0113 0M18.5 8v6M15.5 11h6"/>',
 };
 const unreadAnnouncements = () => { const seen = lsGet(LS_SEEN) || ''; return visibleAnnouncements().filter(a => (a.createdAt || '') > seen && (!a.until || a.until >= TODAY)); };
 /** Les seccions on em toca passar llista: la dels caps de corda o de secció. */
@@ -79,6 +80,9 @@ function todoItems() {
     const s = sessionById(x.sessionId);
     if (s) out.push({ icon: 'roll', t: x.auto ? `Ets ${esc(V.leader)} en funcions de ${esc(SEC[x.section].name.toLowerCase())}: passa llista` : `Avui passes llista de ${esc(SEC[x.section].name.toLowerCase())}`, s: `${esc(s.type || 'Assaig')}${s.time ? ` · ${esc(timeRange(s))}` : ''}`, btn: 'Passa llista', act: `data-act="home-roll" data-sid="${esc(s.id)}" data-sec="${esc(x.section)}"`, n: 1 });
   }
+  // Qui ha obert l'enllaç del cor i espera que l'administració li doni accés (vegeu 12c-entrar).
+  const jr = joinRequests();
+  if (jr.length) out.push({ icon: 'join', t: `${jr.length === 1 ? '1 persona vol' : `${jr.length} persones volen`} entrar a l’app`, s: esc(jr.slice(0, 3).map(r => r.name).join(', ') + (jr.length > 3 ? '…' : '')), btn: 'Revisa', act: 'data-act="join-reqs"', n: jr.length });
   if (canEdit()) {
     const abs = pendingAbsences();
     if (abs.length) {
