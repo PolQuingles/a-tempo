@@ -639,6 +639,22 @@ expect("R7c ni a tothom", commit([upd(f"cors/{F}/messages/r7c", {**MSG, "id": "r
 expect("R7d esborra el seu", commit([dele(f"cors/{F}/messages/r7")], T["arx"]), True)
 expect("R8 l'arxiver escriu a una soprano", commit([upd(f"cors/{F}/threads/r8", TS("r8", "m1", "S", "arx@exemple.cat"))], T["arx"]), True)
 expect("R8b no a un tenor", commit([upd(f"cors/{F}/threads/r8b", TS("r8b", "m2", "T", "arx@exemple.cat"))], T["arx"]), False)
+# Els arxivers també porten el repertori: obres, fitxers i els altres materials de cada producció (només això).
+expect("R9 l'arxiver afegeix una obra", commit([upd(f"cors/{F}/works/wa", {"id": "wa", "title": "Magnificat", "materials": []})], T["arx"]), True)
+expect("R9b l'edita (solos, partitures i àudios)", commit([upd(f"cors/{F}/works/wa", {"roles": [{"id": "r1", "name": "Solo", "memberIds": ["m1"]}], "materials": [{"id": "mt1", "kind": "audio", "title": "Àudio"}]}, ["roles", "materials"])], T["arx"]), True)
+expect("R9c puja un fitxer a trossos", commit([upd(f"cors/{F}/config/fitxer_fa1b2_0", {"i": 0, "of": 1})], T["arx"]), True)
+expect("R9d i l'esborra", commit([dele(f"cors/{F}/config/fitxer_fa1b2_0")], T["arx"]), True)
+expect("R9e esborra l'obra", commit([dele(f"cors/{F}/works/wa")], T["arx"]), True)
+expect("R9f i avisa els mòbils que tornin a baixar el repertori", commit([upd(f"cors/{F}/config/main", {"syncEpoch": {"works": "abc"}}, ["syncEpoch"])], T["arx"]), True)
+expect("R9g però no toca la resta de la configuració", commit([upd(f"cors/{F}/config/main", {"minAttendance": 50}, ["minAttendance"])], T["arx"]), False)
+expect("R9h ni altres documents de config", commit([upd(f"cors/{F}/config/altre", {"x": 1})], T["arx"]), False)
+expect("R9i canvia els altres materials d'una producció", commit([upd(f"cors/{F}/productions/p1", {"materials": [{"id": "mt2", "kind": "partitura", "title": "Programa"}]}, ["materials"])], T["arx"]), True)
+expect("R9j però no les sessions", commit([upd(f"cors/{F}/productions/p1", {"sessions": []}, ["sessions"])], T["arx"]), False)
+expect("R9k ni qui la fa", commit([upd(f"cors/{F}/productions/p1", {"excluded": ["m1"]}, ["excluded"])], T["arx"]), False)
+expect("R9l ni crea produccions", commit([upd(f"cors/{F}/productions/pz", {"id": "pz", "name": "X", "materials": []})], T["arx"]), False)
+expect("R9m un cantaire no toca els materials", commit([upd(f"cors/{F}/productions/p1", {"materials": []}, ["materials"])], T["singer"]), False)
+expect("R9n ni puja fitxers", commit([upd(f"cors/{F}/config/fitxer_fz_0", {"i": 0})], T["singer"]), False)
+expect("R9o ni avisa els mòbils", commit([upd(f"cors/{F}/config/main", {"syncEpoch": {"works": "x"}}, ["syncEpoch"])], T["singer"]), False)
 
 print("V. Vestidor")
 WD = lambda mid, st="demanat", **k: {"id": k.pop("id", "wd1"), "memberId": mid, "memberName": "Cantaire U", "section": "S", "item": "americana", "size": "48", "status": st, "note": "",

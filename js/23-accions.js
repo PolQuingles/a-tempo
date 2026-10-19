@@ -9,10 +9,12 @@ const ADMIN_ONLY = new Set(['join-link', 'join-reqs', 'join-approve', 'join-reje
 const PRO_ONLY = new Set(['brand-color', 'logo-remove', 'kind-set', 'group-delete', 'sections-save', 'sections-undo']);
 // El calendari de les classes: només el professorat de cant i l'administració.
 const CLASS_ONLY = new Set(['cl-new', 'cl-edit', 'cl-review', 'cl-paste', 'cl-plan', 'cl-note', 'cl-mark', 'cl-stats', 'cl-cancel-day']);
-const EDIT_ONLY = new Set(['prod-roll', 'mark', 'min', 'early', 'early-open', 'mark-rest', 'session-new', 'sub-set', 'ann-new', 'ann-edit', 'mat-new', 'mat-edit', 'poll-new', 'poll-edit', 'poll-results', 'poll-remind', 'rsvp-remind', 'doc-new', 'doc-edit', 'share-app', 'staff-bulk', 'preview-on', 'who-in', 'mail-check', 'concert-list', 'concert-toggle', 'session-edit', 'member-edit', 'member-new', 'member-bulk', 'prod-new', 'prod-edit',
+const EDIT_ONLY = new Set(['prod-roll', 'mark', 'min', 'early', 'early-open', 'mark-rest', 'session-new', 'sub-set', 'ann-new', 'ann-edit', 'poll-new', 'poll-edit', 'poll-results', 'poll-remind', 'rsvp-remind', 'doc-new', 'doc-edit', 'share-app', 'staff-bulk', 'preview-on', 'who-in', 'mail-check', 'concert-list', 'concert-toggle', 'session-edit', 'member-edit', 'member-new', 'member-bulk', 'prod-new', 'prod-edit',
   'wipe-demo', 'wipe-all', 'load-demo', 'export-json', 'abs-accept', 'abs-reject', 'abs-delete', 'manage',
   'roster-export', 'docs-copy-noimg',
-  'choices-overview', 'work-new', 'work-edit', 'work-link', 'plan-edit', 'seating-edit', 'participants', 'certificate', 'season-report', 'trip-new', 'trip-edit', 'trip-admin', 'trip-remind']);
+  'choices-overview', 'plan-edit', 'seating-edit', 'participants', 'certificate', 'season-report', 'trip-new', 'trip-edit', 'trip-admin', 'trip-remind']);
+// El repertori: l'equip i els arxivers (canRepertoire, a 18-repertori).
+const REP_ONLY = new Set(['work-new', 'work-edit', 'work-link', 'mat-new', 'mat-edit']);
 const actions = {
   'tab': el => { if (el.dataset.tab === 'gestio' && ui.tab !== 'gestio') ui.gestioFrom = ui.tab; ui.tab = el.dataset.tab; if (ui.tab === 'tauler') ui.board = boardStart(); ui.rollSec = null; ui._calScrolled = false; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
   'reload': () => location.reload(),
@@ -369,6 +371,7 @@ document.addEventListener('click', e => {
   e.preventDefault();
   const subAllowed = SUB_OK.has(act) && canMark(sessionById(ui.sessionId), ui.rollSec || ui.section);
   if (EDIT_ONLY.has(act) && !canEdit() && !subAllowed) { toast('Amb aquest enllaç no pots fer aquesta acció'); return; }
+  if (REP_ONLY.has(act) && !canRepertoire()) { toast(`Només l’equip i els arxivers poden canviar el repertori`); return; }
   if (ADMIN_ONLY.has(act) && !isAdmin()) { toast('Només l’administració de l’agrupació pot fer-ho'); return; }
   if (PRO_ONLY.has(act) && !canManageGroup()) { toast('Només un Usuari Pro que administri l’agrupació pot canviar-ho'); return; }
   if (CLASS_ONLY.has(act) && !teachesClasses()) { toast(`Només el ${V.Teacher.toLowerCase()} pot fer-ho`); return; }

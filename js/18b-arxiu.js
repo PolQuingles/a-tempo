@@ -20,11 +20,38 @@ const archiveSec = () => isArchivist() ? (ME()?.section || '') : '';
 const canScores = sec => canEdit() || (isArchivist() && !!sec);
 /** Veu l'arxiu sencer (l'estat de tothom): l'equip i els arxivers. */
 const seesArchive = () => canEdit() || isArchivist();
-/** Qui ha de tenir les partitures d'una producció: qui la fa (actiu i que no n'és fora). */
-const scorePeople = (pid, sec) => membersOf(sec || null).filter(m => !isExcluded(pid, m.id));
-/** El recompte d'una obra (d'una corda o de totes) i en quin punt és: 'todo' | 'given' | 'returned' ('' si no hi ha ningú). */
+/** Per què algú ja no fa una producció (i, per tant, no n'ha de tenir les partitures): 'cor' si ja no és al cor, 'prod' si
+ *  n'és fora («No fa», o ha dit que no la farà) i 'baixa' si està de baixa a totes les sessions que li queden (si ja s'ha
+ *  acabat, a totes). '' si la fa. Torna una funció per mirar-ho persona per persona sense refer les sessions cada cop. */
+function prodOut(pid) {
+  const ss = allSessions(pid);
+  return m => {
+    if (m.active === false) return 'cor';
+    if (isExcluded(pid, m.id)) return 'prod';
+    const mine = ss.filter(s => convoked(s, m.section));
+    const ahead = mine.filter(s => s.date >= TODAY);
+    const base = ahead.length ? ahead : mine;
+    return base.length && base.every(s => onLeave(m, s.date)) ? 'baixa' : '';
+  };
+}
+/** Qui surt a l'arxiu d'unes obres: qui fa la producció i, de qui ja no la fa, només qui en té (o n'ha tingut) alguna
+ *  partitura, perquè l'ha de tornar. Qui no la fa i no n'ha rebut cap no hi surt. Cadascú amb out: '' o el motiu (prodOut). */
+function scoreRows(pid, sec, wids) {
+  const why = prodOut(pid);
+  return membersOf(sec || null, true).map(m => ({ m, out: why(m) })).filter(r => !r.out || wids.some(w => scoreOf(pid, w, r.m)));
+}
+/** Qui ha de tenir les partitures d'una producció: qui la fa. */
+const scorePeople = (pid, sec) => scoreRows(pid, sec, []).map(r => r.m);
+/** El recordatori sota el nom de qui ja no fa la producció però en té (o n'ha tingut) la partitura. */
+function outNote(out, s) {
+  if (!out || !s) return '';
+  const why = out === 'cor' ? `Ja no és ${V.al}` : 'Ja no fa la producció';
+  return s === 'given' ? `${why}, però té la partitura: l’ha de retornar` : `${why} · ja l’ha retornada`;
+}
+/** El recompte d'una obra (d'una corda o de totes) i en quin punt és: 'todo' | 'given' | 'returned' ('' si no hi ha ningú).
+ *  Hi compta qui fa la producció i qui ja no la fa però en té (o n'ha tornat) la partitura. */
 function scoreSummary(pid, wid, sec) {
-  const ms = scorePeople(pid, sec);
+  const ms = scoreRows(pid, sec, [wid]).map(r => r.m);
   let given = 0, returned = 0;
   for (const m of ms) { const s = scoreOf(pid, wid, m); if (s) given++; if (s === 'returned') returned++; }
   const n = ms.length;
@@ -52,9 +79,10 @@ function scorePill(pid, w) {
     return sumPill(x, true);
   }
   const me = S.members.get(myMemberId());
-  if (!me || isExcluded(pid, me.id)) return '';
-  const s = scoreOf(pid, w.id, me);
-  return `<span class="sc-pill ${SCORE_CLS[s]}" title="La teva partitura">${scoreLabel(s)}</span>`;
+  if (!me) return '';
+  const s = scoreOf(pid, w.id, me), out = prodOut(pid)(me);
+  if (out && !s) return '';
+  return `<span class="sc-pill ${SCORE_CLS[s]}" title="La teva partitura">${out && s === 'given' ? 'Per tornar' : scoreLabel(s)}</span>`;
 }
 /** La pastilla del recompte d'una obra. A mig repartir diu «Repartint» (i a mig recollir, «Recollint»), amb el tros fet pintat.
  *  Amb count, també el nombre: «Repartint · 51/67». */
@@ -93,10 +121,11 @@ function scoreBox(pid, w) {
         <button class="btn btn-sm btn-primary" data-act="score-work" data-pid="${esc(pid)}" data-id="${esc(w.id)}">Reparteix o recull</button></div>`;
   }
   const me = S.members.get(myMemberId());
-  if (!me || isExcluded(pid, me.id)) return '';
-  const s = scoreOf(pid, w.id, me);
+  if (!me) return '';
+  const s = scoreOf(pid, w.id, me), out = prodOut(pid)(me);
+  if (out && !s) return '';
   return `<div class="section-title" style="margin-top:14px"><h2 class="h2">La teva partitura</h2>${scorePill(pid, w)}</div>
-    <p class="muted" style="margin:0 2px;font-size:calc(13px*var(--ts))">${s === 'given' ? `La tens tu. En acabar ${esc(prod?.name || 'la producció')}, torna-la a l’arxiver de la teva ${esc(V.section)}.` : s === 'returned' ? 'Ja l’has tornada a l’arxiu. Gràcies!' : `Encara no te l’han donada: te la donarà l’arxiver de la teva ${esc(V.section)}.`}</p>`;
+    <p class="muted" style="margin:0 2px;font-size:calc(13px*var(--ts))">${out && s === 'given' ? `Ja no fas ${esc(prod?.name || 'aquesta producció')}, però tens la partitura: torna-la a l’arxiver de la teva ${esc(V.section)}.` : s === 'given' ? `La tens tu. En acabar ${esc(prod?.name || 'la producció')}, torna-la a l’arxiver de la teva ${esc(V.section)}.` : s === 'returned' ? 'Ja l’has tornada a l’arxiu. Gràcies!' : `Encara no te l’han donada: te la donarà l’arxiver de la teva ${esc(V.section)}.`}</p>`;
 }
 
 /* ---------- Repartir i recollir una obra ---------- */
@@ -105,14 +134,14 @@ function sheetScoreWork(pid, wid, sec0) {
   if (!prod || !w || !seesArchive()) return;
   let sec = sec0 || archiveSec() || SECTIONS[0]?.id || '';
   const paint = el => {
-    const ms = scorePeople(pid, sec), can = canScores(sec), x = scoreSummary(pid, wid, sec);
+    const rows = scoreRows(pid, sec, [wid]), ms = rows.map(r => r.m), can = canScores(sec), x = scoreSummary(pid, wid, sec);
     el.querySelectorAll('#sw-sec .chip').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.sec === sec)));
     el.querySelector('#sw-sum').innerHTML = `${sumPill(x, false)}
       <span class="muted">${x.given} de ${x.n} repartides · ${x.returned} ${x.returned === 1 ? 'retornada' : 'retornades'}</span>`;
     el.querySelector('#sw-bulk').hidden = !can || !ms.length;
-    el.querySelector('#sw-list').innerHTML = ms.length ? ms.map(m => {
-      const s = scoreOf(pid, wid, m);
-      return `<li class="sw-row" data-mid="${esc(m.id)}"><span class="sw-n">${esc(m.name)}${m.part ? ` <span class="part">${esc(partTag(m))}</span>` : ''}</span>
+    el.querySelector('#sw-list').innerHTML = ms.length ? rows.map(({ m, out }) => {
+      const s = scoreOf(pid, wid, m), note = outNote(out, s);
+      return `<li class="sw-row${note ? ' sw-out' : ''}" data-mid="${esc(m.id)}"><span class="sw-n">${esc(m.name)}${m.part ? ` <span class="part">${esc(partTag(m))}</span>` : ''}${note ? `<small class="sc-out">${esc(note)}</small>` : ''}</span>
         <span class="seg3 sw-seg" role="radiogroup" aria-label="${esc(m.name)}">${SCORE_STATES.map(([k, l]) => `<button type="button" role="radio" data-k="${k}" aria-checked="${s === k}" ${can ? '' : 'disabled'}>${l}</button>`).join('')}</span></li>`;
     }).join('') : `<li class="muted" style="padding:12px 2px">Ningú d’aquesta ${esc(V.section)} fa la producció.</li>`;
     el.querySelectorAll('.sw-row').forEach(r => r.querySelectorAll('button[data-k]').forEach(b => b.onclick = () => {
@@ -136,7 +165,7 @@ function sheetScoreWork(pid, wid, sec0) {
       el.querySelectorAll('#sw-sec .chip').forEach(b => b.onclick = () => { sec = b.dataset.sec; paint(el); });
       el.querySelectorAll('#sw-bulk [data-bulk]').forEach(b => b.onclick = () => {
         if (!canScores(sec)) return;
-        const to = b.dataset.bulk, ms = scorePeople(pid, sec);
+        const to = b.dataset.bulk, ms = scoreRows(pid, sec, [wid]).map(r => r.m);
         // «Totes repartides» no toca les que ja han tornat; «Totes retornades», només les que algú té.
         const touch = ms.filter(m => { const s = scoreOf(pid, wid, m); return to === 'given' ? s === '' : s === 'given'; });
         if (!touch.length) { toast(to === 'given' ? 'Ja estan totes repartides' : 'Ningú no en té cap per tornar'); return; }
@@ -158,16 +187,26 @@ function sheetArchive(pid) {
   let sec = archiveSec() && !canEdit() ? archiveSec() : '';
   const draw = el => {
     el.querySelectorAll('#ax-sec .chip').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.sec === sec)));
-    const ms = scorePeople(pid, sec).sort((a, b) => SECTIONS.findIndex(x => x.id === a.section) - SECTIONS.findIndex(x => x.id === b.section) || byName(a, b));
-    let given = 0, returned = 0;
-    const cells = new Map(ms.map(m => [m.id, works.map(w => { const s = scoreOf(pid, w.id, m); if (s) given++; if (s === 'returned') returned++; return s; })]));
-    const total = ms.length * works.length;
+    const rows = scoreRows(pid, sec, works.map(w => w.id)).sort((a, b) => SECTIONS.findIndex(x => x.id === a.m.section) - SECTIONS.findIndex(x => x.id === b.m.section) || byName(a.m, b.m));
+    const ms = rows.map(r => r.m), outOf = new Map(rows.map(r => [r.m.id, r.out]));
+    // De qui ja no fa la producció només compten les obres que té (o ha tornat): les altres no les ha de tenir ('na').
+    let given = 0, returned = 0, total = 0;
+    const cells = new Map(ms.map(m => [m.id, works.map(w => {
+      const s = scoreOf(pid, w.id, m);
+      if (!s && outOf.get(m.id)) return 'na';
+      total++; if (s) given++; if (s === 'returned') returned++;
+      return s;
+    })]));
     const pctOf = n => total ? Math.round(n / total * 100) : 0;
     const toGive = ms.map(m => ({ m, ws: works.filter((w, i) => cells.get(m.id)[i] === '') })).filter(x => x.ws.length);
-    const toReturn = ms.map(m => ({ m, ws: works.filter((w, i) => cells.get(m.id)[i] === 'given') })).filter(x => x.ws.length);
+    const holding = ms.map(m => ({ m, ws: works.filter((w, i) => cells.get(m.id)[i] === 'given') })).filter(x => x.ws.length);
     const ended = allSessions(pid).every(s => s.date < TODAY);
-    const who = list => list.map(({ m, ws }) => `<li><span><b>${esc(m.name)}</b><br><span class="m">${esc(SEC[m.section].name)} · ${esc(ws.map(w => w.title).join(', '))}</span></span></li>`).join('');
-    const text = (title, list) => `${title} · ${prod.name}\n` + list.map(({ m, ws }) => `- ${fullName(m.name)} (${SEC[m.section].name}): ${ws.map(w => w.title).join(', ')}`).join('\n');
+    // Mentre dura la producció, qui ja no la fa i encara té partitures surt a part: les ha de tornar ja.
+    const toBack = ended ? [] : holding.filter(x => outOf.get(x.m.id));
+    const toReturn = ended ? holding : holding.filter(x => !outOf.get(x.m.id));
+    const noteOf = m => outOf.get(m.id) ? (outOf.get(m.id) === 'cor' ? `ja no és ${V.al}` : 'ja no fa la producció') : '';
+    const who = list => list.map(({ m, ws }) => `<li><span><b>${esc(m.name)}</b><br><span class="m">${esc(SEC[m.section].name)} · ${esc(ws.map(w => w.title).join(', '))}</span>${noteOf(m) ? `<small class="sc-out">${esc(capz(noteOf(m)))}: l’ha de retornar</small>` : ''}</span></li>`).join('');
+    const text = (title, list) => `${title} · ${prod.name}\n` + list.map(({ m, ws }) => `- ${fullName(m.name)} (${SEC[m.section].name}${noteOf(m) ? `, ${noteOf(m)}` : ''}): ${ws.map(w => w.title).join(', ')}`).join('\n');
     el.querySelector('#ax-body').innerHTML = !works.length ? `<p class="muted">Aquesta producció encara no té obres al repertori.</p>` : `
       <div class="ax-kpis">
         <div><b>${given - returned}</b><span>a les mans</span></div>
@@ -178,11 +217,13 @@ function sheetArchive(pid) {
       <div class="section-title"><h2 class="h2">Obra per obra</h2></div>
       <ul class="ax-works">${works.map(w => { const x = scoreSummary(pid, w.id, sec); return `<li><button data-act="score-work" data-pid="${esc(pid)}" data-id="${esc(w.id)}" data-sec="${esc(sec || archiveSec() || '')}">
         <span class="ax-w"><b>${esc(w.title)}</b><small>${x.given} de ${x.n} repartides · ${x.returned} ${x.returned === 1 ? 'retornada' : 'retornades'}</small></span>${sumPill(x, false)}</button></li>`; }).join('')}</ul>
+      ${toBack.length ? `<div class="section-title"><h2 class="h2">Ja no fan la producció</h2><button class="btn btn-sm btn-ghost" id="ax-cp-back">Copia la llista</button></div><ul class="mini-list" style="max-height:none">${who(toBack)}</ul>` : ''}
       ${toGive.length ? `<div class="section-title"><h2 class="h2">Falten per repartir</h2><button class="btn btn-sm btn-ghost" id="ax-cp-give">Copia la llista</button></div><ul class="mini-list" style="max-height:none">${who(toGive)}</ul>` : ''}
       ${toReturn.length ? `<div class="section-title"><h2 class="h2">${ended ? 'Falten per retornar' : 'Les tenen ara'}</h2><button class="btn btn-sm btn-ghost" id="ax-cp-ret">Copia la llista</button></div><ul class="mini-list" style="max-height:none">${who(toReturn)}</ul>` : ''}
       <div class="section-title"><h2 class="h2">Qui té què</h2><span class="ax-legend"><i class="pend"></i>A repartir <i class="given"></i>Repartida <i class="returned"></i>Retornada</span></div>
       <div class="table-wrap"><table class="dtable ax-table"><thead><tr><th>${esc(V.Member)}</th>${works.map(w => `<th title="${esc(w.title)}">${esc(w.title)}</th>`).join('')}</tr></thead>
-        <tbody>${ms.map(m => `<tr><td><b>${esc(m.name)}</b> <span class="m">${esc(SEC[m.section].short)}</span></td>${cells.get(m.id).map((s, i) => `<td class="ax-c ${SCORE_CLS[s]}" title="${esc(works[i].title)}: ${scoreLabel(s)}">${s === 'returned' ? '↩' : s === 'given' ? '✓' : '·'}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+        <tbody>${ms.map(m => `<tr><td><b>${esc(m.name)}</b> <span class="m">${esc(SEC[m.section].short)}</span>${noteOf(m) ? `<small class="sc-out">${esc(capz(noteOf(m)))}</small>` : ''}</td>${cells.get(m.id).map((s, i) => s === 'na' ? `<td class="ax-c na" title="${esc(works[i].title)}: no la fa">—</td>` : `<td class="ax-c ${SCORE_CLS[s]}" title="${esc(works[i].title)}: ${scoreLabel(s)}">${s === 'returned' ? '↩' : s === 'given' ? '✓' : '·'}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+    el.querySelector('#ax-cp-back')?.addEventListener('click', () => copyText(text('Partitures per retornar (ja no fan la producció)', toBack), 'Llista copiada'));
     el.querySelector('#ax-cp-give')?.addEventListener('click', () => copyText(text('Partitures per repartir', toGive), 'Llista copiada'));
     el.querySelector('#ax-cp-ret')?.addEventListener('click', () => copyText(text(ended ? 'Partitures per retornar' : 'Partitures repartides', toReturn), 'Llista copiada'));
   };
@@ -210,9 +251,13 @@ function archiveTodos() {
     const ss = allSessions(p.id), works = worksOf(p.id);
     if (!ss.length || !works.length) continue;
     const first = ss[0].date, last = ss[ss.length - 1].date;
-    const ms = scorePeople(p.id, sec);
-    const give = ms.reduce((n, m) => n + works.filter(w => scoreOf(p.id, w.id, m) === '').length, 0);
-    const back = ms.reduce((n, m) => n + works.filter(w => scoreOf(p.id, w.id, m) === 'given').length, 0);
+    const rows = scoreRows(p.id, sec, works.map(w => w.id));
+    const count = (list, s) => list.reduce((n, r) => n + works.filter(w => scoreOf(p.id, w.id, r.m) === s).length, 0);
+    const give = count(rows.filter(r => !r.out), '');
+    const back = count(rows, 'given');
+    // Qui ha deixat la producció a mig camí i encara té partitures: cal recollir-les ja, sense esperar que s'acabi.
+    const left = rows.filter(r => r.out && works.some(w => scoreOf(p.id, w.id, r.m) === 'given'));
+    if (last >= TODAY && left.length) out.push({ icon: 'score', t: `${left.length === 1 ? `${esc(firstName(fullName(left[0].m.name)))} ha de tornar` : `${left.length} persones han de tornar`} ${count(left, 'given') === 1 ? '1 partitura' : `${count(left, 'given')} partitures`}`, s: `Ja no ${left.length === 1 ? 'fa' : 'fan'} ${esc(p.name)} · ${esc(SEC[sec].name)}`, btn: 'Arxiu', act: `data-act="archive" data-pid="${esc(p.id)}"`, n: 1 });
     if (last >= TODAY && first <= addDays(TODAY, 21) && give) out.push({ icon: 'score', t: `${give === 1 ? '1 partitura' : `${give} partitures`} per repartir`, s: `${esc(p.name)} · ${esc(SEC[sec].name)}`, btn: 'Arxiu', act: `data-act="archive" data-pid="${esc(p.id)}"`, n: 1 });
     if (last < TODAY && last >= addDays(TODAY, -60) && back) out.push({ icon: 'score', t: `${back === 1 ? '1 partitura' : `${back} partitures`} per recollir`, s: `${esc(p.name)} ja s’ha acabat · ${esc(SEC[sec].name)}`, btn: 'Arxiu', act: `data-act="archive" data-pid="${esc(p.id)}"`, n: 1 });
   }

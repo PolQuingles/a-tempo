@@ -120,7 +120,9 @@ const stamped = (path, data) => {
 function bumpEpoch(...cols) {
   const e = { ...(S.config.syncEpoch || {}) };
   for (const c of cols) e[c] = newKey().slice(0, 10);
-  saveConfig({ syncEpoch: e });
+  // Un arxiver (que no edita la resta de la configuració) només hi pot tocar syncEpoch: ho canvia sol (vegeu les regles).
+  if (!canEdit()) { S.config = { ...S.config, syncEpoch: e }; if (!PREVIEW) db.doc('config/main').update({ syncEpoch: e }).catch(writeFailed); }
+  else saveConfig({ syncEpoch: e });
   for (const c of cols) if (c !== 'all' && SYNC.st[c]) SYNC.st[c].epoch = epochOf(c);
   if (cols.includes('all')) for (const c of DELTA) if (SYNC.st[c]) SYNC.st[c].epoch = epochOf(c);
   syncSave();

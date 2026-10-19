@@ -14,7 +14,8 @@ service cloud.firestore {
     //   director | gerencia | secretaria | leader → passen llista, publiquen avisos, pugen documents…
     //                             (leader = cap de corda o de secció)
     //   voice                     → professor de cant: porta les classes (classes i classReq), la resta només lectura
-    //   archive                   → arxiver d'una corda (section): reparteix i recull les partitures (scores) de totes les cordes, la resta només lectura
+    //   archive                   → arxiver d'una corda (section): porta el repertori (obres, partitures, àudios, materials) i
+    //                             reparteix i recull les partitures en paper (scores) de totes les cordes; la resta, només lectura
     //   singer                    → només lectura de tota l'app
     // La fitxa pot portar memberId: llavors la persona té el seu espai personal, sigui quin sigui el rol.
     // Cada persona té un índex de les seves agrupacions a staffIndex/<correu>/agrupacions/<agrupació>.
@@ -127,7 +128,7 @@ service cloud.firestore {
     // tools/stamp.py hi escriu l'empremta d'aquest fitxer. La vigilància comprova que les regles publicades són les del
     // repositori demanant reglesVersio/<empremta>: si les publicades són unes altres, la lectura es denega.
     match /reglesVersio/{v} {
-      allow get: if v == '45073814aca4';
+      allow get: if v == '8913163015c9';
     }
 
     match /plataforma/equip {
@@ -239,6 +240,9 @@ service cloud.firestore {
         // La resta de la configuració la canvia qui pot editar; la identitat, només un Usuari Pro que l'administri.
         allow update: if canEdit(c)
           && (canManage(c) || !request.resource.data.diff(resource.data).affectedKeys().hasAny(identityKeys()));
+        // Els arxivers, en esborrar una obra del repertori, avisen la resta de mòbils que la tornin a baixar (syncEpoch).
+        allow update: if staffHas(c, ['archive'])
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['syncEpoch']);
       }
       match /{col}/{doc} {
         allow read: if (col in ['members', 'productions', 'attendance', 'config', 'staff', 'subs', 'rsvp', 'absences',
@@ -259,6 +263,12 @@ service cloud.firestore {
         allow delete: if col in ['members', 'productions', 'attendance', 'config', 'subs', 'rsvp',
                                  'announcements', 'polls', 'pollVotes', 'works', 'trips'] && canEdit(c)
           && !(col == 'config' && doc == 'main');
+        // Els arxivers porten el repertori: les obres (amb els seus solos, partitures i àudios), els fitxers que s'hi
+        // pugen (config/fitxer_…) i els altres materials de cada producció (només el camp materials, res més).
+        allow create, update, delete: if staffHas(c, ['archive'])
+          && (col == 'works' || (col == 'config' && doc.matches('fitxer_[A-Za-z0-9]+_[0-9]+')));
+        allow update: if col == 'productions' && staffHas(c, ['archive'])
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['materials', 'syncAt']);
       }
       // Arxiu de l'assistència: totes les llistes d'un tros de temporada ja acabat en un sol document (menys lectures).
       // Qui pot passar llista el crea i el corregeix; el llegeix tothom qui llegeix les llistes.
