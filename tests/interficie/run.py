@@ -1490,6 +1490,66 @@ def main():
         check(not errors, "sense errors amb la setmana, el material i els anuncis vistos", "; ".join(errors[:3]))
         ctx.close()
 
+        print("Entrar amb l'enllaç del cor: l'enllaç, la petició i l'aprovació")
+        ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/gestio/personal")
+        page.wait_for_function("S.staffReady", timeout=5000)
+        r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          out.btn = !!document.querySelector('.access-acts [data-act="join-link"]');
+          document.querySelector('.access-acts [data-act="join-link"]').click(); await s(800);
+          const code = S.config.joinCode;
+          const doc = code ? (await firebase.firestore().doc(`cors/${GID}/join/${code}`).get()).data() : null;
+          out.code = !!code && /^[a-z0-9]{10,40}$/.test(code);
+          out.list = !!doc && doc.active === true && doc.people.length === [...S.members.values()].filter(m => m.active !== false && !accountFor(m.id)).length
+            && doc.people.some(p => p.id === 'mT2' && p.n === 'Oriol Camps') && !doc.people.some(p => p.id === 'mS0');
+          out.url = (document.querySelector('#jn-url')?.textContent || '').includes(`a=${GID}&uneix=${code}`);
+          out.qr = !!document.querySelector('#jn-qr svg') || /QR/.test(document.querySelector('#jn-qr')?.textContent || '');
+          closeSheet(); return { ...out, codeValue: code, gidValue: GID }; }""")
+        code, gid = r.pop("codeValue"), r.pop("gidValue")
+        page.goto(f"{base}/index.html?u=nou&a={gid}&uneix={code}")
+        page.wait_for_function("S.mode === 'join' && JOIN && JOIN.step === 'pick'", timeout=20000)
+        r.update(page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          out.screen = !!document.querySelector('.join-card') && /Entra a l’app/.test(document.querySelector('.join-card').innerText);
+          const q = document.querySelector('#jn-q'); q.value = 'oriol'; q.dispatchEvent(new Event('input')); await s(100);
+          out.search = document.querySelectorAll('#jn-list [data-jn-pick]').length === 1;
+          document.querySelector('#jn-list [data-jn-pick="mT2"]').click(); await s(150);
+          document.querySelector('[data-act="jn-send"]').click(); await s(500);
+          const req = (await firebase.firestore().doc(`cors/${JOIN.gid}/joinReq/nou@exemple.cat`).get()).data();
+          out.sent = JOIN.step === 'sent' && !!req && req.memberId === 'mT2' && req.section === 'T' && req.email === 'nou@exemple.cat';
+          return out; }"""))
+        switch_user(page, base, "pol")
+        r.update(page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          out.todo = todoItems().some(x => x.icon === 'join' && /1 persona vol entrar/.test(x.t));
+          ensureStaff(); await s(400);
+          sheetJoinReqs(); await s(300);
+          out.row = !!document.querySelector('.sheet .jr [data-jr-mem]') && document.querySelector('.sheet .jr [data-jr-mem]').value === 'mT2';
+          document.querySelector('.sheet [data-act="join-approve"]').click(); await s(900);
+          const acc = (await firebase.firestore().doc(`cors/${GID}/staff/nou@exemple.cat`).get()).data();
+          out.approved = !!acc && acc.memberId === 'mT2' && acc.roles.includes('singer');
+          out.gone = !(await firebase.firestore().doc(`cors/${GID}/joinReq/nou@exemple.cat`).get()).exists;
+          const doc = (await firebase.firestore().doc(`cors/${GID}/join/${S.config.joinCode}`).get()).data();
+          out.listed = !doc.people.some(p => p.id === 'mT2');
+          return out; }"""))
+        switch_user(page, base, "nou")
+        r.update(page.evaluate("""() => ({ inside: S.mode === 'shared' && myMemberId() === 'mT2', noIntent: !localStorage.getItem('atempo:uneix') })"""))
+        for k, label in [("btn", "a Personal hi ha «Enllaç i QR per entrar»"),
+                         ("code", "en obrir-lo es fa un codi"),
+                         ("list", "amb la llista de qui encara no té accés (nom i primer cognom)"),
+                         ("url", "i l'enllaç porta l'agrupació i el codi"),
+                         ("qr", "i el QR"),
+                         ("screen", "qui obre l'enllaç sense accés veu «Entra a l'app…»"),
+                         ("search", "busca el seu nom"),
+                         ("sent", "i en demana l'accés"),
+                         ("todo", "a l'administració li surt a «Per fer»"),
+                         ("row", "la petició ve amb la fitxa que ha triat"),
+                         ("approved", "i en donar-li accés té el compte amb la seva fitxa"),
+                         ("gone", "la petició s'esborra"),
+                         ("listed", "i ja no surt a la llista de l'enllaç"),
+                         ("inside", "la persona entra a l'app amb la seva fitxa"),
+                         ("noIntent", "i l'enllaç ja no es torna a obrir")]:
+            check(r.get(k), label, str(r))
+        check(not [e for e in errors if "qrcode" not in e], "sense errors amb l'enllaç del cor", "; ".join(errors[:3]))
+        ctx.close()
+
         print("Mira l'app com…")
         ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/gestio/personal")
         page.wait_for_function("S.staffReady", timeout=5000)

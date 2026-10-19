@@ -725,6 +725,32 @@ code, body = req("GET", f"{BASE}/cors/{F}/annSeen/a1", tok=OWNER)
 got = {k: int(v.get("integerValue", 0)) for k, v in (body.get("fields") or {}).items()} if code == 200 else {}
 expect(f"Y13 els comptes són S 1 · B 1 · T 1 ({got})", 200 if got == {"S": 1, "B": 1, "T": 1} else 403, True)
 
+print("Z. Entrar amb l'enllaç del cor")
+JC = "enllacdelcor2026"
+JOIN = {"active": True, "name": "Cor Jove", "secs": [{"id": "S", "name": "Sopranos"}], "people": [{"id": "m2", "n": "Cantaire Dos", "sec": "T"}], "at": now, "by": "pol@exemple.cat"}
+REQ = {"email": "nou@exemple.cat", "name": "Cantaire Dos", "account": "Nil Nou", "memberId": "m2", "section": "T", "code": JC, "at": now}
+expect("Z1 l'administració fa l'enllaç", commit([upd(f"cors/{F}/join/{JC}", JOIN)], T["pol"]), True)
+expect("Z1b un cap de corda no", commit([upd(f"cors/{F}/join/altrecodi12345", JOIN)], T["pau"]), False)
+expect("Z2 qui té l'enllaç en llegeix la llista", get(f"cors/{F}/join/{JC}", T["new"]), True)
+expect("Z3 però no pot fer la llista dels enllaços", lst(f"cors/{F}/join", T["new"]), False)
+expect("Z4 i demana l'accés amb el seu correu", commit([upd(f"cors/{F}/joinReq/nou@exemple.cat", REQ)], T["new"]), True)
+expect("Z5 no a nom d'un altre correu", commit([upd(f"cors/{F}/joinReq/dir@exemple.cat", {**REQ, "email": "dir@exemple.cat"})], T["new"]), False)
+expect("Z6 ni amb un codi que no existeix", commit([upd(f"cors/{F}/joinReq/nou@exemple.cat", {**REQ, "code": "noexisteix123456"})], T["new"]), False)
+expect("Z7 qui ja té accés no en demana", commit([upd(f"cors/{F}/joinReq/singer@exemple.cat", {**REQ, "email": "singer@exemple.cat"})], T["singer"]), False)
+expect("Z8 ni amb camps de més", commit([upd(f"cors/{F}/joinReq/nou@exemple.cat", {**REQ, "roles": ["admin"]})], T["new"]), False)
+expect("Z9 l'administració veu les peticions", lst(f"cors/{F}/joinReq", T["pol"]), True)
+expect("Z9b la persona veu la seva", get(f"cors/{F}/joinReq/nou@exemple.cat", T["new"]), True)
+expect("Z9c un cantaire no veu la dels altres", get(f"cors/{F}/joinReq/nou@exemple.cat", T["singer"]), False)
+expect("Z10 l'administració el desactiva", commit([upd(f"cors/{F}/join/{JC}", {"active": False}, ["active"])], T["pol"]), True)
+expect("Z10b i ja no es pot llegir", get(f"cors/{F}/join/{JC}", T["new"]), False)
+expect("Z10c ni demanar-hi accés", commit([upd(f"cors/{F}/joinReq/nou@exemple.cat", REQ)], T["new"]), False)
+expect("Z11 l'administració hi dona accés (crea el compte i esborra la petició)", commit([
+    upd(f"cors/{F}/staff/nou@exemple.cat", {"email": "nou@exemple.cat", "name": "Cantaire Dos", "role": "singer", "roles": ["singer"], "memberId": "m2", "addedAt": now, "via": "enllaç"}),
+    upd(f"staffIndex/nou@exemple.cat/agrupacions/{F}", {"at": now, "name": "Cor Jove"}),
+    dele(f"cors/{F}/joinReq/nou@exemple.cat")], T["pol"]), True)
+expect("Z12 i la persona veu que ja té compte", get(f"cors/{F}/staff/nou@exemple.cat", T["new"]), True)
+expect("Z13 un cantaire no pot fer-se un compte sol", commit([upd(f"cors/{F}/staff/trampa2@exemple.cat", {"email": "trampa2@exemple.cat", "role": "admin", "roles": ["admin"]})], T["singer"]), False)
+
 print("M. Registre d'errors")
 ERR = {"kind": "error", "msg": "TypeError: x is undefined", "where": "04-llista.js:10:5", "at": now, "app": "abc123", "gid": F, "route": "inici", "ua": "Mozilla/5.0", "online": True}
 expect("M1 cantaire deixa una nota d'error", commit([upd("errors/e1", ERR)], T["singer"]), True)

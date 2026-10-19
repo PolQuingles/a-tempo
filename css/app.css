@@ -1747,3 +1747,26 @@ svg{stroke-linecap:round;stroke-linejoin:round}
 /* Els nous, amb un to molt suau i una marca a l'esquerra; la targeta retalla el to a les cantonades. */
 .panel.msgs{overflow:hidden}
 .msg.new{background:color-mix(in srgb, var(--accent-soft) 55%, var(--surface));box-shadow:inset 3px 0 0 var(--accent)}
+
+/* ---------- Entrar amb l'enllaç del cor (12c-entrar) ---------- */
+/* Qui obre l'enllaç: la llista de noms per cordes, en pastilles per tocar. L'administració: el QR i les peticions. */
+.join-card,.join-card .h2,.join-card p,.jn-sh{text-align:left}
+.jn-list{display:grid;gap:12px;max-height:46vh;overflow:auto;padding:2px;margin:0 -2px}
+.jn-sec{display:flex;flex-wrap:wrap;gap:6px}
+.jn-sh{flex-basis:100%;font-size:calc(12px*var(--ts));font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+.jn-p{min-height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface);font-weight:600;font-size:calc(14px*var(--ts));color:var(--ink);box-shadow:0 1px 2px rgba(27,23,32,.04)}
+.jn-p[aria-pressed="true"]{background:var(--accent-fill);border-color:var(--accent-fill);color:var(--accent-fill-ink)}
+.jn-none{font-size:calc(13.5px*var(--ts));margin:0}
+.jn-qr{display:grid;place-items:center;width:min(100%, 240px);aspect-ratio:1/1;margin:6px auto 12px;padding:10px;border-radius:16px;background:#fff;box-shadow:var(--shadow-1);color:#555;text-align:center;font-size:calc(13px*var(--ts))}
+.jn-qr svg{display:block;width:100%;height:100%}
+.jr-list{display:grid;gap:10px}
+.jr{display:grid;gap:8px;padding:12px 14px;border-radius:var(--r-md);background:var(--surface-2)}
+.jr-h{display:grid;gap:2px}
+.jr-h small{font-size:calc(13px*var(--ts));color:var(--muted);overflow-wrap:anywhere}
+.jr-w{margin:0;font-size:calc(13.5px*var(--ts));color:var(--fj-text)}
+.jr-a{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.jn-poster{text-align:center}
+.jn-poster h1{font-family:var(--f-display);font-size:34px;font-weight:600;margin:10px 0 18px}
+.jn-poster .jn-qr.big{width:320px;max-width:100%;box-shadow:none;border:1px solid #ddd}
+.jn-poster ol{display:inline-block;margin:6px auto 14px;text-align:left;font-size:17px;line-height:1.6}
+.jn-poster .m{font-size:12px;color:#555;word-break:break-all}

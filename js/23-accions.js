@@ -4,7 +4,7 @@
 
 /* ================= Events ================= */
 const SUB_OK = new Set(['mark', 'min', 'early', 'early-open', 'mark-rest']);
-const ADMIN_ONLY = new Set(['ward-cfg-add', 'ward-cfg-del', 'ward-cfg-save', 'people-tools', 'staff-new', 'staff-edit', 'staff-bulk', 'staff-link', 'preview-on', 'who-in', 'mail-check', 'wipe-all', 'share-app', 'onboard-hide', 'cl-seats', 'legacy-clean']);
+const ADMIN_ONLY = new Set(['join-link', 'join-reqs', 'join-approve', 'join-reject', 'ward-cfg-add', 'ward-cfg-del', 'ward-cfg-save', 'people-tools', 'staff-new', 'staff-edit', 'staff-bulk', 'staff-link', 'preview-on', 'who-in', 'mail-check', 'wipe-all', 'share-app', 'onboard-hide', 'cl-seats', 'legacy-clean']);
 // La identitat de l'agrupació i esborrar-la: només un Usuari Pro que l'administri.
 const PRO_ONLY = new Set(['brand-color', 'logo-remove', 'kind-set', 'group-delete', 'sections-save', 'sections-undo']);
 // El calendari de les classes: només el professorat de cant i l'administració.
@@ -347,6 +347,15 @@ const actions = {
   'wipe-demo': () => wipeAll(true),
   'wipe-all': () => wipeAll(false),
   'sheet-close': () => closeSheet(),
+  // Entrar amb l'enllaç del cor (12c-entrar): qui l'obre, i l'administració.
+  'jn-other': () => { JOIN.other = true; render(); },
+  'jn-list': () => { JOIN.other = false; render(); },
+  'jn-send': () => sendJoin(),
+  'jn-again': () => joinAgain(),
+  'join-link': () => sheetJoinLink(false),
+  'join-reqs': () => sheetJoinReqs(),
+  'join-approve': el => approveJoin(el.dataset.email, el),
+  'join-reject': el => rejectJoin(el.dataset.email),
 };
 document.addEventListener('click', e => {
   const el = e.target.closest('[data-act]');
