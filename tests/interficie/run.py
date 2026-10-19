@@ -582,15 +582,17 @@ def main():
         check(not errors, "sense errors a les estadístiques i al visor de PDF", "; ".join(errors[:3]))
         ctx.close()
 
-        print("Inici: Per fer, Les meves absències, Properament i La meva assistència")
+        print("Inici: la propera sessió a dalt, Per fer, Properament i La meva assistència")
         ctx, page, errors = open_app(browser, base, "leader", MOBILE, "#/inici")
         r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms));
           const p = clone(S.productions.get('p1')); p.sessions.push({ id: 'sAvui', date: TODAY, time: '20:30', end: '22:30', type: 'Assaig' }); saveProduction(p); render(); await s(300);
-          const order = [...document.querySelectorAll('.home section')].sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top).map(x => x.querySelector('.section-title .h2')?.textContent);
-          const now = [...document.querySelectorAll('.soon-row.is-now')].find(r => r.querySelector('[data-act="home-roll"]'));
-          return { order, hero: !!document.querySelector('.hero-cta'), roll: !!now, overflow: document.documentElement.scrollWidth <= innerWidth }; }""")
-        check(r["order"][:3] == ["Per fer", "Les meves absències", "Properament"] and (len(r["order"]) < 4 or r["order"][3] in ("La meva assistència", "Missatges")), "Inici: Per fer, Les meves absències, Properament, La meva assistència", str(r))
-        check(not r["hero"] and r["roll"], "sense el requadre «Avui»: la sessió d'avui és a Properament, amb «Passa llista»", str(r))
+          const order = [...document.querySelectorAll('.home section')].sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top).map(x => x.querySelector('.section-title .h2')?.textContent || x.className);
+          const next = document.querySelector('.h-next .next-card.is-now');
+          const later = [...document.querySelectorAll('.soon-row')].filter(r => r.querySelector('[data-act="home-roll"]')).length;
+          return { order, hero: !!document.querySelector('.hero-cta'), roll: !!next?.querySelector('[data-act="home-roll"]'), later, notices: !document.querySelector('.h-notices'), overflow: document.documentElement.scrollWidth <= innerWidth }; }""")
+        check(r["order"][0] == "h-next" and r["order"][1:3] == ["Per fer", "Properament"] and (len(r["order"]) < 4 or r["order"][3] in ("La meva assistència", "Missatges")), "Inici: la propera sessió a dalt i després Per fer, Properament, La meva assistència", str(r))
+        check(not r["hero"] and r["roll"] and r["later"] == 1, "la sessió d'avui és la targeta de dalt, amb «Passa llista»; l'altra d'avui, a Properament", str(r))
+        check(r["notices"], "sense cap absència avisada, no hi ha l'apartat «Les meves absències»", str(r))
         check(r["overflow"], "Inici sense eixamplar la pantalla del mòbil", str(r))
         check(not errors, "sense errors a Inici", "; ".join(errors[:3]))
         ctx.close()
@@ -796,8 +798,9 @@ def main():
           const ti = todoItems; todoItems = () => []; render(); await s(200);
           out.allDone = !!document.querySelector('.home .pf-ok') && !document.querySelector('.home .todo-done');
           todoItems = ti; render(); await s(200);
-          const mine = [...document.querySelectorAll('.home section')].find(x => /Les meves absències/.test(x.querySelector('.h2')?.textContent || ''));
-          out.noticesQuiet = !!mine && !mine.querySelector('p') && !!mine.querySelector('[data-act="absence-new"]');
+          out.noticesQuiet = !document.querySelector('.h-notices') && !!document.querySelector('.next-card [data-act="absence-new"]') && !!document.querySelector('.my-att [data-act="absence-new"]');
+          const shown = document.querySelectorAll('.h-todo .todo > .todo-row, .h-todo .todo > .todo-conv').length, folded = document.querySelectorAll('.h-todo .todo-more > .todo-row, .h-todo .todo-more > .todo-conv').length;
+          out.fold = todoItems().length > 3 && shown === 3 && folded === todoItems().length - 3 && !document.querySelector('.h-todo .todo-more').open;
           const row = [...document.querySelectorAll('.soon-row')].find(x => x.querySelector('[data-act="cl-avisa"]'));
           out.oneBtn = !!row && row.querySelectorAll('.soon-a .btn').length === 1;
           row?.querySelector('[data-act="cl-avisa"]').click(); await s(300);
@@ -830,7 +833,8 @@ def main():
           out.acctCal = !!document.querySelector('.acct-item[data-k="calendar"]');
           closeSheet(); return out; }"""))
         for k, label in [("allDone", "sense res pendent, «Per fer» és només el títol amb «Tot al dia»"),
-                         ("noticesQuiet", "«Les meves absències» buit és només el botó, sense paràgraf"),
+                         ("noticesQuiet", "sense absències no hi ha cap apartat buit: «No hi puc anar» és a la targeta de dalt i «Avisa d'una absència», a l'assistència"),
+                         ("fold", "«Per fer» ensenya les tres primeres coses i plega la resta"),
                          ("oneBtn", "la classe de cant d'Inici té un sol botó «Avisa…»"),
                          ("chooser", "«Avisa…» obre arribar tard, no venir i canviar l'hora"),
                          ("late", "i cada opció obre la seva finestra"),
@@ -916,10 +920,13 @@ def main():
           return out; }""")
         switch_user(page, base, "singer")
         r.update(page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
-          const later = [...document.querySelectorAll('.soon-row [data-act="absence-new"]')].map(b => b.dataset.sid).filter(id => sessionById(id)?.date > TODAY);
-          out.ahead = later.length > 0;
-          if (later.length) { document.querySelector(`.soon-row [data-act="absence-new"][data-sid="${later[0]}"]`).click(); await s(300); }
-          out.preset = !!document.querySelector(`.sheet #ab-sessions input[value="${later[0]}"]:checked`);
+          const row = [...document.querySelectorAll('.soon-row .soon-open')].find(b => sessionById(b.dataset.sid)?.date > TODAY && !sessionById(b.dataset.sid)?.rsvp);
+          out.ahead = !!row && !document.querySelector('.soon-row [data-act="absence-new"]');
+          row?.click(); await s(300);
+          const btn = row && document.querySelector(`.sheet [data-act="absence-new"][data-sid="${row.dataset.sid}"]`);
+          out.sheetBtn = !!btn;
+          btn?.click(); await s(300);
+          out.preset = !!row && !!document.querySelector(`.sheet #ab-sessions input[value="${row.dataset.sid}"]:checked`);
           closeSheet(); return out; }"""))
         for k, label in [("compact", "passar llista té una vista compacta: una fila per persona i cinc cercles"),
                          ("marks", "els cercles marquen igual que els botons"),
@@ -929,8 +936,9 @@ def main():
                          ("tools", "«Més…» té enganxar una llista, l'enllaç, qui ha entrat, els correus i mirar l'app com…"),
                          ("card", "en tocar un cantaire, se'n desplega tota la informació i les accions"),
                          ("keepsOpen", "i queda obert encara que la pantalla es torni a pintar"),
-                         ("ahead", "Properament deixa avisar d'una absència també a les properes sessions"),
-                         ("preset", "i obre l'avís d'aquella sessió")]:
+                         ("ahead", "a Properament, cada sessió obre la seva fitxa, sense repetir «No hi puc anar» a cada fila"),
+                         ("sheetBtn", "i la fitxa té «No hi puc anar o arribaré tard»"),
+                         ("preset", "que obre l'avís d'aquella sessió")]:
             check(r.get(k), label, str(r))
         check(not errors, "sense errors a la distribució nova", "; ".join(errors[:3]))
         ctx.close()
@@ -1039,10 +1047,12 @@ def main():
           setScore('p1', 'w1', S.members.get('mS0'), 'given');
           applyRoute('tauler/repertori'); ui.matProd = 'p1'; render(); await s(300);
           out.pill = /Repartint · 1\/15/.test(txt('.work .sc-pill.sc-part'));
-          // 8. «No hi puc anar o arribaré tard», arran del títol.
+          // 8. «No hi puc anar o arribaré tard»: a la fitxa de cada sessió que ve (les files d'Inici l'obren).
           applyRoute('inici'); render(); await s(300);
-          const gh = document.querySelector('.soon-a .btn-ghost[data-act="absence-new"]');
-          out.ghost = !!gh && getComputedStyle(gh).paddingLeft === '0px';
+          const op = [...document.querySelectorAll('.soon-row .soon-open')].find(b => !sessionById(b.dataset.sid)?.rsvp);
+          op?.click(); await s(300);
+          out.ghost = !!op && !!document.querySelector(`.sheet .sheet-foot [data-act="absence-new"][data-sid="${op.dataset.sid}"], .sheet [data-act="absence-new"][data-sid="${op.dataset.sid}"]`);
+          closeSheet(); await s(200);
           // 9. La meva assistència: en buit, els assajos que queden.
           out.ahead = document.querySelectorAll('.my-att .dots i.fut').length === 2;
           // 10. El Tauler no s'obre a uns anuncis buits, i després recorda on eres.
@@ -1067,7 +1077,7 @@ def main():
                          ("pctLater", "un cop començada, sí"), ("noLegend", "sense cap llista completa, no hi ha la llegenda «Llista completa»"),
                          ("legend", "i surt quan n'hi ha alguna"), ("riskLeft", "les files de Risc van alineades a l'esquerra"),
                          ("classToday", "a Classes diu «La teva hora: avui · 17:00» i no hi ha la llegenda d'avui"),
-                         ("pill", "una obra a mig repartir diu «Repartint · 1/15»"), ("ghost", "l'enllaç d'absència va arran del títol"),
+                         ("pill", "una obra a mig repartir diu «Repartint · 1/15»"), ("ghost", "la fitxa de les sessions que vénen té «No hi puc anar o arribaré tard»"),
                          ("ahead", "la meva assistència mostra en buit els assajos que queden"),
                          ("boardRep", "el Tauler no s'obre a uns anuncis buits"), ("boardKept", "i recorda la darrera pestanya"),
                          ("oneCal", "el compte té un sol «Calendari al mòbil»"), ("calClasses", "i a dins, les classes"),
@@ -1103,7 +1113,7 @@ def main():
           // 13. Els noms: Absències i Notificacions.
           out.absTab = [...document.querySelectorAll('.page-head ~ * .subtab, .subtabs .subtab')].some(b => /^Absències/.test(b.textContent.trim()));
           applyRoute('inici'); render(); await s(300);
-          out.mine = /Les meves absències/.test(txt('#view'));
+          out.mine = /Avisa d’una absència/.test(txt('#view'));
           sheetHelp(); await s(300);
           out.help = /Què és cada cosa/.test(txt('.sheet')) && /Notificacions/.test(txt('.sheet')); closeSheet(); await s(200);
           // 15. Risc › Escriu-los: un missatge privat a cadascú, amb les seves xifres.
@@ -1123,7 +1133,7 @@ def main():
         for k, label in [("allOn", "Ajustos té el calaix dels documents, amb tots tres demanats"), ("two", "es pot deixar de demanar un document"),
                          ("noImg", "i desapareix de la fitxa i del resum de la plantilla"), ("off", "sense cap document, queden desactivats"),
                          ("gone", "i desapareixen el filtre, el botó i les pastilles"), ("back", "i es tornen a activar"),
-                         ("absTab", "Gestió té la pestanya «Absències»"), ("mine", "Inici diu «Les meves absències»"),
+                         ("absTab", "Gestió té la pestanya «Absències»"), ("mine", "Inici diu «Avisa d’una absència»"),
                          ("help", "l'ajuda explica què és cada cosa"), ("btn", "Risc té «Escriu-los»"),
                          ("list", "hi surten els que no arriben, amb una mostra del missatge"), ("count", "es pot treure algú de la llista"),
                          ("sent", "cadascú rep una conversa privada amb les seves xifres"), ("overflow", "sense eixamplar la pantalla del mòbil")]:
@@ -1342,7 +1352,7 @@ def main():
         switch_user(page, base, "singer")
         r.update(page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
           ui.tab = 'avisos'; render(); await s(400);
-          const rows = [...document.querySelectorAll('#view .soon-row.is-now, #view .concert-day')];
+          const rows = [...document.querySelectorAll('#view .soon-row.is-now, #view .concert-day, #view .next-card.is-now')];
           out.noToday = !rows.some(li => /Concert de tardor/.test(li.textContent));
           const att = [...document.querySelectorAll('#view .section-title')].find(x => /La meva assistència/.test(x.textContent));
           out.myProd = !!att && /Concert de Nadal/.test(att.textContent);
@@ -1371,9 +1381,11 @@ def main():
           p.sessions.push({ id: 'sahir', date: d(-1), time: '20:30', end: '22:30', type: 'Assaig', place: 'Sala', note: '' });
           saveProduction(p); await s(300);
           const items = todoItems();
-          out.own = items.some(x => /1 llista per acabar/.test(x.t) && /Tenors/.test(x.s));
+          // Quantes en surten depèn de l'hora: passades les 22:30, la d'avui també és per acabar.
+          const month = isoDate(new Date(Date.now() - 30 * 864e5)), n = sec => pendingSessions(sec).filter(x => x.date >= month).length;
+          out.own = items.some(x => /^(1 llista|\d+ llistes) per acabar/.test(x.t) && /Tenors/.test(x.s) && x.s.includes(ddmm(d(-1))));
           const all = items.find(x => /sense acabar a les altres cordes/.test(x.t));
-          out.others = !!all && /^3 llistes/.test(all.t) && /Sopranos 1/.test(all.s) && /Contralts 1/.test(all.s) && /Baixos 1/.test(all.s) && !/Tenors/.test(all.s);
+          out.others = !!all && ['S', 'C', 'B'].every(k => n(k) > 0 && all.s.includes(`${SEC[k].name} ${n(k)}`)) && all.t.startsWith(`${n('S') + n('C') + n('B')} llist`) && !/Tenors/.test(all.s);
           ui.people = 'singer'; applyRoute('gestio/personal'); render(); await s(400);
           const rows = [...document.querySelectorAll('details.pm')];
           out.lazy = rows.length > 10 && rows.every(x => !x.open && !x.querySelector('.pm-b').childElementCount);

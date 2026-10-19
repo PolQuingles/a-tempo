@@ -431,14 +431,17 @@ function myAttendanceCard(me) {
   const ahead = allSessions(prod.id).filter(s => s.date > TODAY && !seen.has(s.id) && !RULE_SKIP.has(s.type) && convoked(s, me.section) && !onLeave(me, s.date));
   const dots = (r?.hist || []).map(({ s, mk }) => `<i class="${mk ? 's-' + mk.s : ''}" title="${ddmm(s.date)} · ${mk ? STATUS[mk.s].label : 'Sense llista'}"></i>`).join('')
     + ahead.map(s => `<i class="fut" title="${ddmm(s.date)} · Encara ha d’arribar"></i>`).join('');
+  // El percentatge, les hores i, a sota, com va sessió a sessió; després, si arriba a la norma. Avisar d'una absència també és aquí.
+  const facts = [`${minsText(r?.mDone)} de ${minsText(r?.mAll)} d’assaig`, r?.R ? (r.R === 1 ? '1 retard' : `${r.R} retards`) : '', r?.left ? (r.left === 1 ? 'ha marxat abans 1 cop' : `ha marxat abans ${r.left} cops`) : '',
+    r?.FJ ? `${r.FJ} just.` : '', r?.FNJ ? `${r.FNJ} no just.` : ''].filter(Boolean);
   return `<div class="section-title prod-tone" style="--ph:${prodHue(prod)}"><h2 class="h2">La meva assistència</h2><span class="eyebrow"><i class="pdot"></i>${esc(prod.name)}</span></div>
-    <div class="panel my-att prod-tone tinted" style="--ph:${prodHue(prod)}">
-      ${counted ? `<div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span class="big">${Math.round(rate(r) * 100)}<small>%</small></span>
-        <span class="muted" style="font-size:calc(13px*var(--ts))">${minsText(r.mDone)} de ${minsText(r.mAll)} d’assaig${r.R ? ` · ${r.R === 1 ? '1 retard' : `${r.R} retards`}` : ''}${r.left ? ` · ${r.left === 1 ? 'ha marxat abans 1 cop' : `ha marxat abans ${r.left} cops`}` : ''}${r.FJ ? ` · ${r.FJ} just.` : ''}${r.FNJ ? ` · ${r.FNJ} no just.` : ''}</span></div>
-        ${normHint(me, prod.id) || `<div>${ruleSentence(rs)}</div>`}
-        <div class="dots" aria-label="Sessió a sessió">${dots}</div>`
+    <div class="panel my-att prod-tone" style="--ph:${prodHue(prod)}">
+      ${counted ? `<div class="att-top"><span class="big">${Math.round(rate(r) * 100)}<small>%</small></span>
+        <span class="att-facts"><b>${esc(facts[0])}</b>${facts.length > 1 ? `<small>${esc(facts.slice(1).join(' · '))}</small>` : ''}</span></div>
+        <div class="dots" aria-label="Sessió a sessió">${dots}</div>
+        ${normHint(me, prod.id) || `<div>${ruleSentence(rs)}</div>`}`
       : `<span class="muted" style="font-size:calc(13.5px*var(--ts))">Encara no hi ha cap llista passada en aquesta producció.</span>`}
-      <button class="btn btn-sm" data-act="my-att" style="justify-self:start">Totes les produccions</button>
+      <div class="att-acts"><button class="btn btn-sm btn-ghost" data-act="my-att">Totes les produccions</button><button class="btn btn-sm btn-ghost" data-act="absence-new">Avisa d’una absència</button></div>
     </div>`;
 }
 function sheetMyAttendance() {

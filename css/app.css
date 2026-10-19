@@ -1,7 +1,7 @@
 /* A Tempo — estils de tota l'app. Els colors són variables (clar i fosc) definides a :root. */
 :root{
-  --bg:#F6F4F8; --surface:#FFFFFF; --surface-2:#F0EDF3; --line:#E3DEE8; --line-strong:#CFC7D7;
-  --ink:#1D1822; --ink-2:#4A4350; --muted:#655E6C;
+  --bg:#F6F4F8; --surface:#FFFFFF; --surface-2:#F1EEF4; --line:#E8E3EC; --line-strong:#D2CAD9; --raised:#FFFFFF;
+  --ink:#1B1720; --ink-2:#47404E; --muted:#655E6C;
   --accent:#5A3577; --accent-ink:#FFFFFF; --accent-soft:#EEE6F4; --accent-line:#D6C6E3;
   --accent-fill:var(--accent); --accent-fill-ink:var(--accent-ink);
   --av-sat:58%; --av-bg:90%; --av-fg:30%;
@@ -13,16 +13,20 @@
   --p-text:#17713F; --r-text:#0A5A82; --fj-text:#7A4A00; --fnj-text:#B02E29;
   --overlay:rgba(29,24,34,.42);
   --shadow:0 1px 2px rgba(29,24,34,.05), 0 10px 30px rgba(29,24,34,.10);
+  --shadow-1:0 1px 2px rgba(27,23,32,.05), 0 2px 14px rgba(27,23,32,.05);
+  --shadow-2:0 1px 3px rgba(27,23,32,.06), 0 8px 28px rgba(27,23,32,.09);
   --f-display:"Bodoni Moda", "Didot", "Bodoni 72", Georgia, serif;
   --f-ui:"Hanken Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --f-mono:"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  /* Els números (hores, recomptes, percentatges) van amb la mateixa lletra de l'app i xifres d'amplada fixa: vegeu «Xifres». */
+  --f-mono:var(--f-ui);
+  --f-code:ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --r-sm:8px; --r-md:12px; --r-lg:18px;
   --nav-h:64px;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --bg:#131016; --surface:#1C1820; --surface-2:#26212B; --line:#322C38; --line-strong:#463F4E;
+    --bg:#131016; --surface:#1C1820; --surface-2:#26212B; --line:#302A36; --line-strong:#463F4E; --raised:#332D3A;
     --ink:#EFEAF3; --ink-2:#D5CEDB; --muted:#ADA5B5;
     --accent:#C9A7E6; --accent-ink:#1E1027; --accent-soft:#2D2337; --accent-line:#4A3A5A;
     --accent-fill:#644A80; --accent-fill-ink:#F5EEFB;
@@ -35,11 +39,13 @@
     --p-text:#72D69C; --r-text:#93D4F4; --fj-text:#F4C46E; --fnj-text:#F48D88;
     --overlay:rgba(0,0,0,.6);
     --shadow:0 1px 2px rgba(0,0,0,.3), 0 12px 32px rgba(0,0,0,.45);
+    --shadow-1:0 1px 2px rgba(0,0,0,.28);
+    --shadow-2:0 2px 6px rgba(0,0,0,.35), 0 12px 32px rgba(0,0,0,.4);
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"]{
-  --bg:#131016; --surface:#1C1820; --surface-2:#26212B; --line:#322C38; --line-strong:#463F4E;
+  --bg:#131016; --surface:#1C1820; --surface-2:#26212B; --line:#302A36; --line-strong:#463F4E; --raised:#332D3A;
   --ink:#EFEAF3; --ink-2:#D5CEDB; --muted:#ADA5B5;
   --accent:#C9A7E6; --accent-ink:#1E1027; --accent-soft:#2D2337; --accent-line:#4A3A5A;
   --accent-fill:#644A80; --accent-fill-ink:#F5EEFB;
@@ -52,6 +58,8 @@
   --p-text:#72D69C; --r-text:#93D4F4; --fj-text:#F4C46E; --fnj-text:#F48D88;
   --overlay:rgba(0,0,0,.6);
   --shadow:0 1px 2px rgba(0,0,0,.3), 0 12px 32px rgba(0,0,0,.45);
+  --shadow-1:0 1px 2px rgba(0,0,0,.28);
+  --shadow-2:0 2px 6px rgba(0,0,0,.35), 0 12px 32px rgba(0,0,0,.4);
   color-scheme: dark;
 }
 
@@ -506,7 +514,7 @@ textarea.inp{padding:10px 12px;min-height:120px;resize:vertical;line-height:1.4}
 .picklist button[aria-current="true"]{color:var(--accent);font-weight:700}
 .picklist .d{font-weight:600}
 .picklist .m{font-size:calc(13px*var(--ts));color:var(--muted)}
-.summary-pre{width:100%;min-height:220px;font-family:var(--f-mono);font-size:calc(13px*var(--ts));line-height:1.5;border-radius:10px;border:1px solid var(--line-strong);background:var(--surface-2);padding:12px;white-space:pre-wrap;resize:vertical}
+.summary-pre{width:100%;min-height:220px;font-family:var(--f-code);font-size:calc(13px*var(--ts));line-height:1.5;border-radius:10px;border:1px solid var(--line-strong);background:var(--surface-2);padding:12px;white-space:pre-wrap;resize:vertical}
 
 /* ---------- Toast ---------- */
 .toast{position:fixed;left:50%;bottom:calc(var(--nav-h) + 16px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:60;display:flex;align-items:center;gap:14px;max-width:calc(100% - 32px);background:var(--ink);color:var(--bg);border-radius:12px;padding:10px 14px;font-size:calc(14px*var(--ts));box-shadow:var(--shadow);animation:up .2s ease}
@@ -709,7 +717,7 @@ input[type=date].inp,input[type=time].inp{min-width:0;width:100%}
 .login-sep{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:calc(13px*var(--ts));margin:4px 0}
 .login-sep::before,.login-sep::after{content:"";flex:1;height:1px;background:var(--line)}
 .role-tag{font-size:calc(12px*var(--ts));font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:6px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
-.linkbox{font-family:var(--f-mono);font-size:calc(13px*var(--ts));word-break:break-all;padding:10px 12px;border-radius:10px;background:var(--surface-2);border:1px solid var(--line)}
+.linkbox{font-family:var(--f-code);font-size:calc(13px*var(--ts));word-break:break-all;padding:10px 12px;border-radius:10px;background:var(--surface-2);border:1px solid var(--line)}
 /* ---------- Substitutes, confirmations ---------- */
 .sub-line{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:-2px;margin-bottom:8px;padding:8px 12px;border-radius:12px;background:var(--accent-soft);font-size:calc(13px*var(--ts))}
 .sub-line b{color:var(--accent)}
@@ -1610,3 +1618,132 @@ svg{stroke-linecap:round;stroke-linejoin:round}
 .cd-facts dt{font-size:calc(12px*var(--ts));font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
 .cd-facts dd{margin:2px 0 0;font-size:calc(15px*var(--ts));font-weight:600;overflow-wrap:anywhere}
 @media (min-width:700px){.concert-day{grid-template-columns:minmax(0,220px) minmax(0,1fr);align-items:start}.concert-day:not(:has(.cd-poster)){grid-template-columns:minmax(0,1fr)}}
+
+/* =================== Disseny 2026: com el programa d'un concert =================== */
+/* La pantalla com un programa de mà: molt d'aire, la Bodoni per a les dates, els títols grans i els números, la Hanken per a
+   la resta, una línia fina entre files i el color de l'agrupació només on es toca. Les targetes no porten vora: les separa
+   una ombra molt suau. */
+
+/* Xifres: amplada fixa allà on abans hi havia la lletra de màquina d'escriure (hores, recomptes, percentatges). */
+.mono,.voice-c,.legend b,.progress-txt b,.part,.min-chip,.min-input,.cal-date small,.cal-type em,.cal-pct,.bar-row .val,.trend .grid span,.tlabels span,.mrow .mpct,.mrow .mcounts b,.hcell,.prod-meta b,.soon-d small,.pending .chip,.abs-card .a-d span,.q-c,.day-grid b,.cal-badge,.work-k .mat-k b,.bal-parts span,.bal-parts b,.opt-row .n,.vm-sum,.ward-steps li small,.num{font-variant-numeric:tabular-nums lining-nums}
+
+/* Superfícies */
+.panel,.soon-list,.table-wrap,.kpi,.next-card,.acct-grp{box-shadow:var(--shadow-1)}
+.acct-grp{background:var(--surface)}
+.todo{border:0;box-shadow:var(--shadow-1)}
+.fitxa-chip{border-color:var(--line)}
+.sheet{box-shadow:var(--shadow-2)}
+
+/* Títols de secció: una etiqueta petita en versaletes, com els apartats d'un programa, i les accions, en enllaç. */
+.section-title{margin-block:30px 10px;align-items:center;min-height:32px}
+.section-title > .h2{font-family:var(--f-ui);font-size:calc(12.5px*var(--ts));font-weight:700;line-height:1.3;letter-spacing:.085em;text-transform:uppercase;color:var(--ink-2)}
+.section-title > .btn:not(.btn-primary):not(.btn-danger),.section-title > span > .btn:not(.btn-primary):not(.btn-danger){min-height:32px;padding:0 2px;border-color:transparent;background:transparent;color:var(--accent);box-shadow:none}
+.section-title > span:has(> .btn){gap:14px !important}
+.section-title > .btn:not(.btn-primary):hover,.section-title > span > .btn:not(.btn-primary):hover{text-decoration:underline;text-underline-offset:3px}
+
+/* Botons i selectors */
+.btn{border-color:var(--line);box-shadow:0 1px 2px rgba(27,23,32,.04)}
+.btn-primary{border-color:var(--accent-fill);box-shadow:0 1px 2px rgba(27,23,32,.10), 0 2px 8px color-mix(in srgb, var(--accent-fill) 22%, transparent)}
+.btn-danger{border-color:var(--fnj)}
+.btn-ghost,.btn-soft,.btn-danger-ghost{border-color:transparent;box-shadow:none}
+.chip{border-color:var(--line)}
+.chip[aria-pressed="true"]{background:var(--accent-fill);border-color:var(--accent-fill);color:var(--accent-fill-ink)}
+.subtabs{background:var(--surface-2);border-color:transparent}
+.subtab[aria-selected="true"]{background:var(--raised);color:var(--ink);box-shadow:0 1px 2px rgba(27,23,32,.12), 0 2px 8px rgba(27,23,32,.06)}
+.sync,.search-btn,.help-btn{border-color:transparent;background:var(--surface);box-shadow:var(--shadow-1)}
+.tab[aria-current="page"]{font-weight:700}
+
+/* ---------- Inici ---------- */
+.home-head .h1{font-size:32px}
+.h-next{order:0}.h-todo{order:1}.h-soon{order:2}.h-att{order:3}.h-notices{order:4}.h-msgs{order:5}
+.home section > .section-title:first-child{margin-top:30px}
+.home .home-a > section:first-child > .section-title:first-child{margin-top:8px}
+.h-next{margin-top:6px}
+/* La propera sessió, en gran: la data a l'esquerra, què és i on a la dreta i, a sota, el que s'hi pot fer. */
+.next-card{position:relative;display:grid;gap:12px;padding:16px 16px 14px 18px;border-radius:var(--r-lg);background:var(--surface);overflow:hidden}
+.next-card::before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:var(--pdot)}
+.next-card.is-now{background:linear-gradient(180deg, color-mix(in srgb, var(--pbg) 80%, var(--surface)) 0%, var(--surface) 75%)}
+.next-top{display:grid;grid-template-columns:50px minmax(0,1fr);gap:14px;align-items:start}
+.next-top:has(> .poster-th){grid-template-columns:50px minmax(0,1fr) auto}
+.next-d{display:flex;flex-direction:column;align-items:center;line-height:1;padding-top:1px}
+.next-d b{font-family:var(--f-display);font-weight:600;font-size:42px;letter-spacing:-.02em;font-variant-numeric:lining-nums;margin:3px 0 4px}
+.next-d small{font-size:calc(11px*var(--ts));font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.next-d small em{font-style:normal;color:var(--accent)}
+.next-b{display:grid;gap:5px;min-width:0}
+.next-k{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;font-size:calc(11.5px*var(--ts));font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--pink)}
+.next-k .pdot{width:8px;height:8px;border-radius:2px}
+.next-k em{font-style:normal;color:var(--accent);margin-right:6px}
+.next-k .soon-count{margin-left:0;letter-spacing:.02em;text-transform:none}
+.next-t{font-family:var(--f-display);font-weight:600;font-size:calc(23px*var(--ts));line-height:1.12;letter-spacing:-.01em;text-wrap:balance;overflow-wrap:anywhere}
+.next-time{font-size:calc(16px*var(--ts));font-weight:600;color:var(--ink);letter-spacing:.005em}
+.next-m{font-size:calc(14.5px*var(--ts));color:var(--ink-2)}
+.next-m b{font-weight:700;color:var(--ink)}
+.next-m .sep{margin:0 7px;color:var(--line-strong)}
+.next-card .poster-th{width:52px;height:70px}
+.next-note{margin:0;padding:10px 12px;border-radius:12px;background:var(--surface-2);font-size:calc(13.5px*var(--ts));color:var(--ink);line-height:1.45}
+.next-card .plan-chip{margin:0}
+.next-a{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding-top:12px;border-top:1px solid var(--line)}
+.next-a .rsvp{align-self:center}
+.next-fx{margin-left:auto;padding-inline:6px 2px;gap:2px}
+.next-fx svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.next-a .bus-q,.next-card .tasks{width:100%}
+/* El dia del concert: la mateixa targeta, amb el cartell gran a dalt. */
+.concert-day.next-card{gap:12px;padding:14px 14px 14px 18px;background:var(--surface)}
+.concert-day .cd-b{gap:8px}
+.concert-day .cd-facts > div{background:var(--surface-2)}
+.soon-cd{padding:10px;border-top:1px solid var(--line)}
+.soon-cd .next-card{box-shadow:none}
+/* Properament: files curtes; tota la fila obre la fitxa. */
+.soon-row{grid-template-columns:40px minmax(0,1fr);gap:12px;padding:12px 12px 12px 12px}
+.soon-d b{font-size:24px;letter-spacing:-.01em}
+.soon-d small{font-family:var(--f-ui);font-weight:600;font-size:calc(11px*var(--ts));letter-spacing:.04em}
+.soon-k{font-size:calc(12.5px*var(--ts))}
+.soon-t{font-size:calc(15px*var(--ts));font-weight:600}
+.soon-m{color:var(--muted)}
+.soon-open{position:relative;display:grid;gap:2px;width:100%;padding:0 22px 0 0;text-align:left;color:inherit;border-radius:6px}
+.soon-open > svg{position:absolute;right:0;top:50%;width:16px;height:16px;margin-top:-8px;fill:none;stroke:var(--muted);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;opacity:.55}
+.soon-open:hover .soon-t{color:var(--accent)}
+.soon-a{margin-top:8px}
+.soon-none{margin:0;padding:4px 2px;color:var(--muted);font-size:calc(13.5px*var(--ts))}
+/* Per fer: les tres primeres; la resta, plegades. */
+.todo-row{padding:12px 12px 12px 14px}
+.todo-i{background:var(--surface-2)}
+.todo-t b{font-weight:600}
+.todo-n{min-width:22px;height:22px;padding:0 7px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:calc(12px*var(--ts));font-weight:700;line-height:22px;text-align:center}
+.todo-more{display:grid;gap:1px;background:var(--line)}
+.todo-more > summary{order:9;list-style:none;display:flex;align-items:center;justify-content:center;gap:6px;min-height:44px;background:var(--surface);color:var(--accent);font-weight:600;font-size:calc(13.5px*var(--ts));cursor:pointer}
+.todo-more > summary::-webkit-details-marker{display:none}
+.todo-more > summary .chev{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .15s}
+.todo-more[open] > summary .chev{transform:rotate(180deg)}
+.todo-more[open] > summary span{font-size:0}
+.todo-more[open] > summary span::after{content:"Mostra’n menys";font-size:calc(13.5px*var(--ts))}
+/* La meva assistència: el percentatge, les hores i, a sota, sessió a sessió. */
+.my-att{padding:16px;gap:12px}
+.att-top{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.my-att .big{font-size:46px;letter-spacing:-.02em;font-variant-numeric:lining-nums}
+.att-facts{display:grid;gap:2px;min-width:0;flex:1 1 160px}
+.att-facts b{font-weight:600;font-size:calc(14.5px*var(--ts))}
+.att-facts small{font-size:calc(13px*var(--ts));color:var(--muted)}
+.dots i{width:12px;height:12px;border-radius:3px}
+.att-acts{display:flex;flex-wrap:wrap;gap:0 18px;padding-top:10px;border-top:1px solid var(--line)}
+.att-acts .btn-ghost{padding-inline:0;min-height:32px}
+/* Instal·lar l'app: una línia discreta. */
+.install-card{background:var(--surface);box-shadow:var(--shadow-1)}
+.install-go .todo-i{background:var(--accent-soft)}
+
+/* ---------- Calendari: com Properament ---------- */
+/* Les produccions ja no són blocs de color: la llista és blanca i el color de la producció és la franja de l'esquerra. */
+.cal-list,.cal-prod.prod-tone .cal-list{background:var(--surface);border-color:transparent;box-shadow:var(--shadow-1)}
+.cal-prod.prod-tone .cal-row{border-top-color:var(--line);box-shadow:inset 3px 0 0 var(--pdot)}
+.cal-prod.prod-tone .cal-row.is-today,.cal-row.is-today{background:color-mix(in srgb, var(--pbg, var(--accent-soft)) 70%, var(--surface))}
+
+/* ---------- Bandes de color de les produccions ---------- */
+/* Un sol to suau, sense vora: la banda de la sessió (passar llista), la de les fitxes i la de les capçaleres. */
+.session.prod-tone,.prod-band,.page-head.tinted.prod-tone{border-color:transparent}
+.session.prod-tone .nav-arrow{border-color:transparent;box-shadow:var(--shadow-1)}
+.quads{border-color:transparent;box-shadow:var(--shadow-2)}
+
+/* ---------- Missatges ---------- */
+/* Els nous, amb un to molt suau i una marca a l'esquerra; la targeta retalla el to a les cantonades. */
+.panel.msgs{overflow:hidden}
+.msg.new{background:color-mix(in srgb, var(--accent-soft) 55%, var(--surface));box-shadow:inset 3px 0 0 var(--accent)}

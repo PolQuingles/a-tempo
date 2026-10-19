@@ -149,37 +149,42 @@ function convCard(s, me) {
     ${a?.answer === 'yes' ? tasksBlock(s, true) : ''}
   </div>`;
 }
-function todoBlock(me) {
-  const items = todoItems();
+// «Per fer» ensenya les tres primeres coses; la resta, plegades sota «Mostra’n N més». Una convocatòria que ja surt a la
+// targeta de la propera sessió (amb «Hi seré» i «No hi podré anar») no es repeteix a sota.
+const TODO_SHOWN = 3;
+function todoBlock(me, feat) {
+  const items = todoItems().filter(x => !(x.conv && feat && x.conv.id === feat.id));
   // Res pendent: només una marca al costat del títol, sense requadre.
   if (!items.length) return `<div class="section-title"><h2 class="h2">Per fer</h2><span class="pf-ok"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Tot al dia</span></div>`;
-  return `<div class="section-title"><h2 class="h2">Per fer</h2><span class="eyebrow">${items.length}</span></div>` + `<div class="todo">${items.map(x => x.conv ? `<div class="todo-conv"><span class="todo-k">Convocatòria · confirma si hi seràs</span>${convCard(x.conv, me)}</div>`
+  const row = x => x.conv ? `<div class="todo-conv"><span class="todo-k">Convocatòria · confirma si hi seràs</span>${convCard(x.conv, me)}</div>`
     : `<div class="todo-row"><span class="todo-i"><svg viewBox="0 0 24 24" aria-hidden="true">${TODO_ICONS[x.icon]}</svg></span>
       <span class="todo-t"><b>${x.t}</b>${x.s ? `<small>${x.s}</small>` : ''}</span>
-      <button class="btn btn-sm ${x.n ? 'btn-soft' : ''}" ${x.act}>${x.btn}</button></div>`).join('')}</div>`;
+      <button class="btn btn-sm ${x.n ? 'btn-soft' : ''}" ${x.act}>${x.btn}</button></div>`;
+  const shown = items.slice(0, TODO_SHOWN), more = items.slice(TODO_SHOWN);
+  return `<div class="section-title"><h2 class="h2">Per fer</h2><span class="todo-n">${items.length}</span></div>
+    <div class="todo">${shown.map(row).join('')}${more.length ? `<details class="todo-more"><summary><span>Mostra’n ${more.length === 1 ? '1 més' : `${more.length} més`}</span>${ICON.chev}</summary>${more.map(row).join('')}</details>` : ''}</div>`;
 }
-/* ---------- Properament ---------- */
-// Una sola llista, per ordre: el d'avui (amb passar llista o avisar), la propera classe, les sessions dels set dies que vénen i,
-// si són més enllà, el proper assaig i el proper concert.
-// Cada fila és com les del calendari: la data a l'esquerra i, a la dreta, què és, on i el que s'hi pot fer.
-const dayLabel = d => d === TODAY ? 'Avui' : d === addDays(TODAY, 1) ? 'Demà' : '';
-const daysTo = d => Math.round((parseISO(d).getTime() - parseISO(TODAY).getTime()) / 864e5);
-function soonRow({ date, time, kind, title, meta, extra = '', acts = '', tone = null, now = false, poster = '', count = false }) {
-  const lbl = dayLabel(date);
-  // El proper concert porta el compte enrere: «d'aquí a 16 dies».
-  const n = count && !lbl ? daysTo(date) : 0;
-  return `<li class="soon-row${now ? ' is-now' : ''}${tone ? ' prod-tone' : ''}${poster ? ' has-poster' : ''}"${tone ? ` style="--ph:${prodHue(tone)}"` : ''}>
-    <span class="soon-d"><b>${+date.slice(8, 10)}</b><small>${esc(wdShort(date))}</small></span>
-    <div class="soon-b">
-      <span class="soon-k">${lbl ? `<em>${lbl}</em>` : ''}${esc(kind)}${time ? ` · <span class="mono">${esc(time)}</span>` : ''}${n > 1 ? `<span class="soon-count">d’aquí a ${n} dies</span>` : ''}</span>
-      <b class="soon-t">${title}</b>
-      ${meta ? `<span class="soon-m">${meta}</span>` : ''}
-      ${acts ? `<span class="soon-a">${acts}</span>` : ''}
-      ${extra}
-    </div>${poster}</li>`;
+/* ---------- La propera sessió, a dalt de tot ---------- */
+// Una sola targeta: la sessió d'avui que encara no s'ha acabat (o l'última d'avui, si ja s'han fet totes) i, si avui no n'hi
+// ha cap, la propera. Hi ha tot el que cal saber (quan, on, la convocatòria) i el que s'hi pot fer: passar llista, avisar que
+// no hi vas o que arribaràs tard, confirmar-la i obrir-ne la fitxa. La resta de dies van a sota, a «Properament», en files curtes.
+const nowMins = () => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); };
+function sessionOver(s) {
+  if (s.date !== TODAY) return s.date < TODAY;
+  const a = clockMins(s.time), b = clockMins(s.end);
+  const end = b != null ? b : a != null ? a + 120 : null;
+  return end != null && nowMins() > end;
 }
-function sessionSoon(s, me, kind) {
-  const prod = S.productions.get(s.prodId);
+/** On em toca anar (l'equip ho veu tot): l'equip també veu les sessions d'avui que no fa, perquè n'ha de passar llista. */
+const mySoon = (s, me) => !me || canEdit() || convoked(s, me.section);
+function featuredSession(me) {
+  const today = allSessions().filter(s => s.date === TODAY && mySoon(s, me) && (canEdit() || !(me && isOut(s, me))));
+  if (today.length) return today.find(s => !sessionOver(s)) || today[today.length - 1];
+  return allSessions().find(s => s.date > TODAY && mySoon(s, me) && !(me && isOut(s, me))) || null;
+}
+/** El que es pot fer amb una sessió: passar llista (avui, l'equip), la convocatòria (respondre-la o canviar la resposta) i
+ *  avisar que no hi vas o arribaràs tard. big = a la targeta de dalt; a les files de sota, només el que no es pot fer enlloc més. */
+function sessionActs(s, me, big) {
   const out = me && isOut(s, me);
   const now = s.date === TODAY;
   let acts = '', conv = '';
@@ -188,42 +193,106 @@ function sessionSoon(s, me, kind) {
     const pr = secs.length ? progress(s, secs[0]) : null;
     acts = `<button class="btn btn-sm btn-primary" data-act="home-roll" data-sid="${esc(s.id)}" data-sec="${esc(secs[0] || '')}">${pr ? `Passa llista · ${pr.done}/${pr.total}` : 'Passa llista'}</button>`;
   } else if (me && !out && s.date >= TODAY) {
-    const mine = [...S.absences.values()].find(a => a.memberId === me.id && (a.sessionIds || []).includes(s.id) && a.status !== 'rejected');
+    const mine = myAbsence(s, me);
     const a = s.rsvp ? S.rsvp.get(`${s.id}_${me.id}`) : null;
     // Convocatòria ja resposta: la resposta, per canviar-la, i (si hi va) com hi va i si fa de voluntari.
     if (a) conv = `${s.bus && a.answer === 'yes' ? `<div class="soon-a bus-q"><span class="m">Com hi vas?</span><button class="btn btn-sm ${a.transport === 'bus' ? 'btn-primary' : ''}" data-act="rsvp-bus" data-sid="${s.id}" data-k="bus">Amb l’autocar</button><button class="btn btn-sm ${a.transport === 'own' ? 'btn-primary' : ''}" data-act="rsvp-bus" data-sid="${s.id}" data-k="own">Pel meu compte</button></div>` : ''}${a.answer === 'yes' ? tasksBlock(s, true) : ''}`;
-    acts = [a ? `<span class="rsvp ${a.answer}">${a.answer === 'yes' ? 'Hi seràs' : 'No hi seràs'}</span><button class="btn btn-sm btn-ghost" data-act="${a.answer === 'yes' ? 'rsvp-no' : 'rsvp-yes'}" data-sid="${s.id}">${a.answer === 'yes' ? 'Ja no hi puc anar' : 'Sí que hi seré'}</button>` : '',
+    // Convocatòria per respondre, a la targeta de dalt (a «Per fer» no es repeteix).
+    const ask = big && s.rsvp && !a ? `<button class="btn btn-sm btn-primary" data-act="rsvp-yes" data-sid="${s.id}">Hi seré</button><button class="btn btn-sm" data-act="rsvp-no" data-sid="${s.id}">No hi podré anar</button>` : '';
+    acts = [ask, a ? `<span class="rsvp ${a.answer}">${a.answer === 'yes' ? 'Hi seràs' : 'No hi seràs'}</span><button class="btn btn-sm btn-ghost" data-act="${a.answer === 'yes' ? 'rsvp-no' : 'rsvp-yes'}" data-sid="${s.id}">${a.answer === 'yes' ? 'Ja no hi puc anar' : 'Sí que hi seré'}</button>` : '',
       mine ? `<span class="st-pill st-${mine.status}">${mine.kind === 'late' ? 'Has avisat que arribaràs tard' : 'Has avisat que no hi vas'}</span>`
-        // Avisar amb temps: a la sessió d'avui i a les properes (les convocatòries es responen amb «Hi seré» / «No hi podré anar»).
-        : now || !s.rsvp ? `<button class="btn btn-sm${now ? '' : ' btn-ghost'}" data-act="absence-new" data-sid="${esc(s.id)}">No hi puc anar o arribaré tard</button>` : ''].filter(Boolean).join('');
+        // Avisar amb temps: a la targeta de dalt; a les altres sessions, des de la seva fitxa (en tocar-ne la fila).
+        : big && !s.rsvp ? `<button class="btn btn-sm" data-act="absence-new" data-sid="${esc(s.id)}">No hi puc anar o arribaré tard</button>` : ''].filter(Boolean).join('');
   }
-  if (now && isShow(s)) return concertDayRow(s, prod, acts, conv);
-  const meta = [placeLink(s.place || ''), s.info?.call ? `Convocatòria a les <span class="mono">${esc(s.info.call)}</span>` : '',
-    out ? esc(onLeave(me, s.date) ? 'Estàs de baixa' : 'No fas aquesta producció') : ''].filter(Boolean).join(' · ');
-  const extra = `${s.note ? `<span class="soon-note">${esc(s.note)}</span>` : ''}${hasInfo(s) ? fitxaChip(s) : ''}${planChip(s)}`;
-  return soonRow({ date: s.date, time: timeRange(s), kind, title: esc(prodNames(s)), meta, extra: extra + conv, acts, tone: prod, now, poster: posterThumb(prod), count: isShow(s) });
+  return { acts, conv };
 }
-/** El dia del concert: una fila especial amb el cartell gran, la convocatòria, el vestuari i el lloc (amb el mapa). */
-function concertDayRow(s, prod, acts, conv) {
-  const i = s.info || {};
-  const facts = [['Convocatòria', i.call ? `<span class="mono">${esc(i.call)}</span>` : ''], ['Vestuari', esc(i.dress || '')], ['Lloc', placeLink(s.place || '')], ['Trobada', esc(i.meet || '')]].filter(([, v]) => v);
-  return `<li class="concert-day prod-tone" style="--ph:${prodHue(prod)}">
-    ${prod?.poster ? `<button class="cd-poster" data-act="poster" data-pid="${esc(prod.id)}" aria-label="Cartell de ${esc(prod.name)}"><img src="${esc(prod.poster)}" alt=""></button>` : ''}
-    <div class="cd-b">
-      <span class="soon-k"><em>Avui</em>${esc(s.type || V.sh.Show)}${s.time ? ` · <span class="mono">${esc(timeRange(s))}</span>` : ''}</span>
-      <b class="cd-t">${esc(prodNames(s))}</b>
-      ${facts.length ? `<dl class="cd-facts">${facts.map(([l, v]) => `<div><dt>${l}</dt><dd>${v}</dd></div>`).join('')}</dl>` : ''}
-      ${s.note ? `<span class="soon-note">${esc(s.note)}</span>` : ''}
-      <span class="soon-a">${hasInfo(s) ? `<button class="btn btn-sm" data-act="session-info" data-sid="${s.id}">Tota la fitxa</button>` : ''}${acts}</span>
-      ${conv}
+/** L'avís d'absència o de retard que la persona ja ha fet per a aquesta sessió (si n'hi ha). */
+const myAbsence = (s, me) => [...S.absences.values()].find(a => a.memberId === me.id && (a.sessionIds || []).includes(s.id) && a.status !== 'rejected');
+function nextCard(s, me) {
+  const prod = S.productions.get(s.prodId);
+  const now = s.date === TODAY;
+  const { acts, conv } = sessionActs(s, me, true);
+  if (now && isShow(s)) return concertDayRow(s, prod, acts, conv);
+  const lbl = dayLabel(s.date), n = lbl ? 0 : daysTo(s.date);
+  const kind = now ? s.type || 'Assaig' : isShow(s) ? V.sh.next : !s.type || s.type === 'Assaig' ? 'Proper assaig' : s.type;
+  const out = me && isOut(s, me);
+  const place = placeLink(s.place || '');
+  const fitxa = hasInfo(s) ? `<button class="btn btn-sm btn-ghost next-fx" data-act="session-info" data-sid="${esc(s.id)}">${isShow(s) ? `Fitxa ${V.sh.del}` : 'Fitxa de la sessió'}${ICON.right}</button>`
+    : canEdit() && isShow(s) ? `<button class="btn btn-sm btn-ghost next-fx" data-act="session-edit" data-sid="${esc(s.id)}">Afegeix la fitxa ${V.sh.del}${ICON.right}</button>` : '';
+  return `<article class="next-card prod-tone${now ? ' is-now' : ''}" style="--ph:${prodHue(prod)}">
+    <div class="next-top">
+      <span class="next-d"><small>${lbl ? `<em>${lbl}</em>` : esc(monthShort(s.date))}</small><b>${+s.date.slice(8, 10)}</b><small>${esc(wdShort(s.date))}</small></span>
+      <div class="next-b">
+        <span class="next-k"><i class="pdot"></i>${esc(kind)}${n > 1 ? `<span class="soon-count">d’aquí a ${n} dies</span>` : ''}</span>
+        <h2 class="next-t">${esc(prodNames(s))}</h2>
+        ${s.time ? `<span class="next-time num">${esc(timeRange(s))}</span>` : ''}
+        ${place ? `<span class="next-m">${place}</span>` : ''}
+        ${s.info?.call ? `<span class="next-m">Convocatòria a les <b class="num">${esc(s.info.call)}</b></span>` : ''}
+        ${s.rsvp && s.rsvpBy && me && !S.rsvp.get(`${s.id}_${me.id}`) ? `<span class="next-m">Respon abans del ${ddmm(s.rsvpBy)}</span>` : ''}
+        ${out ? `<span class="next-m">${esc(onLeave(me, s.date) ? 'Estàs de baixa' : 'No fas aquesta producció')}</span>` : ''}
+      </div>
+      ${posterThumb(prod, 'next-poster')}
+    </div>
+    ${s.note ? `<p class="next-note">${esc(s.note)}</p>` : ''}
+    ${planChip(s)}
+    ${acts || fitxa ? `<div class="next-a">${acts}${fitxa}</div>` : ''}
+    ${conv}
+  </article>`;
+}
+/* ---------- Properament ---------- */
+// Sota la targeta de dalt, en files curtes i per ordre: el que queda d'avui, la propera classe, les sessions dels set dies que
+// vénen i, si són més enllà, el proper assaig i el proper concert. Cada fila és com les del calendari: la data a l'esquerra i, a
+// la dreta, què és i on; en tocar-la s'obre la fitxa de la sessió (amb «No hi puc anar o arribaré tard»).
+const dayLabel = d => d === TODAY ? 'Avui' : d === addDays(TODAY, 1) ? 'Demà' : '';
+const daysTo = d => Math.round((parseISO(d).getTime() - parseISO(TODAY).getTime()) / 864e5);
+const monthShort = d => fmtD(d, { month: 'short' }).replace(/^d[e’']\s*/, '');
+function soonRow({ date, time, kind, title, meta, extra = '', acts = '', tone = null, now = false, count = false, sid = '' }) {
+  const lbl = dayLabel(date);
+  // El proper concert porta el compte enrere: «d'aquí a 16 dies».
+  const n = count && !lbl ? daysTo(date) : 0;
+  const head = `<span class="soon-k">${lbl ? `<em>${lbl}</em>` : ''}${esc(kind)}${time ? ` · <span class="num">${esc(time)}</span>` : ''}${n > 1 ? `<span class="soon-count">d’aquí a ${n} dies</span>` : ''}</span>
+      <b class="soon-t">${title}</b>
+      ${meta ? `<span class="soon-m">${meta}</span>` : ''}`;
+  return `<li class="soon-row${now ? ' is-now' : ''}${tone ? ' prod-tone' : ''}${sid ? ' can-open' : ''}"${tone ? ` style="--ph:${prodHue(tone)}"` : ''}>
+    <span class="soon-d"><b>${+date.slice(8, 10)}</b><small>${esc(wdShort(date))}</small></span>
+    <div class="soon-b">
+      ${sid ? `<button class="soon-open" data-act="session-info" data-sid="${esc(sid)}" aria-label="${esc(`${kind}: ${title.replace(/<[^>]+>/g, '')}, ${longDate(date)}`)}">${head}${ICON.right}</button>` : head}
+      ${acts ? `<span class="soon-a">${acts}</span>` : ''}
+      ${extra}
     </div></li>`;
 }
-function soonBlock(me) {
-  const mineS = s => !me || canEdit() || convoked(s, me.section);
+function sessionSoon(s, me, kind) {
+  const prod = S.productions.get(s.prodId);
+  const out = me && isOut(s, me);
+  const now = s.date === TODAY;
+  const { acts, conv } = sessionActs(s, me, false);
+  if (now && isShow(s)) return `<li class="soon-cd">${concertDayRow(s, prod, acts, conv)}</li>`;
+  // A la fila, el lloc va sense enllaç (tota la fila obre la fitxa, que ja porta el mapa).
+  const meta = [esc(s.place || ''), s.info?.call ? `Convocatòria a les <span class="num">${esc(s.info.call)}</span>` : '',
+    out ? esc(onLeave(me, s.date) ? 'Estàs de baixa' : 'No fas aquesta producció') : ''].filter(Boolean).join(' · ');
+  const extra = `${s.note ? `<span class="soon-note">${esc(s.note)}</span>` : ''}${conv}`;
+  return soonRow({ date: s.date, time: timeRange(s), kind, title: esc(prodNames(s)), meta, extra, acts, tone: prod, now, count: isShow(s), sid: s.id });
+}
+/** El dia del concert: la targeta de dalt porta el cartell gran, la convocatòria, el vestuari i el lloc (amb el mapa). */
+function concertDayRow(s, prod, acts, conv) {
+  const i = s.info || {};
+  const facts = [['Convocatòria', i.call ? `<span class="num">${esc(i.call)}</span>` : ''], ['Vestuari', esc(i.dress || '')], ['Lloc', placeLink(s.place || '')], ['Trobada', esc(i.meet || '')]].filter(([, v]) => v);
+  return `<article class="concert-day next-card prod-tone" style="--ph:${prodHue(prod)}">
+    ${prod?.poster ? `<button class="cd-poster" data-act="poster" data-pid="${esc(prod.id)}" aria-label="Cartell de ${esc(prod.name)}"><img src="${esc(prod.poster)}" alt=""></button>` : ''}
+    <div class="cd-b">
+      <span class="next-k"><em>Avui</em>${esc(s.type || V.sh.Show)}${s.time ? ` · <span class="num">${esc(timeRange(s))}</span>` : ''}</span>
+      <h2 class="cd-t">${esc(prodNames(s))}</h2>
+      ${facts.length ? `<dl class="cd-facts">${facts.map(([l, v]) => `<div><dt>${l}</dt><dd>${v}</dd></div>`).join('')}</dl>` : ''}
+      ${s.note ? `<p class="next-note">${esc(s.note)}</p>` : ''}
+      <div class="next-a">${acts}${hasInfo(s) ? `<button class="btn btn-sm btn-ghost next-fx" data-act="session-info" data-sid="${s.id}">Tota la fitxa${ICON.right}</button>` : ''}</div>
+      ${conv}
+    </div></article>`;
+}
+function soonBlock(me, feat) {
   const rows = [];
-  // Avui: totes les sessions del dia (el que abans era el requadre gran).
+  // Avui: totes les sessions del dia (menys la de la targeta de dalt).
   // Qui no fa la producció (o és de baixa) no la veu com si hi anés; l'equip sí, perquè n'ha de passar llista.
-  for (const s of allSessions().filter(s => s.date === TODAY && mineS(s) && (canEdit() || !(me && isOut(s, me))))) rows.push({ key: `${s.date} ${s.time || ''}`, html: sessionSoon(s, me, s.type || 'Assaig') });
+  for (const s of allSessions().filter(s => s.date === TODAY && s.id !== feat?.id && mySoon(s, me) && (canEdit() || !(me && isOut(s, me))))) rows.push({ key: `${s.date} ${s.time || ''}`, html: sessionSoon(s, me, s.type || 'Assaig') });
   const nx = nextClass();
   if (nx) {
     const clash = classClash(nx.c, nx.slot);
@@ -231,27 +300,33 @@ function soonBlock(me) {
       extra: clash ? `<span class="st-pill st-pending">Xoca amb ${esc(clash.type || 'l’assaig')}</span>` : '', now: nx.c.date === TODAY,
       acts: `<button class="btn btn-sm" data-act="cl-avisa" data-c="${esc(nx.c.id)}" data-s="${esc(nx.slot.id)}">Avisa…</button>` }) });
   }
-  const later = allSessions().filter(s => s.date > TODAY && mineS(s) && !(me && isOut(s, me)));
-  const next = later[0];
-  const show = later.find(x => isShow(x));
+  const later = allSessions().filter(s => s.date > TODAY && mySoon(s, me) && !(me && isOut(s, me)));
+  const next = later.find(s => s.id !== feat?.id);
+  const show = later.find(x => isShow(x) && x.id !== feat?.id);
   // Els set dies que vénen, sencers: la setmana del concert hi ha la pregeneral i el general, sovint en un altre lloc i a una
-  // altra hora, i abans només hi sortien el proper assaig i el concert. Més enllà, només el proper assaig i el proper concert.
-  const ahead = later.filter(s => s.date <= addDays(TODAY, 7));
+  // altra hora. Més enllà, només el proper assaig i el proper concert.
+  const ahead = later.filter(s => s.date <= addDays(TODAY, 7) && s.id !== feat?.id);
   for (const s of [next, show]) if (s && !ahead.includes(s)) ahead.push(s);
-  for (const s of ahead) rows.push({ key: `${s.date} ${s.time || ''}`, html: sessionSoon(s, me, s === next ? (isShow(s) ? V.sh.next : 'Proper assaig') : s === show ? V.sh.next : s.type || 'Assaig') });
+  const nextLabel = feat && feat.date > TODAY && !isShow(feat) ? '' : 'Proper assaig';
+  for (const s of ahead) rows.push({ key: `${s.date} ${s.time || ''}`, html: sessionSoon(s, me, s === next && nextLabel ? (isShow(s) ? V.sh.next : nextLabel) : s === show && !(feat && isShow(feat)) ? V.sh.next : s.type || 'Assaig') });
   // Les convocatòries que ja ha respost (les que falten són a «Per fer»): per canviar la resposta, l'autocar i els voluntaris.
-  const shown = new Set(ahead.map(s => s.id));
+  const shown = new Set([...ahead.map(s => s.id), feat?.id]);
   if (me) for (const s of openConvocations(me).filter(s => S.rsvp.get(`${s.id}_${me.id}`) && !shown.has(s.id) && s.date > TODAY)) rows.push({ key: `${s.date} ${s.time || ''}`, html: sessionSoon(s, me, 'Convocatòria') });
   rows.sort((a, b) => a.key.localeCompare(b.key));
+  if (!rows.length && feat) return `<div class="section-title"><h2 class="h2">Properament</h2><button class="btn btn-sm" data-act="week">La setmana</button></div>
+    <p class="soon-none">No hi ha res més programat de moment.</p>`;
   return `<div class="section-title"><h2 class="h2">Properament</h2><button class="btn btn-sm" data-act="week">La setmana</button></div>
     ${rows.length ? `<ul class="soon-list">${rows.map(r => r.html).join('')}</ul>` : '<div class="todo-done"><span><b>Res a la vista</b><small>No tens cap assaig ni concert programat.</small></span></div>'}`;
 }
-function myNoticesBlock(me) {
+/** Les absències i retards que ha avisat (del darrer mes o de sessions que encara han de venir). Si no n'hi ha cap, no surt
+ *  res: «Avisa d'una absència» és a la targeta de la propera sessió i a «La meva assistència». withBtn = no hi ha cap
+ *  d'aquests dos llocs, i llavors el botó va aquí. */
+function myNoticesBlock(me, withBtn) {
   const mine = [...S.absences.values()].filter(a => a.memberId === me.id).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
   // Els avisos de sessions que ja han passat de fa més d'un mes no hi fan res: queden a «La meva assistència».
   const recent = mine.filter(a => (a.createdAt || '').slice(0, 10) >= addDays(TODAY, -30) || (a.sessionIds || []).some(id => (sessionById(id)?.date || '') >= TODAY));
-  // Sense avisos, n'hi ha prou amb el botó: l'explicació és a la finestra d'avisar.
-  return `<div class="section-title"><h2 class="h2">Les meves absències</h2><button class="btn btn-sm" data-act="absence-new">Avisa d’una absència</button></div>
+  if (!recent.length && !withBtn) return '';
+  return `<div class="section-title"><h2 class="h2">Les meves absències</h2>${withBtn ? '<button class="btn btn-sm" data-act="absence-new">Avisa d’una absència</button>' : ''}</div>
     ${recent.length ? `<div class="panel">${recent.map(a => absenceCard(a, { mine: true })).join('')}</div>` : ''}`;
 }
 function viewHome() {
@@ -262,14 +337,17 @@ function viewHome() {
   const who = me ? `${esc(SEC[me.section].name)}${me.part ? ` ${esc(me.part)}` : ''}${lv ? ` · ${lv}` : ''}` : (ME() ? esc(rolesText(ME())) : '');
   const head = `<div class="page-head home-head"><div><div class="eyebrow">${esc(longDate(TODAY))}</div><h1 class="h1">Hola${first ? `, ${esc(first)}` : ''}</h1>${who ? `<div class="me-line">${who}</div>` : ''}</div></div>`;
   if (!me && !canEdit() && myMemberId()) return head + `<div class="empty">${staffSvg()}<h2 class="h2">Compte sense fitxa</h2><p>El teu correu encara no està vinculat a cap fitxa de la plantilla. Demana-ho a l’administració ${V.del}.</p></div>`;
-  // Al mòbil, una columna: Per fer, Les meves absències, Properament, La meva assistència i els missatges (l'ordre el posa el CSS).
-  // A l'ordinador, dues: a l'esquerra el que cal fer i el que ve; a la dreta els avisos, l'assistència i els missatges.
+  // Al mòbil, una columna: la propera sessió, Per fer, Properament, La meva assistència, les absències i els missatges.
+  // A l'ordinador, dues: a l'esquerra la propera sessió, el que cal fer i el que ve; a la dreta la resta.
+  const feat = featuredSession(me);
+  const att = me ? myAttendanceCard(me) : '';
+  const notices = me ? myNoticesBlock(me, !att && !(feat && feat.date >= TODAY && !isOut(feat, me))) : '';
   const msgs = messagesBlock();
   return `${head}
     ${installCard()}
     <div class="home">
-      <div class="home-a"><section class="h-todo">${todoBlock(me)}</section><section class="h-soon">${soonBlock(me)}</section></div>
-      <div class="home-b">${me ? `<section class="h-notices">${myNoticesBlock(me)}</section>` : ''}${me ? `<section class="h-att">${myAttendanceCard(me)}</section>` : ''}${msgs ? `<section class="h-msgs">${msgs}</section>` : ''}</div>
+      <div class="home-a">${feat ? `<section class="h-next">${nextCard(feat, me)}</section>` : ''}<section class="h-todo">${todoBlock(me, feat)}</section><section class="h-soon">${soonBlock(me, feat)}</section></div>
+      <div class="home-b">${att ? `<section class="h-att">${att}</section>` : ''}${notices ? `<section class="h-notices">${notices}</section>` : ''}${msgs ? `<section class="h-msgs">${msgs}</section>` : ''}</div>
     </div>`;
 }
 
