@@ -83,12 +83,13 @@ function todoItems() {
   // Qui ha obert l'enllaç del cor i espera que l'administració li doni accés (vegeu 12c-entrar).
   const jr = joinRequests();
   if (jr.length) out.push({ icon: 'join', t: `${jr.length === 1 ? '1 persona vol' : `${jr.length} persones volen`} entrar a l’app`, s: esc(jr.slice(0, 3).map(r => r.name).join(', ') + (jr.length > 3 ? '…' : '')), btn: 'Revisa', act: 'data-act="join-reqs"', n: jr.length });
+  // Els avisos d'absència: els del rol actiu (el cap de corda, els de la seva corda), a Assistència › Absències.
+  const abs = myPendingAbsences();
+  if (abs.length) {
+    const who = [...new Set(abs.map(a => firstName(S.members.get(a.memberId)?.name)).filter(Boolean))];
+    out.push({ icon: 'abs', t: `${abs.length === 1 ? '1 absència' : `${abs.length} absències`} per veure`, s: esc(who.slice(0, 3).join(', ') + (who.length > 3 ? '…' : '')), btn: 'Revisa', act: lensOn() ? 'data-act="att-abs"' : 'data-act="manage" data-k="avisos"', n: abs.length });
+  }
   if (canEdit()) {
-    const abs = pendingAbsences();
-    if (abs.length) {
-      const who = [...new Set(abs.map(a => firstName(S.members.get(a.memberId)?.name)).filter(Boolean))];
-      out.push({ icon: 'abs', t: `${abs.length === 1 ? '1 absència' : `${abs.length} absències`} per veure`, s: esc(who.slice(0, 3).join(', ') + (who.length > 3 ? '…' : '')), btn: 'Revisa', act: 'data-act="manage" data-k="avisos"', n: abs.length });
-    }
     const lists = mySections().flatMap(sec => pendingSessions(sec).map(x => ({ sec, x })));
     if (lists.length) out.push({ icon: 'roll', t: `${lists.length === 1 ? '1 llista' : `${lists.length} llistes`} per acabar`, s: `${esc(SEC[lists[0].sec].name)}: ${lists.slice(-3).map(l => ddmm(l.x.date)).join(', ')}`, btn: 'Acaba-les', act: `data-act="home-roll" data-sid="${esc(lists[lists.length - 1].x.id)}" data-sec="${esc(lists[0].sec)}"`, n: lists.length });
     // Qui porta tot el cor (administració, direcció, gerència, secretaria): les llistes sense acabar de les altres cordes,
@@ -339,18 +340,23 @@ function viewHome() {
   const first = name.includes(',') ? name.split(',').pop().trim() : name.split(' ')[0];
   const lv = me ? leaveText(me) : '';
   const who = me ? `${esc(SEC[me.section].name)}${me.part ? ` ${esc(me.part)}` : ''}${lv ? ` · ${lv}` : ''}` : (ME() ? esc(rolesText(ME())) : '');
-  const head = `<div class="page-head home-head"><div><div class="eyebrow">${esc(longDate(TODAY))}</div><h1 class="h1">Hola${first ? `, ${esc(first)}` : ''}</h1>${who ? `<div class="me-line">${who}</div>` : ''}</div></div>`;
+  // Amb un rol triat, la barra de sota ja diu quin és: sense fitxa, no cal repetir-lo.
+  const bar = lensBar();
+  const head = `<div class="page-head home-head"><div><div class="eyebrow">${esc(longDate(TODAY))}</div><h1 class="h1">Hola${first ? `, ${esc(first)}` : ''}</h1>${who && !(bar && !me) ? `<div class="me-line">${who}</div>` : ''}</div></div>`;
   if (!me && !canEdit() && myMemberId()) return head + `<div class="empty">${staffSvg()}<h2 class="h2">Compte sense fitxa</h2><p>El teu correu encara no està vinculat a cap fitxa de la plantilla. Demana-ho a l’administració ${V.del}.</p></div>`;
   // Al mòbil, una columna: la propera sessió, Per fer, Properament, La meva assistència, les absències i els missatges.
   // A l'ordinador, dues: a l'esquerra la propera sessió, el que cal fer i el que ve; a la dreta la resta.
-  const feat = featuredSession(me);
-  const att = me ? myAttendanceCard(me) : '';
-  const notices = me ? myNoticesBlock(me, !att && !(feat && feat.date >= TODAY && !isOut(feat, me))) : '';
+  const teacher = curLens() === 'voice';
+  const feat = teacher ? null : featuredSession(me);
+  // Amb un rol triat, la meva assistència i els meus avisos són a la pestanya Assistència (vegeu viewMyAtt).
+  const att = me && !lensOn() ? myAttendanceCard(me) : '';
+  const notices = me && !lensOn() ? myNoticesBlock(me, !att && !(feat && feat.date >= TODAY && !isOut(feat, me))) : '';
   const msgs = messagesBlock();
   return `${head}
+    ${bar}
     ${installCard()}
     <div class="home">
-      <div class="home-a">${feat ? `<section class="h-next">${nextCard(feat, me)}</section>` : ''}<section class="h-todo">${todoBlock(me, feat)}</section><section class="h-soon">${soonBlock(me, feat)}</section></div>
+      <div class="home-a">${feat ? `<section class="h-next">${nextCard(feat, me)}</section>` : ''}<section class="h-todo">${todoBlock(me, feat)}</section><section class="h-soon">${teacher ? teacherSoonBlock() : soonBlock(me, feat)}</section></div>
       <div class="home-b">${att ? `<section class="h-att">${att}</section>` : ''}${notices ? `<section class="h-notices">${notices}</section>` : ''}${msgs ? `<section class="h-msgs">${msgs}</section>` : ''}</div>
     </div>`;
 }

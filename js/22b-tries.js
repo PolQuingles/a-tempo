@@ -180,7 +180,7 @@ function watchChoices() {
   if (!choicesOn() || !db || S.choiceWatch) return;
   const onSnap = snap => { S.prodChoice = new Map(snap.docs ? snap.docs.map(d => [d.id, d.data()]) : snap.exists ? [[snap.id, snap.data()]] : []); if (S.ready) scheduleRender(); };
   // Amb les llistes privades, un cantaire no veu qui fa què: només la seva tria.
-  S.choiceWatch = attHidden() || (S.role !== 'edit' && attPrivate())
+  S.choiceWatch = S.role !== 'edit' && attPrivate()
     ? (S.memberId ? db.doc(`prodChoice/${S.memberId}`).onSnapshot(onSnap, () => {}) : () => {})
     : db.collection('prodChoice').onSnapshot(onSnap, () => {});
 }

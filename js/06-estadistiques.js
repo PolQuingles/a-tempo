@@ -30,7 +30,7 @@ function viewStats(inBoard) {
   const selProd = `<label class="sel"><span class="sr">Producció</span><select data-pick="stats-prod">${prods.map(p => `<option value="${p.id}" ${p.id === scope.id ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select></label>`;
   const selSec = `<label class="sel"><span class="sr">${esc(V.Section)}</span><select data-pick="stats-sec"><option value="">${esc(capz(V.tot))}</option>${SECTIONS.map(x => `<option value="${x.id}" ${ui.statsSec === x.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>`;
   const filters = `<div class="filters"><span class="seg3" role="radiogroup" aria-label="Període">${[['prod', 'Producció'], ['season', 'Temporada']].map(([k, l]) => `<button type="button" role="radio" aria-checked="${ui.statsScope === k}" data-act="stats-scope" data-k="${k}">${l}</button>`).join('')}</span>
-    ${ui.statsScope === 'prod' ? selProd : ''}${selSec}</div>`;
+    ${ui.statsScope === 'prod' ? selProd : ''}${lensSection() ? '' : selSec}</div>`;
   const top = inBoard ? filters + head : head + scopeTabs + choice + secChips;
 
   if (!st.counted.length) {
@@ -422,7 +422,7 @@ function normHint(me, pid) {
   if (spare < 1) return `<p class="norm-hint zero">No pots perdre <b>ni un minut més</b> d’assaig si vols fer ${esc(when)} (${left}).</p>`;
   return `<p class="norm-hint">Encara pots perdre <b>${minsText(spare)}</b> d’assaig ${show ? `abans ${V.sh.del} del ${esc(shortDate(show.date))}` : 'fins al final de la producció'} (${left}).</p>`;
 }
-function myAttendanceCard(me) {
+function myAttendanceCard(me, inTab) {
   const x = myProdSummary(me, myProductionId(me));
   if (!x) return '';
   const { prod, r, rs, counted } = x;
@@ -441,19 +441,21 @@ function myAttendanceCard(me) {
         <div class="dots" aria-label="Sessió a sessió">${dots}</div>
         ${normHint(me, prod.id) || `<div>${ruleSentence(rs)}</div>`}`
       : `<span class="muted" style="font-size:calc(13.5px*var(--ts))">Encara no hi ha cap llista passada en aquesta producció.</span>`}
-      <div class="att-acts"><button class="btn btn-sm btn-ghost" data-act="my-att">Totes les produccions</button><button class="btn btn-sm btn-ghost" data-act="absence-new">Avisa d’una absència</button></div>
+      ${inTab ? '' : '<div class="att-acts"><button class="btn btn-sm btn-ghost" data-act="my-att">Totes les produccions</button><button class="btn btn-sm btn-ghost" data-act="absence-new">Avisa d’una absència</button></div>'}
     </div>`;
 }
 function sheetMyAttendance() {
   const me = S.members.get(myMemberId());
   if (!me) return;
+  openSheet({ title: 'La meva assistència', body: myAttSeason(me) });
+}
+/** La temporada d'una persona: el percentatge, el retard i com va cada producció. */
+function myAttSeason(me) {
   const { season } = seasonCfg();
   const sr = computeStats({ kind: 'range', from: season.from, to: season.to, name: season.name }, me.section).rows.find(x => x.m.id === me.id);
   const sc = sr ? sr.P + sr.R + sr.FJ + sr.FNJ : 0;
   const rows = productionsSorted().map(p => myProdSummary(me, p.id)).filter(x => x && x.counted);
-  openSheet({
-    title: 'La meva assistència',
-    body: `<div class="kpis" style="grid-template-columns:repeat(2,1fr)">
+  return `<div class="kpis" style="grid-template-columns:repeat(2,1fr)">
         <div class="kpi"><div class="kpi-v">${sc ? kpiPct(rate(sr)) : '—'}</div><div class="kpi-l">${esc(season.name)}</div></div>
         <div class="kpi"><div class="kpi-v">${sr ? sr.min : 0}<small>min</small></div><div class="kpi-l">Retard acumulat</div></div>
       </div>
@@ -461,6 +463,23 @@ function sheetMyAttendance() {
         <span style="display:flex;justify-content:space-between;gap:8px"><b>${esc(prod.name)}</b><span class="mono">${pct(rate(r))}</span></span>
         <span class="m">${r.P + r.R} de ${counted} · ${r.FJ} just. · ${r.FNJ} no just.</span><span>${ruleSentence(rs)}</span></li>`).join('')}</ul>`
         : '<p class="muted">Encara no hi ha llistes passades.</p>'}
-      <p class="muted" style="font-size:calc(13px*var(--ts))">Només tu i l’equip ${V.del} veieu aquestes dades. Si hi ha algun error, parla amb el teu ${V.leader}.</p>`,
-  });
+      <p class="muted" style="font-size:calc(13px*var(--ts))">Només tu i l’equip ${V.del} veieu aquestes dades. Si hi ha algun error, parla amb el teu ${V.leader}.</p>`;
+}
+/** Assistència, amb el rol de cantaire: només la teva. Avisar d'una absència o d'un retard, els avisos que has fet, com vas a
+ *  la producció d'ara i a tota la temporada; i, si avui passes llista d'una corda (en funcions), el botó per fer-ho. */
+function viewMyAtt() {
+  const me = S.members.get(myMemberId());
+  const head = `<div class="page-head"><div>${me ? `<div class="eyebrow">${esc(SEC[me.section].name)}${me.part ? ` ${esc(me.part)}` : ''}</div>` : ''}<h1 class="h1">Assistència</h1></div>
+    ${me ? '<button class="btn btn-sm btn-primary" data-act="absence-new">Avisa d’una absència o retard</button>' : ''}</div>`;
+  if (!me) return head + `<div class="empty">${staffSvg()}<p>El teu compte encara no està vinculat a cap fitxa de la plantilla. Demana-ho a l’administració ${V.del}.</p></div>`;
+  const subs = mySubs().map(x => ({ x, s: sessionById(x.sessionId) })).filter(o => o.s);
+  const subCard = subs.length ? `<div class="panel my-subs">${subs.map(({ x, s }) => `<div class="setting"><div><div class="t">${x.auto ? `Ets ${esc(V.leader)} en funcions de ${esc(SEC[x.section].name.toLowerCase())}` : `Avui passes llista de ${esc(SEC[x.section].name.toLowerCase())}`}</div>
+      <div class="s">${esc(s.type || 'Assaig')} · ${esc(shortDate(s.date))}${s.time ? ` · ${esc(timeRange(s))}` : ''}</div></div>
+      <button class="btn btn-sm btn-primary" data-act="home-roll" data-sid="${esc(s.id)}" data-sec="${esc(x.section)}">Passa llista</button></div>`).join('')}</div>` : '';
+  const att = myAttendanceCard(me, true);
+  return `${head}${subCard}
+    ${myNoticesBlock(me, false)}
+    ${att}
+    <div class="section-title"><h2 class="h2">Tota la temporada</h2></div>
+    ${myAttSeason(me)}`;
 }

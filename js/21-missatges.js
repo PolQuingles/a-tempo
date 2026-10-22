@@ -39,7 +39,7 @@ function watchMessages() {
   if (msgWatch || !db) return;
   const since = new Date(Date.now() - MSG_DAYS * 864e5).toISOString();
   const take = parts => { S.messages = new Map(parts.flatMap(p => [...p])); if (S.ready) scheduleRender(); };
-  if (canEdit()) {
+  if (canEditAny()) {
     msgWatch = db.collection('messages').where('createdAt', '>=', since).onSnapshot(snap => take([new Map(snap.docs.map(d => [d.id, d.data()]))]), () => {});
     return;
   }

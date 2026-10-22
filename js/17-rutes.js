@@ -25,8 +25,11 @@ function routeFromUi() {
     case 'llista':
       if (ui.att === 'stats') return 'assistencia/estadistiques';
       if (ui.att === 'risk') return 'assistencia/risc';
+      if (ui.att === 'abs') return 'assistencia/absencies';
       return ui.rollSec ? `assistencia/${encodeURIComponent(ui.rollSec)}` : 'assistencia';
     case 'calendari': return 'calendari';
+    case 'partitures': return 'partitures';
+    case 'alumnes': return 'alumnes';
     case 'vestidor': return 'vestidor';
     case 'tauler': return `tauler/${ROUTE_BOARD[ui.board] || 'anuncis'}`;
     case 'classes': return ui.clWho ? `classes/${encodeURIComponent(teacherSlug(ui.clWho))}` : 'classes';
@@ -40,7 +43,7 @@ function applyRoute(route) {
   const sub = b ? decodeURIComponent(b) : '';
   if (a === 'inici') { ui.tab = 'avisos'; return true; }
   if (a === 'gestio') {
-    if (!canEdit()) return false;
+    if (!gestioOn()) return false;
     const k = Object.keys(ROUTE_MANAGE).find(x => ROUTE_MANAGE[x] === sub) || 'personal';
     ui.tab = 'gestio'; ui.manage = k; return true;
   }
@@ -48,10 +51,12 @@ function applyRoute(route) {
     ui.tab = 'llista';
     if (sub === 'estadistiques') { ui.att = 'stats'; ui.rollSec = null; }
     else if (sub === 'risc') { ui.att = 'risk'; ui.rollSec = null; }
+    else if (sub === 'absencies') { ui.att = 'abs'; ui.rollSec = null; }
     else { ui.att = 'llista'; ui.rollSec = sub && SEC_MAP[sub] ? (ui.section = sub) : null; }
     return true;
   }
   if (a === 'calendari') { ui.tab = 'calendari'; return true; }
+  if (a === 'partitures' || a === 'alumnes') { ui.tab = a; return true; }
   if (a === 'vestidor') { if (!wardOn()) return false; ui.tab = 'vestidor'; return true; }
   if (a === 'tauler') { ui.tab = 'tauler'; ui.board = sub === 'materials' ? 'materials' : Object.keys(ROUTE_BOARD).find(k => ROUTE_BOARD[k] === sub) || 'anuncis'; return true; }
   if (a === 'classes') {

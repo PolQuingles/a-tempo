@@ -241,6 +241,13 @@ function sheetArchive(pid) {
   });
 }
 
+/* ---------- La pestanya Partitures (rol d'arxiver) ---------- */
+/** El repertori de cada producció amb l'estat de cada partitura en paper, i l'arxiu sencer: qui en té, qui no i qui l'ha de tornar. */
+function viewScores() {
+  const sec = archiveSec();
+  return `<div class="page-head"><div><div class="eyebrow">${sec ? `Arxiver · ${esc(SEC[sec].name)}` : 'Arxiu'}</div><h1 class="h1">Partitures</h1></div></div>${boardRepertoire()}`;
+}
+
 /* ---------- Per fer de l'arxiver ---------- */
 /** A Inici: si li toca repartir (la producció comença d'aquí a tres setmanes o ja ha començat) o recollir (ja s'ha acabat). */
 function archiveTodos() {

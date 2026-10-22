@@ -269,14 +269,32 @@ const rolesHint = roles => !roles.length ? 'Tria almenys un rol.' : [
 ].filter(Boolean).join(' ');
 // «Mira l'app com…»: l'administració veu l'app com un cantaire, un cap de corda, la direcció, la gerència, la secretaria
 // o un professor de cant. Només canvia el que es veu en aquest mòbil: no es desa res (vegeu previewBlocked).
-// PREVIEW = { roles, memberId, section, email, name, label }.
+// PREVIEW = { roles, memberId, section, email, name, label, role }.
 let PREVIEW = null;
-/** Qui soc a efectes de la pantalla: la fitxa de qui ha entrat o, a la vista prèvia, la de qui s'està mirant. */
-const ME = () => PREVIEW ? { email: PREVIEW.email || '', name: PREVIEW.name || '', roles: PREVIEW.roles, section: PREVIEW.section || '', memberId: PREVIEW.memberId || '' } : S.me;
+// El rol amb què es mira l'app (vegeu 03b-rols): cada rol té les seves pestanyes i només hi veu el que és de la seva feina.
+// Qui té diversos rols el tria en obrir l'app i el canvia des d'Inici. 'viewer' és «Veure l'app com un cantaire» (per a qui no
+// ho és) i 'tot', tots els rols alhora, com era abans (les proves i qui encara no n'ha triat cap). Només canvia la pantalla:
+// les dades que es llegeixen i els permisos de la base de dades són els del compte.
+const LENS_ORDER = ['singer', 'leader', 'archive', 'voice', 'director', 'gerencia', 'secretaria', 'admin'];
+let LENS = null;
+/** El rol actiu: el de la vista prèvia, el triat o, si encara no se n'ha triat cap, tots. */
+const curLens = () => PREVIEW ? PREVIEW.lens || 'tot' : LENS || 'tot';
+const lensOn = () => curLens() !== 'tot';
+/** Qui soc a efectes de la pantalla: la fitxa de qui ha entrat o, a la vista prèvia, la de qui s'està mirant, amb només els
+ *  permisos del rol actiu. Fora del rol de cantaire, l'espai personal (memberId) no hi és. */
+const ME = () => {
+  const base = PREVIEW ? { email: PREVIEW.email || '', name: PREVIEW.name || '', roles: PREVIEW.roles, section: PREVIEW.section || '', memberId: PREVIEW.memberId || '' } : S.me;
+  const l = curLens();
+  if (!base || l === 'tot') return base;
+  return { ...base, roles: [l === 'viewer' ? 'singer' : l], memberId: l === 'singer' ? base.memberId || '' : '' };
+};
 const myEmail = () => PREVIEW ? PREVIEW.email || '' : S.email || '';
 const iHave = r => hasRole(ME(), r);
-const canEdit = () => S.role === 'edit' && (!PREVIEW || PREVIEW.roles.some(r => EDIT_ROLES.has(r)));
-const isAdmin = () => S.role === 'edit' && !PREVIEW && hasRole(S.me, 'admin');
+const canEdit = () => S.role === 'edit' && (!PREVIEW && !lensOn() ? true : rolesOf(ME()).some(r => EDIT_ROLES.has(r)));
+/** Si el compte (o la persona de la vista prèvia) pot editar, sigui quin sigui el rol actiu: per a les dades que es llegeixen
+ *  i els avisos al mòbil, que no canvien en canviar de rol. */
+const canEditAny = () => S.role === 'edit' && (!PREVIEW || PREVIEW.roles.some(r => EDIT_ROLES.has(r)));
+const isAdmin = () => S.role === 'edit' && !PREVIEW && hasRole(S.me, 'admin') && ['tot', 'admin'].includes(curLens());
 /** Name, type, sections and look of the group, and deleting it: only a Pro user who runs it. */
 const canManageGroup = () => isAdmin() && S.pro;
 /* ---------- Classes de cant ---------- */
@@ -367,7 +385,10 @@ const reqsToAnswer = () => { const id = myId(); return id ? [...S.classReq.value
 const reqsForTeacher = () => [...S.classReq.values()].filter(r => r.status === 'pending' && r.kind !== 'swap');
 const classBadge = () => reqsToAnswer().length + (teachesClasses() ? reqsForTeacher().length : 0);
 /** The member this account really is (from the account record or a personal link), if any. */
-const myId = () => { const id = PREVIEW ? PREVIEW.memberId : S.memberId; return id && S.members.has(id) ? id : null; };
+const myId = () => {
+  if (!['tot', 'singer'].includes(curLens())) return null;   // l'espai personal és del rol de cantaire
+  const id = PREVIEW ? PREVIEW.memberId : S.memberId; return id && S.members.has(id) ? id : null;
+};
 const subKey = (sid, sec) => `${sid}_${sec}`;
 const subFor = (sid, sec) => S.subs.get(subKey(sid, sec));
 /** Member allowed to take today's roll for this session and section. */

@@ -25,25 +25,30 @@ const TAB_ICONS = {
   avisos: '<path d="M4 10.5 12 4l8 6.5V19a1.5 1.5 0 01-1.5 1.5H15v-6H9v6H5.5A1.5 1.5 0 014 19z"/>',
   tauler: '<rect x="3.5" y="4" width="17" height="16" rx="2.5"/><path d="M7.5 9h9M7.5 13h9M7.5 17h5"/>',
   classes: '<path d="M12 6.6c-2-1.5-4-2-6.5-2v12c2.5 0 4.5.5 6.5 2 2-1.5 4-2 6.5-2v-12c-2.5 0-4.5.5-6.5 2Z"/><path d="M12 6.6v12"/>',
+  partitures: '<path d="M6 3.5h9l3 3v14H6z"/><path d="M15 3.5v3h3M9 11h6M9 14h6M9 17h4"/>',
+  alumnes: '<circle cx="9" cy="8" r="3.2"/><path d="M3.5 19.5c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><path d="M16 5.2a3 3 0 010 5.6M18 14.8c1.5.7 2.4 2.2 2.6 4.7"/>',
 };
 // El penja-robes del vestidor (al menú del compte, a «Per fer» i al menú lateral de l'ordinador).
 const WARD_ICON = '<path d="M12 8.4V7.2a2 2 0 1 0-2-2"/><path d="M12 8.4 3.7 14.7a1.6 1.6 0 0 0 1 2.9h14.6a1.6 1.6 0 0 0 1-2.9z"/>';
-const TAB_LABEL = { llista: 'Assistència', calendari: 'Calendari', stats: 'Estadístiques', gestio: 'Gestió', avisos: 'Inici', tauler: 'Tauler', classes: 'Classes de cant' };
+const TAB_LABEL = { llista: 'Assistència', calendari: 'Calendari', stats: 'Estadístiques', gestio: 'Gestió', avisos: 'Inici', tauler: 'Tauler', classes: 'Classes de cant', partitures: 'Partitures', alumnes: 'Alumnes' };
 // Amb sis pestanyes (qui edita i també és a la plantilla) els noms llargs no hi caben.
 const TAB_SHORT = { stats: 'Estad.', classes: 'Classes', calendari: 'Calend.', llista: 'Assistència' };
 // Una pestanya per feina: Inici (el que tens per fer i el que ve), Assistència (passar llista i
 // estadístiques), Calendari, Tauler (comunicació) i, si n'hi ha, Classes. La gestió s'obre des del menú del compte.
 const tabsForRole = () => {
+  // Cada rol té les seves pestanyes (vegeu 03b-rols); amb tots els rols alhora, les d'abans.
+  const own = lensTabs();
+  if (own) return own;
   const cl = seeClasses() ? ['classes'] : [];
   // Amb les llistes privades, qui no les passa no té la pestanya d'Assistència: la seva, la veu a Inici.
   return ['avisos', ...(attHidden() && !mySubs().length ? [] : ['llista']), 'calendari', 'tauler', ...cl];
 };
 /** La pestanya de baix que s'il·lumina. Gestió no és cap pestanya: s'obre des del menú del compte. */
-const navTab = () => ui.tab === 'gestio' || ui.tab === 'vestidor' ? '' : ui.tab;
+const navTab = () => (ui.tab === 'gestio' && !tabsForRole().includes('gestio')) || ui.tab === 'vestidor' ? '' : ui.tab;
 function renderTabs() {
   const tabs = tabsForRole();
   if (ui.tab === 'stats' || (ui.tab === 'tauler' && ui.board === 'estadistiques')) { ui.tab = 'llista'; ui.att = 'stats'; ui.board = 'anuncis'; }   // on eren abans
-  if (ui.tab === 'gestio' && !canEdit()) ui.tab = tabs[0];
+  if (ui.tab === 'gestio' && !gestioOn()) ui.tab = tabs[0];
   if (ui.tab === 'vestidor' && !(wardOn() && (myId() || wardStaff()))) ui.tab = tabs[0];
   if (ui.tab !== 'gestio' && ui.tab !== 'vestidor' && !tabs.includes(ui.tab)) ui.tab = tabs[0];
   // Un sol número vermell, a Inici: tot el que espera resposta.
@@ -57,8 +62,8 @@ function renderTabs() {
   const gname = S.config.shortName || S.config.name || MARCA?.short || '';
   const side = `<div class="side-brand" aria-hidden="true">${logo ? `<img src="${esc(logo)}" alt="">` : `<span class="sb-ini">${esc(initials(gname))}</span>`}<span><b>${esc(gname)}</b><small>A Tempo</small></span></div>`;
   // A l'ordinador, Gestió també és al menú lateral (al mòbil s'obre des del menú del compte).
-  const pend = canEdit() ? pendingAbsences().length : 0;
-  const gestio = canEdit() ? `<button class="tab tab-extra" data-act="manage" data-k="${pend ? 'avisos' : ROUTE_MANAGE[ui.manage] ? ui.manage : 'personal'}" aria-current="${ui.tab === 'gestio' ? 'page' : 'false'}">
+  const pend = lensOn() ? 0 : myPendingAbsences().length;
+  const gestio = gestioOn() && !tabs.includes('gestio') ? `<button class="tab tab-extra" data-act="manage" data-k="${pend ? 'avisos' : ROUTE_MANAGE[ui.manage] ? ui.manage : 'personal'}" aria-current="${ui.tab === 'gestio' ? 'page' : 'false'}">
     <span class="tab-ico"><svg viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>${pend ? `<span class="tab-badge">${pend}</span>` : ''}</span>Gestió</button>` : '';
   const vest = wardOn() && (myId() || wardStaff()) ? `<button class="tab tab-extra" data-act="ward-open" aria-current="${ui.tab === 'vestidor' ? 'page' : 'false'}">
     <span class="tab-ico"><svg viewBox="0 0 24 24">${WARD_ICON}</svg></span>Vestidor</button>` : '';
@@ -202,7 +207,11 @@ function render() {
   renderBanner();
   const v = $('#view');
   $('.tabs').hidden = S.mode !== 'shared';
-  if (S.mode === 'shared') renderTabs();
+  // Qui té diversos rols, en obrir l'app, tria amb quin entra (vegeu 03b-rols).
+  ensureLens();
+  const picking = lensPicking();
+  if (picking) $('.tabs').hidden = true;
+  if (S.mode === 'shared' && !picking) renderTabs();
   const GBTN = `<button class="gbtn" data-act="google-in"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17.1z"/><path fill="#FBBC05" d="M10.5 28.7c-.5-1.4-.8-3-.8-4.7s.3-3.2.8-4.7l-7.9-6.1C.9 16.5 0 20.1 0 24s.9 7.5 2.6 10.8l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2.1 1.4-4.8 2.3-8.5 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>Entra amb Google</button>`;
   const own = !['pick', 'create', 'nostaff'].includes(S.mode) && !!(MARCA || S.ready);
   const hero = () => `<div class="entry-id">
@@ -265,7 +274,9 @@ function render() {
       <div class="sk-grid"><span class="sk sk-tile"></span><span class="sk sk-tile"></span></div></div>`;
     return;
   }
-  const html = { llista: viewRoll, calendari: viewCalendar, stats: () => viewStats(false), gestio: viewManage, avisos: viewHome, tauler: viewBoard, classes: viewClasses, vestidor: viewWardrobe }[ui.tab]();
+  if (picking) { v.innerHTML = viewLensPick(); lastViewKey = 'lens'; return; }
+  const html = { llista: viewRoll, calendari: () => curLens() === 'voice' ? viewTeacherCalendar() : viewCalendar(), stats: () => viewStats(false), gestio: viewManage, avisos: viewHome, tauler: viewBoard, classes: viewClasses, vestidor: viewWardrobe,
+    partitures: viewScores, alumnes: viewStudents }[ui.tab]();
   v.innerHTML = html;
   const key = [ui.tab, ui.att, ui.board, ui.manage, ui.people, ui.pmFilter, ui.rollSec, ui.clWho, ui.sessionId].join('|');
   if (key !== lastViewKey) { lastViewKey = key; v.classList.remove('view-in'); void v.offsetWidth; v.classList.add('view-in'); }

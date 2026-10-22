@@ -34,15 +34,42 @@ function dayStats(cur) {
   }
   return { c, expected, out };
 }
-const ATT_TABS = [['llista', 'Llista'], ['stats', 'Estadístiques'], ['risk', 'Risc']];
-const attTabs = () => attHidden() ? '' : `<div class="subtabs att-tabs" role="tablist" style="grid-template-columns:repeat(3,1fr)">${ATT_TABS.map(([k, l]) => `<button class="subtab" role="tab" aria-selected="${ui.att === k}" data-act="att" data-k="${k}">${l}</button>`).join('')}</div>`;
+const ATT_TABS = [['llista', 'Llista'], ['stats', 'Estadístiques'], ['risk', 'Risc'], ['abs', 'Absències']];
+/** Les parts d'Assistència del rol actiu (vegeu attTabKeys): Llista, Estadístiques, Risc i Absències. */
+const attTabs = () => {
+  const keys = attTabKeys();
+  if (attHidden() || keys.length < 2) return '';
+  const pend = keys.includes('abs') ? myPendingAbsences().length : 0;
+  return `<div class="subtabs att-tabs" role="tablist" style="grid-template-columns:repeat(${keys.length},1fr)">${ATT_TABS.filter(([k]) => keys.includes(k)).map(([k, l]) => `<button class="subtab" role="tab" aria-selected="${ui.att === k}" data-act="att" data-k="${k}">${l}${k === 'abs' && pend ? ` <span class="sub-n">${pend}</span>` : ''}</button>`).join('')}</div>`;
+};
+/** Assistència › Absències: els avisos que respon aquest rol (el cap de corda, els de la seva corda). */
+function attAbsences() {
+  const sec = lensSection();
+  const all = absencesForMe([...S.absences.values()]).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+  const list = all.filter(a => ui.absFilter === 'all' || a.status === 'pending');
+  return `<div class="page-head in-board"><div><div class="eyebrow">Avisos d’absència i retard</div><h2 class="h1 stats-t">${sec ? esc(SEC[sec].name) : `${capz(V.tot)}`}</h2></div></div>
+    <div class="sec-h"><div class="pickers">
+      <button class="pick" aria-pressed="${ui.absFilter !== 'all'}" data-act="abs-filter" data-k="pending">Pendents</button>
+      <button class="pick" aria-pressed="${ui.absFilter === 'all'}" data-act="abs-filter" data-k="all">Tots</button></div></div>
+    ${list.length ? `<div class="panel">${list.map(a => absenceCard(a, { staff: true })).join('')}</div>`
+      : `<div class="panel" style="padding:16px;font-size:calc(13.5px*var(--ts));color:var(--muted)">${ui.absFilter === 'all' ? 'Encara no hi ha cap avís.' : 'No hi ha cap avís per respondre.'} Cada ${V.member} avisa des de la seva pestanya d’Assistència.</div>`}`;
+}
+/** El cap de corda només porta la seva corda: no torna a «totes les cordes». */
+const rollOneSec = () => !!lensSection();
 /** La norma d'assistència de totes les produccions en curs: qui no pot fer el concert i qui està en risc. */
 function viewRisk() {
   if (!productionsSorted().length) return `<div class="empty">${staffSvg()}<p>Quan hi hagi produccions amb llistes passades, veuràs aquí qui compleix la norma.</p></div>`;
   return `<div class="page-head in-board"><div><div class="eyebrow">Norma d’assistència</div><h2 class="h1 stats-t">Norma del ${minAttendance()}%</h2></div></div>` + riskView();
 }
 function viewRoll() {
-  if (!ATT_TABS.some(([k]) => k === ui.att)) ui.att = 'llista';
+  // Cada rol té la seva Assistència: el cantaire, la seva; el professor de cant, la de les seves classes (vegeu 03b-rols).
+  if (curLens() === 'singer') { const sub = ui.att === 'llista' && ui.rollSec && mySubs().some(x => x.section === ui.rollSec); if (!sub) return viewMyAtt(); }
+  if (curLens() === 'voice') return viewClassRoll();
+  const keys = attTabKeys();
+  if (!keys.includes(ui.att)) ui.att = keys[0];
+  const sec = lensSection();
+  if (sec) { ui.section = sec; if (ui.att === 'llista') ui.rollSec = sec; if (ui.att === 'stats') ui.statsSec = sec; }
+  if (ui.att === 'abs') return attTabs() + attAbsences();
   // Llistes privades: un substitut només hi ve a passar la seva llista, sense estadístiques ni risc de ningú.
   if (attHidden()) { ui.att = 'llista'; return subListWaiting() ? '<div class="empty"><p>Carregant la llista…</p></div>' : viewRollBody(); }
   if (ui.att === 'stats') return attTabs() + viewStats(true);
@@ -64,7 +91,7 @@ function viewRollBody() {
   let cur = ui.sessionId && list.find(s => s.id === ui.sessionId);
   if (!cur) { cur = defaultSession(list); ui.sessionId = cur.id; }
   const pendingBySec = canEdit() ? Object.fromEntries(SECTIONS.map(x => [x.id, pendingSessions(x.id)])) : {};
-  return ui.rollSec ? viewRollSection(cur, list, ui.rollSec, pendingBySec) : viewRollOverview(cur, list, pendingBySec);
+  return ui.rollSec ? (lensSection() ? attTabs() : '') + viewRollSection(cur, list, ui.rollSec, pendingBySec) : viewRollOverview(cur, list, pendingBySec);
 }
 function viewRollOverview(cur, list, pendingBySec) {
   const quads = SECTIONS.map(x => {
@@ -159,7 +186,7 @@ function viewRollSection(cur, list, sec, pendingBySec) {
   const head = `<div class="ctx" id="ctx">
     ${sessionNav(cur, list, true)}
     <div class="secbar">
-      <button class="btn btn-sm btn-ghost back" data-act="close-sec" aria-label="Torna enrere">${ICON.left.replace('<svg', '<svg class="ic-sm" aria-hidden="true"')} ${V.Sections}</button>
+      ${rollOneSec() ? '<span></span>' : `<button class="btn btn-sm btn-ghost back" data-act="close-sec" aria-label="Torna enrere">${ICON.left.replace('<svg', '<svg class="ic-sm" aria-hidden="true"')} ${V.Sections}</button>`}
       <span class="secbar-t"><em>${esc(secShort(sec))}</em>${esc(SEC[sec].name)}</span>
       <span class="mono${on && rollDone(cur, sec) ? ' is-done' : ''}" id="secbar-count">${on ? (rollDone(cur, sec) ? doneCount(pr) : `${pr.done}/${pr.total}`) : ''}</span>
     </div>
@@ -194,7 +221,7 @@ function viewRollSection(cur, list, sec, pendingBySec) {
       <summary><span>De baixa o no fan la producció (${out.length})</span>${ICON.chev}</summary>
       <ul class="roster${rollCompact() ? ' compact' : ''}" style="margin-top:0">${out.map(m => rowHtml(cur, m)).join('')}</ul>
     </details>` : ''}
-  <button class="btn" data-act="close-sec" style="display:flex;margin:18px auto 0">Torna a totes les ${V.sections}</button>
+  ${rollOneSec() ? '' : `<button class="btn" data-act="close-sec" style="display:flex;margin:18px auto 0">Torna a totes les ${V.sections}</button>`}
   ${canMark(cur, sec) ? '<p class="muted" style="font-size:calc(13px*var(--ts));text-align:center;margin-top:12px">Toca l’estat marcat una altra vegada per desmarcar-lo.</p>' : ''}`;
 }
 function subLine(cur, sec, leader) {
