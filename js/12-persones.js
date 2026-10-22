@@ -588,7 +588,11 @@ function sheetPreview() {
 }
 let REAL_FS = null;
 function startPreview(p) {
-  PREVIEW = { ...p, roles: p.roles.length ? p.roles : ['singer'], blocked: false, blockedAt: 0 };
+  const roles = p.roles.length ? p.roles : ['singer'];
+  // La vista prèvia mira l'app amb el rol triat (vegeu curLens); un cantaire sense fitxa la veu com qui no ho és.
+  const main = p.role && p.role !== 'singer' ? p.role : p.role ? '' : roles.find(r => r !== 'singer');
+  const lens = main || (p.memberId ? 'singer' : 'viewer');
+  PREVIEW = { ...p, roles, lens, blocked: false, blockedAt: 0 };
   // Cap escriptura arriba a la base de dades: ni les de les finestres ni les de qualsevol altre lloc.
   if (!REAL_FS) { REAL_FS = fs; fs = previewFs(REAL_FS); }
   ui.tab = 'avisos'; ui.rollSec = null; ui.clWho = null; ui.sessionId = null;

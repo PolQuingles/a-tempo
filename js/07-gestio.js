@@ -6,11 +6,15 @@
 function viewManage() {
   const pend = pendingAbsences().length;
   if (ui.manage === 'cantaires') ui.manage = 'personal';   // es deia així abans
-  const tabs = [['avisos', `Absències${pend ? ` (${pend})` : ''}`], ['personal', 'Personal'], ['produccions', 'Produccions'], ['config', 'Ajustos']];
-  // S'obre des del menú del compte: la fletxa torna a la pantalla d'on s'ha vingut.
+  // Cada rol hi té les seves parts (vegeu gestioTabs): l'administració, tot menys les absències (que són a Assistència).
+  const own = gestioTabs();
+  const tabs = [['avisos', `Absències${pend ? ` (${pend})` : ''}`], ['personal', 'Personal'], ['produccions', 'Produccions'], ['config', 'Ajustos']].filter(([k]) => own.includes(k));
+  if (!own.includes(ui.manage)) ui.manage = own.includes('personal') ? 'personal' : own[0];
+  // Si és una pestanya del rol, és una pàgina més; si s'obre des del menú del compte, la fletxa torna a la pantalla d'on s'ha vingut.
+  const asTab = tabsForRole().includes('gestio');
   const from = tabsForRole().includes(ui.gestioFrom) ? ui.gestioFrom : 'avisos';
-  const head = `<div class="page-head"><div class="ph-back"><button class="nav-arrow" data-act="tab" data-tab="${from}" aria-label="Torna a ${esc(TAB_LABEL[from])}">${ICON.left}</button><div><div class="eyebrow">El teu compte</div><h1 class="h1">Gestió</h1></div></div></div>
-    <div class="subtabs" role="tablist" style="grid-template-columns:repeat(4,1fr)">${tabs.map(([k, l]) => `<button class="subtab" role="tab" aria-selected="${ui.manage === k}" data-act="manage" data-k="${k}" style="font-size:12.5px">${l}</button>`).join('')}</div>`;
+  const head = `<div class="page-head">${asTab ? '<h1 class="h1">Gestió</h1>' : `<div class="ph-back"><button class="nav-arrow" data-act="tab" data-tab="${from}" aria-label="Torna a ${esc(TAB_LABEL[from])}">${ICON.left}</button><div><div class="eyebrow">El teu compte</div><h1 class="h1">Gestió</h1></div></div>`}</div>
+    ${tabs.length > 1 ? `<div class="subtabs" role="tablist" style="grid-template-columns:repeat(${tabs.length},1fr)">${tabs.map(([k, l]) => `<button class="subtab" role="tab" aria-selected="${ui.manage === k}" data-act="manage" data-k="${k}" style="font-size:12.5px">${l}</button>`).join('')}</div>` : ''}`;
   if (ui.manage === 'produccions') return head + manageProductions();
   if (ui.manage === 'config') return head + manageConfig();
   if (ui.manage === 'avisos') return head + manageAbsences();
@@ -479,6 +483,7 @@ function paintAccount() {
 }
 /** El menú del compte: una fila curta per opció. Cada fila obre la seva finestra (o la pantalla de Gestió). */
 const ACCT_ICONS = {
+  lens: '<path d="M7 7h11l-3-3M17 17H6l3 3"/>',
   gestio: '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
   calendar: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
   classIcs: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="M11 18v-5.5l4-1v4.5"/><circle cx="10" cy="18" r="1.2"/><circle cx="14" cy="16" r="1.2"/>',
@@ -500,13 +505,14 @@ const ACCT_SHEETS = {
 };
 function sheetAccount() {
   const name = accountName();
-  const pend = canEdit() ? pendingAbsences().length : 0;
+  const pend = gestioOn() && gestioTabs().includes('avisos') ? myPendingAbsences().length : 0;
   const item = (k, t, act, n = 0) => `<button class="acct-item${k === 'gestio' ? ' is-main' : ''}" ${act}>
       <span class="acct-i"><svg viewBox="0 0 24 24" aria-hidden="true">${ACCT_ICONS[k]}</svg></span>
       <span class="acct-t">${t}</span>${n ? `<span class="acct-n" aria-label="${n} per veure">${n > 99 ? '99+' : n}</span>` : ''}${ICON.right}</button>`;
   const open = (k, t) => item(k, t, `data-act="acct-open" data-k="${k}"`);
   const groups = [
-    canEdit() ? [item('gestio', 'Gestió', `data-act="manage" data-k="${pend ? 'avisos' : ROUTE_MANAGE[ui.manage] ? ui.manage : 'personal'}"`, pend)] : [],
+    [gestioOn() && !tabsForRole().includes('gestio') && item('gestio', 'Gestió', `data-act="manage" data-k="${pend ? 'avisos' : ROUTE_MANAGE[ui.manage] ? ui.manage : 'personal'}"`, pend),
+      lensBar() && item('lens', 'Canvia de rol', 'data-act="lens-pick"')],
     [(myId() || S.threads.size) && item('threads', 'Converses', 'data-act="acct-open" data-k="threads"', unreadThreads().length), open('week', 'La setmana'),
       myId() && !PREVIEW && open('profile', 'La meva fitxa'), wardOn() && (myId() || wardStaff()) && item('wardrobe', 'Vestidor', 'data-act="ward-open"', myId() ? wardOf(myId()).filter(x => x.status === 'emprovar').length : 0), open('calendar', icsOn() ? 'Calendari al mòbil' : 'Exporta el calendari'), pushSupported() && open('push', 'Notificacions')],
     [groupsVisible() && open('groups', 'Agrupacions'), open('theme', 'Aparença'), canInstall() && open('install', 'Instal·la l’app'), open('help', 'Com funciona')],

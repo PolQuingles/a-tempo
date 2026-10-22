@@ -3,8 +3,8 @@
 // (o tarda massa, com a moltes sales d'assaig), s'obre la darrera que es va desar. El codi i els estils porten
 // ?v=<empremta> a l'adreça: no canvien mai, i es desen i es reaprofiten. Les dades no passen per aquí: Firestore
 // ja en guarda una còpia al mòbil. VERSION i SHELL els escriu tools/stamp.py.
-const VERSION = 'd770ae8f9f';
-const SHELL = ['./', 'index.html', 'app.webmanifest', 'app/icon-192.png', 'app/icon-180.png', 'app/favicon-48.png', 'css/app.css?v=95d702194c', 'config.js?v=666ce52d45', 'js/00-errors.js?v=466e708bfe', 'js/01-base.js?v=98792eadae', 'js/02-dades.js?v=1758784e78', 'js/03-pantalla.js?v=216fa82f85', 'js/04-llista.js?v=ff654a247a', 'js/04b-en-funcions.js?v=9a5a890eb8', 'js/05-calendari.js?v=9e511cfb8e', 'js/06-estadistiques.js?v=ed296aaf1b', 'js/07-gestio.js?v=68b07fb244', 'js/08-tauler.js?v=e9ad70a214', 'js/09-classes.js?v=631f4360e1', 'js/09b-classes-horari.js?v=535dc80cd3', 'js/09c-classes-fitxes.js?v=5021f689cd', 'js/10-inici.js?v=505e6a5808', 'js/11-fitxes.js?v=34afe4ff12', 'js/12-persones.js?v=944bf8ed2f', 'js/12c-entrar.js?v=cfc96b32c2', 'js/13-avisos-mobil.js?v=5577d99ef7', 'js/14-eines.js?v=42c7394bc6', 'js/15-copies.js?v=75effd9ea5', 'js/16-agrupacions.js?v=738951cb03', 'js/17-rutes.js?v=2396c4fe3e', 'js/18-repertori.js?v=a70cf1fc5d', 'js/18b-arxiu.js?v=5195dcc8b9', 'js/19-concerts.js?v=f09556f4c9', 'js/20-sortides.js?v=2a0682fc55', 'js/20b-vestidor.js?v=ed1af300d5', 'js/21-missatges.js?v=04faec1158', 'js/21b-converses.js?v=93a7d0b8db', 'js/22-secretaria.js?v=ca078cc926', 'js/22b-tries.js?v=fec0058dcc', 'js/23-accions.js?v=44ae305685', 'js/24-arrencada.js?v=74487edfb6'];
+const VERSION = '44cff954f5';
+const SHELL = ['./', 'index.html', 'app.webmanifest', 'app/icon-192.png', 'app/icon-180.png', 'app/favicon-48.png', 'css/app.css?v=6ec139ddca', 'config.js?v=666ce52d45', 'js/00-errors.js?v=466e708bfe', 'js/01-base.js?v=4f5e3d7bb2', 'js/02-dades.js?v=1758784e78', 'js/03b-rols.js?v=0d62a0459c', 'js/03-pantalla.js?v=00fa91d4a8', 'js/04-llista.js?v=1cb579402b', 'js/04b-en-funcions.js?v=9252ca296e', 'js/05-calendari.js?v=9e511cfb8e', 'js/06-estadistiques.js?v=08378399c5', 'js/07-gestio.js?v=46deb09198', 'js/08-tauler.js?v=e9ad70a214', 'js/09-classes.js?v=25034dedfe', 'js/09b-classes-horari.js?v=535dc80cd3', 'js/09c-classes-fitxes.js?v=5021f689cd', 'js/10-inici.js?v=ab469c5ece', 'js/11-fitxes.js?v=34afe4ff12', 'js/12-persones.js?v=01cc97f5d0', 'js/12c-entrar.js?v=cfc96b32c2', 'js/13-avisos-mobil.js?v=6743bbce3e', 'js/14-eines.js?v=0cf926bab4', 'js/15-copies.js?v=75effd9ea5', 'js/16-agrupacions.js?v=738951cb03', 'js/17-rutes.js?v=ef03f4540b', 'js/18-repertori.js?v=a70cf1fc5d', 'js/18b-arxiu.js?v=aaa7668591', 'js/19-concerts.js?v=f09556f4c9', 'js/20-sortides.js?v=2a0682fc55', 'js/20b-vestidor.js?v=ed1af300d5', 'js/21-missatges.js?v=4d12f5b725', 'js/21b-converses.js?v=93a7d0b8db', 'js/22-secretaria.js?v=ca078cc926', 'js/22b-tries.js?v=b3c1e9669f', 'js/23-accions.js?v=3ad44e36f1', 'js/24-arrencada.js?v=74487edfb6'];
 const CDN = [
   'https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js',
   'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js',
@@ -95,6 +95,8 @@ self.addEventListener('notificationclick', e => {
   const url = new URL(data.url || './', self.registration.scope);
   // Un botó de la notificació: l'app ho fa en obrir-se (vegeu runNotificationAction).
   if (e.action && data.sid) { url.searchParams.set('accio', e.action); url.searchParams.set('s', data.sid); }
+  // El rol amb què s'ha d'obrir (vegeu 03b-rols): el d'una llista pendent, de cap de corda; el d'una convocatòria, de cantaire.
+  if (data.rol) url.searchParams.set('rol', data.rol);
   const target = url.href;
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
     for (const c of list) {

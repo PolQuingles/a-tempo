@@ -346,6 +346,15 @@ function sheetHelp() {
     <h3>Entrar</h3>
     <p>Tothom entra pel mateix enllaç amb <b>el seu correu</b>: amb Google o, si el correu no és de Google, creant una contrasenya («Entra amb un altre correu»). L’administració afegeix cada persona <b>un sol cop</b> a <b>Gestió › Personal › + Persona</b>: el nom, el correu i què fa (${w.member}, ${w.leader}, ${esc(V.Teacher.toLowerCase())}, director, gerència, secretaria o administració; pot tenir més d’un rol). Si canta, se li fa la fitxa de la plantilla amb la ${w.section} o, si ja hi era, s’hi vincula. A qui ja és a la plantilla, n’hi ha prou de posar-li el correu a la seva fitxa. Després s’envia la <b>invitació</b> per correu o WhatsApp.</p>
     <p>L’administració ho pot fer tot. Direcció, ${w.leaders}, gerència i secretaria passen llista, publiquen anuncis i convocatòries i pugen materials i documents. ${w.Members} ho veuen tot en <b>mode lectura</b>. A <b>Inici</b> hi ha tot el que tens <b>per fer</b> i la sessió d’avui. El teu compte és a les teves inicials, a dalt a la dreta: un menú amb la <b>Gestió</b> per a qui edita (absències, personal, produccions i ajustos; els camins «Gestió › …» d’aquesta ajuda comencen allà), les notificacions, el calendari, l’aparença, les agrupacions i el botó per sortir.</p>
+    <h3>Cada rol, les seves pestanyes</h3>
+    <p>Qui té més d’un rol (per exemple, ${w.member} i ${w.leader}) tria amb quin entra cada cop que obre l’app, i el canvia des d’<b>Inici › Canvia de rol</b>. Amb un sol rol, l’app s’obre directament amb aquest. Cada rol només hi veu la seva feina:</p>
+    <ul><li><b>${capz(w.member)}</b>: Inici, Assistència (la seva: avisar d’una absència o d’un retard i les seves estadístiques; la de la resta no la veu), Calendari, Tauler i, si en fa, Classes.</li>
+    <li><b>${capz(w.leader)}</b>: Inici, Assistència (passa llista de la seva ${w.section} i en respon les absències) i Tauler.</li>
+    <li><b>Arxiver</b>: Inici i Partitures (el repertori i les partitures per repartir, repartides i per retornar).</li>
+    <li><b>${esc(V.Teacher)}</b>: Inici, Assistència (la llista de les classes), Calendari (els dies i l’hora de cada alumne) i Alumnes (la fitxa de cant de cadascú).</li>
+    <li><b>Director</b>: Inici, Assistència (les estadístiques de tothom i les absències), Calendari i Tauler.</li>
+    <li><b>Gerència</b>: Inici, Assistència (estadístiques), Calendari, Tauler i Gestió. <b>Secretaria</b>: Inici, Gestió (personal, altes i baixes, documents i quotes) i Tauler. <b>Administració</b>: tot.</li></ul>
+    <p>Qui no és ${w.member} també pot triar <b>Veure l’app com un ${w.member}</b> per mirar el calendari, el tauler, els anuncis i els documents.</p>
     <h3>Passar llista</h3>
     <ul><li>A <b>Assistència</b> (o amb el botó <b>Passa llista</b> d’Inici) surt la sessió d’avui. Toca el quadre de la teva ${w.section}.</li>
     <li>Toca l’estat de cadascú: <b>Present</b>, <b>Retard</b>, <b>No justificada</b>, <b>Justificada</b> o <b>No fa</b>. Toca’l un altre cop per desmarcar.</li>
@@ -358,7 +367,7 @@ function sheetHelp() {
     <h3>${capz(w.leader)} en funcions</h3>
     <p>Si el ${w.leader} no fa una producció, a <b>Assistència › ${capz(w.leaders)} en funcions</b> tria una persona de la seva ${w.section} que sí la fa: en serà <b>${w.leader} en funcions</b> i passarà llista a tots els assajos i ${w.sh.els.replace(/^(els|les) /, '')} d’aquella producció. Mentre no hi hagi ningú triat, li surt a «Per fer».</p>
     <h3>Absències</h3>
-    <p>Els ${w.members} avisen des d’Inici. Surten a <b>Gestió › Absències</b> i a la llista del dia. En acceptar-los, els dies queden com a falta justificada.</p>
+    <p>Els ${w.members} avisen des de la seva pestanya d’<b>Assistència</b>. Els responen a <b>Assistència › Absències</b> el ${w.leader} de la seva ${w.section}, la direcció i l’administració, i surten a la llista del dia. En acceptar-los, els dies queden com a falta justificada.</p>
     <h3>Convocatòries</h3>
     <p>A la fitxa d’una sessió (${w.sh.show}, viatge…) activa <b>Demana confirmació</b>. Els ${w.members} responen Sí/No i a la Llista veus el recompte.</p>
     <h3>Tauler</h3>

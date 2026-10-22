@@ -98,6 +98,10 @@ def part_matches(item_part, member):
     return not mp or item_part in mp or mp in item_part
 
 
+# El rol amb què s'obre l'app en tocar cada mena d'avís (si la persona no el té, l'app li deixa triar).
+ROL_BY_TAG = {"roll": "leader", "risk": "leader", "rsvp": "singer", "ses": "singer", "abs": "singer", "trip": "singer", "poll": "singer", "pollnew": "singer"}
+
+
 class Group:
     """Tot el que cal per enviar els avisos d'una agrupació. Les lectures grans es fan només si calen."""
 
@@ -186,6 +190,10 @@ class Group:
         """'ok' enviat · 'gone' l'aparell ja no hi és · 'retry' error passatger.
         extra: botons de la notificació ({"actions": [...], "sid": sessió}) per respondre sense obrir l'app."""
         payload = {"title": self.name, "body": body, "url": self.url, "tag": tag, **(extra or {})}
+        # L'app s'obre amb el rol que toca (vegeu 03b-rols): les llistes i el risc, de cap de corda; la resta, de cantaire.
+        rol = ROL_BY_TAG.get(tag.split("-")[0])
+        if rol:
+            payload["rol"] = rol
         if self.icon:
             payload["icon"] = self.icon
         try:
