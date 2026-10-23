@@ -338,12 +338,14 @@ function planForMe(items, sec) {
   });
 }
 const planWorks = items => (items || []).filter(it => !it.kind);
+/** Les obres del pla en una línia, cada una un sol cop (sovint la mateixa peça es fa als parcials i després al tutti). */
+const planLine = (items, bars = true) => [...new Set(planWorks(items).map(it => `${planTitle(it)}${bars && it.bars ? ` (${it.bars})` : ''}`))].join(' · ');
 /** El pla, per llegir. compact = només els títols (per a les targetes). sec = només el que toca a aquella corda. */
 function planHtml(s, compact, sec) {
   const p = planOf(s);
   if (!p) return '';
   const items = planForMe(p.items || [], sec);
-  if (compact) { const w = planWorks(items); return w.length ? `<span class="plan-line">${esc(w.map(it => `${planTitle(it)}${it.bars ? ` (${it.bars})` : ''}`).join(' · '))}</span>` : ''; }
+  if (compact) { const line = planLine(items); return line ? `<span class="plan-line">${esc(line)}</span>` : ''; }
   const past = s.date < TODAY;
   const out = [];
   let list = [];
@@ -483,7 +485,7 @@ function planChip(s) {
   const p = planOf(s);
   if (p) {
     const me = S.members.get(myMemberId());
-    const titles = planWorks(planForMe(p.items || [], me && !canEdit() ? me.section : '')).map(it => `${planTitle(it)}${it.bars ? ` (${it.bars})` : ''}`).join(' · ') || p.text || p.after;
+    const titles = planLine(planForMe(p.items || [], me && !canEdit() ? me.section : '')) || p.text || p.after;
     return `<button class="fitxa-chip plan-chip" data-act="session-info" data-sid="${s.id}">${PLAN_ICON}<span><b>${s.date < TODAY ? 'Què s’hi va treballar' : 'Pla d’assaig'}</b><small>${esc(titles)}</small></span></button>`;
   }
   return '';
