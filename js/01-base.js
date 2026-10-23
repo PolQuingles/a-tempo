@@ -273,7 +273,7 @@ const rolesHint = roles => !roles.length ? 'Tria almenys un rol.' : [
 let PREVIEW = null;
 // El rol amb què es mira l'app (vegeu 03b-rols): cada rol té les seves pestanyes i només hi veu el que és de la seva feina.
 // Qui té diversos rols el tria en obrir l'app i el canvia des d'Inici. 'viewer' és «Veure l'app com un cantaire» (per a qui no
-// ho és) i 'tot', tots els rols alhora, com era abans (les proves i qui encara no n'ha triat cap). Només canvia la pantalla:
+// ho és) i 'tot', mentre encara no se n'ha triat cap (o per a un compte sense fitxa de l'equip). Només canvia la pantalla:
 // les dades que es llegeixen i els permisos de la base de dades són els del compte.
 const LENS_ORDER = ['singer', 'leader', 'archive', 'voice', 'director', 'gerencia', 'secretaria', 'admin'];
 let LENS = null;

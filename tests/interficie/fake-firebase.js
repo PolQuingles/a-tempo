@@ -16,12 +16,6 @@
   if (m) localStorage.setItem('fake:user', m[1]);
   if (/[?&]reset=1/.test(location.search)) localStorage.removeItem(KEY);
   const who = USERS[localStorage.getItem('fake:user') || 'pol'];
-  // Les proves d'abans miren l'app amb tots els rols alhora (rol «tot», vegeu 03b-rols): si l'adreça no en tria cap (?rol=…),
-  // i aquesta persona encara no n'ha triat cap en aquesta pestanya, aquest.
-  if (!/[?&]rol=/.test(location.search)) {
-    const k = `atempo:rol:nSN9kYDkzPik239jnsMsCSYW:${who.email}`;
-    try { if (!sessionStorage.getItem(k)) sessionStorage.setItem(k, 'tot'); } catch {}
-  }
 
   let DB = {};
   try { DB = JSON.parse(localStorage.getItem(KEY) || 'null') || window.FAKE_SEED || {}; } catch { DB = window.FAKE_SEED || {}; }

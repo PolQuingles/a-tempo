@@ -17,15 +17,16 @@ function lensOptions() {
   const rs = rolesOf(S.me);
   return LENS_ORDER.filter(r => rs.includes(r) && (r !== 'singer' || (!!S.memberId && S.members.has(S.memberId))));
 }
-/** L'administració pot fer servir l'app com qualsevol rol (amb la corda o el professor que triï), no només els seus. */
+/** L'administració pot fer servir l'app com qualsevol rol (amb la corda o el professor que triï), no només els seus.
+ *  (Sense llegir el personal: Inici no l'ha de llegir, vegeu ensureStaff.) */
 const lensAll = () => S.role === 'edit' && hasRole(S.me, 'admin');
 function lensAllOptions() {
   if (!lensAll()) return lensOptions();
-  return LENS_ORDER.filter(r => (r !== 'singer' || (!!S.memberId && S.members.has(S.memberId))) && (r !== 'voice' || (classesOn() && classTeachers().length > 0)));
+  return LENS_ORDER.filter(r => (r !== 'singer' || (!!S.memberId && S.members.has(S.memberId))) && (r !== 'voice' || (classesOn() && (S.classes.size > 0 || teacherSeats().length > 0 || hasRole(S.me, 'voice')))));
 }
 /** «Veure l'app com un cantaire»: per a tothom qui no ho és (o no té fitxa a la plantilla). */
 const viewerOption = () => !lensOptions().includes('singer');
-const validLens = k => k === 'tot' || (k === 'viewer' ? viewerOption() : lensAllOptions().includes(k));
+const validLens = k => k === 'viewer' ? viewerOption() : lensAllOptions().includes(k);
 /** La corda o el professor amb què es fa servir un rol: el triat (si l'administració en tria un) o el del compte. */
 function lensCtxFor(k, want = {}) {
   if (k === 'leader' || k === 'archive') {
@@ -87,7 +88,7 @@ function applyLensCode(code) {
  *  cap de triat, LENS es queda a null i es pinta el selector. */
 function ensureLens() {
   if (PREVIEW || S.mode !== 'shared' || !S.ready) return;
-  if (LENS && validLens(LENS)) return;
+  if (LENS && (LENS === 'tot' ? !S.me : validLens(LENS))) return;
   LENS = null; LENS_CTX = {};
   // ?rol=… (l'obre un avís del mòbil): una sola vegada; després, el rol queda triat per a la sessió i es treu de l'adreça.
   const q = new URLSearchParams(location.search).get('rol');

@@ -90,14 +90,23 @@ def serve(directory):
     return srv
 
 
-def open_app(browser, base, user, opts, route=""):
+# El rol amb què entra cada usuari de prova (vegeu js/03b-rols.js): el que triaria. Qui només en té un hi entra directament.
+DEFAULT_ROL = {"pol": "admin", "leader": "leader", "arx": "archive"}
+
+
+def rol_param(user, rol):
+    r = DEFAULT_ROL.get(user) if rol is None else rol
+    return f"&rol={r}" if r else ""
+
+
+def open_app(browser, base, user, opts, route="", rol=None):
     ctx = browser.new_context(**opts)
     page = ctx.new_page()
     errors = []
     page.on("pageerror", lambda e: errors.append(f"error: {e}"))
     page.on("console", lambda m: errors.append(f"consola: {m.text}")
             if m.type == "error" and "Failed to load resource" not in m.text else None)
-    page.goto(f"{base}/index.html?u={user}&reset=1{route}")
+    page.goto(f"{base}/index.html?u={user}&reset=1{rol_param(user, rol)}{route}")
     page.wait_for_function(READY, timeout=20000)
     # La primera vegada s'obre sola la benvinguda: es tanca amb el seu botó, com faria la persona.
     page.wait_for_timeout(900)
@@ -107,9 +116,9 @@ def open_app(browser, base, user, opts, route=""):
     return ctx, page, errors
 
 
-def switch_user(page, base, user):
+def switch_user(page, base, user, rol=None):
     """Una altra persona al mateix navegador: les dades (la base de dades falsa) es conserven."""
-    page.goto(f"{base}/index.html?u={user}")
+    page.goto(f"{base}/index.html?u={user}{rol_param(user, rol)}")
     page.wait_for_function(READY, timeout=20000)
     page.wait_for_timeout(900)
     if page.locator(".sheet").count():
@@ -133,6 +142,9 @@ def main():
                                   ("leader", SMALL, "320 px"), ("singer", SMALL, "320 px"), ("dir", SMALL, "320 px"),
                                   ("prof", SMALL, "320 px"), ("ger", MOBILE, "375 px"), ("dir", DESKTOP, "ordinador")]:
             ctx, page, errors = open_app(browser, base, user, opts)
+            # L'administració pot fer servir l'app com qualsevol rol: al mòbil, es recorren tots.
+            if user == "pol" and label == "375 px":
+                page.evaluate("window.SWEEP_LENSES = [...lensAllOptions()]")
             res = page.evaluate(SWEEP)
             check(res["vistes"] >= 8, f"{user} a {label}: {res['vistes']} pantalles recorregudes")
             check(not res["desbordaments"], f"{user} a {label}: res no surt de la pantalla", "; ".join(res["desbordaments"][:3]))
@@ -163,18 +175,13 @@ def main():
         page.go_back(); page.wait_for_timeout(400)
         check(screen(page) == "#/inici avisos", "tancar amb la creu no deixa passos de més", screen(page))
         page.click('[data-act="tab"][data-tab="calendari"]'); page.wait_for_timeout(300)
-        page.click("#acct-btn"); page.wait_for_timeout(300)
-        page.click('.acct-item[data-act="manage"]'); page.wait_for_timeout(400)
-        check(screen(page) == "#/gestio/avisos gestio", "Gestió s'obre des del menú del compte (a Avisos, si n'hi ha de pendents)", screen(page))
+        page.click('[data-act="tab"][data-tab="gestio"]'); page.wait_for_timeout(400)
+        check(screen(page) == "#/gestio/personal gestio" and page.locator(".ph-back").count() == 0, "per a l'administració, Gestió és una pestanya més (comença per Personal)", screen(page))
         page.click('[data-act="manage"][data-k="config"]'); page.wait_for_timeout(300)
         page.go_back(); page.wait_for_timeout(400)
-        check(screen(page) == "#/gestio/avisos gestio", "dins de Gestió, enrere torna a l'apartat d'abans", screen(page))
+        check(screen(page) == "#/gestio/personal gestio", "dins de Gestió, enrere torna a l'apartat d'abans", screen(page))
         page.go_back(); page.wait_for_timeout(400)
-        check(screen(page) == "#/calendari calendari", "de Gestió, enrere torna a la pantalla d'on s'ha obert", screen(page))
-        page.click("#acct-btn"); page.wait_for_timeout(300)
-        page.click('.acct-item[data-act="manage"]'); page.wait_for_timeout(400)
-        page.click(".ph-back .nav-arrow"); page.wait_for_timeout(400)
-        check(screen(page) == "#/calendari calendari", "la fletxa de Gestió també hi torna", screen(page))
+        check(screen(page) == "#/calendari calendari", "de Gestió, enrere torna a la pantalla d'abans", screen(page))
         check(not errors, "sense errors en navegar", "; ".join(errors[:3]))
         ctx.close()
 
@@ -284,14 +291,14 @@ def main():
           const bal = concertBalance(sessionById('s6'));
           out.tenorsShort = bal.find(b => b.x.id === 'T').short && todoItems().some(x => x.icon === 'voices');
           updateSession('s6', { seating: { rows: autoSeating(sessionById('s6'), 2) } }); await s(100);
-          out.seat = !!mySeat(sessionById('s6'), myMemberId());
+          out.seat = !!mySeat(sessionById('s6'), S.memberId);
           await loadProfiles();
           const t = participantRows(sessionById('s6'), true, new Set(['sec', 'phone', 'emerg', 'size']));
           out.participants = t.rows.length === 4 && t.rows.some(x => x.includes('600000001') && x.includes('L'));
-          out.cert = certificateHtml({ m: S.members.get(myMemberId()), from: seasonCfg().season.from, to: seasonCfg().season.to, label: 'la temporada', signer: 'X', role: 'Secretaria', place: 'Barcelona' }).includes('CERTIFICA');
+          out.cert = certificateHtml({ m: S.members.get(S.memberId), from: seasonCfg().season.from, to: seasonCfg().season.to, label: 'la temporada', signer: 'X', role: 'Secretaria', place: 'Barcelona' }).includes('CERTIFICA');
           const f = await seasonFigures();
           out.season = f.active === 16 && seasonRows(f).length > 20;
-          out.norm = /Encara pots perdre .+ d’assaig|ni un minut més|assegurat/.test(normHint(S.members.get(myMemberId()), 'p1'));
+          out.norm = /Encara pots perdre .+ d’assaig|ni un minut més|assegurat/.test(normHint(S.members.get(S.memberId), 'p1'));
           out.week = timetableHtml([{ label: 'Dilluns', sub: 'Aula 2', cells: { '17:00': 'Anna' } }]).includes('Aula 2');
           return out;
         }""")
@@ -343,7 +350,7 @@ def main():
           document.querySelector('#mg-body').value = 'Tenors, assaig parcial dijous a les 19 h.';
           document.querySelector('#mg-send').click(); await s(200); flushAll(); await s(300);
           out.sent = [...S.messages.values()].some(m => m.body.startsWith('Tenors, assaig') && m.to.length === 1 && m.to[0] === 'T');
-          const tenor = membersOf('T').find(m => m.id !== myMemberId());
+          const tenor = membersOf('T').find(m => m.id !== S.memberId);
           sheetMemberStats(tenor.id); await s(600);
           out.track = !!document.querySelector('#ms-track #tn-text');
           document.querySelector('#tn-text').value = 'Bona evolució als aguts'; document.querySelector('#tn-save').click(); await s(400);
@@ -439,13 +446,13 @@ def main():
         check(not res["desbordaments"], f"amb el text «Molt gran», a 320 px res no surt de la pantalla ({res['vistes']} pantalles)", "; ".join(res["desbordaments"][:3]))
         ctx.close()
         ctx, page, errors = open_app(browser, base, "pol", DESKTOP)
-        g = page.locator(".tabs .tab-extra")
+        g = page.locator('.tabs .tab[data-tab="gestio"]')
         check(g.is_visible() and "Gestió" in g.inner_text(), "a l'ordinador, Gestió és al menú lateral")
         g.click(); page.wait_for_timeout(400)
         check(page.evaluate("location.hash").startswith("#/gestio/"), "i l'obre", page.evaluate("location.hash"))
         ctx.close()
         ctx, page, errors = open_app(browser, base, "pol", MOBILE)
-        check(page.locator(".tabs .tab-extra").is_hidden(), "al mòbil, Gestió continua al menú del compte")
+        check(page.locator('.tabs .tab[data-tab="gestio"]').is_visible() and page.locator('.tabs .tab-extra').count() == 0, "al mòbil, Gestió també és una pestanya de l'administració")
         ctx.close()
 
         print("Gestió › Personal: el desplegable dels rols i les llistes de la plantilla")
@@ -542,13 +549,13 @@ def main():
             check(r.get(k), label, str(r))
         check(not errors, "sense errors en afegir persones", "; ".join(errors[:3]))
         ctx.close()
-        ctx, page, errors = open_app(browser, base, "dir", MOBILE)
+        ctx, page, errors = open_app(browser, base, "ger", MOBILE)
         r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms));
           ui.tab = 'gestio'; ui.manage = 'personal'; ui.people = 'singer'; render(); await s(300);
           document.querySelector('#view [data-act="member-new"]').click(); await s(300);
           const t = document.querySelector('#pb-text'); t.value = 'Nou Cantaire nou@exemple.cat'; t.dispatchEvent(new Event('input')); await s(400);
           return { title: document.querySelector('.sheet-h .h2')?.textContent, roles: !!document.querySelector('#pb-role'), note: document.querySelector('#pb-prev').innerText.includes('administració') }; }""")
-        check(r["title"] == "Afegeix persones" and not r["roles"] and r["note"], "la direcció afegeix noms a la plantilla, però no dona accessos", str(r))
+        check(r["title"] == "Afegeix persones" and not r["roles"] and r["note"], "la gerència afegeix noms a la plantilla, però no dona accessos", str(r))
         ctx.close()
 
         print("Estadístiques en minuts, sense trimestres, i PDF dins l'app")
@@ -617,7 +624,9 @@ def main():
           return out; }""")
         switch_user(page, base, "singer")
         r.update(page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
-          out.noTab = ![...document.querySelectorAll('.tabs .tab[data-tab]')].some(t => t.dataset.tab === 'llista');
+          applyRoute('assistencia'); render(); await s(300);
+          out.noTab = /Assistència/.test(document.querySelector('#view h1')?.textContent || '') && !document.querySelector('#view .quads, #view .roster');
+          applyRoute('inici'); render(); await s(200);
           out.onlyMine = [...S.attendance.values()].every(d => Object.keys(d.marks).every(k => k === myMemberId())) && S.attendance.size > 0;
           out.noPct = !document.querySelector('.cal-pct');
           const t = todoItems().find(x => /produccions/.test(x.t));
@@ -638,7 +647,7 @@ def main():
         for k, label in [("private", "en fer privades les llistes, cadascú té la còpia de les seves marques"),
                          ("choice", "es pot activar que cadascú triï les produccions, amb el mínim"),
                          ("mirror", "una marca nova arriba a la còpia de la persona"),
-                         ("noTab", "amb les llistes privades, un cantaire no té la pestanya d'Assistència"),
+                         ("noTab", "amb les llistes privades, l'Assistència d'un cantaire és només la seva"),
                          ("onlyMine", "i només té les seves marques"),
                          ("noPct", "ni el percentatge de cada sessió al calendari"),
                          ("todo", "a Inici li demana quines produccions farà"),
@@ -686,7 +695,7 @@ def main():
         switch_user(page, base, "arx")
         r.update(page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
           out.todo = archiveTodos().some(x => /per repartir/.test(x.t));
-          ui.tab = 'tauler'; ui.board = 'materials'; ui.matProd = 'p1'; render(); await s(300);
+          ui.tab = 'partitures'; ui.matProd = 'p1'; render(); await s(300);
           out.mySec = /0\/4/.test(document.querySelector('.work .sc-pill')?.textContent || '');
           sheetScoreWork('p1', 'w1'); await s(300);
           out.rows = document.querySelectorAll('.sw-row').length === 4 && !document.querySelector('.sw-row button').disabled;
@@ -747,7 +756,7 @@ def main():
         switch_user(page, base, "arx")
         r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
           const fake = () => JSON.parse(localStorage.getItem('fake:db')), find = (db, end) => db[Object.keys(db).find(k => k.endsWith(end))];
-          ui.tab = 'tauler'; ui.board = 'materials'; ui.matProd = 'p1'; render(); await s(300);
+          ui.tab = 'partitures'; ui.matProd = 'p1'; render(); await s(300);
           out.tools = !!document.querySelector('[data-act="work-new"]') && !!document.querySelector('[data-act="work-link"]') && !!document.querySelector('[data-act="mat-new"]');
           document.querySelector('[data-act="work-new"]').click(); await s(300);
           document.querySelector('#wk-title').value = 'Magnificat'; document.querySelector('#wk-composer').value = 'J. S. Bach';
@@ -788,7 +797,7 @@ def main():
         ctx.close()
 
         print("Pestanyes per rol: el selector en obrir l'app i què veu cada rol")
-        ctx, page, errors = open_app(browser, base, "pol", MOBILE, "&rol=tria")
+        ctx, page, errors = open_app(browser, base, "pol", MOBILE, rol="tria")
         r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
           const tabs = () => [...document.querySelectorAll('.tabs-in .tab:not(.tab-extra)')].map(b => b.dataset.tab).join(',');
           out.picker = lensPicking() && document.querySelector('.tabs').hidden && [...document.querySelectorAll('.lp-opt')].map(b => b.dataset.k).join(',') === 'singer,leader,admin';
@@ -828,7 +837,7 @@ def main():
           setLens('admin'); await s(200);
           out.overflow = document.documentElement.scrollWidth <= innerWidth;
           return out; }""")
-        switch_user(page, base, "dir")
+        switch_user(page, base, "dir", rol="")
         page.evaluate("sessionStorage.clear()")
         page.goto(f"{base}/index.html?u=dir&rol=tria"); page.wait_for_function(READY, timeout=20000); page.wait_for_timeout(900)
         if page.locator(".sheet").count(): page.click('.sheet [data-act="sheet-close"]'); page.wait_for_timeout(300)
@@ -844,7 +853,7 @@ def main():
           out.viewerTabs = tabs() === 'avisos,calendari,tauler' && !canEdit();
           out.noOthers = !validLens('admin') && !validLens('leader');
           return out; }"""))
-        switch_user(page, base, "prof")
+        switch_user(page, base, "prof", rol="")
         page.goto(f"{base}/index.html?u=prof&rol=voice"); page.wait_for_function(READY, timeout=20000); page.wait_for_timeout(900)
         if page.locator(".sheet").count(): page.click('.sheet [data-act="sheet-close"]'); page.wait_for_timeout(300)
         r.update(page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
@@ -913,7 +922,7 @@ def main():
           const req = [...S.classReq.values()].find(x => x.classId === 'cdl' && x.kind === 'swap');
           out.req = !!req && req.open && req.to.join() === 'mT1,mS3' && req.offers.mT1 === 'cdc|q3';
           return out; }"""))
-        switch_user(page, base, "pol")
+        switch_user(page, base, "pol", rol="singer")
         r.update(page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
           const req = openSwaps().find(x => x.classId === 'cdl');
           out.offered = !!req;
@@ -956,7 +965,7 @@ def main():
           const ti = todoItems; todoItems = () => []; render(); await s(200);
           out.allDone = !!document.querySelector('.home .pf-ok') && !document.querySelector('.home .todo-done');
           todoItems = ti; render(); await s(200);
-          out.noticesQuiet = !document.querySelector('.h-notices') && !!document.querySelector('.next-card [data-act="absence-new"]') && !!document.querySelector('.my-att [data-act="absence-new"]');
+          out.noticesQuiet = !document.querySelector('.h-notices') && !document.querySelector('.home .my-att') && !!document.querySelector('.next-card [data-act="absence-new"]');
           const shown = document.querySelectorAll('.h-todo .todo > .todo-row, .h-todo .todo > .todo-conv').length, folded = document.querySelectorAll('.h-todo .todo-more > .todo-row, .h-todo .todo-more > .todo-conv').length;
           out.fold = todoItems().length > 3 && shown === 3 && folded === todoItems().length - 3 && !document.querySelector('.h-todo .todo-more').open;
           const row = [...document.querySelectorAll('.soon-row')].find(x => x.querySelector('[data-act="cl-avisa"]'));
@@ -991,7 +1000,7 @@ def main():
           out.acctCal = !!document.querySelector('.acct-item[data-k="calendar"]');
           closeSheet(); return out; }"""))
         for k, label in [("allDone", "sense res pendent, «Per fer» és només el títol amb «Tot al dia»"),
-                         ("noticesQuiet", "sense absències no hi ha cap apartat buit: «No hi puc anar» és a la targeta de dalt i «Avisa d'una absència», a l'assistència"),
+                         ("noticesQuiet", "Inici no repeteix l'assistència ni les absències (són a la pestanya Assistència): «No hi puc anar» és a la targeta de dalt"),
                          ("fold", "«Per fer» ensenya les tres primeres coses i plega la resta"),
                          ("oneBtn", "la classe de cant d'Inici té un sol botó «Avisa…»"),
                          ("chooser", "«Avisa…» obre arribar tard, no venir i canviar l'hora"),
@@ -1034,7 +1043,7 @@ def main():
         switch_user(page, base, "arx")
         r.update(page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
           out.canMsg = canMessage() && mySecWrite() === 'S' && writableMembers().every(m => m.section === 'S');
-          ui.tab = 'tauler'; ui.board = 'materials'; ui.matProd = 'p1'; render(); await s(300);
+          ui.tab = 'partitures'; ui.matProd = 'p1'; render(); await s(300);
           document.querySelector('.arx-panel [data-act="msg-new"]').click(); await s(300);
           out.preset = /Partitures de/.test(document.querySelector('#mg-title').value);
           document.querySelector('#mg-send').click(); await s(200); flushAll(); await s(500);
@@ -1199,20 +1208,25 @@ def main():
           out.riskLeft = !!rr && getComputedStyle(rr).textAlign === 'left';
           // 6. Classes: «La teva hora: avui · …» i sense la llegenda «Avui hi ha classe».
           saveClassDay({ id: 'cdavui', date: TODAY, place: 'Aula 2', note: '', teacher: 'prof@exemple.cat', teacherName: 'Prat, Berta', slots: [{ id: 'qa', time: '17:00', mins: 40, memberId: 'mT1' }] }); await s(300);
+          setLens('singer'); await s(200);
           applyRoute('classes'); render(); await s(300);
           out.classToday = /La teva hora: avui · 17:00/.test(txt('#view')) && !/Avui hi ha classe/.test(txt('.q-legend') + (document.querySelector('.q-legend') ? '' : ''));
           // 7. Una obra a mig repartir diu «Repartint» amb el recompte.
           setScore('p1', 'w1', S.members.get('mS0'), 'given');
+          setLens('admin'); await s(200);
           applyRoute('tauler/repertori'); ui.matProd = 'p1'; render(); await s(300);
           out.pill = /Repartint · 1\/15/.test(txt('.work .sc-pill.sc-part'));
+          setLens('singer'); await s(200);
           // 8. «No hi puc anar o arribaré tard»: a la fitxa de cada sessió que ve (les files d'Inici l'obren).
           applyRoute('inici'); render(); await s(300);
           const op = [...document.querySelectorAll('.soon-row .soon-open')].find(b => !sessionById(b.dataset.sid)?.rsvp);
           op?.click(); await s(300);
           out.ghost = !!op && !!document.querySelector(`.sheet .sheet-foot [data-act="absence-new"][data-sid="${op.dataset.sid}"], .sheet [data-act="absence-new"][data-sid="${op.dataset.sid}"]`);
           closeSheet(); await s(200);
-          // 9. La meva assistència: en buit, els assajos que queden.
+          // 9. La meva assistència (a la pestanya Assistència del cantaire): en buit, els assajos que queden.
+          applyRoute('assistencia'); render(); await s(300);
           out.ahead = document.querySelectorAll('.my-att .dots i.fut').length === 2;
+          applyRoute('inici'); render(); await s(200);
           // 10. El Tauler no s'obre a uns anuncis buits, i després recorda on eres.
           S.announcements.clear(); ui.board = 'anuncis';
           document.querySelector('[data-act="tab"][data-tab="tauler"]').click(); await s(300);
@@ -1269,9 +1283,12 @@ def main():
           for (const k of ['imatge', 'dades', 'autoritzacio']) { sw(k); await s(300); }
           out.back = docItems().length === 3;
           // 13. Els noms: Absències i Notificacions.
-          out.absTab = [...document.querySelectorAll('.page-head ~ * .subtab, .subtabs .subtab')].some(b => /^Absències/.test(b.textContent.trim()));
-          applyRoute('inici'); render(); await s(300);
+          applyRoute('assistencia/absencies'); render(); await s(300);
+          out.absTab = [...document.querySelectorAll('.att-tabs .subtab')].some(b => /^Absències/.test(b.textContent.trim())) && ui.att === 'abs';
+          setLens('singer'); await s(200);
+          applyRoute('assistencia'); render(); await s(300);
           out.mine = /Avisa d’una absència/.test(txt('#view'));
+          setLens('admin'); await s(200);
           sheetHelp(); await s(300);
           out.help = /Què és cada cosa/.test(txt('.sheet')) && /Notificacions/.test(txt('.sheet')); closeSheet(); await s(200);
           // 15. Risc › Escriu-los: un missatge privat a cadascú, amb les seves xifres.
@@ -1291,7 +1308,7 @@ def main():
         for k, label in [("allOn", "Ajustos té el calaix dels documents, amb tots tres demanats"), ("two", "es pot deixar de demanar un document"),
                          ("noImg", "i desapareix de la fitxa i del resum de la plantilla"), ("off", "sense cap document, queden desactivats"),
                          ("gone", "i desapareixen el filtre, el botó i les pastilles"), ("back", "i es tornen a activar"),
-                         ("absTab", "Gestió té la pestanya «Absències»"), ("mine", "Inici diu «Avisa d’una absència»"),
+                         ("absTab", "Assistència té la pestanya «Absències»"), ("mine", "l'Assistència del cantaire diu «Avisa d’una absència»"),
                          ("help", "l'ajuda explica què és cada cosa"), ("btn", "Risc té «Escriu-los»"),
                          ("list", "hi surten els que no arriben, amb una mostra del missatge"), ("count", "es pot treure algú de la llista"),
                          ("sent", "cadascú rep una conversa privada amb les seves xifres"), ("overflow", "sense eixamplar la pantalla del mòbil")]:
@@ -1300,7 +1317,7 @@ def main():
         ctx.close()
 
         print("Vestidor: demanar el vestuari i portar-lo des de la secretaria")
-        ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/inici")
+        ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/inici", rol="singer")
         r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
           const txt = q => document.querySelector(q)?.innerText || '';
           out.offMenu = (sheetAccount(), await s(300), !document.querySelector('.acct-item[data-act="ward-open"]')); closeSheet(); await s(200);
@@ -1318,6 +1335,8 @@ def main():
           out.saved = mine.length === 1 && mine[0].item === 'americana' && mine[0].size === '50' && mine[0].status === 'demanat';
           out.card = /Americana 50/.test(txt('.ward-card')) && /Demanat/.test(txt('.ward-card .ward-pill'));
           out.oneOnly = !document.querySelector('.section-title [data-act="ward-ask"]');
+          // La resta la porta l'equip (aquí, l'administració).
+          setLens('admin'); await s(200); applyRoute('vestidor'); render(); await s(300);
           out.order = /Americana · 50 ×1/.test(txt('.ward-order'));
           out.todoStaff = todoItems().some(x => x.icon === 'ward' && /per encarregar/.test(x.t));
           document.querySelector('[data-act="ward-ordered"]').click(); await s(400);
@@ -1327,8 +1346,10 @@ def main():
           document.querySelector('#wi-st button[data-k="emprovar"]').click(); document.querySelector('#wi-note').value = 'Escurçar les mànigues';
           document.querySelector('#wi-save').click(); await s(500);
           out.fitting = S.wardrobe.get(id).status === 'emprovar' && S.wardrobe.get(id).note === 'Escurçar les mànigues';
+          setLens('singer'); await s(200); applyRoute('vestidor'); render(); await s(300);
           out.todoMine = todoItems().some(x => x.icon === 'ward' && /per emprovar/.test(x.t));
           out.steps = document.querySelectorAll('.ward-card .ward-steps li.done').length === 2 && /Pendent d’emprovar/.test(txt('.ward-card .ward-steps li.cur'));
+          setLens('admin'); await s(200); applyRoute('vestidor'); render(); await s(300);
           document.querySelector('[data-act="ward-filter"][data-k="none"]').click(); await s(300);
           out.none = document.querySelectorAll('.ward-list .ward-row').length === membersOf(null).length - 1;
           document.querySelector('.ward-list [data-act="ward-new"][data-mid="mS0"]').click(); await s(300);
@@ -1512,6 +1533,7 @@ def main():
           ui.tab = 'avisos'; render(); await s(400);
           const rows = [...document.querySelectorAll('#view .soon-row.is-now, #view .concert-day, #view .next-card.is-now')];
           out.noToday = !rows.some(li => /Concert de tardor/.test(li.textContent));
+          applyRoute('assistencia'); render(); await s(300);
           const att = [...document.querySelectorAll('#view .section-title')].find(x => /La meva assistència/.test(x.textContent));
           out.myProd = !!att && /Concert de Nadal/.test(att.textContent);
           return out; }"""))
@@ -1538,12 +1560,13 @@ def main():
           const p = clone(S.productions.get('p1'));
           p.sessions.push({ id: 'sahir', date: d(-1), time: '20:30', end: '22:30', type: 'Assaig', place: 'Sala', note: '' });
           saveProduction(p); await s(300);
-          const items = todoItems();
           // Quantes en surten depèn de l'hora: passades les 22:30, la d'avui també és per acabar.
           const month = isoDate(new Date(Date.now() - 30 * 864e5)), n = sec => pendingSessions(sec).filter(x => x.date >= month).length;
-          out.own = items.some(x => /^(1 llista|\d+ llistes) per acabar/.test(x.t) && /Tenors/.test(x.s) && x.s.includes(ddmm(d(-1))));
-          const all = items.find(x => /sense acabar a les altres cordes/.test(x.t));
-          out.others = !!all && ['S', 'C', 'B'].every(k => n(k) > 0 && all.s.includes(`${SEC[k].name} ${n(k)}`)) && all.t.startsWith(`${n('S') + n('C') + n('B')} llist`) && !/Tenors/.test(all.s);
+          setLens('leader'); await s(200);
+          out.own = todoItems().some(x => /^(1 llista|\d+ llistes) per acabar/.test(x.t) && /Tenors/.test(x.s) && x.s.includes(ddmm(d(-1))));
+          setLens('admin'); await s(200);
+          const all = todoItems().find(x => /llist(a|es) sense acabar/.test(x.t));
+          out.others = !!all && ['S', 'C', 'T', 'B'].every(k => n(k) > 0 && all.s.includes(`${SEC[k].name} ${n(k)}`)) && all.t.startsWith(`${n('S') + n('C') + n('T') + n('B')} llist`);
           ui.people = 'singer'; applyRoute('gestio/personal'); render(); await s(400);
           const rows = [...document.querySelectorAll('details.pm')];
           out.lazy = rows.length > 10 && rows.every(x => !x.open && !x.querySelector('.pm-b').childElementCount);
@@ -1569,7 +1592,7 @@ def main():
           await s(1500);
           return { once: window.__encara === 1 }; }"""))
         for k, label in [("own", "el cap de corda veu les llistes per acabar de la seva corda"),
-                         ("others", "i l'administració, les de les altres cordes, amb quantes n'hi ha a cadascuna"),
+                         ("others", "i l'administració, les de totes les cordes, amb quantes n'hi ha a cadascuna"),
                          ("lazy", "a Personal, la fitxa de cada persona no es pinta fins que s'obre"),
                          ("opens", "i en obrir-la hi és tota"),
                          ("label", "el botó diu «Revisa els accessos»"),
@@ -1588,6 +1611,7 @@ def main():
           out.week = kinds.some(t => /Proper assaig/.test(t)) && kinds.some(t => /Assaig general/.test(t)) && kinds.some(t => /Proper concert/.test(t));
           out.ini = personInitials({ name: 'Laia Dalmau Tomàs', sortName: 'Dalmau Tomàs, Laia' }) === 'LD' && personInitials('Laia Dalmau Tomàs') === 'LD'
             && personInitials('Pau Diport i Feliu') === 'PD' && personInitials('Quingles, Pol') === 'PQ' && personInitials('') === '?';
+          applyRoute('assistencia'); render(); await s(300);
           const card = document.querySelector('.my-att')?.innerText || '';
           out.mins = /6 h de 6 h d’assaig/.test(card) && !/de \\d+ assajos/.test(card);
           out.hint = /Encara pots perdre 2 h 24 min d’assaig/.test(card);
@@ -1613,7 +1637,8 @@ def main():
           saveProduction({ id: 'p9', name: 'Un sol concert', sessions: [{ id: 's9', date: d(40), time: '19:00', end: '', type: 'Concert', place: '', note: '' }], excluded: [] });
           applyRoute('calendari'); render(); await s(400);
           out.one = [...document.querySelectorAll('.cph-m .mono')].some(x => x.textContent.trim() === '1 sessió') && ![...document.querySelectorAll('.cph-m .mono')].some(x => /^1 sessions/.test(x.textContent.trim()));
-          // «Ha marxat abans», a la llista d'avui dels tenors.
+          // «Ha marxat abans», a la llista d'avui dels tenors (amb el rol de cap de corda).
+          setLens('leader'); await s(200);
           applyRoute('inici'); render(); await s(300);
           document.querySelector('[data-act="home-roll"]').click(); await s(500);
           const row = () => document.querySelector('#roster .row[data-mid="mT2"]');
