@@ -1810,3 +1810,6 @@ svg{stroke-linecap:round;stroke-linejoin:round}
 .stu-t small{font-size:calc(12.5px*var(--ts));color:var(--muted)}
 .stu-n{flex:none;font-size:calc(12px*var(--ts));font-weight:600;color:var(--ink-2);background:var(--surface-2);border-radius:999px;padding:2px 8px}
 .stu-row > svg{width:16px;height:16px;flex:none;fill:none;stroke:var(--muted);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.lp-compact .lp-opt{min-height:52px;padding:9px 12px}
+.lp-compact .lp-i{width:32px;height:32px;border-radius:10px}
+.lp-compact .lp-t small{display:none}

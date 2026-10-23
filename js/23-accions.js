@@ -24,7 +24,7 @@ const actions = {
   'cl-plan': el => sheetClassPlan(el.dataset.k || planWho()),
   'cl-who': el => { ui.clWho = el.dataset.k; ui.clMonth = null; ui.clDay = null; saveUI(); render(); window.scrollTo({ top: 0 }); },
   'cl-roll-day': el => { ui.tab = 'calendari'; ui.clDay = el.dataset.date; ui.clMonth = el.dataset.date.slice(0, 7); ui.clView = 'month'; saveUI(); render(); window.scrollTo({ top: 0 }); },
-  'lens': el => setLens(el.dataset.k),
+  'lens': el => setLens(el.dataset.k, { sec: el.dataset.sec || '', teacher: el.dataset.teacher || '' }),
   'att-abs': () => { ui.tab = 'llista'; ui.att = 'abs'; ui.rollSec = null; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
   'lens-pick': () => sheetLens(),
   'cl-back': () => { ui.clWho = null; saveUI(); render(); window.scrollTo({ top: 0 }); },

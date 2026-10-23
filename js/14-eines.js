@@ -349,11 +349,11 @@ function sheetHelp() {
     <h3>Cada rol, les seves pestanyes</h3>
     <p>Qui té més d’un rol (per exemple, ${w.member} i ${w.leader}) tria amb quin entra cada cop que obre l’app, i el canvia des d’<b>Inici › Canvia de rol</b>. Amb un sol rol, l’app s’obre directament amb aquest. Cada rol només hi veu la seva feina:</p>
     <ul><li><b>${capz(w.member)}</b>: Inici, Assistència (la seva: avisar d’una absència o d’un retard i les seves estadístiques; la de la resta no la veu), Calendari, Tauler i, si en fa, Classes.</li>
-    <li><b>${capz(w.leader)}</b>: Inici, Assistència (passa llista de la seva ${w.section} i en respon les absències) i Tauler.</li>
+    <li><b>${capz(w.leader)}</b>: Inici i Assistència (passa llista de la seva ${w.section} i en respon les absències).</li>
     <li><b>Arxiver</b>: Inici i Partitures (el repertori i les partitures per repartir, repartides i per retornar).</li>
     <li><b>${esc(V.Teacher)}</b>: Inici, Assistència (la llista de les classes), Calendari (els dies i l’hora de cada alumne) i Alumnes (la fitxa de cant de cadascú).</li>
     <li><b>Director</b>: Inici, Assistència (les estadístiques de tothom i les absències), Calendari i Tauler.</li>
-    <li><b>Gerència</b>: Inici, Assistència (estadístiques), Calendari, Tauler i Gestió. <b>Secretaria</b>: Inici, Gestió (personal, altes i baixes, documents i quotes) i Tauler. <b>Administració</b>: tot.</li></ul>
+    <li><b>Gerència</b>: Inici, Assistència (estadístiques), Calendari, Tauler i Gestió. <b>Secretaria</b>: Inici, Gestió (personal, altes i baixes, documents i quotes) i Tauler. <b>Administració</b>: tot, i des d’<b>Inici › Canvia de rol</b> pot fer servir l’app com qualsevol altre rol (el cap de corda o l’arxiver de qualsevol ${w.section}, cada ${esc(V.Teacher.toLowerCase())}, la direcció…), amb el que pot fer aquell rol.</li></ul>
     <p>Qui no és ${w.member} també pot triar <b>Veure l’app com un ${w.member}</b> per mirar el calendari, el tauler, els anuncis i els documents.</p>
     <h3>Passar llista</h3>
     <ul><li>A <b>Assistència</b> (o amb el botó <b>Passa llista</b> d’Inici) surt la sessió d’avui. Toca el quadre de la teva ${w.section}.</li>

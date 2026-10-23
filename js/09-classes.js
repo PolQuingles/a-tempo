@@ -303,7 +303,8 @@ function viewClasses() {
 /* ---------- Amb el rol de professor de cant ---------- */
 // Tres pestanyes de la seva feina (vegeu 03b-rols): Assistència (passar llista a les classes), Calendari (els dies i l'hora de
 // cada alumne) i Alumnes (la fitxa de cant de cadascú: objectius, repertori, notes i enregistraments).
-const myTeacherKey = () => myEmail();
+// L'administració, mirant l'app com un professor de cant, fa servir el del professor que ha triat (LENS_CTX).
+const myTeacherKey = () => !PREVIEW && curLens() === 'voice' && LENS_CTX.teacher ? LENS_CTX.teacher : myEmail();
 /** Les hores d'aquest professor/a que tenen alumne i encara no s'han marcat. */
 const unmarkedSlots = c => classSlots(c).filter(x => x.memberId && !x.mark);
 function viewClassRoll() {
