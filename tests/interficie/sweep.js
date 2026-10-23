@@ -3,7 +3,9 @@
 async () => {
   const s = ms => new Promise(r => setTimeout(r, ms));
   const d = document.documentElement, bad = [], seen = [];
-  const chk = n => {
+  let TAG = '';
+  const chk = m => {
+    const n = TAG + m;
     seen.push(n);
     if (innerWidth > d.clientWidth + 1 || d.scrollWidth > d.clientWidth + 1) {
       const wide = [];
@@ -15,62 +17,69 @@ async () => {
     }
   };
   const cl = async q => { const e = document.querySelector(q); if (e) { e.click(); await s(300); } return !!e; };
-  const tabs = [...document.querySelectorAll('.tabs .tab[data-tab]')].map(b => b.dataset.tab);
-  for (const t of tabs) { await cl(`[data-act="tab"][data-tab="${t}"]`); chk(t); }
-  if (tabs.includes('llista')) {
-    await cl('[data-act="tab"][data-tab="llista"]');
-    for (const k of ['stats', 'risk', 'llista']) { await cl(`[data-act="att"][data-k="${k}"]`); chk('assistencia/' + k); }
-    if (await cl('[data-act="open-sec"]')) { chk('assistencia/seccio'); await cl('[data-act="close-sec"]'); }
-    await cl('[data-act="att"][data-k="stats"]');
-    for (const k of ['term', 'season', 'prod']) { await cl(`[data-act="stats-scope"][data-k="${k}"]`); chk('estadistiques/' + k); }
-    await cl('[data-act="att"][data-k="llista"]');
-  }
-  if (tabs.includes('tauler')) {
-    await cl('[data-act="tab"][data-tab="tauler"]');
-    for (const k of ['anuncis', 'materials', 'documents', 'enquestes', 'sortides']) { await cl(`[data-act="board"][data-k="${k}"]`); chk('tauler/' + k); }
-    await cl('[data-act="board"][data-k="materials"]');
-    if (await cl('[data-act="work-open"]')) { chk('repertori/obra'); await cl('[data-act="sheet-close"]'); }
-  }
-  if (tabs.includes('calendari')) {
-    await cl('[data-act="tab"][data-tab="calendari"]');
-    await cl('[data-act="cal-view"][data-k="month"]'); chk('calendari/mes');
-    await cl('[data-act="cal-view"][data-k="list"]');
-    // La fitxa d'un concert (pla, equilibri de veus i col·locació) i la d'un assaig amb pla.
-    for (const b of [...document.querySelectorAll('.cal-row .icon-btn.info')].slice(-3)) { b.click(); await s(300); chk('calendari/fitxa'); await cl('[data-act="sheet-close"]'); }
-  }
-  if (tabs.includes('classes')) {
-    await cl('[data-act="tab"][data-tab="classes"]');
-    if (await cl('.quad')) { chk('classes/professor'); if (await cl('[data-act="cl-view"][data-k="week"]')) { chk('classes/setmana'); await cl('[data-act="cl-view"][data-k="month"]'); } await cl('[data-act="cl-back"]'); }
-  }
-  await cl('[data-act="tab"][data-tab="avisos"]');
-  // El menú del compte: cada fila obre la seva finestra; la fletxa hi torna.
-  if (await cl('#acct-btn')) {
-    chk('compte');
-    for (const k of [...document.querySelectorAll('.acct-item[data-act="acct-open"]')].map(b => b.dataset.k)) {
-      if (k === 'classIcs') continue;   // demana una adreça a Firestore abans d'obrir-se
-      await cl(`.acct-item[data-k="${k}"]`); chk('compte/' + k);
-      if (!(await cl('.sheet-up'))) bad.push(`compte/${k}: sense fletxa per tornar al menú`);
+  const lenses = Array.isArray(window.SWEEP_LENSES) && window.SWEEP_LENSES.length ? window.SWEEP_LENSES : [null];
+  for (const lens of lenses) {
+    if (lens) { setLens(lens); await s(300); }
+    // A cada pantalla, el nom porta el rol (si se'n recorren diversos).
+    TAG = lens ? `${lens}:` : '';
+    const tabs = [...document.querySelectorAll('.tabs .tab[data-tab]')].map(b => b.dataset.tab);
+    for (const t of tabs) { await cl(`[data-act="tab"][data-tab="${t}"]`); chk(t); }
+    if (tabs.includes('llista')) {
+      await cl('[data-act="tab"][data-tab="llista"]');
+      for (const k of ['stats', 'risk', 'abs', 'llista']) { await cl(`[data-act="att"][data-k="${k}"]`); chk('assistencia/' + k); }
+      if (await cl('[data-act="open-sec"]')) { chk('assistencia/seccio'); await cl('[data-act="close-sec"]'); }
+      await cl('[data-act="att"][data-k="stats"]');
+      for (const k of ['term', 'season', 'prod']) { await cl(`[data-act="stats-scope"][data-k="${k}"]`); chk('estadistiques/' + k); }
+      await cl('[data-act="att"][data-k="llista"]');
     }
-    if (!(await cl('.acct-item[data-act="manage"]'))) await cl('[data-act="sheet-close"]');
-  }
-  if (ui.tab === 'gestio') {
-    for (const k of ['avisos', 'personal', 'produccions', 'config']) { await cl(`[data-act="manage"][data-k="${k}"]`); chk('gestio/' + k); }
-    await cl('[data-act="manage"][data-k="personal"]');
-    // El desplegable dels rols i, dins de la plantilla, els seus filtres (altes i baixes, documents, quotes, accés).
-    const sel = document.querySelector('#people-menu');
-    for (const v of sel ? [...sel.options].map(o => o.value) : []) {
-      const cur = document.querySelector('#people-menu');
-      cur.value = v; cur.dispatchEvent(new Event('change', { bubbles: true })); await s(250); chk('personal/' + v);
-      if (v === 'singer') {
-        for (const t of [...document.querySelectorAll('.pm-chips .chip')].map(b => b.dataset.k)) { await cl(`.pm-chips [data-k="${t}"]`); chk('plantilla/' + t); }
-        await cl('.pm-chips [data-k="all"]');
-        const d = document.querySelector('details.pm'); if (d) { d.open = true; await s(150); chk('plantilla/fitxa-oberta'); d.open = false; }
+    if (tabs.includes('tauler')) {
+      await cl('[data-act="tab"][data-tab="tauler"]');
+      for (const k of ['anuncis', 'materials', 'documents', 'enquestes', 'sortides']) { await cl(`[data-act="board"][data-k="${k}"]`); chk('tauler/' + k); }
+      await cl('[data-act="board"][data-k="materials"]');
+      if (await cl('[data-act="work-open"]')) { chk('repertori/obra'); await cl('[data-act="sheet-close"]'); }
+    }
+    if (tabs.includes('calendari')) {
+      await cl('[data-act="tab"][data-tab="calendari"]');
+      await cl('[data-act="cal-view"][data-k="month"]'); chk('calendari/mes');
+      await cl('[data-act="cal-view"][data-k="list"]');
+      // La fitxa d'un concert (pla, equilibri de veus i col·locació) i la d'un assaig amb pla.
+      for (const b of [...document.querySelectorAll('.cal-row .icon-btn.info')].slice(-3)) { b.click(); await s(300); chk('calendari/fitxa'); await cl('[data-act="sheet-close"]'); }
+    }
+    if (tabs.includes('classes')) {
+      await cl('[data-act="tab"][data-tab="classes"]');
+      if (await cl('.quad')) { chk('classes/professor'); if (await cl('[data-act="cl-view"][data-k="week"]')) { chk('classes/setmana'); await cl('[data-act="cl-view"][data-k="month"]'); } await cl('[data-act="cl-back"]'); }
+    }
+    await cl('[data-act="tab"][data-tab="avisos"]');
+    // El menú del compte: cada fila obre la seva finestra; la fletxa hi torna.
+    if (await cl('#acct-btn')) {
+      chk('compte');
+      for (const k of [...document.querySelectorAll('.acct-item[data-act="acct-open"]')].map(b => b.dataset.k)) {
+        if (k === 'classIcs') continue;   // demana una adreça a Firestore abans d'obrir-se
+        await cl(`.acct-item[data-k="${k}"]`); chk('compte/' + k);
+        if (!(await cl('.sheet-up'))) bad.push(`compte/${k}: sense fletxa per tornar al menú`);
       }
+      if (!(await cl('.acct-item[data-act="manage"]'))) await cl('[data-act="sheet-close"]');
     }
-    await cl('[data-act="manage"][data-k="config"]');
-    for (const b of [...document.querySelectorAll('.cfg-h')]) { b.click(); await s(120); }
-    chk('ajustos/tot-obert');
-    await cl('.ph-back .nav-arrow');
+    if (tabs.includes('gestio') && ui.tab !== 'gestio') await cl('[data-act="tab"][data-tab="gestio"]');
+    if (ui.tab === 'gestio') {
+      for (const k of ['avisos', 'personal', 'produccions', 'config']) { await cl(`[data-act="manage"][data-k="${k}"]`); chk('gestio/' + k); }
+      await cl('[data-act="manage"][data-k="personal"]');
+      // El desplegable dels rols i, dins de la plantilla, els seus filtres (altes i baixes, documents, quotes, accés).
+      const sel = document.querySelector('#people-menu');
+      for (const v of sel ? [...sel.options].map(o => o.value) : []) {
+        const cur = document.querySelector('#people-menu');
+        cur.value = v; cur.dispatchEvent(new Event('change', { bubbles: true })); await s(250); chk('personal/' + v);
+        if (v === 'singer') {
+          for (const t of [...document.querySelectorAll('.pm-chips .chip')].map(b => b.dataset.k)) { await cl(`.pm-chips [data-k="${t}"]`); chk('plantilla/' + t); }
+          await cl('.pm-chips [data-k="all"]');
+          const d = document.querySelector('details.pm'); if (d) { d.open = true; await s(150); chk('plantilla/fitxa-oberta'); d.open = false; }
+        }
+      }
+      await cl('[data-act="manage"][data-k="config"]');
+      for (const b of [...document.querySelectorAll('.cfg-h')]) { b.click(); await s(120); }
+      chk('ajustos/tot-obert');
+      if (!(await cl('.ph-back .nav-arrow'))) await cl('[data-act="tab"][data-tab="avisos"]');
+    }
   }
   return { vistes: seen.length, desbordaments: bad };
 }

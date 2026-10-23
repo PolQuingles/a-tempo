@@ -25,7 +25,7 @@ function lensAllOptions() {
 }
 /** «Veure l'app com un cantaire»: per a tothom qui no ho és (o no té fitxa a la plantilla). */
 const viewerOption = () => !lensOptions().includes('singer');
-const validLens = k => k === 'tot' || (k === 'viewer' ? viewerOption() : lensAllOptions().includes(k));
+const validLens = k => k === 'viewer' ? viewerOption() : lensAllOptions().includes(k);
 /** La corda o el professor amb què es fa servir un rol: el triat (si l'administració en tria un) o el del compte. */
 function lensCtxFor(k, want = {}) {
   if (k === 'leader' || k === 'archive') {
@@ -87,7 +87,7 @@ function applyLensCode(code) {
  *  cap de triat, LENS es queda a null i es pinta el selector. */
 function ensureLens() {
   if (PREVIEW || S.mode !== 'shared' || !S.ready) return;
-  if (LENS && validLens(LENS)) return;
+  if (LENS && (LENS === 'tot' ? !S.me : validLens(LENS))) return;
   LENS = null; LENS_CTX = {};
   // ?rol=… (l'obre un avís del mòbil): una sola vegada; després, el rol queda triat per a la sessió i es treu de l'adreça.
   const q = new URLSearchParams(location.search).get('rol');
