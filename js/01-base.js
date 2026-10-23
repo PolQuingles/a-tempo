@@ -277,6 +277,9 @@ let PREVIEW = null;
 // les dades que es llegeixen i els permisos de la base de dades són els del compte.
 const LENS_ORDER = ['singer', 'leader', 'archive', 'voice', 'director', 'gerencia', 'secretaria', 'admin'];
 let LENS = null;
+// L'administració pot mirar (i fer servir) l'app com qualsevol rol, també els que no té: llavors el rol porta la corda (cap de
+// corda, arxiver) o el professor de cant que s'ha triat. { sec, teacher }; buit = els del compte.
+let LENS_CTX = {};
 /** El rol actiu: el de la vista prèvia, el triat o, si encara no se n'ha triat cap, tots. */
 const curLens = () => PREVIEW ? PREVIEW.lens || 'tot' : LENS || 'tot';
 const lensOn = () => curLens() !== 'tot';
@@ -286,7 +289,8 @@ const ME = () => {
   const base = PREVIEW ? { email: PREVIEW.email || '', name: PREVIEW.name || '', roles: PREVIEW.roles, section: PREVIEW.section || '', memberId: PREVIEW.memberId || '' } : S.me;
   const l = curLens();
   if (!base || l === 'tot') return base;
-  return { ...base, roles: [l === 'viewer' ? 'singer' : l], memberId: l === 'singer' ? base.memberId || '' : '' };
+  const sec = !PREVIEW && ['leader', 'archive'].includes(l) && LENS_CTX.sec ? LENS_CTX.sec : base.section;
+  return { ...base, roles: [l === 'viewer' ? 'singer' : l], section: sec, memberId: l === 'singer' ? base.memberId || '' : '' };
 };
 const myEmail = () => PREVIEW ? PREVIEW.email || '' : S.email || '';
 const iHave = r => hasRole(ME(), r);

@@ -802,7 +802,7 @@ def main():
           out.bar = !!document.querySelector('.lens-bar [data-act="lens-pick"]');
           document.querySelector('.lens-bar [data-act="lens-pick"]').click(); await s(300);
           document.querySelector('.sheet .lp-opt[data-k="leader"]').click(); await s(300);
-          out.leaderTabs = tabs() === 'avisos,llista,tauler';
+          out.leaderTabs = tabs() === 'avisos,llista';
           document.querySelector('.tab[data-tab="llista"]').click(); await s(300);
           out.leaderRoll = ui.rollSec === 'T' && !document.querySelector('[data-act="close-sec"]') && /Tenors/.test(document.querySelector('.secbar-t')?.textContent || '');
           document.querySelector('.att-tabs .subtab[data-k="stats"]').click(); await s(300);
@@ -815,6 +815,17 @@ def main():
           document.querySelector('.tab[data-tab="llista"]').click(); await s(300);
           out.singerAtt = /Assistència/.test(document.querySelector('#view h1')?.textContent || '') && !!document.querySelector('#view [data-act="absence-new"]') && !document.querySelector('#view .quads, #view .roster, #view .att-tabs');
           out.singerHome = (setLens('singer'), true) && !document.querySelector('.h-att');
+          // L'administració pot fer servir l'app com qualsevol altre rol, amb la corda o el professor que triï.
+          document.querySelector('.lens-bar [data-act="lens-pick"]').click(); await s(300);
+          out.adminOthers = document.querySelectorAll('.sheet .lp-compact .lp-opt[data-k="leader"]').length === 3 && !!document.querySelector('.sheet .lp-compact .lp-opt[data-k="director"]');
+          document.querySelector('.sheet .lp-compact .lp-opt[data-k="archive"][data-sec="C"]').click(); await s(300);
+          out.asArchive = tabs() === 'avisos,partitures' && archiveSec() === 'C' && canRepertoire() && canScores('C') && /Contralts/.test(document.querySelector('.lens-bar')?.textContent || '');
+          setLens('leader', { sec: 'S' }); await s(300);
+          ui.tab = 'llista'; render(); await s(200);
+          out.asLeaderS = ui.rollSec === 'S' && canEdit() && myPendingAbsences().length === 1;
+          setLens('voice', { teacher: 'prof@exemple.cat' }); await s(300);
+          out.asTeacher = tabs() === 'avisos,llista,calendari,alumnes' && myTeacherKey() === 'prof@exemple.cat' && teachesClasses() && myStudents(myTeacherKey()).length > 0;
+          setLens('admin'); await s(200);
           out.overflow = document.documentElement.scrollWidth <= innerWidth;
           return out; }""")
         switch_user(page, base, "dir")
@@ -831,6 +842,7 @@ def main():
           out.viewer = !!document.querySelector('.lens-bar');
           setLens('viewer'); await s(300);
           out.viewerTabs = tabs() === 'avisos,calendari,tauler' && !canEdit();
+          out.noOthers = !validLens('admin') && !validLens('leader');
           return out; }"""))
         switch_user(page, base, "prof")
         page.goto(f"{base}/index.html?u=prof&rol=voice"); page.wait_for_function(READY, timeout=20000); page.wait_for_timeout(900)
@@ -852,14 +864,19 @@ def main():
                          ("gestioNoAbs", "Gestió és una pestanya, sense les absències"),
                          ("adminAtt", "a Assistència, llista, estadístiques, risc i absències"),
                          ("bar", "a Inici hi ha el botó per canviar de rol"),
-                         ("leaderTabs", "el cap de corda té Inici, Assistència i Tauler"),
+                         ("leaderTabs", "el cap de corda té Inici i Assistència (sense Tauler)"),
                          ("leaderRoll", "i passa llista només de la seva corda"),
                          ("leaderStats", "les estadístiques són de la seva corda"),
                          ("leaderAbs", "i les absències, només les de la seva corda"),
                          ("singerTabs", "el cantaire té Inici, Assistència, Calendari, Tauler i Classes"),
                          ("singerAtt", "la seva Assistència és només la seva, amb el botó d'avisar"),
                          ("singerHome", "i Inici ja no hi repeteix la seva assistència"),
+                         ("adminOthers", "l'administració, a Canvia de rol, té tots els altres rols (cada corda, la direcció…)"),
+                         ("asArchive", "i pot fer servir l'app com l'arxiver d'una altra corda, amb el que pot fer"),
+                         ("asLeaderS", "o com el cap de corda d'una altra corda, amb les seves absències"),
+                         ("asTeacher", "o com un professor de cant, amb els seus alumnes"),
                          ("overflow", "sense eixamplar la pantalla del mòbil"),
+                         ("noOthers", "qui no és de l'administració no pot triar rols que no té"),
                          ("dirAuto", "amb un sol rol, l'app s'obre directament amb aquest (direcció)"),
                          ("dirAtt", "la direcció veu les estadístiques, el risc i les absències"),
                          ("dirAbs", "i respon les absències de tothom"),
