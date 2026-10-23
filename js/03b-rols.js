@@ -17,11 +17,12 @@ function lensOptions() {
   const rs = rolesOf(S.me);
   return LENS_ORDER.filter(r => rs.includes(r) && (r !== 'singer' || (!!S.memberId && S.members.has(S.memberId))));
 }
-/** L'administració pot fer servir l'app com qualsevol rol (amb la corda o el professor que triï), no només els seus. */
+/** L'administració pot fer servir l'app com qualsevol rol (amb la corda o el professor que triï), no només els seus.
+ *  (Sense llegir el personal: Inici no l'ha de llegir, vegeu ensureStaff.) */
 const lensAll = () => S.role === 'edit' && hasRole(S.me, 'admin');
 function lensAllOptions() {
   if (!lensAll()) return lensOptions();
-  return LENS_ORDER.filter(r => (r !== 'singer' || (!!S.memberId && S.members.has(S.memberId))) && (r !== 'voice' || (classesOn() && classTeachers().length > 0)));
+  return LENS_ORDER.filter(r => (r !== 'singer' || (!!S.memberId && S.members.has(S.memberId))) && (r !== 'voice' || (classesOn() && (S.classes.size > 0 || teacherSeats().length > 0 || hasRole(S.me, 'voice')))));
 }
 /** «Veure l'app com un cantaire»: per a tothom qui no ho és (o no té fitxa a la plantilla). */
 const viewerOption = () => !lensOptions().includes('singer');
