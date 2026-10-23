@@ -211,6 +211,7 @@ DTSTAMP:20260101T000000Z
 DTSTART;TZID=Europe/Madrid:20261026T203000
 DTEND;TZID=Europe/Madrid:20261026T223000
 SUMMARY:Assaig · Oratori de Nadal · J.S. Bach
+LOCATION:Sala d’assaig
 END:VEVENT
 BEGIN:VEVENT
 UID:cj-oratori-03@a-tempo
@@ -218,13 +219,15 @@ DTSTAMP:20260101T000000Z
 DTSTART;TZID=Europe/Madrid:20261028T203000
 DTEND;TZID=Europe/Madrid:20261028T223000
 SUMMARY:Assaig · Oratori de Nadal · J.S. Bach
+LOCATION:Sala d’assaig
 END:VEVENT
 BEGIN:VEVENT
 UID:cj-oratori-04@a-tempo
 DTSTAMP:20260101T000000Z
 DTSTART;TZID=Europe/Madrid:20261102T203000
 DTEND;TZID=Europe/Madrid:20261102T223000
-SUMMARY:Assaig · Oratori de Nadal · J.S. Bach
+SUMMARY:Assaig · Oratori de Nadal · J.S. Bach + Concert de Sant Esteve
+LOCATION:Sala d’assaig
 END:VEVENT
 BEGIN:VEVENT
 UID:cj-oratori-05@a-tempo
@@ -232,6 +235,7 @@ DTSTAMP:20260101T000000Z
 DTSTART;TZID=Europe/Madrid:20261104T203000
 DTEND;TZID=Europe/Madrid:20261104T223000
 SUMMARY:Assaig · Oratori de Nadal · J.S. Bach + Concert de Sant Esteve
+LOCATION:Sala d’assaig
 END:VEVENT
 BEGIN:VEVENT
 UID:smugs6gttv7pq@a-tempo
@@ -247,6 +251,7 @@ DTSTAMP:20260101T000000Z
 DTSTART;TZID=Europe/Madrid:20261109T203000
 DTEND;TZID=Europe/Madrid:20261109T223000
 SUMMARY:Assaig · Oratori de Nadal · J.S. Bach + Concert de Sant Esteve
+LOCATION:Sala d’assaig
 END:VEVENT
 BEGIN:VEVENT
 UID:smugs6gttd93m@a-tempo
