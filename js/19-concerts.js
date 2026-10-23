@@ -314,7 +314,7 @@ async function seasonFigures() {
   const shows = done.filter(isShow);
   const prods = productionsSorted().filter(p => allSessions(p.id).some(s => inSeason(s.date)));
   const active = membersOf(null).length, inactive = membersOf(null, true).filter(m => m.active === false).length;
-  const leaves = membersOf(null, true).filter(m => (m.leaves || []).some(l => l.from <= to && (!l.to || l.to >= from))).length;
+  const leaves = membersOf(null, true).filter(m => leavesOf(m).some(l => l.from <= to && (!l.to || l.to >= from))).length;
   const st = computeStats({ kind: 'range', from, to: TODAY < to ? TODAY : to, name: season.name }, '');
   // Els totals ja els fa computeStats, en minuts (vegeu countMark).
   const sum = st.tot;

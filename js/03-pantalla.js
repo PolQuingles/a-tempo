@@ -246,6 +246,7 @@ function render() {
         <p class="muted" style="font-size:calc(13px*var(--ts));margin:0">Músics, cantaires, direcció i equip entreu pel mateix lloc.</p>
       </div>
       <p class="entry-foot">Si l’has obert des del WhatsApp i no et deixa entrar, obre l’enllaç amb el <b>Safari</b> o el <b>Chrome</b> (menú «···» › Obre al navegador).</p>
+      <p class="entry-foot"><button class="linkish" data-act="privacy">Com es tracten les teves dades</button></p>
     </section>`;
     return;
   }

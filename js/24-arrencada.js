@@ -37,7 +37,8 @@ function afterReady() {
   checkPush();
   syncDirectory();
   // Si s'obre des d'un botó d'una notificació, primer es fa el que s'hi ha triat (i no surt la benvinguda).
-  setTimeout(() => { if (new URLSearchParams(location.search).has('accio')) runNotificationAction(); else maybeWelcome(); }, 500);
+  // Qui encara ha de triar el rol, la veu després de triar-lo (vegeu setLens).
+  setTimeout(() => { if (new URLSearchParams(location.search).has('accio')) runNotificationAction(); else if (lensPicking()) LENS_WELCOME.pending = true; else maybeWelcome(); }, 500);
 }
 const waitForUser = () => new Promise(res => { const un = auth.onAuthStateChanged(u => { un(); res(u); }); });
 /** Signed in with Google: this person's record and role in one group, and the group's directory record. */

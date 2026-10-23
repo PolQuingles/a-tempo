@@ -1,8 +1,9 @@
 name: Publica a Firebase Hosting
-# Publica l'app a Firebase Hosting (i al domini propi, si n'hi ha) quan les proves de main han passat, i
-# també després de cada «Calendari» (que actualitza els calendaris i les icones). GitHub Pages continua
-# publicant la mateixa branca, de manera que les adreces d'abans segueixen funcionant.
-# No fa res fins que hi hagi el secret FIREBASE_SERVICE_ACCOUNT (vegeu README › Allotjament).
+# Publica l'app quan les proves de main han passat, i també després de cada «Calendari» (que actualitza els
+# calendaris i les icones). Primer en fa la còpia minificada (dist/, vegeu tools/construeix.mjs) i la publica:
+#   · a Firebase Hosting (i al domini propi, si n'hi ha), si hi ha el secret FIREBASE_SERVICE_ACCOUNT;
+#   · a GitHub Pages, si a Settings › Pages la font és «GitHub Actions». Mentre sigui «Deploy from a branch»,
+#     GitHub Pages continua publicant la branca main tal com és (sense minificar).
 on:
   workflow_run:
     workflows: [Proves, Calendari]
@@ -11,16 +12,43 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  pages: write
+  id-token: write
 concurrency: publica
 jobs:
   publica:
     if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event != 'pull_request')
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    # GitHub Pages hi publica només si la font és «GitHub Actions» (vegeu el pas «GitHub Pages publica des d'aquí?»).
+    environment:
+      name: github-pages
     steps:
       - uses: actions/checkout@v7
         with:
           ref: main
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: L'app minificada (dist/)
+        run: |
+          npm install --no-save --no-audit --no-fund esbuild@0.24.0
+          node tools/construeix.mjs dist
+      - name: GitHub Pages publica des d'aquí?
+        id: pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "$(gh api "repos/${{ github.repository }}/pages" --jq .build_type 2>/dev/null)" = "workflow" ]; then echo "si=1" >> "$GITHUB_OUTPUT"
+          else echo "::notice::GitHub Pages publica la branca main tal com és. Per publicar-hi l'app minificada, a Settings › Pages tria la font «GitHub Actions»."; fi
+      - name: Prepara GitHub Pages
+        if: steps.pages.outputs.si == '1'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+      - name: Publica a GitHub Pages
+        if: steps.pages.outputs.si == '1'
+        uses: actions/deploy-pages@v4
       - name: Hi ha la clau de publicació?
         id: clau
         env:

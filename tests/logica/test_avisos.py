@@ -20,6 +20,10 @@ DB = {
     f"cors/{G}/staff/b@x.cat": {"email": "b@x.cat", "roles": ["singer"], "memberId": "m2", "section": "T"},
     f"cors/{G}/members/m1": {"id": "m1", "name": "Puig, Anna", "section": "S"},
     f"cors/{G}/members/m2": {"id": "m2", "name": "Bosch, Marc", "section": "T"},
+    # La cap de corda de les sopranos: rep les absències noves de la seva corda (i no les de les altres).
+    f"cors/{G}/push/dev3": {"endpoint": "https://push.example/e3", "p256dh": "x", "auth": "y", "email": "c@x.cat", "memberId": "m3", "section": "S"},
+    f"cors/{G}/staff/c@x.cat": {"email": "c@x.cat", "roles": ["leader", "singer"], "memberId": "m3", "section": "S"},
+    f"cors/{G}/members/m3": {"id": "m3", "name": "Vila, Clara", "section": "S", "leader": True},
     f"cors/{G}/messages/old": {"id": "old", "to": ["*"], "body": "Vell", "byName": "Equip", "by": "z@x.cat", "createdAt": now()},
 }
 class Reader:
@@ -61,13 +65,17 @@ def later():
     import time
     time.sleep(3); DB[f"cors/{G}/messages/n1"] = {"id": "n1", "to": ["T"], "body": "Tenors: assaig parcial", "byName": "Lluc", "by": "z@x.cat", "createdAt": now()}
     time.sleep(2.5); DB[f"cors/{G}/messages/n2"] = {"id": "n2", "to": ["*"], "body": "Demà no hi ha assaig", "byName": "Equip", "by": "a@x.cat", "createdAt": now()}
+    time.sleep(1); DB[f"cors/{G}/absences/ab1"] = {"id": "ab1", "memberId": "m1", "memberName": "Puig, Anna", "section": "S", "kind": "absent", "status": "pending", "sessionIds": [], "createdAt": now()}
+    DB[f"cors/{G}/absences/ab2"] = {"id": "ab2", "memberId": "m2", "memberName": "Bosch, Marc", "section": "T", "kind": "late", "status": "pending", "sessionIds": [], "createdAt": now()}
 threading.Thread(target=later, daemon=True).start()
 sys.argv = ["avisos.py", root]
 runpy.run_path(os.path.join(SCRIPTS, "avisos.py"), run_name="__main__")
 print("ENVIATS:", SENT)
 st = json.load(open(os.path.join(root, "avisos-estat.json")))
 print("ESTAT missatges:", st["messages"])
-ok = sorted(SENT) == sorted([("https://push.example/e2", "Lluc: Tenors: assaig parcial"), ("https://push.example/e2", "Equip: Demà no hi ha assaig")])
+ok = sorted(SENT) == sorted([("https://push.example/e2", "Lluc: Tenors: assaig parcial"), ("https://push.example/e2", "Equip: Demà no hi ha assaig"),
+                             ("https://push.example/e3", "Equip: Demà no hi ha assaig"),
+                             ("https://push.example/e3", "Anna Puig no podrà venir a una sessió. Respon-ho a Assistència › Absències.")])
 # De nit no s'envia res (i les passades curtes s'acaben): aleshores la prova només comprova que no s'ha enviat res.
 import zoneinfo
 night = not (8 <= datetime.datetime.now(zoneinfo.ZoneInfo("Europe/Madrid")).hour < 22)

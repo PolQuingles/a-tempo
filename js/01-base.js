@@ -298,6 +298,10 @@ const canEdit = () => S.role === 'edit' && (!PREVIEW && !lensOn() ? true : roles
 /** Si el compte (o la persona de la vista prèvia) pot editar, sigui quin sigui el rol actiu: per a les dades que es llegeixen
  *  i els avisos al mòbil, que no canvien en canviar de rol. */
 const canEditAny = () => S.role === 'edit' && (!PREVIEW || PREVIEW.roles.some(r => EDIT_ROLES.has(r)));
+/** Qui llegeix l'assistència de tot el cor (vegeu attAll a les regles). Un cap de corda que no té cap d'aquests rols només
+ *  llegeix la de la seva corda: llavors torna la corda; si no, ''. És el compte, no el rol actiu: decideix què es llegeix. */
+const ALL_ATT_ROLES = ['admin', 'director', 'gerencia', 'secretaria'];
+const attScopeSec = () => S.role === 'edit' && !!S.me && !rolesOf(S.me).some(r => ALL_ATT_ROLES.includes(r)) && hasRole(S.me, 'leader') ? S.me.section || '-' : '';
 const isAdmin = () => S.role === 'edit' && !PREVIEW && hasRole(S.me, 'admin') && ['tot', 'admin'].includes(curLens());
 /** Name, type, sections and look of the group, and deleting it: only a Pro user who runs it. */
 const canManageGroup = () => isAdmin() && S.pro;

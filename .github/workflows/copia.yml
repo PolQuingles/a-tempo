@@ -24,6 +24,7 @@ jobs:
         env:
           SERVICE_REFRESH_TOKEN: ${{ secrets.SERVICE_REFRESH_TOKEN }}
           BACKUP_REFRESH_TOKEN: ${{ secrets.BACKUP_REFRESH_TOKEN }}
+          BACKUP_KEY: ${{ secrets.BACKUP_KEY }}
         run: python3 .github/scripts/copia.py copies
       - name: Desa la còpia
         working-directory: copies

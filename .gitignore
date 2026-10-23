@@ -5,3 +5,5 @@ __pycache__/
 # Còpia de proves de la interfície
 tests/interficie/site/
 __pycache__/
+node_modules/
+dist/

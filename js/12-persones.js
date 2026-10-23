@@ -556,32 +556,22 @@ function previewPeople(role) {
   const people = peopleWithRole(role).map(p => ({ key: p.email, label: fullName(p.name || p.email), person: { roles: rolesOf(p).filter(r => r !== 'admin'), email: p.email, name: p.name || '', memberId: p.memberId || '', section: p.section || '' } }));
   return people.length ? people : [{ key: '', label: `${previewLabel(role)} (encara no hi ha ningú amb aquest rol)`, person: { roles: [role], email: '', name: '', memberId: '', section: '' } }];
 }
+// Mirar l'app com un rol (i fer-hi el que faria) és a Inici › Canvia de rol (vegeu 03b-rols); aquí queda veure-la com la veu
+// una persona concreta de la plantilla, sense desar res.
 function sheetPreview() {
-  ensureStaff();
-  let role = 'singer';
-  const paint = el => {
-    const list = previewPeople(role);
-    el.querySelector('#pv-who-l').textContent = role === 'singer' ? V.Member : role === 'leader' || role === 'archive' ? capz(V.section) : role === 'voice' ? V.Teacher : 'Qui';
-    el.querySelector('#pv-who').innerHTML = list.map(x => `<option value="${esc(x.key)}">${esc(x.label)}</option>`).join('');
-    el.querySelectorAll('#pv-role .pick').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.k === role)));
-  };
+  const list = previewPeople('singer');
   openSheet({
-    title: 'Mira l’app com…',
-    body: `<p style="margin-top:0">Tria un rol i una persona, i veuràs l’app tal com la veu. Només canvia en aquest mòbil i no es desa res del que facis. Se’n surt amb el botó de dalt.</p>
-      <div class="field"><span>Rol</span><div class="pickers" id="pv-role">${PREVIEW_ROLES.filter(k => k !== 'voice' || classesOn()).map(k => `<button type="button" class="pick" data-k="${k}" aria-pressed="${k === role}">${esc(previewLabel(k))}</button>`).join('')}</div></div>
-      <label class="field"><span id="pv-who-l">${esc(V.Member)}</span><select class="inp" id="pv-who"></select></label>`,
+    title: `Mira l’app com un ${V.member}`,
+    body: `<p style="margin-top:0">Tria qui, i veuràs l’app tal com la veu: la seva assistència, els seus avisos, el que li toca. Només canvia en aquest mòbil i no es desa res del que facis. Se’n surt amb el botó de dalt.</p>
+      <p class="muted" style="font-size:calc(13px*var(--ts))">Per fer servir l’app com un altre rol (cap de corda, arxiver, professor de cant…), ves a <b>Inici › Canvia de rol</b>.</p>
+      <label class="field"><span>${esc(V.Member)}</span><select class="inp" id="pv-who">${list.map(x => `<option value="${esc(x.key)}">${esc(x.label)}</option>`).join('')}</select></label>`,
     foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="pv-ok">Mira-ho</button>`,
     onMount: el => {
-      paint(el);
-      el.querySelectorAll('#pv-role .pick').forEach(b => b.onclick = () => { role = b.dataset.k; paint(el); });
-      // El personal pot arribar després d'obrir la finestra.
-      const t = setInterval(() => { if (!document.body.contains(el)) { clearInterval(t); return; } if (S.staffReady) { clearInterval(t); const v = el.querySelector('#pv-who').value; paint(el); el.querySelector('#pv-who').value = v; } }, 300);
       el.querySelector('#pv-ok').onclick = () => {
-        const pick = previewPeople(role).find(x => x.key === el.querySelector('#pv-who').value);
+        const pick = list.find(x => x.key === el.querySelector('#pv-who').value);
         if (!pick) { toast('Tria qui vols veure'); return; }
-        const label = previewLabel(role);
         closeSheet();
-        startPreview({ ...pick.person, label, role });
+        startPreview({ ...pick.person, label: V.Member, role: 'singer' });
       };
     },
   });

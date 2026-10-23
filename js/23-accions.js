@@ -4,7 +4,7 @@
 
 /* ================= Events ================= */
 const SUB_OK = new Set(['mark', 'min', 'early', 'early-open', 'mark-rest']);
-const ADMIN_ONLY = new Set(['join-link', 'join-reqs', 'join-approve', 'join-reject', 'ward-cfg-add', 'ward-cfg-del', 'ward-cfg-save', 'people-tools', 'staff-new', 'staff-edit', 'staff-bulk', 'staff-link', 'preview-on', 'who-in', 'mail-check', 'wipe-all', 'share-app', 'onboard-hide', 'cl-seats', 'legacy-clean']);
+const ADMIN_ONLY = new Set(['retention', 'join-link', 'join-reqs', 'join-approve', 'join-reject', 'ward-cfg-add', 'ward-cfg-del', 'ward-cfg-save', 'people-tools', 'staff-new', 'staff-edit', 'staff-bulk', 'staff-link', 'preview-on', 'who-in', 'mail-check', 'wipe-all', 'share-app', 'onboard-hide', 'cl-seats', 'legacy-clean']);
 // La identitat de l'agrupació i esborrar-la: només un Usuari Pro que l'administri.
 const PRO_ONLY = new Set(['brand-color', 'logo-remove', 'kind-set', 'group-delete', 'sections-save', 'sections-undo']);
 // El calendari de les classes: només el professorat de cant i l'administració.
@@ -25,8 +25,12 @@ const actions = {
   'cl-who': el => { ui.clWho = el.dataset.k; ui.clMonth = null; ui.clDay = null; saveUI(); render(); window.scrollTo({ top: 0 }); },
   'cl-roll-day': el => { ui.tab = 'calendari'; ui.clDay = el.dataset.date; ui.clMonth = el.dataset.date.slice(0, 7); ui.clView = 'month'; saveUI(); render(); window.scrollTo({ top: 0 }); },
   'lens': el => setLens(el.dataset.k, { sec: el.dataset.sec || '', teacher: el.dataset.teacher || '' }),
+  'att-open': el => { ui.tab = 'llista'; ui.att = el.dataset.k; ui.rollSec = null; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
   'att-abs': () => { ui.tab = 'llista'; ui.att = 'abs'; ui.rollSec = null; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
   'lens-pick': () => sheetLens(),
+  'privacy': () => sheetPrivacy(),
+  'my-data': () => exportMyData(),
+  'retention': () => sheetRetention(),
   'cl-back': () => { ui.clWho = null; saveUI(); render(); window.scrollTo({ top: 0 }); },
   'cl-month': el => { const [y, m] = ui.clMonth.split('-').map(Number); const d = new Date(y, m - 1 + (+el.dataset.dir), 1); ui.clMonth = `${d.getFullYear()}-${pad(d.getMonth() + 1)}`; render(); },
   'cl-day': el => { ui.clDay = el.dataset.date; render(); },

@@ -22,8 +22,9 @@ const pushKinds = () => ({
 const leaderKinds = () => ({
   llistes: ['Llista a mitges', 'Mitja hora després d’acabar l’assaig, si la llista no és completa.'],
   risc: [`${V.Members} en risc`, 'Quan algú baixa de la norma d’assistència.'],
+  absnoves: ['Absències noves', `Quan algú de la teva ${V.section} avisa que no vindrà o que arribarà tard.`],
 });
-const DEFAULT_PREFS = { missatges: true, calendari: true, anuncis: true, materials: true, convocatories: true, enquestes: true, sortides: true, absencies: true, assajos: false, llistes: true, risc: true, classes: true };
+const DEFAULT_PREFS = { missatges: true, calendari: true, anuncis: true, materials: true, convocatories: true, enquestes: true, sortides: true, absencies: true, assajos: false, llistes: true, risc: true, classes: true, absnoves: true };
 const LS_PUSH_PREFS = 'atempo:avis-prefs';
 /** The sections a leader looks after: their own, from the account or from their roster record. */
 function defaultCordes() {
