@@ -64,7 +64,7 @@ def set_clock(fresh_minutes=None):
 RISK_TIME = os.environ.get("AVISOS_RISK") == "1" or (NOW.hour in (10, 19) and NOW.minute < 30)
 
 DEFAULT_PREFS = {"missatges": True, "calendari": True, "anuncis": True, "convocatories": True, "enquestes": True, "sortides": True,
-                 "assajos": False, "materials": True, "absencies": True, "llistes": True, "risc": True, "classes": True}
+                 "assajos": False, "materials": True, "absencies": True, "llistes": True, "risc": True, "classes": True, "absnoves": True}
 EDIT_ROLES = {"admin", "director", "gerencia", "secretaria", "leader"}
 
 
@@ -99,7 +99,9 @@ def part_matches(item_part, member):
 
 
 # El rol amb què s'obre l'app en tocar cada mena d'avís (si la persona no el té, l'app li deixa triar).
-ROL_BY_TAG = {"roll": "leader", "risk": "leader", "rsvp": "singer", "ses": "singer", "abs": "singer", "trip": "singer", "poll": "singer", "pollnew": "singer"}
+# Els avisos de classe: el professor els obre com a professor de cant; l'alumne, com a cantaire.
+TEACHER, STUDENT = {"rol": "voice"}, {"rol": "singer"}
+ROL_BY_TAG = {"roll": "leader", "risk": "leader", "absnew": "leader", "rsvp": "singer", "ses": "singer", "abs": "singer", "trip": "singer", "poll": "singer", "pollnew": "singer"}
 
 
 class Group:
@@ -190,8 +192,9 @@ class Group:
         """'ok' enviat · 'gone' l'aparell ja no hi és · 'retry' error passatger.
         extra: botons de la notificació ({"actions": [...], "sid": sessió}) per respondre sense obrir l'app."""
         payload = {"title": self.name, "body": body, "url": self.url, "tag": tag, **(extra or {})}
-        # L'app s'obre amb el rol que toca (vegeu 03b-rols): les llistes i el risc, de cap de corda; la resta, de cantaire.
-        rol = ROL_BY_TAG.get(tag.split("-")[0])
+        # L'app s'obre amb el rol que toca (vegeu 03b-rols): les llistes, el risc i les absències noves, de cap de corda; els
+        # avisos de classe, de professor o de cantaire segons qui els rep (extra["rol"]); la resta, de cantaire.
+        rol = payload.get("rol") or ROL_BY_TAG.get(tag.split("-")[0])
         if rol:
             payload["rol"] = rol
         if self.icon:
@@ -575,6 +578,27 @@ class Group:
             for did, d in self.targets("absencies", member_ids={a.get("memberId")}):
                 self.deliver(f"abs:{aid}:{status}:{did}", d, body, f"abs-{aid}")
 
+    # ---------- Absències noves, al cap de corda ----------
+    def new_absences(self):
+        """Quan algú avisa que no podrà venir o que arribarà tard, ho sap el cap de la seva corda (que és qui el respon)."""
+        since = self.state.setdefault("absnew_since", UTC_NOW.isoformat().replace("+00:00", "Z"))
+        if QUIET or not any(True for _ in self.targets("absnoves")):
+            return
+        fresh = r.query(self.base, "absences", [("createdAt", ">=", max(since, FRESH))])
+        for aid, a in fresh.items():
+            sec = a.get("section")
+            if a.get("status") != "pending" or not sec:
+                continue
+            days = sorted(self.all[x]["date"] for x in (a.get("sessionIds") or []) if x in self.all)
+            when = ("el " + ", ".join(day_label(x) for x in days[:3]) + ("…" if len(days) > 3 else "")) if days else "a una sessió"
+            who = dades.full_name(a.get("memberName") or "")
+            what = f"arribarà tard {when}" if a.get("kind") == "late" else f"no podrà venir {when}"
+            body = f"{who or 'Algú'} {what}. Respon-ho a Assistència › Absències."
+            for did, d in self.targets("absnoves"):
+                if sec not in self.leader_sections(d) or d.get("memberId") == a.get("memberId"):
+                    continue
+                self.deliver(f"absnew:{aid}:{did}", d, body, f"absnew-{aid}")
+
     # ---------- Classes de cant ----------
     def teachers(self):
         """Els correus que porten les classes: professorat de cant i administració."""
@@ -638,7 +662,7 @@ class Group:
             who = {x.get("memberId") for x in day.get("slots") or [] if x.get("memberId")}
             body = f"S'ha anul·lat {when({'classId': cid})}."
             for did, d in self.targets("classes", member_ids=who):
-                self.deliver(f"cls:off:{cid}:{day.get('cancelledAt')}:{did}", d, body, f"cls-{cid}")
+                self.deliver(f"cls:off:{cid}:{day.get('cancelledAt')}:{did}", d, body, f"cls-{cid}", STUDENT)
 
         for rid, req in sorted(reqs.items()):
             kind, status = req.get("kind"), req.get("status")
@@ -657,23 +681,23 @@ class Group:
                 else:
                     body = f"{who} busca algú per canviar l'hora de {when(req)}."
                 for did, d in self.to_emails(teachers):
-                    self.deliver(f"cls:{rid}:{status}:{did}", d, body, f"cls-{rid}")
+                    self.deliver(f"cls:{rid}:{status}:{did}", d, body, f"cls-{rid}", TEACHER)
                 if kind == "swap" and req.get("withMemberId"):
                     msg = f"{who} et demana canviar l'hora de {when(req)}: tens les {other_time(req)}. Respon-hi des de l'app."
                     for did, d in self.targets("classes", member_ids={req.get("withMemberId")}):
-                        self.deliver(f"cls:{rid}:ask:{did}", d, msg, f"cls-{rid}")
+                        self.deliver(f"cls:{rid}:ask:{did}", d, msg, f"cls-{rid}", STUDENT)
                 elif kind == "swap":
                     # Canvi obert: ho saben les persones triades o, si és per a tothom, tots els qui tenen classe aquella
                     # setmana amb el mateix professor, tret de qui el demana.
                     others = (set(req.get("to") or []) or week_people(req)) - {req.get("memberId")}
                     msg = f"{who} busca algú per canviar l'hora de {when(req)}. Si et va bé, queda-te'l des de l'app."
                     for did, d in self.targets("classes", member_ids=others):
-                        self.deliver(f"cls:{rid}:ask:{did}", d, msg, f"cls-{rid}")
+                        self.deliver(f"cls:{rid}:ask:{did}", d, msg, f"cls-{rid}", STUDENT)
                 continue
             if status == "cancelled":
                 body = f"{who} ha retirat l'avís de {when(req)}."
                 for did, d in self.to_emails(teachers):
-                    self.deliver(f"cls:{rid}:{status}:{did}", d, body, f"cls-{rid}")
+                    self.deliver(f"cls:{rid}:{status}:{did}", d, body, f"cls-{rid}", TEACHER)
                 continue
             done = status == "accepted"
             if kind == "swap":
@@ -686,10 +710,10 @@ class Group:
                 body = f"El professorat {'ha vist' if done else 'no pot acceptar'} el teu avís de {when(req)}."
                 teach_body = None
             for did, d in self.targets("classes", member_ids={req.get("memberId")}):
-                self.deliver(f"cls:{rid}:{status}:{did}", d, body, f"cls-{rid}")
+                self.deliver(f"cls:{rid}:{status}:{did}", d, body, f"cls-{rid}", STUDENT)
             if teach_body:
                 for did, d in self.to_emails(teachers):
-                    self.deliver(f"cls:{rid}:{status}:t:{did}", d, teach_body, f"cls-{rid}")
+                    self.deliver(f"cls:{rid}:{status}:t:{did}", d, teach_body, f"cls-{rid}", TEACHER)
 
     # ---------- Caps de corda o de secció ----------
     def leader_sections(self, d):
@@ -802,6 +826,7 @@ class Group:
             self.rehearsals()
         self.materials()
         self.absences()
+        self.new_absences()
         self.classes()
         if not self.first_run:
             self.rolls()
@@ -822,6 +847,7 @@ class Group:
         self.new_polls()
         self.trips()
         self.absences()
+        self.new_absences()
         self.classes()
         self.save()
         return self.count - before

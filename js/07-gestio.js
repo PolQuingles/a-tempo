@@ -63,7 +63,7 @@ function sheetPeopleTools() {
       ${o('share-app', 'Enllaç de l’app', 'L’adreça i un missatge per enviar a qui ha de començar a fer-la servir.')}
       ${o('who-in', 'Qui ha entrat', 'Qui ja fa servir l’app, qui encara no i a qui li falta el correu.')}
       ${o('mail-check', `Revisa els accessos${n ? ` (${n})` : ''}`, 'Correus repetits, comptes sense fitxa i caps de corda que no poden passar llista.')}
-      ${o('preview-on', 'Mira l’app com…', 'Com la veu un cantaire, un cap de corda, la direcció o un professor de cant.')}
+      ${o('preview-on', `Mira l’app com un ${V.member}`, `Com la veu una persona concreta de la plantilla, sense desar res. Per fer servir l’app com un altre rol, Inici › Canvia de rol.`)}
     </div>`,
   });
 }
@@ -105,7 +105,7 @@ function managePeople() {
 function leaveText(m) {
   const now = onLeave(m, TODAY);
   if (now) return `De baixa${now.to ? ` fins al ${ddmm(now.to)}` : ''}`;
-  const next = (m.leaves || []).filter(l => l.from > TODAY).sort((a, b) => a.from.localeCompare(b.from))[0];
+  const next = leavesOf(m).filter(l => l.from > TODAY).sort((a, b) => a.from.localeCompare(b.from))[0];
   return next ? `Baixa prevista des del ${ddmm(next.from)}` : '';
 }
 const SEARCH_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>';
@@ -399,6 +399,7 @@ function manageConfig() {
     <div class="setting"><div><div class="t">Còpia de seguretat</div><div class="s">Descarrega ${esc(V.members)}, produccions, llistes i avisos en un fitxer JSON. A més, cada nit se’n guarda una còpia automàtica.</div></div><button class="btn btn-sm" data-act="export-json">Exporta</button></div>
     ${isAdmin() ? `<div class="setting"><div><div class="t">Restaura una còpia</div><div class="s">Substitueix totes les dades actuals per les del fitxer.</div></div>
       <label class="btn btn-sm" for="import-file">Importa…</label><input id="import-file" type="file" accept="application/json,.json" class="sr" data-bind="import"></div>
+    <div class="setting"><div><div class="t">Temporades velles</div><div class="s">Esborra l’assistència, les absències, les respostes i les classes d’abans d’una data (les dades personals no s’han de guardar més del que cal).</div></div><button class="btn btn-sm" data-act="retention">Revisa-ho</button></div>
     <div class="setting"><div><div class="t">Restes de versions antigues</div><div class="s">Les dades dels enllaços personals d’abans (ja no serveixen) i el rol antic «Treballador del Palau».</div></div><button class="btn btn-sm" data-act="legacy-clean">Revisa-ho</button></div>
     <div class="setting"><div><div class="t">Esborra les dades</div><div class="s">Elimina ${esc(V.members)}, produccions, llistes i avisos, però manté l’agrupació i les persones amb accés. No es pot desfer.</div></div><button class="btn btn-sm btn-danger-ghost" data-act="wipe-all">Esborra</button></div>
     ${GID !== FOUNDER && canManageGroup() ? `<div class="setting"><div><div class="t">Esborra l’agrupació</div><div class="s">Ho elimina tot, persones incloses, i l’agrupació desapareix. No es pot desfer.</div></div><button class="btn btn-sm btn-danger-ghost" data-act="group-delete">Esborra-la</button></div>` : ''}` : ''}
@@ -483,6 +484,7 @@ function paintAccount() {
 }
 /** El menú del compte: una fila curta per opció. Cada fila obre la seva finestra (o la pantalla de Gestió). */
 const ACCT_ICONS = {
+  privacy: '<path d="M12 3.5 5 6.5v5c0 4.2 3 7.6 7 9 4-1.4 7-4.8 7-9v-5z"/><path d="m9 12 2 2 4-4"/>',
   lens: '<path d="M7 7h11l-3-3M17 17H6l3 3"/>',
   gestio: '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
   calendar: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
@@ -501,7 +503,7 @@ const ACCT_ICONS = {
 const ACCT_SHEETS = {
   calendar: () => sheetCalendar(), classIcs: () => sheetClassIcs(), push: () => sheetPush(),
   groups: () => sheetGroups(), theme: () => sheetTheme(), help: () => sheetHelp(), profile: () => sheetMyProfile(), install: () => sheetInstall(),
-  threads: () => sheetThreads(), week: () => sheetWeek(),
+  threads: () => sheetThreads(), week: () => sheetWeek(), privacy: () => sheetPrivacy(),
 };
 function sheetAccount() {
   const name = accountName();
@@ -515,7 +517,7 @@ function sheetAccount() {
       lensBar() && item('lens', 'Canvia de rol', 'data-act="lens-pick"')],
     [(myId() || S.threads.size) && item('threads', 'Converses', 'data-act="acct-open" data-k="threads"', unreadThreads().length), open('week', 'La setmana'),
       myId() && !PREVIEW && open('profile', 'La meva fitxa'), wardOn() && (myId() || wardStaff()) && item('wardrobe', 'Vestidor', 'data-act="ward-open"', myId() ? wardOf(myId()).filter(x => x.status === 'emprovar').length : 0), open('calendar', icsOn() ? 'Calendari al mòbil' : 'Exporta el calendari'), pushSupported() && open('push', 'Notificacions')],
-    [groupsVisible() && open('groups', 'Agrupacions'), open('theme', 'Aparença'), canInstall() && open('install', 'Instal·la l’app'), open('help', 'Com funciona')],
+    [groupsVisible() && open('groups', 'Agrupacions'), open('theme', 'Aparença'), canInstall() && open('install', 'Instal·la l’app'), open('help', 'Com funciona'), open('privacy', 'Les teves dades')],
   ].map(g => g.filter(Boolean)).filter(g => g.length);
   openSheet({
     title: 'El teu compte',

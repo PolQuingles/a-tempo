@@ -193,7 +193,7 @@ function sessionActs(s, me, big) {
   const out = me && isOut(s, me);
   const now = s.date === TODAY;
   let acts = '', conv = '';
-  if (now && canEdit()) {
+  if (now && canEdit() && attTabKeys().includes('llista')) {
     const secs = mySections().filter(x => convoked(s, x));
     const pr = secs.length ? progress(s, secs[0]) : null;
     acts = `<button class="btn btn-sm btn-primary" data-act="home-roll" data-sid="${esc(s.id)}" data-sec="${esc(secs[0] || '')}">${pr ? `Passa llista · ${pr.done}/${pr.total}` : 'Passa llista'}</button>`;
@@ -334,6 +334,50 @@ function myNoticesBlock(me, withBtn) {
   return `<div class="section-title"><h2 class="h2">Les meves absències</h2>${withBtn ? '<button class="btn btn-sm" data-act="absence-new">Avisa d’una absència</button>' : ''}</div>
     ${recent.length ? `<div class="panel">${recent.map(a => absenceCard(a, { mine: true })).join('')}</div>` : ''}`;
 }
+/* ---------- A dalt d'Inici, el que és de cada rol ---------- */
+// El cap de corda: quan l'assaig ja ha començat (o és a punt), el botó de passar llista ben gros. La direcció: com va la producció
+// (l'assistència, qui està en risc i qui no arriba a la norma). La secretaria: els documents i les quotes que falten.
+function lensHomeCard() {
+  const l = curLens();
+  if (l === 'leader') return leaderNowCard();
+  if (l === 'director' || l === 'gerencia') return prodPulseCard();
+  if (l === 'secretaria') return secPendingCard();
+  return '';
+}
+function leaderNowCard() {
+  const sec = lensSection();
+  const s = sec && allSessions().find(x => x.date === TODAY && convoked(x, sec) && x.time);
+  if (!s) return '';
+  const start = parseTime(s.time), end = parseTime(s.end) || start + 120, now = nowMins();
+  if (now < start - 30 || now > end + 90) return '';
+  const pr = progress(s, sec), done = pr.total && pr.done === pr.total;
+  return `<section class="live-roll${done ? ' is-done' : ''}"><span class="lr-t"><small>${now < start ? `Comença a les ${esc(s.time)}` : now <= end ? 'L’assaig ha començat' : 'L’assaig s’ha acabat'}</small>
+      <b>${done ? `Llista de ${esc(SEC[sec].name.toLowerCase())} completa` : `Passa llista de ${esc(SEC[sec].name.toLowerCase())}`}</b><small>${pr.done} de ${pr.total} marcats</small></span>
+    <button class="btn ${done ? '' : 'btn-primary'}" data-act="home-roll" data-sid="${esc(s.id)}" data-sec="${esc(sec)}">${done ? 'Revisa-la' : 'Passa llista'}</button></section>`;
+}
+function prodPulseCard() {
+  const pid = currentProductionId(), prod = pid && S.productions.get(pid);
+  if (!prod) return '';
+  const st = computeStats({ kind: 'prod', id: prod.id, name: prod.name }, '');
+  if (!st.counted.length) return '';
+  const rs = membersOf(null).map(m => ruleStatus(prod.id, m)).filter(Boolean);
+  const out = rs.filter(r => r.status === 'out').length, risk = rs.filter(r => r.status === 'risk').length;
+  return `<section class="pulse prod-tone" style="--ph:${prodHue(prod)}"><div class="pu-h"><span class="eyebrow"><i class="pdot"></i>${esc(prod.name)}</span><span class="m">${st.counted.length} de ${st.all.length} sessions</span></div>
+    <div class="pu-k"><div><b>${Math.round(rate(st.tot) * 100)}<small>%</small></b><span>d’assistència</span></div>
+      <div class="${risk ? 'warn' : ''}"><b>${risk}</b><span>en risc</span></div><div class="${out ? 'bad' : ''}"><b>${out}</b><span>no arriben a la norma</span></div></div>
+    <div class="pu-a"><button class="btn btn-sm" data-act="att-open" data-k="risk">Mira el risc</button><button class="btn btn-sm btn-ghost" data-act="att-open" data-k="stats">Estadístiques</button></div></section>`;
+}
+function secPendingCard() {
+  if (!canDocs()) return '';
+  if (!S.memberDocs) { ensureSecData(); return ''; }
+  const active = membersOf(null);
+  const docs = docsOn() ? active.filter(docsPending).length : 0;
+  const fees = feesOn() ? active.filter(m => !feeOf(m).paid).length : 0;
+  if (!docs && !fees) return '';
+  return `<section class="pulse"><div class="pu-h"><span class="eyebrow">Secretaria</span></div>
+    <div class="pu-k">${docsOn() ? `<div class="${docs ? 'warn' : ''}"><b>${docs}</b><span>amb documents pendents</span></div>` : ''}${feesOn() ? `<div class="${fees ? 'warn' : ''}"><b>${fees}</b><span>sense la quota pagada</span></div>` : ''}</div>
+    <div class="pu-a"><button class="btn btn-sm" data-act="manage" data-k="personal">Obre la plantilla</button></div></section>`;
+}
 function viewHome() {
   const me = S.members.get(myMemberId());
   const name = me ? me.name : (ME()?.name || S.userName || '');
@@ -354,6 +398,7 @@ function viewHome() {
   const msgs = messagesBlock();
   return `${head}
     ${bar}
+    ${lensHomeCard()}
     ${installCard()}
     <div class="home">
       <div class="home-a">${feat ? `<section class="h-next">${nextCard(feat, me)}</section>` : ''}<section class="h-todo">${todoBlock(me, feat)}</section><section class="h-soon">${teacher ? teacherSoonBlock() : soonBlock(me, feat)}</section></div>

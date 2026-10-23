@@ -108,6 +108,8 @@ function dropLensParam() {
   const qs = u.toString();
   history.replaceState(history.state, '', `${location.pathname}${qs ? `?${qs}` : ''}${location.hash}`);
 }
+// La benvinguda (maybeWelcome) espera que s'hagi triat el rol: si no, sortiria a sobre del selector.
+const LENS_WELCOME = { pending: false };
 const lensPicking = () => !PREVIEW && S.mode === 'shared' && S.ready && LENS === null;
 /** Canvia de rol (amb la corda o el professor, si se'n tria): l'app torna a Inici, amb les pestanyes del rol nou. */
 function setLens(k, want = {}) {
@@ -118,6 +120,7 @@ function setLens(k, want = {}) {
   if (curLens() === 'leader' && ME()?.section) ui.section = ME().section;
   document.body.classList.toggle('ro', !canEdit());
   closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 });
+  if (LENS_WELCOME.pending) { LENS_WELCOME.pending = false; setTimeout(maybeWelcome, 300); }
 }
 /** La pantalla d'entrada per a qui té més d'un rol: els seus (l'administració en pot triar d'altres des d'Inici). */
 function viewLensPick() {

@@ -77,6 +77,10 @@ service cloud.firestore {
     // El tauler (anuncis, enquestes, sortides, repertori, materials i documents) el porten l'administració, la direcció, la
     // gerència i la secretaria (el repertori, també els arxivers). Els caps de corda passen llista, però no hi editen res.
     function boardEdit(c) { return staffHas(c, ['admin', 'director', 'gerencia', 'secretaria']); }
+    // L'assistència de tot el cor (llistes, absències i arxiu) la veuen l'administració, la direcció, la gerència i la
+    // secretaria; un cap de corda, només la de la seva corda (sec). Els cantaires, cadascú la seva (attMine).
+    function attAll(c) { return staffHas(c, ['admin', 'director', 'gerencia', 'secretaria']); }
+    function attSec(c, sec) { return attAll(c) || (staffHas(c, ['leader']) && staffSection(c) == sec); }
     function boardCol(col) { return col in ['announcements', 'polls', 'pollVotes', 'works', 'trips']; }
     // Una producció nova amb materials, o una que ja hi era a la qual se'ls canvia.
     function materialsTouched() {
@@ -137,7 +141,7 @@ service cloud.firestore {
     // tools/stamp.py hi escriu l'empremta d'aquest fitxer. La vigilància comprova que les regles publicades són les del
     // repositori demanant reglesVersio/<empremta>: si les publicades són unes altres, la lectura es denega.
     match /reglesVersio/{v} {
-      allow get: if v == 'f23f1fbbba81';
+      allow get: if v == '80fcb3d4bc75';
     }
 
     match /plataforma/equip {
@@ -256,9 +260,11 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['syncEpoch']);
       }
       match /{col}/{doc} {
-        allow read: if (col in ['members', 'productions', 'attendance', 'config', 'staff', 'subs', 'rsvp', 'absences',
+        allow read: if (col in ['members', 'productions', 'config', 'staff', 'subs', 'rsvp',
                                 'announcements', 'polls', 'pollVotes', 'push', 'classes', 'classReq', 'classPlan',
                                 'works', 'trips'] && canEdit(c))
+                    // Les llistes: tot el cor, o la corda del cap de corda (la consulta ha de demanar només aquesta corda).
+                    || (col == 'attendance' && canEdit(c) && attSec(c, resource.data.section))
                     // Cantaires i músics: veuen tota l'app (també el repertori i les sortides), però no poden canviar res.
                     || (col in ['members', 'productions', 'config', 'subs',
                                 'announcements', 'polls', 'works', 'trips'] && isStaff(c))
@@ -272,10 +278,12 @@ service cloud.firestore {
         allow create, update: if col in ['members', 'productions', 'attendance', 'config', 'subs', 'rsvp',
                                          'announcements', 'polls', 'pollVotes', 'works', 'trips'] && canEdit(c)
           && !(col == 'config' && doc == 'main')
+          && (col != 'attendance' || (attSec(c, request.resource.data.get('section', '')) && (resource == null || resource.data.get('section', '') == request.resource.data.get('section', ''))))
           && ((!boardCol(col) && col != 'config' && !(col == 'productions' && materialsTouched())) || boardEdit(c));
         allow delete: if col in ['members', 'productions', 'attendance', 'config', 'subs', 'rsvp',
                                  'announcements', 'polls', 'pollVotes', 'works', 'trips'] && canEdit(c)
           && !(col == 'config' && doc == 'main')
+          && (col != 'attendance' || attSec(c, resource.data.get('section', '')))
           && ((!boardCol(col) && col != 'config') || boardEdit(c));
         // Els arxivers porten el repertori: les obres (amb els seus solos, partitures i àudios), els fitxers que s'hi
         // pugen (config/fitxer_…) i els altres materials de cada producció (només el camp materials, res més).
@@ -287,13 +295,14 @@ service cloud.firestore {
       // Arxiu de l'assistència: totes les llistes d'un tros de temporada ja acabat en un sol document (menys lectures).
       // Qui pot passar llista el crea i el corregeix; el llegeix tothom qui llegeix les llistes.
       match /attArchive/{id} {
-        allow read: if canEdit(c) || (isStaff(c) && !attPrivate(c)) || hasRole(c, ['backup']) || isService();
-        allow create, update: if canEdit(c);
+        // Té les llistes de totes les cordes: el cap de corda no l'hi llegeix (té les de la seva a attendance, que no s'esborren).
+        allow read: if attAll(c) || (isStaff(c) && !attPrivate(c)) || hasRole(c, ['backup']) || isService();
+        allow create, update: if attAll(c);
         allow delete: if isAdmin(c);
       }
       // Llistes privades: la còpia de les marques de cada persona. L'escriu qui passa llista; la llegeix la persona i l'equip.
       match /attMine/{mid} {
-        allow read: if canEdit(c) || (hasSpace(c) && mine(c, mid)) || hasRole(c, ['backup']) || isService();
+        allow read: if attAll(c) || (hasSpace(c) && mine(c, mid)) || hasRole(c, ['backup']) || isService();
         allow create, update, delete: if canEdit(c);
       }
       // Les produccions que farà cada persona, quan cadascú les tria (Ajustos). Les pot canviar ella mateixa o l'equip; les
@@ -584,12 +593,14 @@ service cloud.firestore {
       match /subs/{id} {
         allow read: if hasSpace(c) && mine(c, resource.data.memberId);
       }
+      // Els avisos d'absència: els respon el cap de corda (de la seva corda), la direcció i l'administració; la resta de l'equip els
+      // veu tots (vegeu attSec). La persona veu i retira els seus.
       match /absences/{id} {
-        allow read: if canEdit(c) || (hasSpace(c) && mine(c, resource.data.memberId));
+        allow read: if (canEdit(c) && attSec(c, resource.data.section)) || (hasSpace(c) && mine(c, resource.data.memberId));
         allow create: if request.resource.data.uid == request.auth.uid
-          && (canEdit(c) || (hasSpace(c) && request.resource.data.status == 'pending' && mine(c, request.resource.data.memberId)));
-        allow update: if canEdit(c);
-        allow delete: if canEdit(c)
+          && ((canEdit(c) && attSec(c, request.resource.data.get('section', ''))) || (hasSpace(c) && request.resource.data.status == 'pending' && mine(c, request.resource.data.memberId)));
+        allow update: if canEdit(c) && attSec(c, resource.data.get('section', '')) && request.resource.data.get('section', '') == resource.data.get('section', '');
+        allow delete: if (canEdit(c) && attSec(c, resource.data.get('section', '')))
           || (hasSpace(c) && mine(c, resource.data.memberId) && resource.data.status == 'pending');
       }
       match /rsvp/{id} {

@@ -259,6 +259,14 @@ function subscribe() {
   // Amb les llistes privades, qui no passa llista només en llegeix la seva còpia (vegeu 22b-tries).
   const attDone = BIG.get('attendance').done;
   BIG.get('attendance').done = () => { attDone(); mirrorPending(); };
+  // Un cap de corda (sense cap altre rol de l'equip) només pot llegir les llistes de la seva corda: les llegeix totes d'una
+  // consulta (no s'esborren en arxivar-les), sense l'arxiu ni la lectura per canvis.
+  const onlySec = attScopeSec();
+  if (onlySec) {
+    BIG.delete('attendance');
+    db.collection('attendance').where('section', '==', onlySec).onSnapshot(snap => { takeSnap('attendance', snap); markLoaded('attendance'); mirrorPending(); if (S.ready) scheduleRender(); },
+      e => { markLoaded('attendance'); onDbError(e); });
+  }
   for (const col of ['announcements', 'polls', 'trips']) big(col, () => db.collection(col));
   if (staff) for (const col of ['rsvp', 'pollVotes']) big(col, () => db.collection(col));
   else for (const col of ['rsvp', 'pollVotes']) mine(col).onSnapshot(onCol(col), () => markLoaded(col));
@@ -279,14 +287,14 @@ function subscribe() {
     grab(db.collection('classReq').where('open', '==', true), m => { openOnes = m; });
   }
   mine('tripSignups').onSnapshot(onCol('tripSignups'), () => markLoaded('tripSignups'));
-  for (const col of ['absences', 'subs']) mine(col).onSnapshot(snap => { onCol(col)(snap); if (col === 'subs') syncSubLists(); }, e => { markLoaded(col); if (staff) onDbError(e); });
+  for (const col of ['absences', 'subs']) (col === 'absences' && onlySec ? db.collection('absences').where('section', '==', onlySec) : mine(col)).onSnapshot(snap => { onCol(col)(snap); if (col === 'subs') syncSubLists(); }, e => { markLoaded(col); if (staff) onDbError(e); });
   db.doc('config/main').onSnapshot(snap => {
     if (!isDirty('config/main')) S.config = { name: '', alertFNJ: 3, minAttendance: 80, demo: false, ...(snap.exists ? snap.data() : {}) };
     applyGroupConfig();
     // Si les llistes passen a ser privades (o deixen de ser-ho), qui no les passa torna a començar: llegeix unes altres dades.
     const priv = !staff && attPrivate();
     if (SYNC.started && priv !== SYNC.priv) { location.reload(); return; }
-    if (!priv) watchArchive();
+    if (!priv && !attScopeSec()) watchArchive();
     watchChoices();
     watchWardrobe();
     if (!staff) watchMyPriv();
@@ -368,7 +376,10 @@ const allAttendance = () => new Map([...ARCH.docs, ...S.attendance]);
 // Fora d'una producció: l'hi ha tret l'equip o, si cadascú tria les seves produccions, ha dit que no la farà (22b-tries).
 const isExcluded = (prodId, mid) => !!(S.productions.get(prodId)?.excluded || []).includes(mid) || choseNo(mid, prodId);
 const convoked = (s, sec) => !s.sections || !s.sections.length || s.sections.includes(sec);
-const onLeave = (m, date) => (m.leaves || []).find(l => l.from && l.from <= date && (!l.to || l.to >= date));
+// Les baixes temporals: les de la fitxa (amb el motiu, que només veuen l'equip i la persona) o, si no es poden llegir, les
+// dates soles (away), que es desen a la part pública de la fitxa perquè els arxivers i qui no és de l'equip sàpiguen qui hi és.
+const leavesOf = m => m.leaves || m.away || [];
+const onLeave = (m, date) => leavesOf(m).find(l => l.from && l.from <= date && (!l.to || l.to >= date));
 /** Out of the roll for this session: on leave, or not doing any of its productions. */
 const isOut = (s, m) => !!onLeave(m, s.date) || sessionProds(s).every(p => isExcluded(p, m.id));
 /** Effective mark. ctxProd: when computing one production's stats, members outside it count as «No fa». */
@@ -546,86 +557,6 @@ function ruleStatus(prodId, member) {
   return { cur, best, att, abs, remaining, attM, absM, remM, status: best < min ? 'out' : cur < min ? 'risk' : 'ok' };
 }
 
-/* ---------- Arxiu de l'assistència per trimestres ---------- */
-// Cada llista és un document (una sessió × una corda): a final de temporada en són uns 400, i cada mòbil que obre l'app
-// després d'una setmana els tornaria a llegir tots. Per això, quan un tros de temporada fa dues setmanes que s'ha acabat,
-// algú de l'equip en desa totes les llistes en un sol document, attArchive/<del>_<al>, i config/main.attArchive.cut passa
-// a ser l'últim dia arxivat. A partir d'aquí, els mòbils llegeixen cada tros arxivat d'una sola lectura i, de les llistes,
-// només les posteriors (camp `date`). Les llistes arxivades no s'esborren: la còpia diària i els avisos les segueixen tenint.
-// Els trossos són fixos i seguits (gener–març, abril–juliol, agost–desembre), perquè no en quedi cap dia fora.
-const ARCH = { docs: new Map(), by: new Map(), watch: null, ids: '', busy: false };
-const ARCH_GRACE = 14 * 864e5;
-const ARCH_MAX = 850 * 1024;   // un document de Firestore no pot passar d'1 MB
-const archCut = () => (S.config.attArchive && S.config.attArchive.cut) || '';
-/** El tros de l'any on cau una data: { id, from, to }. */
-function archSegment(date) {
-  const y = date.slice(0, 4), m = +date.slice(5, 7);
-  const [from, to] = m <= 3 ? [`${y}-01-01`, `${y}-03-31`] : m <= 7 ? [`${y}-04-01`, `${y}-07-31`] : [`${y}-08-01`, `${y}-12-31`];
-  return { id: `${from}_${to}`, from, to };
-}
-const nextSegment = g => archSegment(isoDate(new Date(parseISO(g.to).getTime() + 864e5)));
-/** L'arxiu que guarda una data (si ja s'ha arxivat). */
-const archiveOf = date => { const g = archSegment(date); return ARCH.by.has(g.id) ? g : null; };
-/** Els trossos que ja es poden arxivar, per ordre: des del primer que no ho està fins al que fa dues setmanes que ha acabat. */
-function archivable(dates, cut, today = TODAY) {
-  const first = dates.filter(Boolean).sort()[0];
-  if (!first) return [];
-  const limit = isoDate(new Date(parseISO(today).getTime() - ARCH_GRACE));
-  const out = [];
-  let g = cut ? nextSegment(archSegment(cut)) : archSegment(first);
-  while (g.to <= limit) { out.push(g); g = nextSegment(g); }
-  return out;
-}
-/** Les llistes d'un tros, tal com es desen a l'arxiu. */
-function archiveDocs(g, docs, dateOf) {
-  const out = {};
-  for (const [key, d] of docs) {
-    const date = dateOf(d) || d.date;
-    if (date && date >= g.from && date <= g.to) out[key] = { ...d, date };
-  }
-  return out;
-}
-/** Es llegeixen els arxius (un document per tros) només si n'hi ha. */
-function watchArchive() {
-  const ids = ((S.config.attArchive && S.config.attArchive.ids) || []).join(',');
-  if (ids === ARCH.ids || !db) return;
-  ARCH.ids = ids;
-  if (ARCH.watch) { ARCH.watch(); ARCH.watch = null; }
-  if (!ids) { ARCH.docs = new Map(); ARCH.by = new Map(); return; }
-  ARCH.watch = db.collection('attArchive').onSnapshot(snap => {
-    ARCH.by = new Map(snap.docs.map(d => [d.id, d.data()]));
-    ARCH.docs = new Map([...ARCH.by.values()].sort((a, b) => (a.from || '').localeCompare(b.from || '')).flatMap(a => Object.entries(a.docs || {})));
-    if (S.ready) scheduleRender();
-  }, () => {});
-}
-/** Qui edita i té totes les llistes (acabades de llegir senceres del servidor) arxiva els trossos que toquen. Abans, a
- *  qualsevol llista que encara no porti la data (desada per una versió antiga de l'app) se li posa, perquè es pugui llegir. */
-async function archiveTerms() {
-  if (!canEdit() || PREVIEW || ARCH.busy) return;
-  const dateOf = d => sessionById(d.sessionId)?.date;
-  for (const [key, d] of S.attendance) { const date = dateOf(d); if (!d.date && date && date > archCut() && archCut() && !isDirty(`attendance/${key}`)) persist('attendance', key, { ...d, date }, 30); }
-  if (SYNC.mode.attendance !== 'full' || SYNC.got.attendance == null || pendingWrites()) return;
-  const all = allSessions();
-  const todo = archivable(all.map(s => s.date), archCut());
-  if (!todo.length) return;
-  ARCH.busy = true;
-  try {
-    const cfg = { ...(S.config.attArchive || {}), ids: [...((S.config.attArchive || {}).ids || [])] };
-    for (const g of todo) {
-      const docs = archiveDocs(g, S.attendance, dateOf);
-      if (JSON.stringify(docs).length > ARCH_MAX) break;   // massa gran per a un sol document: es queda com està
-      await db.doc(`attArchive/${g.id}`).set({ from: g.from, to: g.to, docs, n: Object.keys(docs).length, builtAt: new Date().toISOString(), by: S.email || '' });
-      cfg.ids = [...new Set([...cfg.ids, g.id])]; cfg.cut = g.to;
-    }
-    if (cfg.cut && cfg.cut !== archCut()) {
-      // Les llistes de després que encara no porten la data (desades per una versió antiga de l'app) la necessiten per sortir.
-      for (const [key, d] of S.attendance) { const date = dateOf(d); if (!d.date && date && date > cfg.cut) persist('attendance', key, { ...d, date }, 30); }
-      saveConfig({ attArchive: cfg });
-    }
-  } catch { /* es tornarà a provar el pròxim cop */ }
-  ARCH.busy = false;
-}
-
 /* ---------- Absence notices ---------- */
 const absencesFor = (sid, mid) => [...S.absences.values()].filter(a => a.memberId === mid && (a.sessionIds || []).includes(sid) && a.status !== 'rejected');
 const pendingAbsences = () => [...S.absences.values()].filter(a => a.status === 'pending');
@@ -660,72 +591,6 @@ function saveAttendance(key, doc) {
   ARCH.docs.set(key, doc);
   const path = new firebase.firestore.FieldPath('docs', key);
   db.doc(`attArchive/${arch.id}`).update(path, doc).catch(writeFailed);
-}
-/* ---------- Fitxes privades ---------- */
-// La plantilla (members) la llegeix tothom de l'agrupació: hi ha de ser el nom, la corda i la veu de cadascú. Amb les llistes
-// privades, el que la resta no ha de veure (el telèfon, les notes, les baixes i les altes amb el motiu) va a
-// memberPriv/<membre>, que només llegeixen l'equip i la persona. Aquí es tornen a ajuntar.
-const MEMBER_PRIV = ['phone', 'notes', 'leaves', 'history'];
-const privMembers = () => !!S.config.attPrivate;
-function splitMember(m) {
-  const pub = { ...m }, priv = { memberId: m.id };
-  for (const k of MEMBER_PRIV) {
-    if (!(k in pub)) continue;
-    const v = pub[k];
-    if (v != null && v !== '' && !(Array.isArray(v) && !v.length)) priv[k] = v;
-    delete pub[k];
-  }
-  return { pub, priv };
-}
-/** Cada fitxa amb la seva part privada (la de les fitxes que en tenen; les altres, tal com són). */
-function mergePriv() {
-  for (const [id, p] of S.memberPriv) {
-    const m = S.members.get(id);
-    if (!m) continue;
-    const base = { ...m };
-    for (const k of MEMBER_PRIV) delete base[k];
-    const { memberId, syncAt, ...rest } = p;
-    S.members.set(id, { ...base, ...rest });
-  }
-}
-let privWatch = null;
-/** Qui no és de l'equip només llegeix la seva part privada (les baixes compten a la seva assistència). */
-function watchMyPriv() {
-  if (privWatch || !db || !privMembers() || !S.memberId) return;
-  privWatch = db.doc(`memberPriv/${S.memberId}`).onSnapshot(snap => {
-    S.memberPriv = new Map(snap.exists ? [[snap.id, snap.data()]] : []);
-    mergePriv();
-    if (S.ready) scheduleRender();
-  }, () => {});
-}
-function saveMember(m) {
-  m = normPersonName(m);
-  S.members.set(m.id, m);
-  if (!privMembers()) { persist('members', m.id, m, 50); return; }
-  const { pub, priv } = splitMember(m);
-  S.memberPriv.set(m.id, priv);
-  persist('members', m.id, pub, 50);
-  persist('memberPriv', m.id, priv, 50);
-}
-/** En fer (o desfer) les llistes privades: les parts privades de totes les fitxes passen a memberPriv (o hi tornen). */
-async function moveMemberPriv(toPriv) {
-  const all = [...S.members.values()];
-  for (let i = 0; i < all.length; i += 200) {
-    const b = fs.batch();
-    for (const m of all.slice(i, i + 200)) {
-      if (toPriv) {
-        const { pub, priv } = splitMember(m);
-        b.set(db.doc(`memberPriv/${m.id}`), stamped(`memberPriv/${m.id}`, priv));
-        b.set(db.doc(`members/${m.id}`), stamped(`members/${m.id}`, pub));
-        S.memberPriv.set(m.id, priv);
-      } else {
-        b.set(db.doc(`members/${m.id}`), stamped(`members/${m.id}`, m));
-        if (S.memberPriv.has(m.id)) b.delete(db.doc(`memberPriv/${m.id}`));
-      }
-    }
-    await b.commit();
-  }
-  if (!toPriv && S.memberPriv.size) { S.memberPriv.clear(); bumpEpoch('memberPriv'); }
 }
 function saveProduction(p) {
   S.productions.set(p.id, p); persist('productions', p.id, p, 50);

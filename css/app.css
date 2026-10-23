@@ -1813,3 +1813,21 @@ svg{stroke-linecap:round;stroke-linejoin:round}
 .lp-compact .lp-opt{min-height:52px;padding:9px 12px}
 .lp-compact .lp-i{width:32px;height:32px;border-radius:10px}
 .lp-compact .lp-t small{display:none}
+/* A dalt d'Inici, el que és de cada rol: passar llista ara (cap de corda), com va la producció (direcció) i la secretaria. */
+.live-roll{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 14px;padding:14px 16px;border-radius:var(--r-lg);background:var(--accent-fill);color:var(--accent-fill-ink);box-shadow:var(--shadow-2)}
+.live-roll .lr-t{flex:1 1 180px;min-width:0;display:grid;gap:2px}
+.live-roll .lr-t small{font-size:calc(12.5px*var(--ts));opacity:.85}
+.live-roll .lr-t b{font-size:calc(18px*var(--ts));font-weight:700;line-height:1.2}
+.live-roll .btn-primary{background:var(--accent-fill-ink);color:var(--accent-fill);border-color:transparent}
+.live-roll .btn:not(.btn-primary){background:transparent;color:inherit;border-color:currentColor}
+.live-roll.is-done{background:var(--p-soft);color:var(--p-text);box-shadow:none}
+.pulse{margin:0 0 14px;padding:14px 16px;border-radius:var(--r-lg);background:var(--raised);box-shadow:var(--shadow-1);display:grid;gap:10px}
+.pu-h{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.pu-k{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px}
+.pu-k div{display:grid;gap:2px;padding:8px 10px;border-radius:var(--r-md);background:var(--surface-2)}
+.pu-k b{font-family:var(--f-display);font-size:26px;line-height:1;font-variant-numeric:tabular-nums}
+.pu-k b small{font-size:15px}
+.pu-k span{font-size:calc(12.5px*var(--ts));color:var(--muted)}
+.pu-k .warn{background:var(--fj-soft)}.pu-k .warn b{color:var(--fj-text)}
+.pu-k .bad{background:var(--fnj-soft)}.pu-k .bad b{color:var(--fnj-text)}
+.pu-a{display:flex;gap:6px;flex-wrap:wrap}

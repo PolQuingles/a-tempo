@@ -8,7 +8,9 @@ i obrir http://127.0.0.1:8777/index.html?u=pol (u = pol · leader · singer · p
 import os, re, shutil, subprocess, sys, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(os.path.dirname(HERE))
+# Amb ATEMPO_DIST, la còpia es fa de l'app tal com es publica (minificada, vegeu tools/construeix.mjs): és la que fa servir
+# la gent, i així les proves també en comproven la minificació.
+ROOT = os.environ.get("ATEMPO_DIST") or os.path.dirname(os.path.dirname(HERE))
 
 
 def build(dst):
