@@ -449,20 +449,25 @@ function sheetMyAttendance() {
   if (!me) return;
   openSheet({ title: 'La meva assistència', body: myAttSeason(me) });
 }
-/** La temporada d'una persona: el percentatge, el retard i com va cada producció. */
-function myAttSeason(me) {
+/** La temporada d'una persona: el percentatge, el retard i com va cada producció. Les que encara s'assagen, a la vista (menys
+ *  `skip`, la que ja surt a dalt, a la targeta grossa); les acabades, plegades a sota, perquè no ocupin la pantalla. */
+function myAttSeason(me, skip) {
   const { season } = seasonCfg();
   const sr = computeStats({ kind: 'range', from: season.from, to: season.to, name: season.name }, me.section).rows.find(x => x.m.id === me.id);
   const sc = sr ? sr.P + sr.R + sr.FJ + sr.FNJ : 0;
   const rows = productionsSorted().map(p => myProdSummary(me, p.id)).filter(x => x && x.counted);
+  const done = x => !allSessions(x.prod.id).some(s => s.date >= TODAY);
+  const now = rows.filter(x => !done(x) && x.prod.id !== skip), past = rows.filter(done).reverse();
+  const list = xs => `<ul class="mini-list" style="max-height:none">${xs.map(({ prod, r, rs, counted }) => `<li style="display:grid;gap:4px;padding:10px 12px">
+        <span style="display:flex;justify-content:space-between;gap:8px"><b>${esc(prod.name)}</b><span class="mono">${pct(rate(r))}</span></span>
+        <span class="m">${r.P + r.R} de ${counted} · ${r.FJ} just. · ${r.FNJ} no just.</span><span>${ruleSentence(rs)}</span></li>`).join('')}</ul>`;
   return `<div class="kpis" style="grid-template-columns:repeat(2,1fr)">
         <div class="kpi"><div class="kpi-v">${sc ? kpiPct(rate(sr)) : '—'}</div><div class="kpi-l">${esc(season.name)}</div></div>
         <div class="kpi"><div class="kpi-v">${sr ? sr.min : 0}<small>min</small></div><div class="kpi-l">Retard acumulat</div></div>
       </div>
-      ${rows.length ? `<ul class="mini-list" style="max-height:none;margin-top:14px">${rows.map(({ prod, r, rs, counted }) => `<li style="display:grid;gap:4px;padding:10px 12px">
-        <span style="display:flex;justify-content:space-between;gap:8px"><b>${esc(prod.name)}</b><span class="mono">${pct(rate(r))}</span></span>
-        <span class="m">${r.P + r.R} de ${counted} · ${r.FJ} just. · ${r.FNJ} no just.</span><span>${ruleSentence(rs)}</span></li>`).join('')}</ul>`
-        : '<p class="muted">Encara no hi ha llistes passades.</p>'}
+      ${now.length ? `<div style="margin-top:14px">${list(now)}</div>` : ''}
+      ${past.length ? `<details class="np-group my-past"><summary><span>Produccions acabades (${past.length})</span>${ICON.chev}</summary>${list(past)}</details>` : ''}
+      ${rows.length ? '' : '<p class="muted">Encara no hi ha llistes passades.</p>'}
       <p class="muted" style="font-size:calc(13px*var(--ts))">Només tu i l’equip ${V.del} veieu aquestes dades. Si hi ha algun error, parla amb el teu ${V.leader}.</p>`;
 }
 /** Assistència, amb el rol de cantaire: només la teva. Avisar d'una absència o d'un retard, els avisos que has fet, com vas a
@@ -481,5 +486,5 @@ function viewMyAtt() {
     ${myNoticesBlock(me, false)}
     ${att}
     <div class="section-title"><h2 class="h2">Tota la temporada</h2></div>
-    ${myAttSeason(me)}`;
+    ${myAttSeason(me, myProductionId(me))}`;
 }

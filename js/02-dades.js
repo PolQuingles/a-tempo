@@ -459,9 +459,16 @@ function lateNow(session) {
   const mins = Math.floor((Date.now() - start.getTime()) / 60000);
   return mins > 0 && mins <= 240 ? mins : 0;
 }
+/** La producció que s'assaja ara: de les que estan dins de les seves dates, la del pròxim assaig. Una que ja ha fet l'última
+ *  sessió no hi compta, encara que la data de final sigui més tard (el Dido acabava el 25/10 i l'últim assaig va ser el 17/10). */
+function runningProduction(ps) {
+  const live = ps.filter(p => p.start <= TODAY && (p.end || '9999') >= TODAY);
+  const next = p => allSessions(p.id).find(s => s.date >= TODAY)?.date || '9999';
+  return live.filter(p => next(p) < '9999').sort((a, b) => next(a).localeCompare(next(b)))[0] || live[0] || null;
+}
 function currentProductionId() {
   const ps = productionsSorted();
-  const now = ps.find(p => p.start <= TODAY && (p.end || '9999') >= TODAY);
+  const now = runningProduction(ps);
   if (now) return now.id;
   const withData = ps.filter(p => allSessions(p.id).some(s => SECTIONS.some(x => hasData(s, x.id))));
   return (withData.pop() || ps[0])?.id || null;
@@ -470,7 +477,7 @@ function currentProductionId() {
  * ha dit que no fa (o de la qual l'han tret) no hi compta, encara que sigui la del cor. */
 function myProductionId(me) {
   const ps = productionsSorted().filter(p => !isExcluded(p.id, me.id) && allSessions(p.id).length);
-  const now = ps.find(p => p.start <= TODAY && (p.end || '9999') >= TODAY);
+  const now = runningProduction(ps);
   if (now) return now.id;
   const next = ps.find(p => (p.start || '') > TODAY);
   if (next) return next.id;
