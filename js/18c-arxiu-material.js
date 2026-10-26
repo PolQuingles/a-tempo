@@ -24,7 +24,7 @@ const codeNum = c => { const x = String(c || '').match(/(\d+)/); return x ? +x[1
 /** Per codi: primer els de sempre (S1, S2…), després els reforços (R1, R2…) i, al final, qui no en té, per nom. */
 const codeCmp = pid => (a, b) => {
   const ca = codeOf(a, pid), cb = codeOf(b, pid);
-  return (!ca - !cb) || (/^R/i.test(ca) - /^R/i.test(cb)) || (codeNum(ca) - codeNum(cb)) || byName(a, b);
+  return (Number(!ca) - Number(!cb)) || (Number(/^R/i.test(ca)) - Number(/^R/i.test(cb))) || (codeNum(ca) - codeNum(cb)) || byName(a, b);
 };
 const codeTag = (m, pid) => { const c = codeOf(m, pid); return c ? `<span class="arx-code${/^R/i.test(c) ? ' r' : ''}">${esc(c)}</span>` : ''; };
 /** «T6 Pol Quingles», per a les llistes que es copien. */
@@ -99,11 +99,11 @@ function sheetKit(sec0) {
       setKit(m, b.dataset.item, kitOf(m, b.dataset.item) === b.dataset.k ? '' : b.dataset.k); paint(el);
     }));
     // Qui no en té: la llista per encarregar-ne o fer-ne de noves.
-    const lack = KIT_ITEMS.map(([k, l]) => [k, l, ms.filter(m => kitOf(m, k) === 'no')]).filter(([, , list]) => list.length);
-    el.querySelector('#kt-lack').innerHTML = lack.map(([k, l, list]) => `<div class="section-title"><h2 class="h2">Sense ${esc(l.toLowerCase())} (${list.length})</h2><button class="btn btn-sm btn-ghost" data-copy="${k}">Copia la llista</button></div>
+    const lack = KIT_ITEMS.map(([k, l]) => ({ k, l, list: ms.filter(m => kitOf(m, k) === 'no') })).filter(x => x.list.length);
+    el.querySelector('#kt-lack').innerHTML = lack.map(({ k, l, list }) => `<div class="section-title"><h2 class="h2">Sense ${esc(l.toLowerCase())} (${list.length})</h2><button class="btn btn-sm btn-ghost" data-copy="${k}">Copia la llista</button></div>
       <ul class="mini-list" style="max-height:none">${list.map(m => `<li><span>${codeTag(m, curGuestProd(m))}<b>${esc(m.name)}</b>${kitAt(m, k) ? ` <span class="m">· des del ${esc(ddmm(isoDate(new Date(kitAt(m, k)))))}</span>` : ''}</span></li>`).join('')}</ul>`).join('');
     el.querySelectorAll('#kt-lack [data-copy]').forEach(b => b.onclick = () => {
-      const [k, l, list] = lack.find(([kk]) => kk === b.dataset.copy);
+      const { l, list } = lack.find(x => x.k === b.dataset.copy);
       copyText(`Sense ${l.toLowerCase()} · ${SEC[sec].name}\n${list.map(m => `- ${codeName(m, curGuestProd(m))}`).join('\n')}`, 'Llista copiada');
     });
     el.querySelector('#kt-note').textContent = can ? 'Toca «La té» o «No» per a cadascú; si hi tornes a tocar, queda per mirar.' : '';
