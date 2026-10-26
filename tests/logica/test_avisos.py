@@ -40,9 +40,11 @@ class Reader:
     def query(self, parent, collection, where):
         out = self.list(f"{parent}/{collection}")
         self.reads -= max(1, len(out))
+        # Les mateixes consultes que fa avisos.py (algunes només a certes hores, com les enquestes que tanquen demà).
+        ops = {">=": lambda a, b: (a or "") >= b, ">": lambda a, b: (a or "") > b, "==": lambda a, b: a == b, "in": lambda a, b: a in b}
         for f, op, v in where:
-            assert op == ">="
-            out = {k: d for k, d in out.items() if (d.get(f) or "") >= v}
+            assert op in ops, op
+            out = {k: d for k, d in out.items() if ops[op](d.get(f), v)}
         self.reads += max(1, len(out))
         return out
     def batch_get(self, paths):
