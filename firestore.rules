@@ -141,7 +141,7 @@ service cloud.firestore {
     // tools/stamp.py hi escriu l'empremta d'aquest fitxer. La vigilància comprova que les regles publicades són les del
     // repositori demanant reglesVersio/<empremta>: si les publicades són unes altres, la lectura es denega.
     match /reglesVersio/{v} {
-      allow get: if v == '80fcb3d4bc75';
+      allow get: if v == 'dc049a5dac79';
     }
 
     match /plataforma/equip {
@@ -364,6 +364,14 @@ service cloud.firestore {
         allow read: if isStaff(c) || hasRole(c, ['backup']) || isService();
         allow create: if canEdit(c) || staffHas(c, ['archive']);
         allow update: if canEdit(c) || (staffHas(c, ['archive']) && request.resource.data.section == resource.data.section);
+        allow delete: if canEdit(c);
+      }
+      // Codis d'arxiu i carpetes i etiquetes del cor (18c-arxiu-material): un document per corda. Els porten l'equip i els arxivers.
+      match /kit/{sec} {
+        allow read: if canEdit(c) || staffHas(c, ['archive']) || hasRole(c, ['backup']) || isService();
+        allow create, update: if (canEdit(c) || staffHas(c, ['archive']))
+          && request.resource.data.get('section', '') == sec
+          && request.resource.data.keys().hasOnly(['section', 'codes', 'prod', 'folder', 'label', 'updatedAt', 'by']);
         allow delete: if canEdit(c);
       }
       // Converses privades entre algú de la plantilla i l'equip (vegeu inThread). Es poden afegir missatges i marcar-les com a

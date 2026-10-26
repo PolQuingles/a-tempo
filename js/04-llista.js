@@ -200,7 +200,7 @@ function viewRollSection(cur, list, sec, pendingBySec) {
     return head + pendHtml + `<div class="empty"><h2 class="h2">${esc(SEC[sec].name)}: no convocats</h2><p>Aquesta sessió només és per a ${esc(cur.sections.map(x => SEC[x].name.toLowerCase()).join(', '))}.</p>
       ${canEdit() ? `<button class="btn" data-act="session-edit" data-sid="${cur.id}">Edita la sessió</button>` : ''}</div>`;
   }
-  const all = membersOf(sec);
+  const all = membersOf(sec).filter(m => !strayGuest(cur, m));
   if (!all.length) {
     return head + `<div class="empty"><h2 class="h2">${esc(SEC[sec].name)}: encara no hi ha ningú</h2><p>Afegeix els ${V.members} d’aquesta ${V.section} per poder passar llista.</p>
       ${canEdit() ? `<button class="btn btn-primary" data-act="member-bulk" data-sec="${sec}">Afegeix ${V.members}</button>` : ''}</div>`;

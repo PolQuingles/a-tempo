@@ -255,6 +255,8 @@ function subscribe() {
   big('classes', () => db.collection('classes').where('date', '>=', CLASS_FROM));
   big('works', () => db.collection('works'));
   big('scores', () => db.collection('scores'));   // l'arxiu de partitures (18b-arxiu)
+  // Els codis d'arxiu i les carpetes i etiquetes (18c): quatre documents, només per a l'equip i els arxivers.
+  if (staff || hasRole(S.me, 'archive')) db.collection('kit').onSnapshot(snap => { takeSnap('kit', snap); if (S.ready) scheduleRender(); }, () => {});
   big('attendance', () => archCut() ? db.collection('attendance').where('date', '>', archCut()) : db.collection('attendance'), e => { markLoaded('attendance'); onDbError(e); });
   // Amb les llistes privades, qui no passa llista només en llegeix la seva còpia (vegeu 22b-tries).
   const attDone = BIG.get('attendance').done;
@@ -373,8 +375,25 @@ const attKey = (sid, sec) => `${sid}_${sec}`;
 const attDoc = (sid, sec) => S.attendance.get(attKey(sid, sec)) || ARCH.docs.get(attKey(sid, sec));
 /** Totes les llistes, les arxivades i les vives (per a les còpies i per mirar tota la història d'algú). */
 const allAttendance = () => new Map([...ARCH.docs, ...S.attendance]);
-// Fora d'una producció: l'hi ha tret l'equip o, si cadascú tria les seves produccions, ha dit que no la farà (22b-tries).
-const isExcluded = (prodId, mid) => !!(S.productions.get(prodId)?.excluded || []).includes(mid) || choseNo(mid, prodId);
+// Els reforços (production.guests): gent de fora del cor que només canta en una producció. Fora de les seves produccions és
+// com si no les fes: no surten a les llistes ni a les estadístiques de les altres. Es fa servir molt: es calcula un cop i es
+// torna a calcular quan canvien les produccions (una altra llista, o se'n desa una) i, per si de cas, a la tasca següent.
+let GUESTS = null;
+function guestIds() {
+  if (!GUESTS || GUESTS.of !== S.productions) {
+    GUESTS = { of: S.productions, ids: new Set([...S.productions.values()].flatMap(p => p.guests || [])) };
+    Promise.resolve().then(() => { GUESTS = null; });
+  }
+  return GUESTS.ids;
+}
+const isGuest = mid => guestIds().has(mid);
+const guestOf = (pid, mid) => !!pid && (S.productions.get(pid)?.guests || []).includes(mid);
+const guestProds = mid => productionsSorted().filter(p => (p.guests || []).includes(mid));
+/** Un reforç en una sessió que no és de cap de les seves produccions: no hi ha de sortir enlloc, ni com a «No fa». */
+const strayGuest = (s, m) => isGuest(m.id) && !sessionProds(s).some(p => guestOf(p, m.id));
+// Fora d'una producció: l'hi ha tret l'equip o, si cadascú tria les seves produccions, ha dit que no la farà (22b-tries);
+// o és un reforç d'una altra producció.
+const isExcluded = (prodId, mid) => !!(S.productions.get(prodId)?.excluded || []).includes(mid) || choseNo(mid, prodId) || (isGuest(mid) && !guestOf(prodId, mid));
 const convoked = (s, sec) => !s.sections || !s.sections.length || s.sections.includes(sec);
 // Les baixes temporals: les de la fitxa (amb el motiu, que només veuen l'equip i la persona) o, si no es poden llegir, les
 // dates soles (away), que es desen a la part pública de la fitxa perquè els arxivers i qui no és de l'equip sàpiguen qui hi és.
@@ -600,7 +619,7 @@ function saveAttendance(key, doc) {
   db.doc(`attArchive/${arch.id}`).update(path, doc).catch(writeFailed);
 }
 function saveProduction(p) {
-  S.productions.set(p.id, p); persist('productions', p.id, p, 50);
+  S.productions.set(p.id, p); GUESTS = null; persist('productions', p.id, p, 50);
   // Si té caps de corda en funcions, les sessions noves (o canviades de dia) també en tenen (vegeu 04b-en-funcions).
   if (p.roll && Object.keys(p.roll).length) setTimeout(() => syncRollSubs(p.id), 0);
 }
