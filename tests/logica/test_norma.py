@@ -50,6 +50,10 @@ def cases(n, seed):
                 sessions.append(s)
             prods.append({"id": f"p{j}", "name": f"P{j}", "sessions": sessions,
                           "excluded": [m["id"] for m in members if rnd.random() < .15]})
+        if rnd.random() < .3:   # un reforç: només fa una o dues produccions (a les altres, com si no hi fos)
+            g = rnd.choice(members)["id"]
+            for p in rnd.sample(prods, rnd.randint(1, len(prods))):
+                p["guests"] = [g]
         attendance = {}
         for p in prods:
             for s in p["sessions"]:
@@ -85,6 +89,7 @@ def python_side(c):
     productions = {p["id"]: p for p in c["productions"]}
     if c["config"].get("prodChoice"):
         productions = norma.apply_choices(productions, c["choices"])
+    productions = norma.apply_guests(productions)
     sessions = norma.sessions_of(productions)
     k = dades.KINDS[dades.kind(c["config"])]
     skip = set(k["shows"]) | {"Altres", "Reunió"}

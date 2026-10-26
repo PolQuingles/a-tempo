@@ -81,6 +81,18 @@ def apply_choices(productions, choices):
     return out
 
 
+def apply_guests(productions):
+    """Els reforços (guests) només fan les seves produccions: a les altres hi compten com si els n'haguessin tret."""
+    guests = {mid for p in productions.values() for mid in (p.get("guests") or [])}
+    if not guests:
+        return productions
+    out = {}
+    for pid, p in productions.items():
+        other = guests - set(p.get("guests") or [])
+        out[pid] = {**p, "excluded": sorted(set(p.get("excluded") or []) | other)} if other else p
+    return out
+
+
 def excluded(productions, mid, prods):
     """Només queda fora si no fa cap de les produccions de la sessió."""
     prods = [pid for pid in prods if pid in productions]

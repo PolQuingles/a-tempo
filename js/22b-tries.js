@@ -157,7 +157,7 @@ function choiceProds(mid) {
   const { season } = seasonCfg();
   return productionsSorted().filter(p => {
     const ss = allSessions(p.id);
-    return ss.length && ss.some(s => s.date >= season.from && s.date <= season.to) && !(p.excluded || []).includes(mid);
+    return ss.length && ss.some(s => s.date >= season.from && s.date <= season.to) && !(p.excluded || []).includes(mid) && (!isGuest(mid) || guestOf(p.id, mid));
   });
 }
 /** Ja ha començat: el cantaire ja no la pot canviar. */

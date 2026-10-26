@@ -159,6 +159,55 @@ prova('arxiu de partitures: qui no fa la producció no hi surt, tret que tingui 
   igual(scoreRows('p', '', ['w']).some(r => r.m.id === 'c'), false, 'si mai l’ha tinguda, ja no hi surt');
   S.scores = new Map();
 });
+prova('reforços: només fan la seva producció; a les altres no surten enlloc', () => {
+  escenari({ members: [{ id: 'a', name: 'Puig, Anna', section: 'B' }, { id: 'r', name: 'Gómez, Mateu', section: 'B' }],
+    productions: [{ id: 'p', name: 'Oratori', sessions: [{ id: 's1', date: D(-2), type: 'Assaig' }, { id: 's2', date: D(3), type: 'Assaig' }], guests: ['r'] },
+      { id: 'q', name: 'Sant Esteve', sessions: [{ id: 's3', date: D(4), type: 'Assaig' }, { id: 'sx', date: D(6), type: 'Assaig', alsoIn: ['p'] }] }] });
+  const m = id => S.members.get(id);
+  igual([isExcluded('p', 'r'), isExcluded('q', 'r'), isExcluded('q', 'a')], [false, true, false], 'fa l’Oratori i no Sant Esteve');
+  igual(isOut(sessionById('s3'), m('r')), true, 'a una sessió de l’altra producció és fora');
+  igual(strayGuest(sessionById('s3'), m('r')), true, 'i ni tan sols surt a la llista');
+  igual(strayGuest(sessionById('sx'), m('r')), false, 'a una sessió compartida amb la seva, sí');
+  igual(strayGuest(sessionById('s1'), m('a')), false, 'qui és del cor sempre hi surt');
+  igual(effMark(sessionById('s3'), m('r'))?.why, 'prod', 'compta com «No fa»');
+  igual(guestProds('r').map(p => p.id), ['p']);
+  saveProduction({ ...clone(S.productions.get('q')), guests: ['r'] });
+  igual(isExcluded('q', 'r'), false, 'en desar una producció, es torna a mirar qui és reforç de què');
+});
+prova('codis d’arxiu: per ordre de codi, els R dels reforços al final, i el de la producció mana sobre el de sempre', () => {
+  escenari({ members: [{ id: 'a', name: 'Puig, Anna', section: 'B' }, { id: 'b', name: 'Vila, Joan', section: 'B' }, { id: 'c', name: 'Abad, Marc', section: 'B' }, { id: 'r', name: 'Gómez, Mateu', section: 'B' }, { id: 'z', name: 'Ros, Pau', section: 'B' }],
+    productions: [{ id: 'p', name: 'Oratori', sessions: [{ id: 's1', date: D(3), type: 'Assaig' }], guests: ['r'] }] });
+  S.kit = new Map();
+  const m = id => S.members.get(id);
+  setCode(m('a'), 'b10'); setCode(m('b'), 'B2'); setCode(m('c'), 'B1');
+  igual(nextGuestCode('p'), 'R1', 'el primer reforç');
+  setCode(m('r'), nextGuestCode('p'), 'p');
+  igual([codeOf(m('a')), codeOf(m('r'), 'p'), codeOf(m('r')), codeOf(m('z'))], ['B10', 'R1', '', ''], 'en majúscules; el R només val a la producció');
+  igual(nextGuestCode('p'), 'R2', 'el següent');
+  igual(membersOf('B').sort(codeCmp('p')).map(x => x.id), ['c', 'b', 'a', 'r', 'z'], 'B1, B2, B10, R1 i qui no en té');
+  setCode(m('b'), 'B7', 'p');
+  igual([codeOf(m('b'), 'p'), codeOf(m('b'))], ['B7', 'B2'], 'un codi només per a una producció');
+  setCode(m('b'), '', 'p');
+  igual(codeOf(m('b'), 'p'), 'B2', 'en treure’l, torna el de sempre');
+  igual(Object.keys(S.kit.get('B').prod.p), ['r'], 'i a la producció només hi queda el reforç');
+  igual(S.kit.get('B').section, 'B', 'un document per corda');
+  S.kit = new Map();
+});
+prova('carpeta i etiqueta: qui en té, qui no i qui falta mirar', () => {
+  escenari({ members: [{ id: 'a', name: 'Puig, Anna', section: 'S' }, { id: 'b', name: 'Vila, Clara', section: 'S' }, { id: 'c', name: 'Mas, Laia', section: 'S', active: false }, { id: 'r', name: 'Gómez, Mia', section: 'S' }],
+    productions: [{ id: 'old', name: 'Passada', sessions: [{ id: 's0', date: D(-30), type: 'Assaig' }], guests: ['r'] }] });
+  S.kit = new Map();
+  const m = id => S.members.get(id);
+  igual(kitPeople('S').map(x => x.id).sort(), ['a', 'b'], 'qui ja no és al cor, i el reforç d’una producció acabada, no');
+  igual(kitStarted('S'), false, 'encara no es porta');
+  setKit(m('a'), 'folder', 'yes'); setKit(m('a'), 'label', 'no'); setKit(m('b'), 'folder', 'yes');
+  const x = kitSummary('S');
+  igual([x.n, x.folder.yes, x.folder.no, x.label.yes, x.label.no, x.unk], [2, 2, 0, 0, 1, 1], 'el recompte');
+  igual(kitStarted('S'), true, 'ja es porta');
+  setKit(m('a'), 'folder', '');
+  igual(kitOf(m('a'), 'folder'), '', 'es pot desfer');
+  S.kit = new Map();
+});
 prova('arxiver: el rol porta la seva corda, també si la fitxa en canvia', () => {
   escenari({ members: [{ id: 'a', name: 'Puig, Anna', section: 'S' }] });
   const acc = { email: 'a@x.cat', roles: ['archive', 'singer'], role: 'archive', section: 'S', memberId: 'a' };

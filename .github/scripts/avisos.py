@@ -139,6 +139,8 @@ class Group:
         # Si cadascú tria les produccions que fa, qui ha dit que no en fa una hi compta com si l'haguessin tret.
         if self.config.get("prodChoice"):
             self.productions = norma.apply_choices(self.productions, r.list(f"{self.base}/prodChoice"))
+        # Els reforços d'una producció no són a les altres (ni per als recordatoris ni per a la norma).
+        self.productions = norma.apply_guests(self.productions)
         self.all = self._sessions()
 
     # ---------- lectures ----------

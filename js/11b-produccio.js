@@ -8,6 +8,12 @@ function sheetProduction(pid) {
   const d = existing ? clone(existing) : { id: uid('p'), name: '', start: TODAY, end: '', sessions: [], excluded: [] };
   d.sessions = d.sessions || []; d.excluded = d.excluded || [];
   const excluded = new Set(d.excluded);
+  // Els reforços: els que ja hi són (fitxes de la plantilla) i els nous, que es creen en desar.
+  let guests = [...(d.guests || [])].filter(id => S.members.has(id));
+  const fresh = [];
+  const guestsList = () => [...guests.map(id => S.members.get(id)), ...fresh].length
+    ? `<ul class="mini-list" style="max-height:none">${[...guests.map(id => S.members.get(id)), ...fresh].map(m => `<li><span>${codeTag(m, d.id)}<b>${esc(m.name)}</b> <span class="m">· ${esc(SEC[m.section]?.name || '')}${fresh.includes(m) ? ' · es crearà en desar' : ''}</span></span><button type="button" class="icon-btn" data-g-rm="${esc(m.id)}" aria-label="Treu ${esc(m.name)} dels reforços">${ICON.close}</button></li>`).join('')}</ul>`
+    : '<p class="muted" style="margin:0;font-size:calc(13.5px*var(--ts))">Cap.</p>';
   const gen = { from: d.start || TODAY, to: d.end || '', days: new Set(['1', '3']), time: '20:30', end: '22:30', type: 'Assaig', place: '' };
 
   const sessionsList = () => d.sessions.length
@@ -43,7 +49,15 @@ function sheetProduction(pid) {
 
       <fieldset class="fieldset"><legend>Qui no fa aquesta producció</legend>
         <p class="muted" style="margin:0;font-size:calc(13px*var(--ts))">Els marcats sortiran en gris («No fa») a totes les sessions i no comptaran a les estadístiques.</p>
-        ${SECTIONS.map(x => { const ms = membersOf(x.id); return ms.length ? `<div class="field"><span>${x.name}</span><div class="pickers">${ms.map(mm => `<button type="button" class="pick" data-ex="${mm.id}" aria-pressed="${excluded.has(mm.id)}">${esc(mm.name)}</button>`).join('')}</div></div>` : ''; }).join('')}
+        ${SECTIONS.map(x => { const ms = membersOf(x.id).filter(mm => !isGuest(mm.id)); return ms.length ? `<div class="field"><span>${x.name}</span><div class="pickers">${ms.map(mm => `<button type="button" class="pick" data-ex="${mm.id}" aria-pressed="${excluded.has(mm.id)}">${esc(mm.name)}</button>`).join('')}</div></div>` : ''; }).join('')}
+      </fieldset>
+
+      <fieldset class="fieldset"><legend>Reforços</legend>
+        <p class="muted" style="margin:0;font-size:calc(13px*var(--ts))">Gent de fora ${V.del} que només canta en aquesta producció. Surten a les llistes, a l’assistència i a l’arxiu de partitures (amb el codi R1, R2…), però no a les altres produccions.</p>
+        <div id="pe-guests">${guestsList()}</div>
+        <div class="row2"><input class="inp" id="pe-g-name" type="text" maxlength="60" placeholder="Nom i cognoms" aria-label="Nom del reforç">
+          <select class="inp" id="pe-g-sec" aria-label="${esc(V.Section)}">${SECTIONS.map(x => `<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('')}</select></div>
+        <button type="button" class="btn btn-sm" id="pe-g-add" style="width:max-content">+ Afegeix el reforç</button>
       </fieldset>
     </div>`,
     foot: `${existing ? '<button class="btn btn-danger-ghost" id="pe-del">Esborra</button>' : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="pe-save">Desa</button>`,
@@ -64,6 +78,19 @@ function sheetProduction(pid) {
       bindRm();
       el.querySelectorAll('#g-days .pick').forEach(b => b.onclick = () => b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') !== 'true'));
       el.querySelectorAll('[data-ex]').forEach(b => b.onclick = () => b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') !== 'true'));
+      const bindGuests = () => el.querySelectorAll('[data-g-rm]').forEach(b => b.onclick = () => {
+        guests = guests.filter(id => id !== b.dataset.gRm);
+        const i = fresh.findIndex(m => m.id === b.dataset.gRm); if (i >= 0) fresh.splice(i, 1);
+        el.querySelector('#pe-guests').innerHTML = guestsList(); bindGuests();
+      });
+      bindGuests();
+      el.querySelector('#pe-g-add').onclick = () => {
+        const name = el.querySelector('#pe-g-name').value.trim();
+        if (!name) { toast('Escriu el nom del reforç'); return; }
+        fresh.push({ id: uid('m'), name: fullName(name), section: el.querySelector('#pe-g-sec').value });
+        el.querySelector('#pe-g-name').value = '';
+        el.querySelector('#pe-guests').innerHTML = guestsList(); bindGuests();
+      };
       el.querySelectorAll('#pe-hue .hue-pick').forEach(b => b.onclick = () => el.querySelectorAll('#pe-hue .hue-pick').forEach(x => x.setAttribute('aria-pressed', x === b)));
       el.querySelector('#pe-start').onchange = e => { if (!el.querySelector('#g-from').value || !d.sessions.length) el.querySelector('#g-from').value = e.target.value; };
       el.querySelector('#pe-end').onchange = e => { if (!el.querySelector('#g-to').value) el.querySelector('#g-to').value = e.target.value; };
@@ -91,11 +118,25 @@ function sheetProduction(pid) {
         d.start = el.querySelector('#pe-start').value || (d.sessions[0]?.date ?? TODAY);
         d.end = el.querySelector('#pe-end').value;
         d.excluded = $$('[data-ex][aria-pressed="true"]', el).map(b => b.dataset.ex);
+        // Els reforços nous es creen a la plantilla; qui deixa de ser-ho i no ho és de cap altra producció, en surt (baixa).
+        const pending = el.querySelector('#pe-g-name').value.trim();
+        if (pending) fresh.push({ id: uid('m'), name: fullName(pending), section: el.querySelector('#pe-g-sec').value });
+        for (const g of fresh) saveMember({ ...g, leader: false, active: true, joined: TODAY, history: [{ date: TODAY, kind: 'alta', note: `Reforç de ${d.name}` }] });
+        const dropped = (existing?.guests || []).filter(id => !guests.includes(id));
+        d.guests = [...guests, ...fresh.map(g => g.id)];
+        if (!d.guests.length) delete d.guests;
         const hueBtn = el.querySelector('#pe-hue .hue-pick[aria-pressed="true"]');
         if (hueBtn) d.hue = +hueBtn.dataset.hue;
         d.sessions.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
         const removed = (existing?.sessions || []).filter(s => !d.sessions.some(x => x.id === s.id));
         saveProduction(d);
+        for (const id of dropped) {
+          const m = S.members.get(id);
+          if (m && m.active !== false && !productionsSorted().some(p => p.id !== d.id && (p.guests || []).includes(id)))
+            saveMember({ ...clone(m), active: false, history: [...(m.history || []), { date: TODAY, kind: 'baixa', note: `Ja no és reforç de cap producció` }] });
+        }
+        // Els codis R1, R2… dels reforços que encara no en tenen (a l'arxiu de partitures).
+        for (const id of d.guests || []) { const m = S.members.get(id); if (m && !kitDoc(m.section).prod?.[d.id]?.[id]) setCode(m, nextGuestCode(d.id), d.id); }
         if (removed.length) removeMany(removed.flatMap(s => SECTIONS.map(x => ['attendance', attKey(s.id, x.id)])).filter(([, k]) => S.attendance.has(k)));
         closeSheet();
         toast(existing ? 'Producció desada' : 'Producció creada');

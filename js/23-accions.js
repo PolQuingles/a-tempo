@@ -326,6 +326,8 @@ const actions = {
   'stats-sort': el => { ui.statsSort = el.dataset.k; saveUI(); render(); },
   // L'arxiu de partitures (18b-arxiu): l'equip i els arxivers.
   'archive': el => { closeSheet(); sheetArchive(el.dataset.pid); },
+  'arx-kit': el => { closeSheet(); sheetKit(el.dataset.sec || ''); },
+  'arx-codes': el => { closeSheet(); sheetCodes(el.dataset.sec || '', el.dataset.pid || ''); },
   'score-work': el => { closeSheet(); sheetScoreWork(el.dataset.pid, el.dataset.id, el.dataset.sec || ''); },
   'member-stats': el => { if (attHidden() && el.dataset.mid !== myMemberId()) { toast('Les llistes d’assistència són privades'); return; } sheetMemberStats(el.dataset.mid); },
   // Tria de produccions (22b-tries).

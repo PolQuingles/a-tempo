@@ -237,9 +237,9 @@ function pmRow(m, f) {
     docs && f === 'docs' ? docItems().filter(([k]) => !docState(m.id, k).v).map(([k]) => `<span class="dp">${short[k]}</span>`).join('') : '',
     docs && f === 'fees' && feesOn() ? `<span class="dp">${feeAmount() ? euros(feeAmount()) : 'Pendent'}</span>` : '',
   ].filter(Boolean).join('');
-  const sub = off ? 'Inactiu' : f === 'moves' ? seasonMoves(m).map(h => `${HIST_WORD[h.kind] || esc(h.kind)} ${esc(ddmm(h.date))}${h.note ? ` · ${esc(h.note)}` : ''}`).join(' · ') : leaveText(m) || esc(phoneOf(m));
+  const sub = off ? 'Inactiu' : isGuest(m.id) && f === 'all' ? `Reforç de ${esc(guestProds(m.id).map(p => p.name).join(', '))}` : f === 'moves' ? seasonMoves(m).map(h => `${HIST_WORD[h.kind] || esc(h.kind)} ${esc(ddmm(h.date))}${h.note ? ` · ${esc(h.note)}` : ''}`).join(' · ') : leaveText(m) || esc(phoneOf(m));
   return `<details class="pm" data-mid="${m.id}" data-find="${esc(normText(m.name))}"${PM_OPEN.has(m.id) ? ' open' : ''}>
-    <summary>${avatar(m)}<span class="pm-n${off ? ' dim' : ''}"><span class="t">${esc(m.name)}</span>${m.part ? ` <span class="part">${esc(partTag(m))}</span>` : ''}${m.leader ? ` <span class="tag">${V.Leader}</span>` : ''}${sub ? `<span class="s">${sub}</span>` : ''}</span>
+    <summary>${avatar(m)}<span class="pm-n${off ? ' dim' : ''}"><span class="t">${esc(m.name)}</span>${m.part ? ` <span class="part">${esc(partTag(m))}</span>` : ''}${m.leader ? ` <span class="tag">${V.Leader}</span>` : ''}${isGuest(m.id) ? ' <span class="tag">Reforç</span>' : ''}${sub ? `<span class="s">${sub}</span>` : ''}</span>
       ${tags ? `<span class="pm-tags">${tags}</span>` : ''}${ICON.chev}</summary>
     <div class="pm-b">${PM_OPEN.has(m.id) ? memberCard(m) : ''}</div></details>`;
 }
