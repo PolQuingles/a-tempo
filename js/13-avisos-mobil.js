@@ -28,7 +28,7 @@ const DEFAULT_PREFS = { missatges: true, calendari: true, anuncis: true, materia
 const LS_PUSH_PREFS = 'atempo:avis-prefs';
 /** The sections a leader looks after: their own, from the account or from their roster record. */
 function defaultCordes() {
-  if (!canEditAny()) return [];
+  if (!canEdit()) return [];
   if (hasRole(S.me, 'leader') && S.me.section) return [S.me.section];
   const m = S.members.get(myId() || '');
   return m && m.leader ? [m.section] : [];
@@ -75,7 +75,7 @@ function pushRecord(sub, prefs, cordes) {
     uid: S.uid, email: (S.me && S.me.email) || '', memberId: mid || '', section: m ? m.section : '',
     name: m ? m.name : ((S.me && (S.me.name || S.me.email)) || ''),
     endpoint: sub.endpoint, p256dh: subKeyB64(sub, 'p256dh'), auth: subKeyB64(sub, 'auth'),
-    prefs: { ...DEFAULT_PREFS, ...(prefs || {}) }, cordes: canEditAny() ? (cordes || defaultCordes()) : [],
+    prefs: { ...DEFAULT_PREFS, ...(prefs || {}) }, cordes: canEdit() ? (cordes || defaultCordes()) : [],
     device: deviceName(), at: new Date().toISOString(),
   };
 }
@@ -143,7 +143,7 @@ function sheetPush() {
       ${blocked ? `<div class="sub-line sub-hint" style="margin:0 0 12px"><span>Aquest navegador té les notificacions <b>bloquejades</b>. Actíva’ls als ajustos del lloc web i torna-ho a provar.</span></div>` : ''}
       <p style="margin-top:0">Tria de què vols que t’avisi. Pots canviar-ho quan vulguis.</p>
       <div class="kv">${kinds.map(row).join('')}</div>
-      ${canEditAny() ? `<div class="section-title" style="margin:18px 0 6px"><h2 class="h2">Com a ${V.leader}</h2></div>
+      ${canEdit() ? `<div class="section-title" style="margin:18px 0 6px"><h2 class="h2">Com a ${V.leader}</h2></div>
         <div class="kv">${Object.entries(leaderKinds()).map(row).join('')}
           <div class="field"><span>De quines ${V.sections}?</span><div class="pickers" id="pf-cordes">${SECTIONS.map(x => secPick(x, cordes.has(x.id))).join('')}</div>
             <small>Si no en tries cap, no rebràs aquestes dues notificacions.</small></div></div>` : ''}
@@ -154,10 +154,10 @@ function sheetPush() {
     onMount: el => {
       el.querySelectorAll('#pf-cordes .pick').forEach(b => b.onclick = () => b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') !== 'true'));
       el.querySelector('#pu-on').onclick = async () => {
-        const keys = [...kinds.map(([k]) => k), ...(canEditAny() ? Object.keys(leaderKinds()) : [])];
+        const keys = [...kinds.map(([k]) => k), ...(canEdit() ? Object.keys(leaderKinds()) : [])];
         const chosen = Object.fromEntries(keys.map(k => [k, el.querySelector(`#pf-${k}`).checked]));
         if (!Object.values(chosen).some(Boolean)) { toast('Tria almenys una cosa'); return; }
-        const pickedCordes = canEditAny() ? $$('#pf-cordes .pick[aria-pressed="true"]', el).map(b => b.dataset.sec) : [];
+        const pickedCordes = canEdit() ? $$('#pf-cordes .pick[aria-pressed="true"]', el).map(b => b.dataset.sec) : [];
         const err = await enablePush(chosen, pickedCordes);
         closeSheet();
         toast(err ? { ios: 'Abans afegeix l’app a la pantalla d’inici', denegat: 'El navegador té les notificacions bloquejades', 'no-suport': 'Aquest navegador no els admet' }[err] || 'No s’han pogut activar' : 'Notificacions activades');

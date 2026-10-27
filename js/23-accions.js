@@ -15,6 +15,9 @@ const EDIT_ONLY = new Set(['prod-roll', 'mark', 'min', 'early', 'early-open', 'm
   'choices-overview', 'plan-edit', 'seating-edit', 'participants', 'certificate', 'season-report', 'trip-new', 'trip-edit', 'trip-admin', 'trip-remind']);
 // El repertori: l'equip i els arxivers (canRepertoire, a 18-repertori).
 const REP_ONLY = new Set(['work-new', 'work-edit', 'work-link', 'mat-new', 'mat-edit']);
+// El tauler, qui el porta (canBoard); les sessions, qui porta les produccions (canProd). Vegeu 01-base.
+const BOARD_ONLY = new Set(['ann-new', 'ann-edit', 'poll-new', 'poll-edit', 'poll-remind', 'doc-new', 'doc-edit', 'trip-new', 'trip-edit', 'trip-admin', 'trip-remind']);
+const PROD_ONLY = new Set(['session-new', 'session-edit', 'plan-edit', 'seating-edit', 'participants']);
 const actions = {
   'tab': el => { if (el.dataset.tab === 'gestio' && ui.tab !== 'gestio') ui.gestioFrom = ui.tab; ui.tab = el.dataset.tab; if (ui.tab === 'tauler') ui.board = boardStart(); ui.rollSec = null; ui._calScrolled = false; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
   'reload': () => location.reload(),
@@ -24,10 +27,13 @@ const actions = {
   'cl-plan': el => sheetClassPlan(el.dataset.k || planWho()),
   'cl-who': el => { ui.clWho = el.dataset.k; ui.clMonth = null; ui.clDay = null; saveUI(); render(); window.scrollTo({ top: 0 }); },
   'cl-roll-day': el => { ui.tab = 'calendari'; ui.clDay = el.dataset.date; ui.clMonth = el.dataset.date.slice(0, 7); ui.clView = 'month'; saveUI(); render(); window.scrollTo({ top: 0 }); },
-  'lens': el => setLens(el.dataset.k, { sec: el.dataset.sec || '', teacher: el.dataset.teacher || '' }),
-  'att-open': el => { ui.tab = 'llista'; ui.att = el.dataset.k; ui.rollSec = null; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
-  'att-abs': () => { ui.tab = 'llista'; ui.att = 'abs'; ui.rollSec = null; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
-  'lens-pick': () => sheetLens(),
+  // Les estadístiques i el risc de tot el cor (des d'Inici, la targeta de la producció).
+  'att-open': el => { ui.tab = 'llista'; ui.attArea = 'all'; ui.att = el.dataset.k; ui.rollSec = null; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
+  'att-abs': () => { ui.tab = 'llista'; ui.attArea = absArea(); ui.att = 'abs'; ui.rollSec = null; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
+  // Assistència: la meva, la de la corda o la de tot el cor (vegeu attAreas).
+  'att-area': el => { ui.attArea = el.dataset.k; ui.att = attTabKeys()[0] || 'llista'; ui.rollSec = null; if (el.dataset.k === 'all') ui.statsSec = ''; saveUI(); render(); window.scrollTo({ top: 0 }); },
+  // Classes del professorat: l'assistència de cada dia, els alumnes o totes les classes.
+  'cl-tab': el => { ui.clTab = el.dataset.k; ui.clWho = null; ui.clMonth = null; ui.clDay = null; saveUI(); render(); window.scrollTo({ top: 0 }); },
   'privacy': () => sheetPrivacy(),
   'my-data': () => exportMyData(),
   'retention': () => sheetRetention(),
@@ -170,8 +176,11 @@ const actions = {
   // Des d'Inici: directe a la llista d'aquella sessió i, si soc cap, a la meva secció.
   'home-roll': el => {
     const s = sessionById(el.dataset.sid); if (!s) return;
+    // La llista de la corda que porta (des de la corda), la de qualsevol (des de tot el cor) o, si n'és substitut, la seva.
+    const sec = el.dataset.sec || '', as = attAreas();
+    ui.attArea = sec && sec === leadSec() ? 'sec' : as.includes('all') ? 'all' : as.includes('sec') && !sec ? 'sec' : 'me';
     ui.tab = 'llista'; ui.att = 'llista'; ui.sessionId = s.id;
-    ui.rollSec = el.dataset.sec && convoked(s, el.dataset.sec) ? (ui.section = el.dataset.sec) : null;
+    ui.rollSec = sec && convoked(s, sec) ? (ui.section = sec) : null;
     closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 });
   },
   'cal-class': el => { ui.tab = 'classes'; ui.clWho = el.dataset.k || null; ui.clMonth = (el.dataset.date || TODAY).slice(0, 7); ui.clDay = el.dataset.date || null; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
@@ -382,6 +391,8 @@ document.addEventListener('click', e => {
   const subAllowed = SUB_OK.has(act) && canMark(sessionById(ui.sessionId), ui.rollSec || ui.section);
   if (EDIT_ONLY.has(act) && !canEdit() && !subAllowed) { toast('Amb aquest enllaç no pots fer aquesta acció'); return; }
   if (REP_ONLY.has(act) && !canRepertoire()) { toast(`Només l’equip i els arxivers poden canviar el repertori`); return; }
+  if (BOARD_ONLY.has(act) && !canBoard()) { toast('Només la direcció, la gerència, la secretaria i l’administració porten el tauler'); return; }
+  if (PROD_ONLY.has(act) && !canProd()) { toast('Només la direcció, la gerència i l’administració porten les sessions'); return; }
   if (ADMIN_ONLY.has(act) && !isAdmin()) { toast('Només l’administració de l’agrupació pot fer-ho'); return; }
   if (PRO_ONLY.has(act) && !canManageGroup()) { toast('Només un Usuari Pro que administri l’agrupació pot canviar-ho'); return; }
   if (CLASS_ONLY.has(act) && !teachesClasses()) { toast(`Només el ${V.Teacher.toLowerCase()} pot fer-ho`); return; }

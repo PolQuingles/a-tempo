@@ -529,10 +529,10 @@ function sheetPeopleBulk(sec) {
 function indexPerson(mail) {
   fs.doc(`staffIndex/${mail}/agrupacions/${GID}`).set({ at: new Date().toISOString(), name: (S.config.name || '').slice(0, 80) }).catch(() => {});
 }
-/* ---------- «Mira l'app com…»: la vista prèvia de cada rol ---------- */
-// L'administració pot veure l'app tal com la veu un cantaire, un cap de corda, la direcció, la gerència, la secretaria o un
-// professor de cant. Es fa servir la fitxa real d'algú que tingui aquell rol (o una de genèrica si encara no n'hi ha cap).
-// Només canvia el que es veu en aquest mòbil i no es desa res: ni els canvis de les llistes ni res que s'escrigui.
+/* ---------- «Mira l'app com…»: la vista prèvia de qualsevol persona ---------- */
+// L'administració pot veure l'app tal com la veu una persona concreta, amb tots els seus rols: un cantaire, un cap de corda
+// (que també canta), la direcció, la gerència, la secretaria, un arxiver o un professor de cant. Si encara no hi ha ningú
+// amb un rol, se'n fa servir una fitxa genèrica. Només canvia el que es veu en aquest mòbil i no es desa res.
 const PREVIEW_ROLES = ['singer', 'leader', 'archive', 'director', 'gerencia', 'secretaria', 'voice'];
 const previewLabel = r => ({ singer: V.Member, leader: capz(V.leader), archive: 'Arxiver', director: 'Direcció', gerencia: 'Gerència', secretaria: 'Secretaria', voice: V.Teacher }[r] || r);
 /** Les persones que es poden triar per a un rol: [{ key, label, person }]. */
@@ -556,22 +556,27 @@ function previewPeople(role) {
   const people = peopleWithRole(role).map(p => ({ key: p.email, label: fullName(p.name || p.email), person: { roles: rolesOf(p).filter(r => r !== 'admin'), email: p.email, name: p.name || '', memberId: p.memberId || '', section: p.section || '' } }));
   return people.length ? people : [{ key: '', label: `${previewLabel(role)} (encara no hi ha ningú amb aquest rol)`, person: { roles: [role], email: '', name: '', memberId: '', section: '' } }];
 }
-// Mirar l'app com un rol (i fer-hi el que faria) és a Inici › Canvia de rol (vegeu 03b-rols); aquí queda veure-la com la veu
-// una persona concreta de la plantilla, sense desar res.
 function sheetPreview() {
-  const list = previewPeople('singer');
+  let role = 'singer';
+  const draw = el => {
+    const list = previewPeople(role);
+    el.querySelectorAll('#pv-role .chip').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.k === role)));
+    el.querySelector('#pv-who').innerHTML = list.map(x => `<option value="${esc(x.key)}">${esc(x.label)}</option>`).join('');
+  };
   openSheet({
-    title: `Mira l’app com un ${V.member}`,
-    body: `<p style="margin-top:0">Tria qui, i veuràs l’app tal com la veu: la seva assistència, els seus avisos, el que li toca. Només canvia en aquest mòbil i no es desa res del que facis. Se’n surt amb el botó de dalt.</p>
-      <p class="muted" style="font-size:calc(13px*var(--ts))">Per fer servir l’app com un altre rol (cap de corda, arxiver, professor de cant…), ves a <b>Inici › Canvia de rol</b>.</p>
-      <label class="field"><span>${esc(V.Member)}</span><select class="inp" id="pv-who">${list.map(x => `<option value="${esc(x.key)}">${esc(x.label)}</option>`).join('')}</select></label>`,
+    title: 'Mira l’app com…',
+    body: `<p style="margin-top:0">Tria qui, i veuràs l’app tal com la veu, amb tots els seus rols: les seves pestanyes, el que li toca fer i el que hi pot canviar. Només canvia en aquest mòbil i no es desa res del que facis. Se’n surt amb el botó de dalt.</p>
+      <div class="chips" id="pv-role" role="group" aria-label="Rol" style="flex-wrap:wrap;overflow:visible;margin-inline:0;padding-inline:0">${PREVIEW_ROLES.filter(r => r !== 'voice' || classesOn()).map(r => `<button class="chip" data-k="${r}" aria-pressed="${r === role}">${esc(previewLabel(r))}</button>`).join('')}</div>
+      <label class="field" style="margin-top:10px"><span>Qui</span><select class="inp" id="pv-who"></select></label>`,
     foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="pv-ok">Mira-ho</button>`,
     onMount: el => {
+      el.querySelectorAll('#pv-role .chip').forEach(b => b.onclick = () => { role = b.dataset.k; draw(el); });
+      draw(el);
       el.querySelector('#pv-ok').onclick = () => {
-        const pick = list.find(x => x.key === el.querySelector('#pv-who').value);
+        const pick = previewPeople(role).find(x => x.key === el.querySelector('#pv-who').value);
         if (!pick) { toast('Tria qui vols veure'); return; }
         closeSheet();
-        startPreview({ ...pick.person, label: V.Member, role: 'singer' });
+        startPreview({ ...pick.person, label: previewLabel(role) });
       };
     },
   });
@@ -579,13 +584,10 @@ function sheetPreview() {
 let REAL_FS = null;
 function startPreview(p) {
   const roles = p.roles.length ? p.roles : ['singer'];
-  // La vista prèvia mira l'app amb el rol triat (vegeu curLens); un cantaire sense fitxa la veu com qui no ho és.
-  const main = p.role && p.role !== 'singer' ? p.role : p.role ? '' : roles.find(r => r !== 'singer');
-  const lens = main || (p.memberId ? 'singer' : 'viewer');
-  PREVIEW = { ...p, roles, lens, blocked: false, blockedAt: 0 };
+  PREVIEW = { ...p, roles, blocked: false, blockedAt: 0 };
   // Cap escriptura arriba a la base de dades: ni les de les finestres ni les de qualsevol altre lloc.
   if (!REAL_FS) { REAL_FS = fs; fs = previewFs(REAL_FS); }
-  ui.tab = 'avisos'; ui.rollSec = null; ui.clWho = null; ui.sessionId = null;
+  ui.tab = 'avisos'; ui.rollSec = null; ui.clWho = null; ui.sessionId = null; ui.attArea = null; ui.clTab = null;
   document.body.classList.toggle('ro', !canEdit());
   render(); window.scrollTo({ top: 0 });
 }
@@ -595,7 +597,7 @@ function stopPreview() {
   if (REAL_FS) { fs = REAL_FS; REAL_FS = null; }
   // Si s'hi ha tocat res, aquest mòbil ho té canviat a la pantalla (però no desat): es torna a carregar tal com és.
   if (blocked) { location.reload(); return; }
-  ui.tab = 'gestio'; ui.manage = 'personal'; ui.rollSec = null; ui.clWho = null;
+  ui.tab = 'gestio'; ui.manage = 'personal'; ui.rollSec = null; ui.clWho = null; ui.attArea = null; ui.clTab = null;
   document.body.classList.toggle('ro', !canEdit());
   render(); window.scrollTo({ top: 0 });
 }

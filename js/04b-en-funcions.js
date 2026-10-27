@@ -6,9 +6,9 @@
 
 /* ---------- Cap de corda en funcions, per producció ---------- */
 const actingWord = () => `${V.leader} en funcions`;
-/** Qui el pot triar per a totes les cordes (l'administració, la direcció, la gerència i la secretaria); el cap de corda, només per a la seva. */
-// Amb un rol triat, només l'administració: la direcció i la gerència hi miren les estadístiques, no passen llista.
-const rollAll = () => isAdmin() || (!lensOn() && ['director', 'gerencia', 'secretaria'].some(iHave));
+/** Qui el pot triar per a totes les cordes: qui porta les produccions (l'administració, la direcció i la gerència); el cap de
+ *  corda, només per a la seva. */
+const rollAll = () => canProd();
 /** Els caps de corda que fan la producció (els que no la fan no hi poden passar llista). */
 const rollLeaders = (pid, sec) => membersOf(sec).filter(m => m.leader && !isExcluded(pid, m.id));
 /** Qui fa la producció, d'una corda: d'entre aquests es tria qui passa llista. */

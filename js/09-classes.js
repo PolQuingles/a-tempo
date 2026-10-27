@@ -244,7 +244,20 @@ function classTeacherSpace(who, own) {
         <button class="btn btn-sm" data-act="cl-stats">Mira-la</button></div>
     </div>` : ''}`;
 }
+/** La pestanya Classes. El professorat hi té la llista de cada dia i els alumnes (vegeu clTabKeys); la resta, totes les classes. */
 function viewClasses() {
+  const keys = clTabKeys();
+  if (!keys.length) return viewAllClasses();
+  // Des de l'espai d'un professor (o d'un enllaç que hi porta), totes les classes.
+  if (ui.clWho && keys.includes('totes')) ui.clTab = 'totes';
+  if (!keys.includes(ui.clTab)) ui.clTab = keys[0];
+  const tabs = clTabs();
+  if (ui.clTab === 'alumnes') return viewStudents(tabs);
+  if (ui.clTab === 'totes') return viewAllClasses(tabs);
+  return viewClassRoll(tabs);
+}
+/** Totes les classes: el quadre del professorat, l'espai de cadascú i, per a qui en fa, les seves hores. tabs = les parts del professorat. */
+function viewAllClasses(tabs = '') {
   const teach = teachesClasses();
   const answer = reqsToAnswer();
   const pending = teach ? reqsForTeacher() : [];
@@ -284,8 +297,8 @@ function viewClasses() {
     ${mineReq.length ? `<div class="section-title"><h2 class="h2">Les teves absències i canvis</h2></div><ul class="mini-list" style="max-height:none">${mineReq.map(mineCard).join('')}</ul>` : ''}`;
   const who = ui.clWho && classTeachers().some(t => t.key === ui.clWho) ? ui.clWho : null;
   if (!who && ui.clWho) ui.clWho = null;
-  if (who) return `<div class="page-head" style="margin-bottom:0"><h1 class="h1">${esc(V.classes)}</h1></div>${avisos}${classTeacherSpace(who)}`;
-  return `<div class="page-head"><h1 class="h1">${esc(V.classes)} ${helpBtn('classes')}</h1></div>
+  if (who) return `<div class="page-head" style="margin-bottom:0"><h1 class="h1">${esc(V.classes)}</h1></div>${tabs}${avisos}${classTeacherSpace(who)}`;
+  return `<div class="page-head"><h1 class="h1">${esc(V.classes)} ${helpBtn('classes')}</h1></div>${tabs}
     ${helpText('classes', `Tria un ${esc(V.Teacher.toLowerCase())} per veure’n el calendari i les hores de cada ${esc(V.member)}. Els canvis d’hora valen només per a la setmana que es demanen, i es poden fer amb qui tingui classe qualsevol dia d’aquella setmana amb el mateix ${esc(V.Teacher.toLowerCase())}. Qui rep la petició ha de dir que sí perquè es faci.`)}
     ${avisos}
     ${classQuads()}
@@ -300,14 +313,13 @@ function viewClasses() {
 `;
 }
 
-/* ---------- Amb el rol de professor de cant ---------- */
-// Tres pestanyes de la seva feina (vegeu 03b-rols): Assistència (passar llista a les classes), Calendari (els dies i l'hora de
-// cada alumne) i Alumnes (la fitxa de cant de cadascú: objectius, repertori, notes i enregistraments).
-// L'administració, mirant l'app com un professor de cant, fa servir el del professor que ha triat (LENS_CTX).
-const myTeacherKey = () => !PREVIEW && curLens() === 'voice' && LENS_CTX.teacher ? LENS_CTX.teacher : myEmail();
+/* ---------- El professorat de cant ---------- */
+// A Classes, la seva feina (vegeu 03b-rols): la Llista (passar llista a les classes de cada dia) i els Alumnes (la fitxa de cant
+// de cadascú: objectius, repertori, notes i enregistraments). Al Calendari, els dies i l'hora de cada alumne.
+const myTeacherKey = () => myEmail();
 /** Les hores d'aquest professor/a que tenen alumne i encara no s'han marcat. */
 const unmarkedSlots = c => classSlots(c).filter(x => x.memberId && !x.mark);
-function viewClassRoll() {
+function viewClassRoll(tabs = '') {
   const who = myTeacherKey();
   const days = classDays(who).filter(classLive);
   const past = days.filter(c => c.date <= TODAY);
@@ -322,7 +334,7 @@ function viewClassRoll() {
     </div>`;
   const day = c => `<div class="section-title"><h2 class="h2">${c.date === TODAY ? 'Avui' : esc(capz(longDate(c.date)))}</h2><span class="eyebrow">${esc(classDaySpan(c))}</span></div>
     <div class="panel">${classDayCard(c, c.date < TODAY, true)}</div>`;
-  return `<div class="page-head"><div><div class="eyebrow">${esc(V.classes)}</div><h1 class="h1">Assistència</h1></div><button class="btn btn-sm" data-act="cl-stats">Assistència del curs</button></div>
+  return `<div class="page-head"><div><div class="eyebrow">${esc(V.classes)}</div><h1 class="h1">Assistència</h1></div><button class="btn btn-sm" data-act="cl-stats">Assistència del curs</button></div>${tabs}
     ${pend.length ? `<div class="section-title"><h2 class="h2">Absències i canvis per veure</h2><span class="eyebrow">${pend.length}</span></div><div class="panel" style="display:grid;gap:10px;padding:12px">${pend.map(pendCard).join('')}</div>` : ''}
     ${shown.length ? shown.map(day).join('') : `<div class="empty">${staffSvg()}<p>Encara no has fet cap classe. El dia que en facis, aquí marcaràs qui hi ha vingut.</p></div>`}
     ${!now.length && days.some(c => c.date > TODAY) ? `<div class="section-title"><h2 class="h2">Properes classes</h2></div>${classNextList(days.filter(c => c.date > TODAY).slice(0, 3))}` : ''}
@@ -363,11 +375,11 @@ function myStudents(who) {
   }
   return [...by].filter(([mid]) => S.members.has(mid)).map(([mid, e]) => ({ m: S.members.get(mid), ...e })).sort((a, b) => byName(a.m, b.m));
 }
-function viewStudents() {
+function viewStudents(tabs = '') {
   const list = myStudents(myTeacherKey());
   const notes = new Map();
   for (const n of S.classNotes.values()) if (n.text || n.file) notes.set(n.memberId, (notes.get(n.memberId) || 0) + 1);
-  return `<div class="page-head"><div><div class="eyebrow">${esc(V.classes)}</div><h1 class="h1">Alumnes</h1></div><span class="eyebrow">${list.length}</span></div>
+  return `<div class="page-head"><div><div class="eyebrow">${esc(V.classes)}</div><h1 class="h1">Alumnes</h1></div><span class="eyebrow">${list.length}</span></div>${tabs}
     ${list.length ? `<div class="panel students">${list.map(({ m, hours, next }) => `<button class="stu-row" data-act="cl-student" data-m="${esc(m.id)}">
         ${avatar(m)}<span class="stu-t"><b>${esc(fullName(m.name))}</b><small>${esc([SEC[m.section]?.name + (m.part ? ` ${m.part}` : ''), hours.join(', '), next ? `propera, ${shortDate(next)}` : ''].filter(Boolean).join(' · '))}</small></span>
         ${notes.get(m.id) ? `<span class="stu-n">${notes.get(m.id)} ${notes.get(m.id) === 1 ? 'nota' : 'notes'}</span>` : ''}${ICON.right}</button>`).join('')}</div>`

@@ -114,8 +114,8 @@ function seatingBlock(s) {
   if (!isShow(s)) return '';
   const me = S.members.get(myMemberId());
   const seat = me && mySeat(s, me.id);
-  if (!seatRows(s).length) return canEdit() ? `<div class="section-title" style="margin-top:16px"><h2 class="h2">Col·locació</h2><button class="btn btn-sm" data-act="seating-edit" data-sid="${s.id}">Fes-la</button></div>` : '';
-  return `<div class="section-title" style="margin-top:16px"><h2 class="h2">Col·locació</h2>${canEdit() ? `<button class="btn btn-sm" data-act="seating-edit" data-sid="${s.id}">Edita-la</button>` : ''}</div>
+  if (!seatRows(s).length) return canProd() ? `<div class="section-title" style="margin-top:16px"><h2 class="h2">Col·locació</h2><button class="btn btn-sm" data-act="seating-edit" data-sid="${s.id}">Fes-la</button></div>` : '';
+  return `<div class="section-title" style="margin-top:16px"><h2 class="h2">Col·locació</h2>${canProd() ? `<button class="btn btn-sm" data-act="seating-edit" data-sid="${s.id}">Edita-la</button>` : ''}</div>
     ${seat ? `<p class="seat-me">El teu lloc: <b>fila ${seat.row}</b>${seat.row === 1 ? ' (la de davant)' : ''}, <b>${seat.pos}${seat.pos === 1 ? 'r' : seat.pos === 2 ? 'n' : seat.pos === 3 ? 'r' : seat.pos === 4 ? 't' : 'è'}</b> des de l’esquerra de la direcció.</p>` : ''}
     ${seatingHtml(s, me)}
     <p class="muted" style="font-size:calc(13px*var(--ts));margin:6px 2px 0">Vist des de la direcció: la fila 1 és la de davant.</p>`;

@@ -57,10 +57,13 @@ const attachList = (files, act, id) => (files || []).length ? `<div class="attac
   : `<a class="att" href="${esc(f.url)}" target="_blank" rel="noopener">${ICON.link}<span>${esc(f.title || f.url)}<small>Enllaç</small></span></a>`).join('')}</div>` : '';
 const ANN_LONG = 700;
 const mySection = () => S.members.get(myMemberId())?.section || null;
-const forMe = x => canEdit() || !myId() || !x.sections?.length || x.sections.includes(mySection());
+/** Si un anunci o una enquesta és per a la meva corda (o per a tothom): els que he de llegir o respondre. */
+const forMySection = x => !x.sections?.length || (!!mySection() && x.sections.includes(mySection()));
+/** Els que veig: qui porta el tauler (o no és a la plantilla), tots; la resta, els de la seva corda. */
+const forMe = x => canBoard() || !myId() || forMySection(x);
 function visibleAnnouncements() {
   return [...S.announcements.values()]
-    .filter(a => forMe(a) && (canEdit() || !a.until || a.until >= TODAY))
+    .filter(a => forMe(a) && (canBoard() || !a.until || a.until >= TODAY))
     .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (b.createdAt || '').localeCompare(a.createdAt || ''));
 }
 const openPolls = () => [...S.polls.values()].filter(p => forMe(p) && !p.closed && (!p.closesAt || p.closesAt >= TODAY));
@@ -68,7 +71,7 @@ function boardBadge() {
   let seen = '';
   seen = lsGet(LS_SEEN) || '';
   const news = visibleAnnouncements().filter(a => (a.createdAt || '') > seen).length;
-  const polls = myId() && !canEdit() ? openPolls().filter(p => !S.pollVotes.get(`${p.id}_${myId()}`)).length : 0;
+  const polls = myId() && !canBoard() ? openPolls().filter(p => !S.pollVotes.get(`${p.id}_${myId()}`)).length : 0;
   return news + polls;
 }
 /** On s'obre el Tauler en tocar-ne la pestanya: als anuncis si n'hi ha de nous; si no, on es va quedar, però mai a uns
@@ -86,7 +89,8 @@ function viewBoard() {
   if (ui.board === 'anuncis') { lsSet(LS_SEEN, new Date().toISOString()); setTimeout(renderTabs, 0); }
   const head = `<div class="page-head"><h1 class="h1">Tauler</h1></div>
     <div class="subtabs board-tabs" role="tablist" style="margin-bottom:10px;grid-template-columns:repeat(${tabs.length},1fr)">${tabs.map(([k, l]) => `<button class="subtab" role="tab" aria-selected="${ui.board === k}" data-act="board" data-k="${k}"><svg viewBox="0 0 24 24" aria-hidden="true">${TODO_ICONS[BOARD_ICONS[k]]}</svg><span>${l}</span></button>`).join('')}</div>`;
-  if (ui.board === 'materials') return head + boardRepertoire();
+  // Al repertori, els arxivers (i l'administració) hi tenen a dalt l'arxiu: les carpetes, les etiquetes i els codis.
+  if (ui.board === 'materials') return head + kitPanel() + boardRepertoire();
   if (ui.board === 'sortides') return head + boardTrips();
   if (ui.board === 'documents') return head + boardDocuments();
   if (ui.board === 'enquestes') return head + boardPolls();
@@ -96,14 +100,14 @@ function viewBoard() {
 function annCard(a, board) {
   const long = board && (a.body || '').length > ANN_LONG;
   return `<article class="ann ${a.pinned ? 'pinned' : ''}" data-ann="${esc(a.id)}">
-      <div class="ann-h"><h2 class="ann-t">${esc(a.title)}</h2>${board && canEdit() ? `<button class="icon-btn" data-act="ann-edit" data-id="${a.id}" aria-label="Edita l’anunci">${ICON.more}</button>` : ''}</div>
+      <div class="ann-h"><h2 class="ann-t">${esc(a.title)}</h2>${board && canBoard() ? `<button class="icon-btn" data-act="ann-edit" data-id="${a.id}" aria-label="Edita l’anunci">${ICON.more}</button>` : ''}</div>
       ${a.body ? `<div class="ann-b rich">${richText(long ? cutText(a.body, ANN_LONG) : a.body)}</div>` : ''}
       ${long ? `<button class="btn btn-sm btn-ghost ann-more" data-act="ann-read" data-id="${esc(a.id)}">Llegeix-lo sencer</button>` : ''}
       ${attachList(a.files, 'ann-file', a.id)}
       <div class="ann-m">${a.pinned ? '<span class="pin">Fixat</span>' : ''}<span>${esc(fullName(a.author))}</span><span class="mono">${a.createdAt ? ddmm(a.createdAt.slice(0, 10)) : ''}</span>
         ${a.sections?.length ? `<span>Per a: ${esc(a.sections.map(x => SEC[x].name).join(', '))}</span>` : ''}${a.until ? `<span>Fins al ${ddmm(a.until)}</span>` : ''}</div>
       ${canReply(a.by) ? `<div class="ann-acts"><button class="btn btn-sm" data-act="reply" data-ref="ann:${esc(a.id)}">Respon a ${esc(firstName(fullName(a.author)) || 'l’equip')}</button></div>` : ''}
-      ${board && canEdit() && (!a.until || a.until >= TODAY) ? annSeenLine(a) : ''}
+      ${board && canBoard() && (!a.until || a.until >= TODAY) ? annSeenLine(a) : ''}
     </article>`;
 }
 function sheetAnnouncementRead(id) {
@@ -137,7 +141,7 @@ function markAnnSeen(list) {
 }
 /** Els comptes dels anuncis vigents, per a l'equip: una lectura per anunci, com a molt un cop per minut. */
 function loadAnnSeen(list) {
-  if (!canEdit() || ANN_SEEN.busy || Date.now() - ANN_SEEN.at < 60e3 || !list.length) return;
+  if (!canBoard() || ANN_SEEN.busy || Date.now() - ANN_SEEN.at < 60e3 || !list.length) return;
   ANN_SEEN.busy = true; ANN_SEEN.at = Date.now();
   Promise.all(list.map(a => db.doc(`annSeen/${a.id}`).get().then(d => [a.id, d.exists ? d.data() : {}]).catch(() => null)))
     .then(rows => { for (const r of rows) if (r) ANN_SEEN.map.set(r[0], r[1]); scheduleRender(); })
@@ -163,9 +167,9 @@ function boardAnnouncements() {
   const card = a => annCard(a, true);
   markAnnSeen(active);
   loadAnnSeen(active);
-  return `${canEdit() ? `<div class="sec-h end" style="margin-top:6px"><button class="btn btn-sm btn-primary" data-act="ann-new">+ Anunci</button></div>` : ''}
+  return `${canBoard() ? `<div class="sec-h end" style="margin-top:6px"><button class="btn btn-sm btn-primary" data-act="ann-new">+ Anunci</button></div>` : ''}
     ${active.length ? `<div class="panel">${active.map(card).join('')}</div>` : `<div class="empty"><p>No hi ha anuncis.</p></div>`}
-    ${canEdit() && expired.length ? `<details class="np-group"><summary><span>Caducats (${expired.length})</span>${ICON.chev}</summary><div class="panel">${expired.map(card).join('')}</div></details>` : ''}`;
+    ${canBoard() && expired.length ? `<details class="np-group"><summary><span>Caducats (${expired.length})</span>${ICON.chev}</summary><div class="panel">${expired.map(card).join('')}</div></details>` : ''}`;
 }
 /* ---------- Fitxers pujats des de l'ordinador (PDF, àudio, imatges…) ---------- */
 // Cada fitxer es desa a trossos de 700 KB dins de cors/<agrupació>/config (config/fitxer_<id>_<n>).
@@ -413,15 +417,15 @@ const choirDocs = () => [...(S.config.documents || [])]
   .sort((a, b) => Object.keys(DOC_KINDS).indexOf(a.kind) - Object.keys(DOC_KINDS).indexOf(b.kind) || a.title.localeCompare(b.title, 'ca'));
 function boardDocuments() {
   const docs = choirDocs();
-  const tools = canEdit()
+  const tools = canBoard()
     ? `<div class="sec-h end" style="margin-top:6px"><button class="btn btn-sm btn-primary" data-act="doc-new">+ Document</button></div>`
     : '';
   const row = d => `<div class="mat"><span class="mat-k doc-${esc(d.kind)}">${DOC_KINDS[d.kind]?.[1] || 'Doc'}</span>
       <span class="mat-i">${itemLink(d, `data-act="file-open" data-src="doc" data-id="${esc(d.id)}"`)}<small>${[DOC_KINDS[d.kind]?.[0], d.note, fileNote(d)].filter(Boolean).map(esc).join(' · ')}</small></span>
-      ${canEdit() ? `<button class="icon-btn" data-act="doc-edit" data-id="${esc(d.id)}" aria-label="Edita el document">${ICON.more}</button>` : ''}</div>`;
+      ${canBoard() ? `<button class="icon-btn" data-act="doc-edit" data-id="${esc(d.id)}" aria-label="Edita el document">${ICON.more}</button>` : ''}</div>`;
   return tools + (docs.length
     ? `<div class="panel">${docs.map(row).join('')}</div>`
-    : `<div class="empty"><p>Encara no hi ha cap document.${canEdit() ? ' Afegeix-hi la normativa o el calendari de la temporada.' : ''}</p></div>`);
+    : `<div class="empty"><p>Encara no hi ha cap document.${canBoard() ? ' Afegeix-hi la normativa o el calendari de la temporada.' : ''}</p></div>`);
 }
 function sheetDocument(id) {
   const ex = id ? (S.config.documents || []).find(d => d.id === id) : null;
@@ -478,7 +482,7 @@ function boardPolls() {
   const card = p => {
     const closed = p.closed || (p.closesAt && p.closesAt < TODAY);
     const meta = `<div class="ann-m">${closed ? '<span class="st-pill st-rejected">Tancada</span>' : '<span class="st-pill st-accepted">Oberta</span>'}${p.closesAt ? `<span>Fins al ${ddmm(p.closesAt)}</span>` : ''}${p.sections?.length ? `<span>Per a: ${esc(p.sections.map(x => SEC[x].name).join(', '))}</span>` : ''}<span>${p.multi ? 'Pots triar-ne diverses' : 'Una opció'}</span></div>`;
-    if (canEdit()) {
+    if (canBoard()) {
       const r = pollResults(p);
       const max = Math.max(1, ...Object.values(r.counts));
       return `<div class="poll"><div class="ann-h"><h2 class="ann-t">${esc(p.title)}</h2><button class="icon-btn" data-act="poll-edit" data-id="${p.id}" aria-label="Edita">${ICON.more}</button></div>
@@ -496,6 +500,6 @@ function boardPolls() {
       ${canVote && p.allowNote ? `<label class="field" style="margin-top:8px"><span>Comentari (opcional)</span><textarea class="inp" data-poll-note maxlength="300" style="min-height:60px">${esc(mine?.note || '')}</textarea></label>` : !canVote && mine?.note ? `<p class="m" style="margin:6px 0 0">«${esc(mine.note)}»</p>` : ''}
       ${canVote ? `<div class="c-a" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="btn btn-sm btn-primary" data-act="poll-vote" data-id="${p.id}">${mine ? 'Actualitza la resposta' : 'Envia la resposta'}</button>${mine ? '<span class="rsvp yes">Resposta desada</span>' : ''}</div>` : ''}</div>`;
   };
-  return `${canEdit() ? '<div class="sec-h" style="margin-top:6px"><span class="muted" style="font-size:calc(13px*var(--ts))">Per saber quan pot venir la gent.</span><button class="btn btn-sm btn-primary" data-act="poll-new">+ Enquesta</button></div>' : ''}
+  return `${canBoard() ? '<div class="sec-h" style="margin-top:6px"><span class="muted" style="font-size:calc(13px*var(--ts))">Per saber quan pot venir la gent.</span><button class="btn btn-sm btn-primary" data-act="poll-new">+ Enquesta</button></div>' : ''}
     ${all.length ? `<div class="panel">${all.map(card).join('')}</div>` : '<div class="empty"><p>No hi ha enquestes.</p></div>'}`;
 }

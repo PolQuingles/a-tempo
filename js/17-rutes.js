@@ -4,7 +4,7 @@
 // Els fitxers de js/ són scripts clàssics que comparteixen l'àmbit global i es carreguen en ordre (vegeu index.html).
 'use strict';
 
-const ROUTE_MANAGE = { avisos: 'avisos', personal: 'personal', produccions: 'produccions', config: 'ajustos' };
+const ROUTE_MANAGE = { personal: 'personal', produccions: 'produccions', config: 'ajustos' };
 // ui.board → adreça (el repertori es deia «materials»).
 const ROUTE_BOARD = { anuncis: 'anuncis', materials: 'repertori', documents: 'documents', enquestes: 'enquestes', sortides: 'sortides' };
 const HIST = { sheet: false, closePending: false, ignorePop: 0, pending: null, started: false };
@@ -23,16 +23,18 @@ function routeFromUi() {
     case 'gestio': return `gestio/${ROUTE_MANAGE[ui.manage] || 'personal'}`;
     case 'stats': return 'assistencia/estadistiques';
     case 'llista':
+      if (attArea() === 'me' && !ui.rollSec) return 'assistencia/meva';
       if (ui.att === 'stats') return 'assistencia/estadistiques';
       if (ui.att === 'risk') return 'assistencia/risc';
       if (ui.att === 'abs') return 'assistencia/absencies';
       return ui.rollSec ? `assistencia/${encodeURIComponent(ui.rollSec)}` : 'assistencia';
     case 'calendari': return 'calendari';
-    case 'partitures': return 'partitures';
-    case 'alumnes': return 'alumnes';
     case 'vestidor': return 'vestidor';
     case 'tauler': return `tauler/${ROUTE_BOARD[ui.board] || 'anuncis'}`;
-    case 'classes': return ui.clWho ? `classes/${encodeURIComponent(teacherSlug(ui.clWho))}` : 'classes';
+    case 'classes':
+      if (ui.clWho) return `classes/${encodeURIComponent(teacherSlug(ui.clWho))}`;
+      // El professorat: l'assistència de cada dia (#/classes), els alumnes o totes les classes.
+      return clTabKeys().length && ui.clTab === 'alumnes' ? 'alumnes' : clTabKeys().length && ui.clTab === 'totes' ? 'classes/totes' : 'classes';
     default: return 'inici';
   }
 }
@@ -42,6 +44,8 @@ function applyRoute(route) {
   const [a, b] = String(route || '').split('/');
   const sub = b ? decodeURIComponent(b) : '';
   if (a === 'inici') { ui.tab = 'avisos'; return true; }
+  // Les absències eren a Gestió: ara es responen a Assistència.
+  if (a === 'gestio' && sub === 'avisos') return applyRoute('assistencia/absencies');
   if (a === 'gestio') {
     if (!gestioOn()) return false;
     const k = Object.keys(ROUTE_MANAGE).find(x => ROUTE_MANAGE[x] === sub) || 'personal';
@@ -49,6 +53,14 @@ function applyRoute(route) {
   }
   if (a === 'assistencia') {
     ui.tab = 'llista';
+    // L'àmbit: la meva; la llista d'una corda, des de la corda si és la que porta; la resta, el que ja s'hi mirava.
+    const as = attAreas();
+    if (sub === 'meva') { if (as.includes('me')) ui.attArea = 'me'; ui.att = 'llista'; ui.rollSec = null; return true; }
+    if (sub && SEC_MAP[sub]) ui.attArea = sub === leadSec() ? 'sec' : as.includes('all') ? 'all' : ui.attArea;
+    else if (attArea() === 'me' && as.length > 1) ui.attArea = as.includes('sec') ? 'sec' : 'all';
+    // Les estadístiques, el risc o les absències: des d'on es miren (el risc només és de tot el cor).
+    const part = { estadistiques: 'stats', risc: 'risk', absencies: 'abs' }[sub];
+    if (part && !areaKeys(attArea()).includes(part)) ui.attArea = ['all', 'sec'].find(x => as.includes(x) && areaKeys(x).includes(part)) || ui.attArea;
     if (sub === 'estadistiques') { ui.att = 'stats'; ui.rollSec = null; }
     else if (sub === 'risc') { ui.att = 'risk'; ui.rollSec = null; }
     else if (sub === 'absencies') { ui.att = 'abs'; ui.rollSec = null; }
@@ -56,7 +68,9 @@ function applyRoute(route) {
     return true;
   }
   if (a === 'calendari') { ui.tab = 'calendari'; return true; }
-  if (a === 'partitures' || a === 'alumnes') { ui.tab = a; return true; }
+  // L'arxiu de partitures és al Repertori del Tauler, i els alumnes, a les Classes.
+  if (a === 'partitures') { ui.tab = 'tauler'; ui.board = 'materials'; return true; }
+  if (a === 'alumnes') { ui.tab = 'classes'; ui.clTab = 'alumnes'; ui.clWho = null; return true; }
   if (a === 'vestidor') { if (!wardOn()) return false; ui.tab = 'vestidor'; return true; }
   if (a === 'tauler') { ui.tab = 'tauler'; ui.board = sub === 'materials' ? 'materials' : Object.keys(ROUTE_BOARD).find(k => ROUTE_BOARD[k] === sub) || 'anuncis'; return true; }
   if (a === 'classes') {
@@ -64,6 +78,7 @@ function applyRoute(route) {
     const t = sub && typeof classTeachers === 'function' ? classTeachers().find(x => teacherSlug(x.key) === sub) : null;
     if (!t || t.key !== ui.clWho) { ui.clMonth = null; ui.clDay = null; }
     ui.clWho = t ? t.key : null;
+    ui.clTab = t || sub === 'totes' ? 'totes' : 'llista';
     return true;
   }
   return false;
