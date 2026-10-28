@@ -1159,10 +1159,25 @@ button.mday:hover{background:var(--surface-2)}
 .sw-n{flex:1 1 140px;min-width:0;font-size:calc(14.5px*var(--ts));font-weight:600}
 .sc-out{display:block;margin-top:2px;font-size:calc(12.5px*var(--ts));font-weight:500;line-height:1.35;color:var(--fnj-text)}
 .sw-out{background:color-mix(in srgb,var(--fnj-soft) 45%,var(--surface))}
-.sw-seg button[aria-checked="true"][data-k=""]{background:var(--fj-soft);color:var(--fj-text)}
-.sw-seg button[aria-checked="true"][data-k="given"]{background:var(--r-soft);color:var(--r-text)}
-.sw-seg button[aria-checked="true"][data-k="returned"]{background:var(--p-soft);color:var(--p-text)}
-.sw-seg button:disabled{opacity:.6}
+/* Repartir i recollir una obra: una taula amb els tres passos a la capçalera. Les caselles es pinten fins al pas on és cadascú:
+   taronja (a repartir), blau (repartida) o verd (retornada). */
+.sw-wrap{border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;overflow:clip;background:var(--surface)}
+.sw-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:calc(14.5px*var(--ts))}
+.sw-table thead th{position:sticky;top:0;z-index:1;width:19%;padding:9px 3px;background:var(--surface);border-bottom:1px solid var(--line);font-size:calc(12px*var(--ts));font-weight:700;line-height:1.2;color:var(--muted);text-align:center}
+.sw-table thead th:first-child{width:auto;padding-left:12px;text-align:left}
+.sw-table .sw-row{display:table-row;padding:0}
+.sw-table tbody tr + tr > *{border-top:1px solid var(--line)}
+.sw-table .sw-n{padding:9px 6px 9px 12px;font-weight:600;text-align:left;vertical-align:middle;overflow-wrap:anywhere}
+.sw-c{padding:5px 3px;vertical-align:middle}
+.sw-c:last-child{padding-right:8px}
+.sw-c button{display:block;width:100%;height:36px;border-radius:9px;border:1px solid var(--line-strong);background:var(--surface);cursor:pointer;transition:background .15s,border-color .15s}
+.sw-c button:not(:disabled):hover{border-color:var(--ink-2)}
+.sw-c button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.sw-c button.on{border-color:transparent}
+.sw-c button.st-pend{background:var(--fj)}
+.sw-c button.st-given{background:var(--r)}
+.sw-c button.st-returned{background:var(--p)}
+.sw-c button:disabled{cursor:default}
 .ax-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0 10px}
 .ax-kpis div{display:grid;gap:2px;padding:10px 12px;border-radius:var(--r-md);background:var(--surface-2)}
 .ax-kpis b{font-family:var(--f-display);font-size:28px;line-height:1;font-variant-numeric:tabular-nums}

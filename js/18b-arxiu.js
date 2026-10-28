@@ -10,6 +10,8 @@
 S.scores = new Map();
 const SCORE_STATES = [['', 'A repartir'], ['given', 'Repartida'], ['returned', 'Retornada']];
 const SCORE_CLS = { '': 'pend', given: 'given', returned: 'returned' };
+/** Els passos per ordre: a repartir, repartida, retornada. */
+const SCORE_STEPS = SCORE_STATES.map(([k]) => k);
 const scoreKey = (pid, wid, sec) => `${pid}_${wid}_${sec}`;
 /** On és la partitura d'aquesta persona: '' (encara no l'hi han donat), 'given' (la té) o 'returned' (l'ha tornada). */
 const scoreOf = (pid, wid, m) => S.scores.get(scoreKey(pid, wid, m.section))?.marks?.[m.id]?.s || '';
@@ -140,15 +142,22 @@ function sheetScoreWork(pid, wid, sec0) {
     el.querySelector('#sw-sum').innerHTML = `${sumPill(x, false)}
       <span class="muted">${x.given} de ${x.n} repartides · ${x.returned} ${x.returned === 1 ? 'retornada' : 'retornades'}</span>`;
     el.querySelector('#sw-bulk').hidden = !can || !ms.length;
-    el.querySelector('#sw-list').innerHTML = ms.length ? rows.map(({ m, out }) => {
-      const s = scoreOf(pid, wid, m), note = outNote(out, s);
-      return `<li class="sw-row${note ? ' sw-out' : ''}" data-mid="${esc(m.id)}"><span class="sw-n">${codeTag(m, pid)}${esc(m.name)}${m.part ? ` <span class="part">${esc(partTag(m))}</span>` : ''}${guestOf(pid, m.id) ? ' <span class="tag">Reforç</span>' : ''}${note ? `<small class="sc-out">${esc(note)}</small>` : ''}</span>
-        <span class="seg3 sw-seg" role="radiogroup" aria-label="${esc(m.name)}">${SCORE_STATES.map(([k, l]) => `<button type="button" role="radio" data-k="${k}" aria-checked="${s === k}" ${can ? '' : 'disabled'}>${l}</button>`).join('')}</span></li>`;
-    }).join('') : `<li class="muted" style="padding:12px 2px">Ningú d’aquesta ${esc(V.section)} fa la producció.</li>`;
+    // Una taula: qui és i els tres passos. Les caselles es pinten fins al pas on és cadascú, del color d'aquell pas: taronja
+    // (a repartir), blau (repartida) o verd (retornada).
+    el.querySelector('#sw-list').innerHTML = ms.length ? `<table class="sw-table"><thead><tr><th scope="col"><span class="sr">${esc(V.Member)}</span></th>${SCORE_STATES.map(([, l]) => `<th scope="col">${l}</th>`).join('')}</tr></thead>
+      <tbody>${rows.map(({ m, out }) => {
+        const s = scoreOf(pid, wid, m), at = SCORE_STEPS.indexOf(s), note = outNote(out, s);
+        return `<tr class="sw-row${note ? ' sw-out' : ''}" data-mid="${esc(m.id)}"><th scope="row" class="sw-n">${codeTag(m, pid)}${esc(m.name)}${m.part ? ` <span class="part">${esc(partTag(m))}</span>` : ''}${guestOf(pid, m.id) ? ' <span class="tag">Reforç</span>' : ''}${note ? `<small class="sc-out">${esc(note)}</small>` : ''}</th>
+          ${SCORE_STATES.map(([k, l], i) => `<td class="sw-c"><button type="button" data-k="${k}" class="${i <= at ? `on st-${SCORE_CLS[s]}` : ''}" aria-pressed="${i === at}" aria-label="${esc(`${m.name}: ${l}`)}" ${can ? '' : 'disabled'}></button></td>`).join('')}</tr>`;
+      }).join('')}</tbody></table>` : `<p class="muted" style="padding:12px;margin:0">Ningú d’aquesta ${esc(V.section)} fa la producció.</p>`;
     el.querySelectorAll('.sw-row').forEach(r => r.querySelectorAll('button[data-k]').forEach(b => b.onclick = () => {
       const m = S.members.get(r.dataset.mid);
       if (!m || !canScores(m.section)) return;
-      setScore(pid, wid, m, b.dataset.k); paint(el);
+      // Tocar una casella hi porta la partitura; tocar la del pas on ja és el desfà (torna al pas d'abans).
+      const cur = scoreOf(pid, wid, m), i = SCORE_STEPS.indexOf(b.dataset.k);
+      const to = b.dataset.k === cur ? SCORE_STEPS[Math.max(0, i - 1)] : b.dataset.k;
+      if (to === cur) return;
+      setScore(pid, wid, m, to); paint(el);
     }));
     el.querySelector('#sw-note').textContent = can ? '' : `Les d’aquesta ${V.section} les porta el seu arxiver.`;
   };
@@ -159,7 +168,7 @@ function sheetScoreWork(pid, wid, sec0) {
       <div class="chips" id="sw-sec" role="group" aria-label="${esc(V.Section)}">${SECTIONS.map(x => `<button class="chip" data-sec="${esc(x.id)}" aria-pressed="${x.id === sec}">${esc(x.name)}</button>`).join('')}</div>
       <div class="sw-sum" id="sw-sum"></div>
       <div class="sw-bulk" id="sw-bulk"><button type="button" class="btn btn-sm" data-bulk="given">Totes repartides</button><button type="button" class="btn btn-sm" data-bulk="returned">Totes retornades</button></div>
-      <ul class="sw-list" id="sw-list"></ul>
+      <div class="sw-wrap" id="sw-list"></div>
       <p class="muted" id="sw-note" style="margin:8px 2px 0;font-size:calc(13px*var(--ts))"></p>`,
     foot: `<button class="btn" data-act="archive" data-pid="${esc(pid)}">Tot l’arxiu</button><span class="spacer"></span><button class="btn btn-primary" data-act="sheet-close">Fet</button>`,
     onMount: el => {
