@@ -97,7 +97,8 @@ function applyGroupConfig() {
   const w = k.words;
   V = { ...w, kind, Member: capz(w.member), Members: capz(w.members), Section: capz(w.section), Sections: capz(w.sections),
     Leader: capz(w.leader), Part: capz(w.part), Group: capz(w.group), Tot: capz(w.tot), Kind: k.label,
-    Teacher: kind === 'cor' ? 'Professor de cant' : 'Professor', classes: kind === 'cor' ? 'Classes de cant' : 'Classes' };
+    Teacher: kind === 'cor' ? 'Professor de cant' : 'Professor', Teaching: kind === 'cor' ? 'Professorat de cant' : 'Professorat',
+    classes: kind === 'cor' ? 'Classes de cant' : 'Classes' };
   if (SECTIONS.length && !SEC_MAP[ui.section]) ui.section = SECTIONS[0].id;
   if (ui.rollSec && !SEC_MAP[ui.rollSec]) ui.rollSec = null;
   if (ui.statsSec && !SEC_MAP[ui.statsSec]) ui.statsSec = '';
@@ -207,7 +208,8 @@ const S = {
   joinReq: null,          // <correu> -> qui ha obert l'enllaç del cor i espera accés (només l'administració; 12c-entrar)
   me: null,               // la fitxa d'accés de qui ha entrat (staff/<correu>)
   memberId: null,         // la seva fitxa de la plantilla, si en té
-  profiles: null,         // equip: les fitxes que omple cadascú (es llegeixen quan cal: llistes i sortides)
+  profiles: null,         // qui porta les persones: les fitxes que omple cadascú (es llegeixen quan cal: llistes i sortides)
+  health: null,           // secretaria i gerència: les al·lèrgies i intoleràncies de cadascú (health/<membre>)
   push: new Map(),        // staff: one doc per device that has notifications on (read when «Qui ha entrat» opens)
   pushOn: false,          // this device
   pushPrefs: null,
@@ -247,7 +249,8 @@ function saveUI() {
 // Rols de les persones de l'agrupació. Una persona pot tenir-ne més d'un (p. ex. cap de corda i cantaire).
 // Administració ho pot fer tot; direcció, caps i equip passen llista i editen; cantaires i músics només llegeixen.
 const ROLE_KEYS = ['admin', 'director', 'gerencia', 'secretaria', 'leader', 'archive', 'voice', 'singer'];
-const roleLabel = r => ({ admin: 'Administració', director: 'Director', gerencia: 'Gerència', secretaria: 'Secretaria', leader: V.Leader, archive: 'Arxiver', singer: V.Member, voice: V.Teacher }[r] || r);
+// Els rols de l'equip es diuen per la funció (Direcció, Arxiu…), no per qui la fa.
+const roleLabel = r => ({ admin: 'Administració', director: 'Direcció', gerencia: 'Gerència', secretaria: 'Secretaria', leader: V.Leader, archive: 'Arxiu', singer: V.Member, voice: V.Teaching }[r] || r);
 const EDIT_ROLES = new Set(['admin', 'director', 'gerencia', 'secretaria', 'leader']);
 /** The roles of a person record, in ROLE_KEYS order: the list, or the single role of older records. */
 const rolesOf = p => {
@@ -260,8 +263,11 @@ const roleLevel = p => rolesOf(p).some(r => EDIT_ROLES.has(r)) ? 'edit' : 'read'
 /** What a set of roles lets that person do, in one or two sentences. */
 const rolesHint = roles => !roles.length ? 'Tria almenys un rol.' : [
   roles.includes('admin') ? 'Ho pot fer tot: persones, identitat i dades de l’agrupació.'
-    : roles.some(r => EDIT_ROLES.has(r)) ? 'Passa llista, publica anuncis, convocatòries i enquestes, i puja materials i documents.'
+    : roles.some(r => ['director', 'gerencia'].includes(r)) ? `Porta les produccions, les sessions, els Ajustos i el tauler, i veu l’assistència de tot ${V.el}${roles.includes('director') ? ' (la direcció també en respon les absències)' : ''}.`
+    : roles.includes('secretaria') ? 'Porta les persones (fitxes, altes i baixes, documents i quotes) i el tauler.'
+    : roles.includes('leader') ? `Passa llista de la seva ${V.section} i en respon les absències.`
     : 'Veu tota l’app en mode lectura, sense poder-hi canviar res.',
+  roles.some(r => ['secretaria', 'gerencia'].includes(r)) && !roles.includes('admin') ? 'Veu les al·lèrgies, per organitzar els àpats.' : '',
   roles.includes('singer') ? `Té el seu espai: avisa de les seves absències i veu la seva assistència.` : '',
   roles.includes('leader') ? `Porta una ${V.section}.` : '',
   roles.includes('archive') ? `Porta el repertori (obres, solos, partitures, àudios i materials), reparteix les partitures en paper (les de la seva ${V.section} i, si cal, les de les altres), les recull en acabar cada producció i pot escriure missatges a la seva ${V.section}.` : '',
@@ -283,10 +289,25 @@ const canBoard = () => S.role === 'edit' && BOARD_ROLES.some(iHave);
 /** Qui porta les produccions i les seves sessions (Gestió › Produccions i el calendari): l'administració, la direcció i la gerència. */
 const PROD_ROLES = ['admin', 'director', 'gerencia'];
 const canProd = () => S.role === 'edit' && PROD_ROLES.some(iHave);
+/** Qui porta les persones (Gestió › Personal): les fitxes de la plantilla, els comptes, els telèfons i les fitxes personals. */
+const PEOPLE_ROLES = ['admin', 'director', 'gerencia', 'secretaria'];
+const canPeople = () => S.role === 'edit' && PEOPLE_ROLES.some(iHave);
+/** Les al·lèrgies i intoleràncies (dades de salut, a health/<membre>): només les veuen la secretaria i la gerència. */
+const HEALTH_ROLES = ['secretaria', 'gerencia'];
 /** Qui llegeix l'assistència de tot el cor (vegeu attAll a les regles). Un cap de corda que no té cap d'aquests rols només
  *  llegeix la de la seva corda: llavors torna la corda; si no, ''. És el compte qui decideix què es llegeix. */
-const ALL_ATT_ROLES = ['admin', 'director', 'gerencia', 'secretaria'];
+const ALL_ATT_ROLES = ['admin', 'director', 'gerencia'];
 const attScopeSec = () => S.role === 'edit' && !!S.me && !rolesOf(S.me).some(r => ALL_ATT_ROLES.includes(r)) && hasRole(S.me, 'leader') ? S.me.section || '-' : '';
+/* Què pot llegir el compte segons les regles (firestore.rules). Per a les dades que es carreguen mana el compte, no la vista
+ * prèvia: si l'administració mira l'app com una altra persona, continua llegint el que li toca a ella. */
+const acctHas = (...rs) => S.role === 'edit' && !!S.me && rs.some(r => hasRole(S.me, r));
+const readsAllAtt = () => acctHas(...ALL_ATT_ROLES);
+/** Passa llista i respon les absències de totes les cordes (attWriteAll): l'administració i la direcció. */
+const writesAllAtt = () => acctHas('admin', 'director');
+const readsPeople = () => acctHas(...PEOPLE_ROLES);
+const readsHealth = () => acctHas(...HEALTH_ROLES);
+const readsBoard = () => acctHas(...BOARD_ROLES);
+const seesHealth = () => S.role === 'edit' && HEALTH_ROLES.some(iHave) && readsHealth();
 const isAdmin = () => S.role === 'edit' && !PREVIEW && hasRole(S.me, 'admin');
 /** Name, type, sections and look of the group, and deleting it: only a Pro user who runs it. */
 const canManageGroup = () => isAdmin() && S.pro;
@@ -375,12 +396,13 @@ const slotReqs = (c, slot) => [...S.classReq.values()]
   .sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
 const reqsToAnswer = () => { const id = myId(); return id ? [...S.classReq.values()].filter(r => r.kind === 'swap' && r.status === 'pending' && r.withMemberId === id) : []; };
 const reqsForTeacher = () => [...S.classReq.values()].filter(r => r.status === 'pending' && r.kind !== 'swap');
-const classBadge = () => reqsToAnswer().length + (teachesClasses() ? reqsForTeacher().length : 0);
 /** The member this account really is (from the account record or a personal link), if any. */
 const myId = () => { const id = PREVIEW ? PREVIEW.memberId : S.memberId; return id && S.members.has(id) ? id : null; };
 const subKey = (sid, sec) => `${sid}_${sec}`;
 const subFor = (sid, sec) => S.subs.get(subKey(sid, sec));
 /** Member allowed to take today's roll for this session and section. */
-const isMySub = (sid, sec) => { const x = subFor(sid, sec); return !canEdit() && !!x && !!myId() && x.memberId === myId() && x.until > Date.now(); };
-const canMark = (s, sec) => canEdit() || (!!s && isMySub(s.id, sec));
+const isMySub = (sid, sec) => { const x = subFor(sid, sec); return !!x && !!myId() && x.memberId === myId() && x.until > Date.now(); };
+/** Qui passa llista d'una corda (vegeu attSecW a les regles): l'administració i la direcció, de totes; el cap de corda, de la seva. */
+const canWriteAtt = sec => S.role === 'edit' && (['admin', 'director'].some(iHave) || (iHave('leader') && ME()?.section === sec));
+const canMark = (s, sec) => canWriteAtt(sec) || (!!s && isMySub(s.id, sec));
 const mySubs = () => { const id = myId(); return id ? [...S.subs.values()].filter(x => x.memberId === id && x.until > Date.now()) : []; };

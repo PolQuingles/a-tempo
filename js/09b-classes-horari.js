@@ -141,9 +141,6 @@ const placeFields = (days, value) => days.length ? `<div class="field" style="ma
       <input class="inp" type="text" maxlength="40" data-place="${d}" value="${esc(value(d))}" placeholder="p. ex. Aula 2 · Petit Palau" style="flex:1;min-width:0"></label>`).join('')}</div>
     <small>Es posa a cada dia de classe i queda desada amb l’horari.</small></div>` : '';
 const planRows = who => ((S.classPlan.get(who) || {}).rows || []);
-/** L'horari fix, en el format que fan servir la generació i la vista prèvia. */
-const planToRows = who => planRows(who).map(r => ({ name: S.members.get(r.memberId)?.name || r.name || '', day: +r.day,
-  from: parseTime(r.time) ?? 0, to: (parseTime(r.time) ?? 0) + (+r.mins || 30), mins: +r.mins || 30, memberId: r.memberId || '' }));
 
 function sheetClassPaste(preset) {
   const teachers = teacherOptions();

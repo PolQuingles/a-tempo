@@ -534,7 +534,7 @@ function indexPerson(mail) {
 // (que també canta), la direcció, la gerència, la secretaria, un arxiver o un professor de cant. Si encara no hi ha ningú
 // amb un rol, se'n fa servir una fitxa genèrica. Només canvia el que es veu en aquest mòbil i no es desa res.
 const PREVIEW_ROLES = ['singer', 'leader', 'archive', 'director', 'gerencia', 'secretaria', 'voice'];
-const previewLabel = r => ({ singer: V.Member, leader: capz(V.leader), archive: 'Arxiver', director: 'Direcció', gerencia: 'Gerència', secretaria: 'Secretaria', voice: V.Teacher }[r] || r);
+const previewLabel = r => ({ singer: V.Member, leader: capz(V.leader), archive: 'Arxiu', director: 'Direcció', gerencia: 'Gerència', secretaria: 'Secretaria', voice: V.Teaching }[r] || r);
 /** Les persones que es poden triar per a un rol: [{ key, label, person }]. */
 function previewPeople(role) {
   if (role === 'singer') return membersOf(null).sort(byName).map(m => ({ key: m.id, label: `${m.name} · ${SEC[m.section].name}`, person: { roles: ['singer'], memberId: m.id, section: m.section, name: m.name, email: accountFor(m.id)?.email || '' } }));
@@ -546,7 +546,7 @@ function previewPeople(role) {
   });
   if (role === 'archive') return SECTIONS.map(x => {
     const p = peopleWithRole('archive').find(q => q.section === x.id);
-    return { key: x.id, label: `Arxiver de ${x.name.toLowerCase()}${p ? ` · ${fullName(p.name || p.email)}` : ' (encara no n’hi ha)'}`,
+    return { key: x.id, label: `Arxiu de ${x.name.toLowerCase()}${p ? ` · ${fullName(p.name || p.email)}` : ' (encara no n’hi ha)'}`,
       person: { roles: p ? rolesOf(p).filter(r => r !== 'admin') : ['archive', 'singer'], section: x.id, memberId: p?.memberId || membersOf(x.id)[0]?.id || '', name: p?.name || '', email: p?.email || '' } };
   });
   if (role === 'voice') return teacherOptions().map(t => {

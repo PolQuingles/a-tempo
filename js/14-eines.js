@@ -32,7 +32,6 @@ function maybeWelcome() {
 }
 
 /* ---------- Qui ha entrat i qui no ---------- */
-const lastSeenOf = p => p && p.lastSeen ? p.lastSeen : null;
 function agoText(iso) {
   if (!iso) return 'Mai';
   const d = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
@@ -182,13 +181,14 @@ function sheetSub(sid, sec) {
   openSheet({
     title: `Qui passa llista · ${SEC[sec].name}`,
     body: `<p style="margin-top:0">${longDate(s.date)} · ${esc(s.type)}. La persona triada podrà passar llista d’aquesta ${V.section} <b>només aquest dia</b>, entrant a l’app amb el seu correu.</p>
-      <label class="field"><span>Substitut</span><select class="inp" id="sub-m"><option value="">—</option>${ms.map(m => `<option value="${m.id}" ${cur?.memberId === m.id ? 'selected' : ''}>${esc(m.name)}${accountFor(m.id) ? '' : ' (encara sense accés)'}</option>`).join('')}</select></label>`,
+      <label class="field"><span>Substitut</span><select class="inp" id="sub-m"><option value="">—</option>${ms.map(m => `<option value="${m.id}" ${cur?.memberId === m.id ? 'selected' : ''}>${esc(m.name)}${!S.staffReady || accountFor(m.id) ? '' : ' (encara sense accés)'}</option>`).join('')}</select></label>`,
     foot: `${cur ? '<button class="btn btn-danger-ghost" id="sub-del">Treu el substitut</button>' : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="sub-save">Desa</button>`,
     onMount: el => {
       el.querySelector('#sub-save').onclick = async () => {
         const m = S.members.get(el.querySelector('#sub-m').value);
         if (!m) { toast('Tria qui passarà llista'); return; }
-        const hasAccount = !!accountFor(m.id);
+        // Qui té accés només ho sap qui porta les persones (els caps de corda no llegeixen les fitxes de l'equip).
+        const hasAccount = !S.staffReady || !!accountFor(m.id);
         const until = parseISO(s.date).getTime() + 36 * 3600 * 1000;   // fins l’endemà al migdia
         const rec = { sessionId: s.id, section: sec, memberId: m.id, memberName: m.name, date: s.date, until, by: S.me?.email || 'enllaç', at: new Date().toISOString() };
         S.subs.set(subKey(s.id, sec), rec); persist('subs', subKey(s.id, sec), rec, 10);
@@ -293,15 +293,15 @@ function sheetCalendar() {
   openSheet({
     title: 'Calendari al mòbil',
     body: `<div class="manual">${on ? `
-      <p style="margin-top:0">Subscriu-te al calendari ${esc(ofName())} i tindràs tots els assajos i ${V.sh.els} a la teva app de calendari. Si canvia alguna cosa, s’actualitza sol (pot trigar unes hores).</p>
+      <p style="margin-top:0">Subscriu-te al calendari ${esc(ofName())} i tindràs tots els assajos i ${V.sh.els} a la teva app de calendari, amb l’hora i el lloc. Si canvia alguna cosa, s’actualitza sol (pot trigar unes hores). L’horari del dia, el punt de trobada i el que cal portar són a l’app o al teu calendari personal (a sota).</p>
       <h3>iPhone, iPad o Mac</h3><p><a class="btn btn-sm btn-primary" href="${webcal}">Subscriu-t’hi</a></p>
       <h3>Android o Google Calendar</h3><p><a class="btn btn-sm btn-primary" href="https://calendar.google.com/calendar/r?cid=${encodeURIComponent(webcal)}" target="_blank" rel="noopener">Obre Google Calendar</a></p>
       <p>Si no funciona, a Google Calendar (web) ves a <b>Altres calendaris › + › Des d’un URL</b> i enganxa aquesta adreça:</p>
       <div class="linkbox">${esc(https)}</div>
       <h3>Només un cop</h3>` : `<p style="margin-top:0">Aquesta agrupació no té el calendari subscrit activat${isAdmin() ? ': el pots activar a Gestió › Ajustos' : ''}.</p>`}
       <p>${on ? 'També' : 'Mentrestant'} pots descarregar el calendari ${me ? 'amb les sessions on estàs convocat/da' : 'actual'} i importar-lo (no s’actualitzarà sol).</p>
-      ${classesOn() && myId() && inClasses() ? `<h3>Les teves classes de cant</h3><p>Van en un calendari a part, només amb les teves hores.</p>
-      <p><button class="btn btn-sm" data-act="acct-open" data-k="classIcs">Afegeix les teves classes</button></p>` : ''}
+      ${myId() ? `<h3>El teu calendari, amb tots els detalls</h3><p>Només les sessions on et toca anar, amb l’horari del dia, el punt de trobada i el que cal portar${classesOn() && inClasses() ? ', i les teves classes' : ''}. És una adreça només per a tu.</p>
+      <p><button class="btn btn-sm btn-primary" data-act="my-cal">Fes-te el teu calendari</button></p>` : ''}
     </div>`,
     foot: `${on ? '<button class="btn" id="ics-copy">Copia l’adreça</button>' : ''}<button class="btn btn-primary" id="ics-dl">Descarrega .ics</button>`,
     onMount: el => {
@@ -310,6 +310,36 @@ function sheetCalendar() {
         const list = allSessions().filter(s => !me || convoked(s, me.section));
         offerFile(`calendari-${(S.config.name || 'agrupacio').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-')}.ics`, buildIcs(list, S.config.name || PLATFORM.name), 'text/calendar');
       };
+    },
+  });
+}
+
+/** El calendari personal: les sessions on és convocat (i no les de les produccions que no fa), amb tots els detalls, i les
+ *  seves classes. L'adreça porta una clau (calKeys/<membre>); el fitxer el fa la tasca «Publica» cada poques hores. */
+async function sheetMyCalendar() {
+  const mid = myId();
+  if (!mid) { toast('El teu compte no està vinculat a cap fitxa de la plantilla'); return; }
+  let token = '';
+  try {
+    const snap = await db.doc(`calKeys/${mid}`).get();
+    token = snap.exists ? snap.data().token : '';
+    if (!token) { token = newKey() + newKey(); await db.doc(`calKeys/${mid}`).set({ memberId: mid, token, at: new Date().toISOString() }); }
+  } catch { toast('No s’ha pogut preparar el calendari. Comprova la connexió.'); return; }
+  const url = `${location.origin}${location.pathname.replace(/[^/]*$/, '')}calendaris/p/${token}.ics`;
+  const webcal = url.replace(/^https?:/, 'webcal:');
+  const classes = classesOn() && inClasses();
+  openSheet({
+    title: 'El teu calendari',
+    body: `<div class="manual"><p style="margin-top:0">Aquesta adreça porta <b>només les teves sessions</b>, amb l’horari del dia, el punt de trobada i el que cal portar${classes ? ', i les teves classes' : ''}. Si t’hi subscrius, s’actualitza sol cada poques hores.</p>
+      <h3>iPhone, iPad o Mac</h3><p><a class="btn btn-sm btn-primary" href="${esc(webcal)}">Subscriu-t’hi</a></p>
+      <h3>Android o Google Calendar</h3><p><a class="btn btn-sm btn-primary" href="https://calendar.google.com/calendar/r?cid=${encodeURIComponent(webcal)}" target="_blank" rel="noopener">Obre Google Calendar</a></p>
+      <p>Si no funciona, a Google Calendar (web) ves a <b>Altres calendaris › + › Des d’un URL</b> i enganxa aquesta adreça:</p>
+      <div class="linkbox">${esc(url)}</div>
+      <p class="muted" style="font-size:calc(13px*var(--ts))">És una adreça personal: no la comparteixis. ${classes ? 'Si ja tenies el calendari de les classes, el pots treure: aquest ja les porta. ' : ''}La primera vegada, i després de cada canvi, les sessions hi surten al cap d’unes hores.</p></div>`,
+    foot: `${navigator.share ? '<button class="btn" id="mc-share">Comparteix…</button>' : ''}<span class="spacer"></span><button class="btn btn-primary" id="mc-copy">Copia l’adreça</button>`,
+    onMount: el => {
+      el.querySelector('#mc-copy').onclick = () => copyText(url, 'Adreça copiada');
+      el.querySelector('#mc-share')?.addEventListener('click', () => navigator.share({ title: 'El meu calendari', url }).catch(() => {}));
     },
   });
 }

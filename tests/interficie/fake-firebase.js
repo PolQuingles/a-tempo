@@ -37,7 +37,11 @@
   const test = (v0, op, x0) => { const v = plain(v0), x = plain(x0); return testRaw(v, op, x); };
   const testRaw = (v, op, x) => op === '==' ? v === x : op === '>=' ? v >= x : op === '<=' ? v <= x : op === '>' ? v > x : op === '<' ? v < x
     : op === 'in' ? x.includes(v) : op === 'array-contains' ? Array.isArray(v) && v.includes(x) : op === '!=' ? v !== x : false;
-  const merge = (a, b) => { const out = { ...(a || {}) }; for (const [k, v] of Object.entries(b)) out[k] = v && typeof v === 'object' && !Array.isArray(v) && out[k] && typeof out[k] === 'object' && !Array.isArray(out[k]) ? merge(out[k], v) : v; return out; };
+  // FieldValue.arrayUnion / arrayRemove: es desen com a { __union } / { __remove } i aquí s'apliquen a la llista que hi havia.
+  const listOp = (cur, v) => { const a = Array.isArray(cur) ? cur : []; return '__union' in v ? [...a, ...v.__union.filter(x => !a.includes(x))] : a.filter(x => !v.__remove.includes(x)); };
+  const isListOp = v => v && typeof v === 'object' && ('__union' in v || '__remove' in v);
+  const isSentinel = v => isListOp(v) || (v && typeof v === 'object' && ('__serverTs' in v || '__inc' in v));
+  const merge = (a, b) => { const out = { ...(a || {}) }; for (const [k, v] of Object.entries(b)) out[k] = isListOp(v) ? listOp(out[k], v) : v && typeof v === 'object' && !Array.isArray(v) && !isSentinel(v) && out[k] && typeof out[k] === 'object' && !Array.isArray(out[k]) ? merge(out[k], v) : v; return out; };
   // set(…, { mergeFields: [camps] }): només aquells camps (un valor esborrat, FieldValue.delete(), treu el camp).
   const mergeFields = (cur, data, fields) => {
     const out = clone(cur || {});
@@ -114,7 +118,8 @@
   const firestore = () => fsApi;
   firestore.FieldPath = FieldPath;
   firestore.Blob = { fromUint8Array: a => ({ toUint8Array: () => a }) };
-  firestore.FieldValue = { delete: () => undefined, serverTimestamp: () => ({ __serverTs: 1 }), increment: n => ({ __inc: n }) };
+  firestore.FieldValue = { delete: () => undefined, serverTimestamp: () => ({ __serverTs: 1 }), increment: n => ({ __inc: n }),
+    arrayUnion: (...xs) => ({ __union: xs }), arrayRemove: (...xs) => ({ __remove: xs }) };
   firestore.Timestamp = { fromMillis: ms => new Ts(ms) };
   // A les proves, la lectura per canvis funciona des del primer dia (vegeu DELTA_FROM a js/02-dades.js).
   window.COR_DELTA_FROM = '2000-01-01';

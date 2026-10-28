@@ -75,12 +75,12 @@ function sheetClassNote(classId, slotId) {
           if (!navigator.onLine) { toast('Cal connexió per pujar l’enregistrament'); return; }
           const btn = e.currentTarget, label = btn.textContent;
           btn.disabled = true;
-          try { file = await uploadFile(picked, (i, n) => { btn.textContent = n > 1 ? `Pujant ${i} de ${n}…` : 'Pujant…'; }, { where: 'classFiles', memberId: slot.memberId || '' }); }
+          try { file = await uploadFile(picked, (i, n) => { btn.textContent = n > 1 ? `Pujant ${i} de ${n}…` : 'Pujant…'; }, { where: 'classFiles', memberId: slot.memberId || '', teacher: noteTeacher(c) }); }
           catch { toast('No s’ha pogut pujar l’enregistrament. Torna-ho a provar.'); btn.disabled = false; btn.textContent = label; return; }
         }
         if (ex?.file && (!file || file.id !== ex.file.id)) deleteFile(ex.file);
         if (!text && !file) { if (ex) { S.classNotes.delete(id); persist('classNotes', id, null, 10); } closeSheet(); render(); return; }
-        const rec = { id, classId, slotId, memberId: slot.memberId || '', date: c.date, text, at: new Date().toISOString(), by: S.email || '', ...(file ? { file } : {}) };
+        const rec = { id, classId, slotId, memberId: slot.memberId || '', teacher: noteTeacher(c), date: c.date, text, at: new Date().toISOString(), by: S.email || '', ...(file ? { file } : {}) };
         S.classNotes.set(id, rec); persist('classNotes', id, rec, 10);
         closeSheet(); toast(picked ? 'Nota i enregistrament desats' : 'Nota desada'); render();
       };
@@ -380,6 +380,17 @@ function answerClassReq(id, status) {
 // students/<membre> = { memberId, goals, repertoire: [{ id, title, composer, status }], at, by }. La fa el professorat i la
 // veu l'alumne; hi surten també totes les notes de classe i els enregistraments (classNotes amb «file»).
 const STUDENT_STATUS = { nova: 'Per començar', treballant: 'Treballant-la', apunt: 'A punt' };
+/** De quin professor són les notes i els enregistraments d'una classe (teacher): cada professor només veu els dels seus alumnes.
+ *  Els del professorat que encara no entra a l'app (una clau que no és un correu) només els veu l'administració. */
+const noteTeacher = c => c.teacher || (isAdmin() ? '' : myEmail());
+/** Qui porta un alumne (students.teachers): qui ja hi era i qui en desa la fitxa; si la desa l'administració, el professorat
+ *  amb compte de les seves classes. */
+function studentTeachers(mid, had) {
+  const keys = new Set(had || []);
+  if (!isAdmin()) keys.add(myEmail());
+  else for (const c of S.classes.values()) if ((c.slots || []).some(x => x.memberId === mid) && (c.teacher || '').includes('@')) keys.add(c.teacher);
+  return [...keys].filter(Boolean);
+}
 const NOTE_CACHE = new Map();   // les notes carregades a la fitxa, per obrir-ne l'enregistrament
 async function sheetStudent(mid) {
   const m = S.members.get(mid);
@@ -388,7 +399,9 @@ async function sheetStudent(mid) {
   openSheet({ title: m.name, wide: true, body: '<p class="muted" style="margin:0">Carregant la fitxa…</p>' });
   let rec = { goals: '', repertoire: [] }, notes = [];
   try { const d = await db.doc(`students/${mid}`).get(); if (d.exists) rec = { ...rec, ...d.data() }; } catch {}
-  try { notes = (await db.collection('classNotes').where('memberId', '==', mid).get()).docs.map(d => d.data()); }
+  // Un professor només llegeix les notes de les seves classes (vegeu les regles); l'administració i l'alumne, totes.
+  const q = db.collection('classNotes').where('memberId', '==', mid);
+  try { notes = (await (isAdmin() || mid === myId() ? q : q.where('teacher', '==', myEmail())).get()).docs.map(d => d.data()); }
   catch { notes = [...S.classNotes.values()].filter(n => n.memberId === mid); }
   if (!sheetClose) return;
   notes.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
@@ -433,7 +446,7 @@ async function sheetStudent(mid) {
       el.querySelector('#stu-add')?.addEventListener('click', () => { read(el); rec.repertoire.push({ id: uid('sr'), title: '', composer: '', status: 'treballant' }); paint(el); });
       el.querySelector('#stu-save')?.addEventListener('click', async () => {
         read(el);
-        const out = { memberId: mid, goals: rec.goals || '', repertoire: rec.repertoire.filter(x => x.title), at: new Date().toISOString(), by: S.email || '' };
+        const out = { memberId: mid, goals: rec.goals || '', repertoire: rec.repertoire.filter(x => x.title), teachers: studentTeachers(mid, rec.teachers), at: new Date().toISOString(), by: S.email || '' };
         try { await db.doc(`students/${mid}`).set(out); closeSheet(); toast('Fitxa desada'); }
         catch { toast('No s’ha pogut desar. Comprova la connexió.'); }
       });

@@ -205,7 +205,7 @@ function memberCard(m) {
     ['Alta', m.joined ? `${esc(ddmm(m.joined))}/${m.joined.slice(0, 4)} · ${esc(seniority(m))}` : 'Sense data d’alta'],
     ['Telèfon', phone ? `<a href="tel:${esc(phone.replace(/\s/g, ''))}">${esc(phone)}</a>` : ''],
     isAdmin() && !off ? ['Accés a l’app', acc ? `${esc(acc.email)}${acc.lastSeen ? '' : ' · encara no ha entrat'}` : 'Sense accés'] : null,
-    ['Talla', esc(p.size || '')], ['Emergència', esc([p.emergencyName, p.emergencyPhone].filter(Boolean).join(' · '))], ['Al·lèrgies', esc(p.diet || '')],
+    ['Talla', esc(p.size || '')], ['Emergència', esc([p.emergencyName, p.emergencyPhone].filter(Boolean).join(' · '))], ['Al·lèrgies', esc(dietOf(m.id))],
     ['Notes', esc(m.notes || '')],
   ].filter(r => r && r[1]);
   const hist = (m.history || []).slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));

@@ -76,8 +76,15 @@ function pushRecord(sub, prefs, cordes) {
     name: m ? m.name : ((S.me && (S.me.name || S.me.email)) || ''),
     endpoint: sub.endpoint, p256dh: subKeyB64(sub, 'p256dh'), auth: subKeyB64(sub, 'auth'),
     prefs: { ...DEFAULT_PREFS, ...(prefs || {}) }, cordes: canEdit() ? (cordes || defaultCordes()) : [],
-    device: deviceName(), at: new Date().toISOString(),
+    device: deviceName(), origin: location.origin, at: new Date().toISOString(),
   };
+}
+/** En activar-los a l'adreça d'ara, els del mateix compte i el mateix tipus d'aparell que eren d'una altra adreça (l'antiga de
+ *  GitHub Pages) ja no calen: sense això, aquell mòbil rebria cada avís dues vegades. */
+function dropOtherOrigins(rec) {
+  db.collection('push').where('uid', '==', S.uid || '-').get().then(snap => {
+    for (const d of snap.docs) { const x = d.data(); if (d.id !== pushId() && (x.origin || '') !== location.origin && x.device === rec.device) d.ref.delete().catch(() => {}); }
+  }).catch(() => {});
 }
 /** Turn notifications on for this device. Returns a reason when it can't. */
 async function enablePush(prefs, cordes) {
@@ -91,6 +98,7 @@ async function enablePush(prefs, cordes) {
       || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToU8(window.COR_PUSH_KEY) });
     const rec = pushRecord(sub, prefs || S.pushPrefs, cordes || S.pushCordes);
     await db.doc(`push/${pushId()}`).set(rec);
+    dropOtherOrigins(rec);
     S.pushOn = true; S.pushPrefs = rec.prefs; S.pushCordes = rec.cordes;
     lsSet(LS_PUSH_PREFS, JSON.stringify({ prefs: rec.prefs, cordes: rec.cordes }));
     lsSet(LS_PUSH_AT, String(Date.now()));

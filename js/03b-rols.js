@@ -111,9 +111,10 @@ const clTabs = () => { const keys = clTabKeys(); return `<div class="subtabs cl-
 /* ---------- Enllaços d'abans ---------- */
 // Fins a l'octubre del 2026 cadascú entrava amb un sol rol, i els avisos del mòbil obrien l'app amb ?rol=…: ja no cal, i es treu.
 function dropRolParam() {
+  // També el «canvi=1» de qui ve de l'adreça antiga (vegeu tools/adreca_antiga.py): un cop dins, ja no cal.
   const u = new URLSearchParams(location.search);
-  if (!u.has('rol')) return;
-  u.delete('rol');
+  if (!u.has('rol') && !u.has('canvi')) return;
+  u.delete('rol'); u.delete('canvi');
   const qs = u.toString();
   history.replaceState(history.state, '', `${location.pathname}${qs ? `?${qs}` : ''}${location.hash}`);
 }

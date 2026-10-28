@@ -195,11 +195,7 @@ h1,h2,h3{margin:0;text-wrap:balance}
 
 .voices{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:10px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:3px}
 .voice{position:relative;display:flex;flex-direction:column;align-items:center;gap:0;padding:5px 2px 6px;border-radius:9px;color:var(--ink-2)}
-.voice-l{font-family:var(--f-display);font-style:italic;font-weight:600;font-size:calc(22px*var(--ts));line-height:1}
-.voice-n{font-size:11px;font-weight:600;letter-spacing:.01em;margin-top:2px}
-.voice-c{font-family:var(--f-mono);font-size:10.5px;color:var(--muted);margin-top:1px}
 .voice[aria-selected="true"]{background:var(--accent-fill);color:var(--accent-fill-ink)}
-.voice[aria-selected="true"] .voice-c{color:inherit;opacity:.8}
 .voice .done{position:absolute;top:5px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--p)}
 .voice.off{opacity:.45}
 
@@ -260,8 +256,6 @@ summary::-webkit-details-marker{display:none}
 .min-chip[aria-pressed="true"]{background:var(--r);border-color:var(--r);color:var(--r-ink);font-weight:500}
 .min-input{width:74px;height:34px;border-radius:8px;border:1px solid var(--line-strong);background:var(--surface);padding:0 8px;font-family:var(--f-mono);font-size:calc(16px*var(--ts));text-align:center}
 .note-input{flex:1 1 180px;min-width:0;height:36px;border-radius:8px;border:1px solid var(--line-strong);background:var(--surface);padding:0 10px;font-size:calc(16px*var(--ts))}
-
-.group-h{display:flex;justify-content:space-between;align-items:center;margin-block:22px 0;padding-inline:2px}
 details.np-group{margin-top:0}
 details.np-group summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 2px;font-size:calc(13.5px*var(--ts));font-weight:600;color:var(--ink-2)}
 details.np-group summary::-webkit-details-marker{display:none}
@@ -416,7 +410,7 @@ details.np-group[open] summary .chev{transform:rotate(180deg)}
 /* Inici (10-inici): una sola columna, Per fer → Properament → Els meus avisos → La meva assistència → Missatges. */
 .home{display:grid;max-width:680px}
 .home-a,.home-b{display:contents}
-.h-todo{order:1}.h-notices{order:2}.h-soon{order:3}.h-att{order:4}.h-msgs{order:5}
+.h-todo{order:1}.h-soon{order:3}.h-msgs{order:5}
 .home section > .section-title:first-child{margin-top:22px}
 .home .h-todo > .section-title:first-child{margin-top:6px}
 .home-head{padding-bottom:6px}
@@ -439,7 +433,6 @@ details.np-group[open] summary .chev{transform:rotate(180deg)}
 .soon-a{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px}
 .soon-a .rsvp{align-self:center}
 .soon-a .btn-ghost{padding-inline:0;justify-content:flex-start;text-align:left}
-.soon-row.has-poster{grid-template-columns:44px minmax(0,1fr) 48px}
 .soon-a.bus-q .m{font-size:calc(13px*var(--ts));color:var(--muted)}
 .soon-b .tasks,.soon-a .tasks{width:100%}
 /* Tria de produccions (22b-tries): una fila per producció amb «La faré / No», i el recompte amb la marca del mínim. */
@@ -479,7 +472,6 @@ details.np-group[open] summary .chev{transform:rotate(180deg)}
 .pdfv-pages{display:grid;gap:10px;justify-content:start;overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;min-width:0}
 .pdfv-p{background:#fff;border-radius:4px;box-shadow:0 0 0 1px var(--line)}
 .pdfv-p canvas{display:block;width:100%;height:100%;border-radius:4px}
-.grip{width:36px;height:4px;border-radius:4px;background:var(--line-strong);margin:8px auto 0}
 @keyframes fade{from{opacity:0}}
 @keyframes up{from{transform:translateY(24px);opacity:.6}}
 
@@ -538,8 +530,6 @@ textarea.inp{padding:10px 12px;min-height:120px;resize:vertical;line-height:1.4}
 .rule.risk{background:var(--fj-soft);color:var(--fj-ink)}
 .min-chip.now{font-family:var(--f-ui);font-weight:600;padding:0 10px}
 .min-chip[disabled]{opacity:.4}
-.ro-state{display:flex;align-items:center;gap:8px;font-size:calc(13.5px*var(--ts));font-weight:600}
-.ro-state i{width:10px;height:10px;border-radius:3px}
 .abs-card{padding:12px 14px;border-top:1px solid var(--line);display:grid;gap:6px}
 .abs-card:first-child{border-top:0}
 .abs-card .a-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
@@ -561,9 +551,6 @@ textarea.inp{padding:10px 12px;min-height:120px;resize:vertical;line-height:1.4}
 .row3{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .row3 > *,.row2 > *{min-width:0}
 input[type=date].inp,input[type=time].inp{min-width:0;width:100%}
-.hero-cta{display:grid;gap:10px;padding:18px;border-radius:var(--r-lg);background:var(--accent-fill);color:var(--accent-fill-ink);margin-top:8px}
-.hero-cta .h2{color:inherit}
-.hero-cta .btn{background:var(--surface);color:var(--accent);border-color:transparent;justify-self:start}
 /* Inici: instal·lar l'app i activar els avisos */
 .install-card{display:flex;align-items:center;gap:2px;margin:2px 0 12px;padding:3px 3px 3px 0;border-radius:var(--r-lg);background:var(--accent-soft);color:var(--ink)}
 .install-go{flex:1;min-width:0;display:flex;align-items:center;gap:10px;padding:5px 8px 5px 6px;border-radius:calc(var(--r-lg) - 3px);text-align:left;color:var(--ink);font-weight:600;font-size:calc(14.5px*var(--ts))}
@@ -608,7 +595,6 @@ input[type=date].inp,input[type=time].inp{min-width:0;width:100%}
 .todo-done{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px dashed var(--line-strong);border-radius:var(--r-lg);color:var(--ink-2)}
 .todo-done span:last-child{display:grid;gap:1px}
 .todo-done small{font-size:calc(13px*var(--ts));color:var(--muted)}
-.link-row .t small{font-weight:400;color:var(--muted)}
 
 /* ---------- Roll overview: four quadrants ---------- */
 .quads{display:grid;grid-template-columns:1fr 1fr;gap:1px;aspect-ratio:1/1;max-width:100%;width:min(100%, 520px);margin:16px auto 0;background:var(--line);border:1px solid var(--line);border-radius:26px;overflow:hidden;box-shadow:var(--shadow)}
@@ -714,8 +700,6 @@ input[type=date].inp,input[type=time].inp{min-width:0;width:100%}
 .login-card{max-width:420px;margin:28px auto 0;padding:22px;border-radius:var(--r-lg);background:var(--surface);border:1px solid var(--line);display:grid;gap:12px;text-align:left}
 .login-card .h2{font-size:calc(20px*var(--ts))}
 .login-card p{margin:0;color:var(--ink-2);font-size:calc(14px*var(--ts))}
-.login-sep{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:calc(13px*var(--ts));margin:4px 0}
-.login-sep::before,.login-sep::after{content:"";flex:1;height:1px;background:var(--line)}
 .role-tag{font-size:calc(12px*var(--ts));font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:6px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
 .linkbox{font-family:var(--f-code);font-size:calc(13px*var(--ts));word-break:break-all;padding:10px 12px;border-radius:10px;background:var(--surface-2);border:1px solid var(--line)}
 /* ---------- Substitutes, confirmations ---------- */
@@ -1033,7 +1017,6 @@ button.mday:hover{background:var(--surface-2)}
 /* Tipografia: la Bodoni per als títols grans i els números; la Hanken en negreta per als subtítols. */
 .h2{font-family:var(--f-ui);font-weight:700;font-size:calc(18px*var(--ts));line-height:1.25;letter-spacing:-.012em}
 .sec-h .h2 em{font-family:var(--f-display);font-weight:600;font-size:1.3em;line-height:1}
-.hero-cta .h2{font-family:var(--f-display);font-weight:600;font-size:26px;line-height:1.1;letter-spacing:-.01em}
 .prod-card .h2{font-size:calc(18px*var(--ts))}
 .empty .h2{font-size:calc(19px*var(--ts))}
 .ann-t{font-family:var(--f-ui);font-weight:700;font-size:calc(16.5px*var(--ts));line-height:1.3;letter-spacing:-.01em}
@@ -1083,9 +1066,6 @@ button.mday:hover{background:var(--surface-2)}
 .dtable tr[data-act]:hover td{background:var(--surface-2)}
 .dtable .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .dtable .m{color:var(--muted);font-size:calc(13px*var(--ts))}
-.dtable .grp td{background:var(--surface-2);padding:8px 14px;font-weight:700}
-.dtable .grp em{font-family:var(--f-display);font-style:italic;font-weight:600;font-size:calc(19px*var(--ts));color:var(--accent);margin-right:8px}
-.dtable .grp .btn{float:right;min-height:28px}
 /* =================== Escriptori: menú lateral i dues columnes =================== */
 @media (min-width:1000px){
   :root{--side-w:236px}
@@ -1225,7 +1205,6 @@ button.mday:hover{background:var(--surface-2)}
 .plan-after{padding:8px 10px;border-radius:10px;background:var(--surface-2)}
 .plan-row{display:grid;gap:6px;padding:10px;border:1px solid var(--line);border-radius:var(--r-md)}
 .plan-n{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-weight:700;font-size:calc(13px*var(--ts));flex:none}
-.hero-cta .fitxa-chip.empty{background:var(--surface);opacity:.92}
 .plan-chip small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cal-plan{display:block;font-size:calc(13px*var(--ts));color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* Equilibri de veus */
@@ -1353,17 +1332,13 @@ button.mday:hover{background:var(--surface-2)}
 .hist-k{display:inline-block;padding:1px 7px;border-radius:999px;font-size:calc(12px*var(--ts));font-weight:700;background:var(--surface-2);color:var(--ink-2)}
 .hist-k.alta,.hist-k.retorn{background:var(--p-soft);color:var(--p-text)}
 .hist-k.baixa{background:var(--fnj-soft);color:var(--fnj-text)}
-.dps{display:flex;gap:6px;flex:none}
 .dp-i{display:grid;justify-items:center;gap:1px}
 .dp-i small{font-size:10px;color:var(--muted)}
 .dp{display:inline-block;min-width:54px;padding:2px 7px;border-radius:999px;font-size:calc(12px*var(--ts));font-weight:700;text-align:center;background:var(--surface-2);color:var(--muted)}
 .dp.ok{background:var(--p-soft);color:var(--p-text)}
 .dp.no{background:var(--fnj-soft);color:var(--fnj-text)}
-.fee-row{display:flex;align-items:center;gap:6px;padding-right:10px}
-.li.fee-row > button:first-child{flex:1;min-width:0;width:auto}
-.li.fee-row > button.btn{width:auto;flex:none;min-height:34px;padding:0 12px}
 .doc-f{display:grid;gap:8px}
-@media (max-width:420px){.dps{gap:3px}.dp{min-width:44px;padding:2px 4px}}
+@media (max-width:420px){.dp{min-width:44px;padding:2px 4px}}
 
 /* ---------- Mida del text (4.4) ---------- */
 /* Totes les mides de lletra són calc(N px * var(--ts)): «Aparença › Mida del text» les fa més grans. La barra de pestanyes,
@@ -1494,8 +1469,6 @@ svg{stroke-linecap:round;stroke-linejoin:round}
 .people-filters{margin:2px 0 10px}
 .sel-big{width:100%}
 .sel-big select{width:100%;min-height:44px;padding-left:16px;font-size:calc(15px*var(--ts));border-radius:14px}
-.cant-tabs{margin-bottom:12px}
-.cant-tabs .subtab{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media (min-width:700px){.sel-big{width:auto;min-width:320px}}
 
 /* Comunicació: text amb format, adjunts, converses, horari del dia, voluntaris, pla per blocs i la setmana */
@@ -1558,10 +1531,6 @@ svg{stroke-linecap:round;stroke-linejoin:round}
 .preview-banner{background:var(--surface-2);border-style:dashed}
 @media (max-width:420px){.step-row{grid-template-columns:88px minmax(0,1fr) auto}.plan-row .row3{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.plan-row .row3 [data-f="mins"]{grid-column:1 / -1}}
 @media print{.week .btn,.week .fitxa-chip{display:none}}
-.kpis-3{grid-template-columns:repeat(3,minmax(0,1fr))}
-.kpis-3 .kpi{padding:10px}
-.kpis-3 .kpi-l{overflow-wrap:anywhere;hyphens:auto}
-@media (max-width:360px){:root[data-text] .kpis-3{grid-template-columns:1fr 1fr}}
 /* «?»: les explicacions plegades */
 .q-help{display:inline-grid;place-items:center;width:22px;height:22px;margin-left:4px;border:1px solid var(--line-strong);border-radius:50%;background:var(--surface);color:var(--muted);font-family:var(--f-ui);font-size:13px;font-weight:700;line-height:1;vertical-align:middle;cursor:pointer}
 .q-help:hover,.q-help[aria-expanded="true"]{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
@@ -1652,7 +1621,7 @@ svg{stroke-linecap:round;stroke-linejoin:round}
    una ombra molt suau. */
 
 /* Xifres: amplada fixa allà on abans hi havia la lletra de màquina d'escriure (hores, recomptes, percentatges). */
-.mono,.voice-c,.legend b,.progress-txt b,.part,.min-chip,.min-input,.cal-date small,.cal-type em,.cal-pct,.bar-row .val,.trend .grid span,.tlabels span,.mrow .mpct,.mrow .mcounts b,.hcell,.prod-meta b,.soon-d small,.pending .chip,.abs-card .a-d span,.q-c,.day-grid b,.cal-badge,.work-k .mat-k b,.bal-parts span,.bal-parts b,.opt-row .n,.vm-sum,.ward-steps li small,.num{font-variant-numeric:tabular-nums lining-nums}
+.mono,.legend b,.progress-txt b,.part,.min-chip,.min-input,.cal-date small,.cal-type em,.cal-pct,.bar-row .val,.trend .grid span,.tlabels span,.mrow .mpct,.mrow .mcounts b,.hcell,.prod-meta b,.soon-d small,.pending .chip,.abs-card .a-d span,.q-c,.day-grid b,.cal-badge,.work-k .mat-k b,.bal-parts span,.bal-parts b,.opt-row .n,.vm-sum,.ward-steps li small,.num{font-variant-numeric:tabular-nums lining-nums}
 
 /* Superfícies */
 .panel,.soon-list,.table-wrap,.kpi,.next-card,.acct-grp{box-shadow:var(--shadow-1)}
@@ -1682,7 +1651,7 @@ svg{stroke-linecap:round;stroke-linejoin:round}
 
 /* ---------- Inici ---------- */
 .home-head .h1{font-size:32px}
-.h-next{order:0}.h-todo{order:1}.h-soon{order:2}.h-att{order:3}.h-notices{order:4}.h-msgs{order:5}
+.h-next{order:0}.h-todo{order:1}.h-soon{order:2}.h-msgs{order:5}
 .home section > .section-title:first-child{margin-top:30px}
 .home .home-a > section:first-child > .section-title:first-child{margin-top:8px}
 .h-next{margin-top:6px}

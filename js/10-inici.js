@@ -130,16 +130,16 @@ function todoItems() {
   out.push(...rollTodos());
   const th = unreadThreads();
   if (th.length) out.push({ icon: 'thread', t: `${th.length === 1 ? '1 conversa' : `${th.length} converses`} amb resposta nova`, s: esc(th.map(threadWho).slice(0, 2).join(', ')), btn: 'Llegeix', act: th.length === 1 ? `data-act="thread" data-id="${esc(th[0].id)}"` : 'data-act="threads"', n: th.length });
-  const msgs = unreadMessages();
-  if (msgs.length) out.push({ icon: 'msg', t: `${msgs.length === 1 ? '1 missatge nou' : `${msgs.length} missatges nous`}`, s: esc(`${msgs[0].byName || ''}: ${msgs[0].title || msgs[0].body || ''}`.slice(0, 90)), btn: 'Llegeix', act: 'data-act="msg-list"', n: msgs.length });
   for (const t of tripsToAnswer()) out.push({ icon: 'trip', t: `${esc(t.title)}: t’hi apuntes?`, s: `${esc(capz(tripDates(t)))}${t.deadline ? ` · fins al ${ddmm(t.deadline)}` : ''}`, btn: 'Respon', act: 'data-act="board-trips"', n: 1 });
   for (const { s, short } of shortConcerts()) out.push({ icon: 'voices', t: `${esc(capz(V.sh.show))} del ${esc(shortDate(s.date))}: ${short.map(b => `${b.min - b.yes === 1 ? 'falta' : 'falten'} ${b.min - b.yes} ${esc(b.x.name.toLowerCase())}`).join(' i ')}`, s: `${esc(short.map(b => `${b.x.name}: ${b.yes} de ${b.min}`).join(' · '))}`, btn: 'Mira-ho', act: `data-act="session-info" data-sid="${esc(s.id)}"`, n: 0 });
   const news = unreadAnnouncements();
   if (news.length) out.push({ icon: 'ann', t: `${news.length === 1 ? '1 anunci nou' : `${news.length} anuncis nous`}`, s: esc(news[0].title || ''), btn: 'Llegeix', act: 'data-act="board-news"', n: news.length });
   return out;
 }
-/** El número vermell de la pestanya Inici: tot el que espera resposta. */
-const todoCount = () => todoItems().reduce((n, x) => n + (x.n || 0), 0);
+/** El que surt a «Per fer»: la convocatòria que ja és a la targeta de la propera sessió no s'hi repeteix. */
+const todoShown = (me, feat) => todoItems().filter(x => !(x.conv && feat && x.conv.id === feat.id));
+/** El número vermell de la pestanya Inici: les mateixes files que «Per fer». */
+const todoCount = () => { const me = S.members.get(myMemberId()); return todoShown(me, featuredSession(me)).length; };
 function convCard(s, me) {
   const a = S.rsvp.get(`${s.id}_${me.id}`);
   return `<div class="conv-card">
@@ -158,7 +158,7 @@ function convCard(s, me) {
 // targeta de la propera sessió (amb «Hi seré» i «No hi podré anar») no es repeteix a sota.
 const TODO_SHOWN = 3;
 function todoBlock(me, feat) {
-  const items = todoItems().filter(x => !(x.conv && feat && x.conv.id === feat.id));
+  const items = todoShown(me, feat);
   // Res pendent: només una marca al costat del títol, sense requadre.
   if (!items.length) return `<div class="section-title"><h2 class="h2">Per fer</h2><span class="pf-ok"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Tot al dia</span></div>`;
   const row = x => x.conv ? `<div class="todo-conv"><span class="todo-k">Convocatòria · confirma si hi seràs</span>${convCard(x.conv, me)}</div>`
@@ -218,6 +218,26 @@ function sessionActs(s, me, big) {
   }
   return { acts, conv };
 }
+/** A la targeta de la sessió: al cap de corda, qui de la seva corda ha avisat que no hi va o que arribarà tard; a qui veu tot el
+ *  cor, quanta gent hi haurà a cada corda (qui hi ha de ser, menys qui ha avisat que no hi va o ha respost que no). */
+function sessionHeads(s) {
+  if (sessionOver(s)) return '';
+  const away = m => absencesFor(s.id, m.id).some(a => a.kind !== 'late') || (!!s.rsvp && S.rsvp.get(`${s.id}_${m.id}`)?.answer === 'no');
+  const late = m => !away(m) && absencesFor(s.id, m.id).some(a => a.kind === 'late');
+  const who = sec => membersOf(sec).filter(m => !isOut(s, m));
+  const out = [];
+  const sec = leadSec();
+  if (sec && convoked(s, sec)) {
+    const told = who(sec).filter(m => away(m) || late(m));
+    if (told.length) out.push(`<span class="next-m"><b>Han avisat:</b> ${told.map(m => `${esc(firstName(m.name))}${late(m) ? ' (tard)' : ''}`).join(', ')}</span>`);
+  }
+  if (attAreas().includes('all')) {
+    const parts = SECTIONS.filter(x => convoked(s, x.id)).map(x => [x, who(x.id)]).filter(([, ms]) => ms.length)
+      .map(([x, ms]) => `${esc(x.short)} ${ms.filter(m => !away(m)).length}/${ms.length}`);
+    if (parts.length) out.push(`<span class="next-m" title="Qui hi ha de ser, menys qui ha avisat que no hi va">Previsió: <b class="num">${parts.join(' · ')}</b></span>`);
+  }
+  return out.join('');
+}
 /** L'avís d'absència o de retard que la persona ja ha fet per a aquesta sessió (si n'hi ha). */
 const myAbsence = (s, me) => [...S.absences.values()].find(a => a.memberId === me.id && (a.sessionIds || []).includes(s.id) && a.status !== 'rejected');
 function nextCard(s, me) {
@@ -242,6 +262,7 @@ function nextCard(s, me) {
         ${s.info?.call ? `<span class="next-m">Convocatòria a les <b class="num">${esc(s.info.call)}</b></span>` : ''}
         ${s.rsvp && s.rsvpBy && me && !S.rsvp.get(`${s.id}_${me.id}`) ? `<span class="next-m">Respon abans del ${ddmm(s.rsvpBy)}</span>` : ''}
         ${out ? `<span class="next-m">${esc(onLeave(me, s.date) ? 'Estàs de baixa' : 'No fas aquesta producció')}</span>` : ''}
+        ${sessionHeads(s)}
       </div>
       ${posterThumb(prod, 'next-poster')}
     </div>

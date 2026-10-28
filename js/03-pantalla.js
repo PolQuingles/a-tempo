@@ -228,6 +228,9 @@ function render() {
     const intro = joining ? `<h2 class="h2">Entra per unir-t’hi</h2><p>Entra amb el teu compte de Google (o amb un altre correu). Després triaràs el teu nom de la llista i l’administració et donarà accés.</p>`
       : S.mode === 'badlink'
       ? `<h2 class="h2">Aquest enllaç ja no funciona</h2><p>Ara tothom entra amb el seu correu, el mateix que has donat a l’agrupació.</p>`
+      // Ve de l'adreça antiga (GitHub Pages, vegeu tools/adreca_antiga.py): en una adreça nova cal tornar a entrar.
+      : new URLSearchParams(location.search).has('canvi')
+      ? `<h2 class="h2">L’app té una adreça nova</h2><p>Entra un altre cop amb el mateix correu d’abans. Si tenies les notificacions activades, després torna-les a activar (a les teves inicials › Notificacions).</p>`
       : `<h2 class="h2">Entra-hi</h2><p>Fes servir el correu que has donat a la teva agrupació.</p>`;
     v.innerHTML = `<section class="entry">${hero()}
       <div class="login-card">${intro}

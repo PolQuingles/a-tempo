@@ -461,6 +461,9 @@ function sheetMember(mid, sec) {
         if (!ok) return;
         S.members.delete(existing.id); persist('members', existing.id, null, 20);
         if (S.memberPriv.has(existing.id)) { S.memberPriv.delete(existing.id); persist('memberPriv', existing.id, null, 20); }
+        // Les seves al·lèrgies (qui les pot esborrar, vegeu les regles) i la clau del seu calendari, si en tenia.
+        if (!PREVIEW && acctHas('admin', 'secretaria', 'gerencia')) db.doc(`health/${existing.id}`).delete().catch(() => {});
+        if (!PREVIEW && isAdmin()) db.doc(`calKeys/${existing.id}`).delete().catch(() => {});
         bumpEpoch('members');
         toast('Fitxa esborrada');
         render();

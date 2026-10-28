@@ -57,8 +57,9 @@ function watchArchive() {
 /** Qui edita i té totes les llistes (acabades de llegir senceres del servidor) arxiva els trossos que toquen. Abans, a
  *  qualsevol llista que encara no porti la data (desada per una versió antiga de l'app) se li posa, perquè es pugui llegir. */
 async function archiveTerms() {
-  // Arxiva qui llegeix les llistes de tot el cor (un cap de corda només té les de la seva corda).
-  if (S.role !== 'edit' || attScopeSec() || PREVIEW || ARCH.busy) return;
+  // Arxiva qui passa llista de tot el cor (l'administració i la direcció): un cap de corda només té les de la seva corda, i la
+  // gerència les llegeix però no les escriu.
+  if (!writesAllAtt() || PREVIEW || ARCH.busy) return;
   const dateOf = d => sessionById(d.sessionId)?.date;
   for (const [key, d] of S.attendance) { const date = dateOf(d); if (!d.date && date && date > archCut() && archCut() && !isDirty(`attendance/${key}`)) persist('attendance', key, { ...d, date }, 30); }
   if (SYNC.mode.attendance !== 'full' || SYNC.got.attendance == null || pendingWrites()) return;

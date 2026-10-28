@@ -22,7 +22,7 @@ function viewManage() {
 // Al menú, la plantilla va primer (és la llista que més es mira) i els noms van en plural.
 const PEOPLE_MENU = ['singer', 'admin', 'director', 'gerencia', 'secretaria', 'leader', 'archive', 'voice'];
 const rolePlural = r => ({ admin: 'Administració', director: 'Direcció', gerencia: 'Gerència', secretaria: 'Secretaria',
-  leader: capz(V.leaders), archive: 'Arxivers', singer: V.Members, voice: V.kind === 'cor' ? 'Professors de cant' : 'Professors' }[r] || roleLabel(r));
+  leader: capz(V.leaders), archive: 'Arxiu', singer: V.Members, voice: V.Teaching }[r] || roleLabel(r));
 /** Qui té aquest rol. Els de la plantilla són tota la plantilla, tinguin compte o no. */
 const peopleWithRole = r => peopleSorted().filter(p => hasRole(p, r));
 const roleCount = r => r === 'singer' ? membersOf(null, true).filter(m => m.active !== false).length : peopleWithRole(r).length;
@@ -249,6 +249,9 @@ async function deleteGroup(el) {
       const snap = await db.collection(col).get();
       for (const d of snap.docs) if (!(col === 'config' && d.id === 'main')) refs.push(d.ref);
     }
+    // Les al·lèrgies i les claus dels calendaris personals no les llegeix l'administració (vegeu les regles): s'esborren les de
+    // cada fitxa, encara que no n'hi hagi.
+    for (const mid of S.members.keys()) refs.push(db.doc(`health/${mid}`), db.doc(`calKeys/${mid}`));
     const staffSnap = await db.collection('staff').get();
     for (const d of staffSnap.docs) if (d.id !== S.me.email) refs.push(fs.doc(`staffIndex/${d.id}/agrupacions/${GID}`), d.ref);
     for (let i = 0; i < refs.length; i += 400) {

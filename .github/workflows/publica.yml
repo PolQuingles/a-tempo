@@ -1,9 +1,11 @@
 name: Publica a Firebase Hosting
-# Publica l'app quan les proves de main han passat, i també després de cada «Calendari» (que actualitza els
-# calendaris i les icones). Primer en fa la còpia minificada (dist/, vegeu tools/construeix.mjs) i la publica:
-#   · a Firebase Hosting (i al domini propi, si n'hi ha), si hi ha el secret FIREBASE_SERVICE_ACCOUNT;
-#   · a GitHub Pages, si a Settings › Pages la font és «GitHub Actions». Mentre sigui «Deploy from a branch»,
-#     GitHub Pages continua publicant la branca main tal com és (sense minificar).
+# Publica l'app quan les proves de main han passat, i també després de cada «Calendari» (cada tres hores). Primer en fa la
+# còpia minificada (dist/, vegeu tools/construeix.mjs) i hi afegeix els calendaris (que no són al repositori, que és públic:
+# vegeu .github/scripts/calendari.py). Després:
+#   · la publica a Firebase Hosting (cor-present.web.app, l'adreça de l'app), si hi ha el secret FIREBASE_SERVICE_ACCOUNT;
+#   · a GitHub Pages (l'adreça antiga), si a Settings › Pages la font és «GitHub Actions», hi publica una pàgina que porta a
+#     l'adreça nova, els avisos dels mòbils que encara hi estan subscrits i els calendaris d'abans (tools/adreca_antiga.py).
+# Si els calendaris no es poden fer, no es publica res: l'app d'abans continua en línia, amb els seus.
 on:
   workflow_run:
     workflows: [Proves, Calendari]
@@ -34,6 +36,18 @@ jobs:
         run: |
           npm install --no-save --no-audit --no-fund esbuild@0.24.0
           node tools/construeix.mjs dist
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Els calendaris (a dist/, mai al repositori)
+        env:
+          SERVICE_REFRESH_TOKEN: ${{ secrets.SERVICE_REFRESH_TOKEN }}
+          CAL_REFRESH_TOKEN: ${{ secrets.CAL_REFRESH_TOKEN }}
+          CAL_FER: calendaris
+          ICS_DIR: dist
+        run: python3 .github/scripts/calendari.py
+      - name: L'adreça antiga (dist-pages/)
+        run: python3 tools/adreca_antiga.py dist dist-pages
       - name: GitHub Pages publica des d'aquí?
         id: pages
         env:
@@ -45,7 +59,7 @@ jobs:
         if: steps.pages.outputs.si == '1'
         uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: dist-pages
       - name: Publica a GitHub Pages
         if: steps.pages.outputs.si == '1'
         uses: actions/deploy-pages@v4

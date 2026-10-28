@@ -354,9 +354,11 @@ def main():
         ctx.close()
         ctx, page, errors = open_app(browser, base, "singer", MOBILE)
         r = page.evaluate("""() => ({ mine: messagesForMe().map(m => m.id).sort().join(','), todo: todoItems().some(x => x.icon === 'msg'), write: canMessage(),
-          track: canTrack(S.members.get(myMemberId())), block: !!document.querySelector('#view .msgs') })""")
+          track: canTrack(S.members.get(myMemberId())), block: !!document.querySelector('#view .msgs'),
+          badge: +(document.querySelector('.tab-badge')?.textContent || 0), rows: document.querySelectorAll('#view .todo-row, #view .todo-conv').length })""")
         check(r["mine"] == "g1", "una soprano rep el missatge a tothom i no el dels tenors", str(r))
-        check(r["todo"] and r["block"], "els missatges nous surten a Inici i a «Per fer»", str(r))
+        check(not r["todo"] and r["block"], "els missatges nous surten una sola vegada, a «Missatges» (no a «Per fer»)", str(r))
+        check(r["badge"] == r["rows"], "la bombolla d'Inici diu el mateix que «Per fer»", str(r))
         check(not r["write"] and not r["track"], "un cantaire no escriu missatges ni veu notes de seguiment", str(r))
         ctx.close()
         ctx, page, errors = open_app(browser, base, "ger", MOBILE)
@@ -1043,14 +1045,14 @@ def main():
           document.querySelector('.arx-panel [data-act="msg-new"]').click(); await s(300);
           out.preset = /Partitures de/.test(document.querySelector('#mg-title').value);
           document.querySelector('#mg-send').click(); await s(200); flushAll(); await s(500);
-          out.arxSent = [...S.messages.values()].some(m => /tornar-me les partitures/.test(m.body) && m.to.join() === 'S' && /^Arxiver/.test(m.byRole));
+          out.arxSent = [...S.messages.values()].some(m => /tornar-me les partitures/.test(m.body) && m.to.join() === 'S' && /^Arxiu/.test(m.byRole));
           return out; }"""))
         for k, label in [("sent", "l'equip escriu a una persona: una conversa privada a nom seu"),
                          ("reopens", "si ja hi parla, s'obre la mateixa conversa"),
                          ("inbox", "a la persona li surt a «Per fer» i a les converses"),
                          ("canMsg", "l'arxiver pot escriure a la seva corda i a la gent de la seva corda"),
                          ("preset", "«Avisa la corda» proposa el recordatori de les partitures"),
-                         ("arxSent", "i el missatge va només a la seva corda, signat com a arxiver")]:
+                         ("arxSent", "i el missatge va només a la seva corda, signat com a «Arxiu de …»")]:
             check(r.get(k), label, str(r))
         check(not errors, "sense errors als missatges a una persona", "; ".join(errors[:3]))
         ctx.close()
@@ -1230,11 +1232,11 @@ def main():
           document.querySelector('[data-act="tab"][data-tab="avisos"]').click(); await s(200);
           document.querySelector('[data-act="tab"][data-tab="tauler"]').click(); await s(300);
           out.boardKept = ui.board === 'documents';
-          // 11. Un sol «Calendari al mòbil» al compte, amb les classes a dins.
+          // 11. Un sol «Calendari al mòbil» al compte, amb el calendari personal (que porta les classes) a dins.
           sheetAccount(); await s(300);
           out.oneCal = !document.querySelector('.acct-item[data-k="classIcs"]') && !!document.querySelector('.acct-item[data-k="calendar"]');
           sheetCalendar(); await s(300);
-          out.calClasses = !!document.querySelector('.sheet [data-act="acct-open"][data-k="classIcs"]');
+          out.calClasses = !!document.querySelector('.sheet [data-act="my-cal"]');
           closeSheet(); await s(200);
           out.overflow = document.documentElement.scrollWidth <= innerWidth;
           return out; }""")
@@ -1247,7 +1249,7 @@ def main():
                          ("pill", "una obra a mig repartir diu «Repartint · 1/15»"), ("ghost", "la fitxa de les sessions que vénen té «No hi puc anar o arribaré tard»"),
                          ("ahead", "la meva assistència mostra en buit els assajos que queden"),
                          ("boardRep", "el Tauler no s'obre a uns anuncis buits"), ("boardKept", "i recorda la darrera pestanya"),
-                         ("oneCal", "el compte té un sol «Calendari al mòbil»"), ("calClasses", "i a dins, les classes"),
+                         ("oneCal", "el compte té un sol «Calendari al mòbil»"), ("calClasses", "i a dins, el calendari personal (amb les classes)"),
                          ("overflow", "sense eixamplar la pantalla del mòbil")]:
             check(r.get(k), label, str(r))
         check(not errors, "sense errors als canvis de l'auditoria", "; ".join(errors[:3]))
@@ -1846,7 +1848,11 @@ def main():
           document.querySelector('.pickers[data-q="q"] .pick[data-v="Sí"]').click(); document.querySelector('#ts-ok').click(); await s(300); flushAll(); await s(300);
           out.trip = S.tripSignups.get(`t1_${myMemberId()}`)?.answers?.q === 'Sí';
           sheetMyProfile(); await s(400); document.querySelector('#pf-diet').value = 'Celíaca'; document.querySelector('#pf-save').click(); await s(400);
-          out.diet = (await firebase.firestore().doc(`cors/${GID}/profiles/${myMemberId()}`).get()).data()?.diet === 'Celíaca';
+          // Sense el consentiment no es desen; amb ell, van a part (health), no a la fitxa.
+          out.dietAsk = !!document.querySelector('#pf-diet');
+          document.querySelector('#pf-diet-ok').checked = true; document.querySelector('#pf-save').click(); await s(400);
+          const prof = (await firebase.firestore().doc(`cors/${GID}/profiles/${myMemberId()}`).get()).data() || {};
+          out.diet = out.dietAsk && (await firebase.firestore().doc(`cors/${GID}/health/${myMemberId()}`).get()).data()?.diet === 'Celíaca' && !('diet' in prof);
           rsvpAnswer('s6', 'yes'); await s(200);
           ui.tab = 'avisos'; render(); await s(200);
           const bus = document.querySelector('[data-act="rsvp-bus"][data-k="bus"]');
@@ -1861,7 +1867,7 @@ def main():
           out.week = wk.includes('QUÈ FAREM') || wk.includes('Què farem');
           out.weekPlan = wk.includes('Gloria');
           return out; }""")
-        for k, label in [("trip", "el cantaire respon les preguntes de la sortida"), ("diet", "el cantaire posa les seves al·lèrgies a la fitxa"),
+        for k, label in [("trip", "el cantaire respon les preguntes de la sortida"), ("diet", "el cantaire posa les seves al·lèrgies (amb el consentiment, i a part de la fitxa)"),
                          ("busAsked", "en confirmar un concert amb autocar, es pregunta com hi va"), ("bus", "i queda desat que va amb l'autocar"),
                          ("task", "el cantaire s'apunta de voluntari a carregar el material"), ("plan", "el cantaire veu el seu parcial (i pot veure tot el pla)"),
                          ("week", "«La setmana» es pot obrir"), ("weekPlan", "«La setmana» porta el pla dels pròxims assajos")]:

@@ -27,17 +27,21 @@ const mirrorMark = mk => Object.fromEntries(['s', 'min', 'note'].filter(k => mk[
 function flushMirrors() {
   if (!MIRROR.q.size || !db || PREVIEW) { MIRROR.q.clear(); return; }
   const FP = firebase.firestore.FieldPath, del = firebase.firestore.FieldValue.delete();
-  const b = fs.batch();
-  for (const [mid, sids] of MIRROR.q) {
-    const data = { memberId: mid, marks: {} }, fields = [new FP('memberId')];
-    for (const [sid, v] of sids) { data.marks[sid] = v || del; fields.push(new FP('marks', sid)); }
-    b.set(db.doc(`attMine/${mid}`), data, { mergeFields: fields });
-  }
+  // De deu en deu: per a cada còpia, les regles miren de quina corda és la persona (una lectura), i un lot no en pot fer més de vint.
+  const all = [...MIRROR.q];
   MIRROR.q.clear();
   clearTimeout(MIRROR.timer);
-  inflight++;
-  updateSync();
-  b.commit().catch(writeFailed).finally(() => { inflight--; updateSync(); });
+  for (let i = 0; i < all.length; i += 10) {
+    const b = fs.batch();
+    for (const [mid, sids] of all.slice(i, i + 10)) {
+      const data = { memberId: mid, marks: {} }, fields = [new FP('memberId')];
+      for (const [sid, v] of sids) { data.marks[sid] = v || del; fields.push(new FP('marks', sid)); }
+      b.set(db.doc(`attMine/${mid}`), data, { mergeFields: fields });
+    }
+    inflight++;
+    updateSync();
+    b.commit().catch(writeFailed).finally(() => { inflight--; updateSync(); });
+  }
 }
 // Si es tanca l'app (o es canvia d'app) just després de marcar, les còpies es desen igualment. Aquests escoltadors van
 // després dels de 02-dades, que desen primer les llistes (i n'apunten les còpies).
@@ -99,7 +103,8 @@ async function setAttPrivate(on) {
 function mirrorPending() {
   if (!attPrivate() || !canEdit() || PREVIEW) return;
   for (const [key, d] of S.attendance) {
-    if (!d.unmirrored || isDirty(`attendance/${key}`)) continue;
+    // Només les de les cordes on aquest compte pot passar llista (vegeu attSecW a les regles).
+    if (!d.unmirrored || isDirty(`attendance/${key}`) || !(writesAllAtt() || (acctHas('leader') && S.me.section === d.section))) continue;
     for (const [mid, mk] of Object.entries(d.marks || {})) queueMirror(mid, d.sessionId, mk);
     const next = { ...d }; delete next.unmirrored;
     S.attendance.set(key, next); persist('attendance', key, next, 2000);
