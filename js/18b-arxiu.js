@@ -16,8 +16,8 @@ const scoreOf = (pid, wid, m) => S.scores.get(scoreKey(pid, wid, m.section))?.ma
 /** És l'arxiver d'alguna corda (el de la seva, que porta a section). */
 const isArchivist = () => iHave('archive');
 const archiveSec = () => isArchivist() ? (ME()?.section || '') : '';
-/** Pot repartir i recollir les d'aquesta corda: l'equip i els arxivers, les de totes (cada arxiver comença per la seva). */
-const canScores = sec => canEdit() || (isArchivist() && !!sec);
+/** Pot repartir i recollir les d'aquesta corda: qui porta el tauler i els arxivers, les de totes (cada arxiver comença per la seva). */
+const canScores = sec => canBoard() || (isArchivist() && !!sec);
 /** Veu l'arxiu sencer (l'estat de tothom): l'equip i els arxivers. */
 const seesArchive = () => canEdit() || isArchivist();
 /** Per què algú ja no fa una producció (i, per tant, no n'ha de tenir les partitures): 'cor' si ja no és al cor, 'prod' si
@@ -240,13 +240,6 @@ function sheetArchive(pid) {
       draw(el);
     },
   });
-}
-
-/* ---------- La pestanya Partitures (rol d'arxiver) ---------- */
-/** El repertori de cada producció amb l'estat de cada partitura en paper, i l'arxiu sencer: qui en té, qui no i qui l'ha de tornar. */
-function viewScores() {
-  const sec = archiveSec();
-  return `<div class="page-head"><div><div class="eyebrow">${sec ? `Arxiver · ${esc(SEC[sec].name)}` : 'Arxiu'}</div><h1 class="h1">Partitures</h1></div></div>${kitPanel()}${boardRepertoire()}`;
 }
 
 /* ---------- Per fer de l'arxiver ---------- */

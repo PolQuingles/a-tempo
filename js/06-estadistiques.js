@@ -30,7 +30,7 @@ function viewStats(inBoard) {
   const selProd = `<label class="sel"><span class="sr">Producció</span><select data-pick="stats-prod">${prods.map(p => `<option value="${p.id}" ${p.id === scope.id ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select></label>`;
   const selSec = `<label class="sel"><span class="sr">${esc(V.Section)}</span><select data-pick="stats-sec"><option value="">${esc(capz(V.tot))}</option>${SECTIONS.map(x => `<option value="${x.id}" ${ui.statsSec === x.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>`;
   const filters = `<div class="filters"><span class="seg3" role="radiogroup" aria-label="Període">${[['prod', 'Producció'], ['season', 'Temporada']].map(([k, l]) => `<button type="button" role="radio" aria-checked="${ui.statsScope === k}" data-act="stats-scope" data-k="${k}">${l}</button>`).join('')}</span>
-    ${ui.statsScope === 'prod' ? selProd : ''}${lensSection() ? '' : selSec}</div>`;
+    ${ui.statsScope === 'prod' ? selProd : ''}${areaSec() ? '' : selSec}</div>`;
   const top = inBoard ? filters + head : head + scopeTabs + choice + secChips;
 
   if (!st.counted.length) {

@@ -90,7 +90,7 @@ function sheetSessionPicker() {
   }
   openSheet({
     title: 'Tria la sessió', body,
-    foot: `<button class="btn btn-ghost" data-act="pick-today">Ves a avui</button><span class="spacer"></span><button class="btn btn-primary" data-act="session-new">+ Nova sessió</button>`,
+    foot: `<button class="btn btn-ghost" data-act="pick-today">Ves a avui</button><span class="spacer"></span>${canProd() ? '<button class="btn btn-primary" data-act="session-new">+ Nova sessió</button>' : ''}`,
     onMount: el => { const c = el.querySelector('[aria-current="true"]'); if (c) setTimeout(() => c.scrollIntoView({ block: 'center' }), 30); },
   });
 }
@@ -204,11 +204,11 @@ function sheetSessionInfo(sid) {
       ${fitxaHtml(s)}
       ${s.note ? `<p class="fitxa-note">${esc(s.note)}</p>` : ''}
       ${hasInfo(s) ? '' : `<p class="muted" style="font-size:calc(13px*var(--ts))">Encara no hi ha indicacions de convocatòria, vestuari ni punt de trobada.</p>`}
-      ${planOf(s) || canEdit() ? `<div class="section-title" style="margin-top:16px"><h2 class="h2">${isShow(s) ? 'Programa' : s.date < TODAY ? 'Què s’hi va treballar' : 'Pla d’assaig'}</h2>${canEdit() ? `<button class="btn btn-sm" data-act="plan-edit" data-sid="${s.id}">${planOf(s) ? 'Edita’l' : 'Fes-lo'}</button>` : ''}</div>
+      ${planOf(s) || canProd() ? `<div class="section-title" style="margin-top:16px"><h2 class="h2">${isShow(s) ? 'Programa' : s.date < TODAY ? 'Què s’hi va treballar' : 'Pla d’assaig'}</h2>${canProd() ? `<button class="btn btn-sm" data-act="plan-edit" data-sid="${s.id}">${planOf(s) ? 'Edita’l' : 'Fes-lo'}</button>` : ''}</div>
         ${planHtml(s, false, planSec(s)) || `<p class="muted" style="font-size:calc(13px*var(--ts));margin:0">${isShow(s) ? 'Encara no hi ha programa: quines obres es cantaran i en quin ordre.' : 'Encara no hi ha pla: quines obres i quins compassos s’assajaran.'}</p>`}` : ''}
       ${tasksBlock(s)}
       ${isShow(s) ? balanceBlock(s) + seatingBlock(s) : ''}`,
-    foot: `${canEdit() ? `<button class="btn" data-act="session-edit" data-sid="${s.id}">Edita</button>` : ''}${canEdit() && isShow(s) ? `<button class="btn" data-act="participants" data-sid="${s.id}">Llista de participants</button>` : ''}<span class="spacer"></span>${absenceAct ? `<button class="btn" id="fx-copy">Copia per al grup</button>${absenceAct}` : '<button class="btn btn-primary" id="fx-copy">Copia per al grup</button>'}`,
+    foot: `${canProd() ? `<button class="btn" data-act="session-edit" data-sid="${s.id}">Edita</button>` : ''}${canProd() && isShow(s) ? `<button class="btn" data-act="participants" data-sid="${s.id}">Llista de participants</button>` : ''}<span class="spacer"></span>${absenceAct ? `<button class="btn" id="fx-copy">Copia per al grup</button>${absenceAct}` : '<button class="btn btn-primary" id="fx-copy">Copia per al grup</button>'}`,
     onMount: el => {
       el.querySelector('#fx-copy').onclick = () => copyText(text + (planOf(s) ? `\n\nPla d’assaig:\n${planText(s)}` : ''), 'Fitxa copiada');
     },
@@ -216,7 +216,7 @@ function sheetSessionInfo(sid) {
 }
 function fitxaChip(s) {
   if (hasInfo(s)) return `<button class="fitxa-chip" data-act="session-info" data-sid="${s.id}">${ICON.info}<span><b>${isShow(s) ? `Fitxa ${V.sh.del}` : 'Fitxa de la sessió'}</b><small>${esc(infoSummary(s))}</small></span></button>`;
-  if (canEdit() && isShow(s)) return `<button class="fitxa-chip empty" data-act="session-edit" data-sid="${s.id}">${ICON.info}<span><b>Afegeix la fitxa ${V.sh.del}</b><small>Convocatòria, vestuari, punt de trobada…</small></span></button>`;
+  if (canProd() && isShow(s)) return `<button class="fitxa-chip empty" data-act="session-edit" data-sid="${s.id}">${ICON.info}<span><b>Afegeix la fitxa ${V.sh.del}</b><small>Convocatòria, vestuari, punt de trobada…</small></span></button>`;
   return '';
 }
 function sheetSession(sid, presetProd, presetDate) {

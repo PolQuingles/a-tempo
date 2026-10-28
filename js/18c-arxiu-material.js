@@ -12,8 +12,8 @@ S.kit = new Map();
 const KIT_ITEMS = [['folder', 'Carpeta'], ['label', 'Etiqueta']];
 const KIT_WORD = { folder: 'la carpeta', label: 'l’etiqueta' };
 const kitDoc = sec => S.kit.get(sec) || { section: sec };
-/** Ho porta l'equip o un arxiver. */
-const canKit = () => canEdit() || isArchivist();
+/** Ho porten els arxivers i l'administració. */
+const canKit = () => isAdmin() || isArchivist();
 /** El codi d'arxiu d'una persona: el d'aquella producció, si en té, o el de sempre. */
 function codeOf(m, pid) {
   if (!m) return '';
@@ -190,7 +190,7 @@ function sheetCodes(sec0, pid0) {
 /* ---------- A la pestanya Partitures ---------- */
 /** El resum de carpetes i etiquetes (de la corda de l'arxiver, o de tot el cor) i els botons per portar-les i per als codis. */
 function kitPanel() {
-  if (!seesArchive()) return '';
+  if (!canKit()) return '';
   const sec = archiveSec() && !canEdit() ? archiveSec() : '';
   const x = kitSummary(sec);
   const bits = [...KIT_ITEMS.map(([k, l]) => x[k].no ? `${x[k].no} sense ${l.toLowerCase()}` : ''), x.unk ? `${x.unk} per mirar` : ''].filter(Boolean);

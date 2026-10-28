@@ -216,6 +216,38 @@ prova('arxiver: el rol porta la seva corda, també si la fitxa en canvia', () =>
   igual(rolesOf(acc), ['archive', 'singer']);
   igual(roleLevel(acc), 'read', 'no passa llista');
 });
+prova('rols sumats: cadascú té les pestanyes i els permisos de tots els seus rols, sense triar-ne cap', () => {
+  escenari({ members: [{ id: 'a', name: 'Puig, Anna', section: 'S' }, { id: 't', name: 'Bosch, Marc', section: 'T', leader: true }] });
+  S.classes = new Map();
+  const as = (roles, extra = {}) => {
+    S.me = { email: 'x@x.cat', roles, section: extra.section || '', memberId: extra.memberId || '' };
+    S.memberId = extra.memberId || null; S.role = roleLevel(S.me);
+    return { tabs: tabsForRole().join(','), more: moreTabs().join(','), gestio: gestioOn() ? gestioTabs().join(',') : '', areas: attAreas().join(',') };
+  };
+  igual(as(['singer'], { memberId: 'a' }), { tabs: 'avisos,llista,calendari,tauler', more: '', gestio: '', areas: 'me' }, 'cantaire');
+  igual(as(['leader', 'singer'], { section: 'T', memberId: 't' }), { tabs: 'avisos,llista,calendari,tauler', more: '', gestio: '', areas: 'me,sec' }, 'cap de corda que canta');
+  igual(as(['leader'], { section: 'T' }), { tabs: 'avisos,llista', more: '', gestio: '', areas: 'sec' }, 'cap de corda que no canta');
+  igual(as(['archive', 'singer'], { section: 'S', memberId: 'a' }).tabs, 'avisos,llista,calendari,tauler', 'arxiver que canta: l’arxiu és al Tauler');
+  igual(as(['director']), { tabs: 'avisos,llista,calendari,tauler,gestio', more: '', gestio: 'personal,produccions,config', areas: 'all' }, 'direcció, amb tota la Gestió');
+  igual(as(['gerencia']).gestio, 'personal,produccions,config', 'gerència, amb tota la Gestió');
+  igual(as(['secretaria']), { tabs: 'avisos,tauler,gestio', more: '', gestio: 'personal', areas: '' }, 'secretaria');
+  S.config.classesOn = true;
+  S.classes = new Map([['c1', { id: 'c1', date: D(2), teacher: 'p@x.cat', slots: [{ id: 's1', time: '17:00', memberId: 't' }] }]]);
+  igual(as(['admin', 'leader', 'singer'], { section: 'T', memberId: 't' }), { tabs: 'avisos,llista,calendari,tauler,classes', more: 'gestio', gestio: 'personal,produccions,config', areas: 'me,sec,all' },
+    'administració que porta una corda i fa classes: cinc pestanyes, i Gestió al menú del compte');
+  igual(as(['admin', 'gerencia']), { tabs: 'avisos,llista,calendari,tauler,gestio', more: 'classes', gestio: 'personal,produccions,config', areas: 'all' },
+    'administració sense classes pròpies: les classes al menú del compte');
+  igual(as(['voice']).tabs, 'avisos,calendari,classes', 'professor de cant');
+  igual(clTabKeys(), ['llista', 'alumnes'], 'el professor, a Classes: l’assistència i els alumnes');
+  // Qui edita què: el tauler i les sessions no són del cap de corda.
+  as(['leader', 'singer'], { section: 'T', memberId: 't' });
+  igual([canEdit(), canBoard(), canProd(), canRepertoire(), absencesOn()], [true, false, false, false, true], 'el cap de corda passa llista i respon absències');
+  as(['director']);
+  igual([canBoard(), canProd(), absencesOn()], [true, true, true], 'la direcció porta el tauler, les sessions i les absències');
+  as(['secretaria']);
+  igual([canBoard(), canProd(), absencesOn()], [true, false, false], 'la secretaria porta el tauler');
+  S.me = null; S.memberId = null; S.role = 'edit'; S.config.classesOn = false; S.classes = new Map();
+});
 prova('canvis d’hora de classe entre els dos dies de la setmana, i a unes quantes persones', () => {
   escenari({ members: [{ id: 'a', name: 'Puig, Anna', section: 'S' }, { id: 'b', name: 'Vila, Clara', section: 'S' }, { id: 'c', name: 'Bosch, Marc', section: 'T' }] });
   const mon = (() => { let d = addDays(TODAY, 7); while (new Date(d + 'T12:00:00').getDay() !== 1) d = addDays(d, 1); return d; })();

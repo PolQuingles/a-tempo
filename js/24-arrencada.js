@@ -36,9 +36,10 @@ function afterReady() {
   setTimeout(archiveTerms, window.COR_ARCHIVE_WAIT || 8000);
   checkPush();
   syncDirectory();
+  // Els avisos d'abans obrien l'app amb ?rol=… (vegeu 03b-rols): es treu de l'adreça.
+  dropRolParam();
   // Si s'obre des d'un botó d'una notificació, primer es fa el que s'hi ha triat (i no surt la benvinguda).
-  // Qui encara ha de triar el rol, la veu després de triar-lo (vegeu setLens).
-  setTimeout(() => { if (new URLSearchParams(location.search).has('accio')) runNotificationAction(); else if (lensPicking()) LENS_WELCOME.pending = true; else maybeWelcome(); }, 500);
+  setTimeout(() => { if (new URLSearchParams(location.search).has('accio')) runNotificationAction(); else maybeWelcome(); }, 500);
 }
 const waitForUser = () => new Promise(res => { const un = auth.onAuthStateChanged(u => { un(); res(u); }); });
 /** Signed in with Google: this person's record and role in one group, and the group's directory record. */

@@ -225,6 +225,7 @@ const ui = {
   statsScope: 'prod', statsProd: null, statsSec: '', statsSort: 'pct',
   manage: 'personal', people: 'singer', pmFilter: 'all', absFilter: 'pending',
   clWho: null, clMonth: null, clDay: null,
+  attArea: null, clTab: null,   // Assistència: la meva, la de la corda o la de tot el cor; Classes del professorat: llista o alumnes
 };
 /* ---------- Memòria del mòbil, per agrupació ---------- */
 // Cada agrupació guarda a part la pestanya oberta, els avisos vistos, etc.
@@ -241,7 +242,7 @@ function loadUI() {
   ui.clWho = null;   // les classes comencen sempre pel quadre del professorat
 }
 function saveUI() {
-  lsSet(LS_UI, JSON.stringify({ tab: ui.tab, section: ui.section, calProd: ui.calProd, calView: ui.calView, statsScope: ui.statsScope, statsSec: ui.statsSec, statsSort: ui.statsSort, manage: ui.manage, people: ui.people, pmFilter: ui.pmFilter, board: ui.board, att: ui.att }));
+  lsSet(LS_UI, JSON.stringify({ tab: ui.tab, section: ui.section, calProd: ui.calProd, calView: ui.calView, statsScope: ui.statsScope, statsSec: ui.statsSec, statsSort: ui.statsSort, manage: ui.manage, people: ui.people, pmFilter: ui.pmFilter, board: ui.board, att: ui.att, attArea: ui.attArea, clTab: ui.clTab }));
 }
 // Rols de les persones de l'agrupació. Una persona pot tenir-ne més d'un (p. ex. cap de corda i cantaire).
 // Administració ho pot fer tot; direcció, caps i equip passen llista i editen; cantaires i músics només llegeixen.
@@ -267,42 +268,26 @@ const rolesHint = roles => !roles.length ? 'Tria almenys un rol.' : [
   roles.includes('gerencia') || roles.includes('secretaria') ? 'Forma part de l’equip de l’agrupació.' : '',
   roles.includes('voice') ? `Porta les ${V.classes.toLowerCase()}: en fa el calendari i rep les absències i els canvis dels ${V.members}.` : '',
 ].filter(Boolean).join(' ');
-// «Mira l'app com…»: l'administració veu l'app com un cantaire, un cap de corda, la direcció, la gerència, la secretaria
-// o un professor de cant. Només canvia el que es veu en aquest mòbil: no es desa res (vegeu previewBlocked).
-// PREVIEW = { roles, memberId, section, email, name, label, role }.
+// «Mira l'app com…»: l'administració veu l'app tal com la veu una persona concreta, amb tots els seus rols. Només canvia el
+// que es veu en aquest mòbil: no es desa res (vegeu previewBlocked). PREVIEW = { roles, memberId, section, email, name, label }.
 let PREVIEW = null;
-// El rol amb què es mira l'app (vegeu 03b-rols): cada rol té les seves pestanyes i només hi veu el que és de la seva feina.
-// Qui té diversos rols el tria en obrir l'app i el canvia des d'Inici. 'viewer' és «Veure l'app com un cantaire» (per a qui no
-// ho és) i 'tot', mentre encara no se n'ha triat cap (o per a un compte sense fitxa de l'equip). Només canvia la pantalla:
-// les dades que es llegeixen i els permisos de la base de dades són els del compte.
-const LENS_ORDER = ['singer', 'leader', 'archive', 'voice', 'director', 'gerencia', 'secretaria', 'admin'];
-let LENS = null;
-// L'administració pot mirar (i fer servir) l'app com qualsevol rol, també els que no té: llavors el rol porta la corda (cap de
-// corda, arxiver) o el professor de cant que s'ha triat. { sec, teacher }; buit = els del compte.
-let LENS_CTX = {};
-/** El rol actiu: el de la vista prèvia, el triat o, si encara no se n'ha triat cap, tots. */
-const curLens = () => PREVIEW ? PREVIEW.lens || 'tot' : LENS || 'tot';
-const lensOn = () => curLens() !== 'tot';
-/** Qui soc a efectes de la pantalla: la fitxa de qui ha entrat o, a la vista prèvia, la de qui s'està mirant, amb només els
- *  permisos del rol actiu. Fora del rol de cantaire, l'espai personal (memberId) no hi és. */
-const ME = () => {
-  const base = PREVIEW ? { email: PREVIEW.email || '', name: PREVIEW.name || '', roles: PREVIEW.roles, section: PREVIEW.section || '', memberId: PREVIEW.memberId || '' } : S.me;
-  const l = curLens();
-  if (!base || l === 'tot') return base;
-  const sec = !PREVIEW && ['leader', 'archive'].includes(l) && LENS_CTX.sec ? LENS_CTX.sec : base.section;
-  return { ...base, roles: [l === 'viewer' ? 'singer' : l], section: sec, memberId: l === 'singer' ? base.memberId || '' : '' };
-};
+/** Qui soc a efectes de la pantalla: la fitxa de qui ha entrat o, a la vista prèvia, la de qui s'està mirant. Cadascú veu
+ *  l'app amb tots els seus rols alhora: les pestanyes i el que pot fer són la suma dels de cada rol (vegeu 03b-rols). */
+const ME = () => PREVIEW ? { email: PREVIEW.email || '', name: PREVIEW.name || '', roles: PREVIEW.roles, section: PREVIEW.section || '', memberId: PREVIEW.memberId || '' } : S.me;
 const myEmail = () => PREVIEW ? PREVIEW.email || '' : S.email || '';
 const iHave = r => hasRole(ME(), r);
-const canEdit = () => S.role === 'edit' && (!PREVIEW && !lensOn() ? true : rolesOf(ME()).some(r => EDIT_ROLES.has(r)));
-/** Si el compte (o la persona de la vista prèvia) pot editar, sigui quin sigui el rol actiu: per a les dades que es llegeixen
- *  i els avisos al mòbil, que no canvien en canviar de rol. */
-const canEditAny = () => S.role === 'edit' && (!PREVIEW || PREVIEW.roles.some(r => EDIT_ROLES.has(r)));
+const canEdit = () => S.role === 'edit' && (!PREVIEW || PREVIEW.roles.some(r => EDIT_ROLES.has(r)));
+/** Qui porta el tauler (anuncis, enquestes, documents i sortides) i, amb els arxivers, el repertori: com boardEdit a les regles. */
+const BOARD_ROLES = ['admin', 'director', 'gerencia', 'secretaria'];
+const canBoard = () => S.role === 'edit' && BOARD_ROLES.some(iHave);
+/** Qui porta les produccions i les seves sessions (Gestió › Produccions i el calendari): l'administració, la direcció i la gerència. */
+const PROD_ROLES = ['admin', 'director', 'gerencia'];
+const canProd = () => S.role === 'edit' && PROD_ROLES.some(iHave);
 /** Qui llegeix l'assistència de tot el cor (vegeu attAll a les regles). Un cap de corda que no té cap d'aquests rols només
- *  llegeix la de la seva corda: llavors torna la corda; si no, ''. És el compte, no el rol actiu: decideix què es llegeix. */
+ *  llegeix la de la seva corda: llavors torna la corda; si no, ''. És el compte qui decideix què es llegeix. */
 const ALL_ATT_ROLES = ['admin', 'director', 'gerencia', 'secretaria'];
 const attScopeSec = () => S.role === 'edit' && !!S.me && !rolesOf(S.me).some(r => ALL_ATT_ROLES.includes(r)) && hasRole(S.me, 'leader') ? S.me.section || '-' : '';
-const isAdmin = () => S.role === 'edit' && !PREVIEW && hasRole(S.me, 'admin') && ['tot', 'admin'].includes(curLens());
+const isAdmin = () => S.role === 'edit' && !PREVIEW && hasRole(S.me, 'admin');
 /** Name, type, sections and look of the group, and deleting it: only a Pro user who runs it. */
 const canManageGroup = () => isAdmin() && S.pro;
 /* ---------- Classes de cant ---------- */
@@ -381,7 +366,6 @@ function nextClass() {
 /** De qui és una hora de classe un cop aplicats els canvis d'hora. */
 const slotMember = x => x.markFor || x.memberId || '';
 const inClasses = () => !!myId() && classDays().some(c => (c.slots || []).some(x => x.memberId === myId()));
-const seeClasses = () => classesOn() && (teachesClasses() || inClasses());
 /** Els avisos que toquen una hora concreta: els de retard o absència segueixen la persona
  *  (si s'ha fet un canvi, van amb ella a l'hora nova); els canvis d'hora, les dues hores. */
 const slotReqs = (c, slot) => [...S.classReq.values()]
@@ -393,10 +377,7 @@ const reqsToAnswer = () => { const id = myId(); return id ? [...S.classReq.value
 const reqsForTeacher = () => [...S.classReq.values()].filter(r => r.status === 'pending' && r.kind !== 'swap');
 const classBadge = () => reqsToAnswer().length + (teachesClasses() ? reqsForTeacher().length : 0);
 /** The member this account really is (from the account record or a personal link), if any. */
-const myId = () => {
-  if (!['tot', 'singer'].includes(curLens())) return null;   // l'espai personal és del rol de cantaire
-  const id = PREVIEW ? PREVIEW.memberId : S.memberId; return id && S.members.has(id) ? id : null;
-};
+const myId = () => { const id = PREVIEW ? PREVIEW.memberId : S.memberId; return id && S.members.has(id) ? id : null; };
 const subKey = (sid, sec) => `${sid}_${sec}`;
 const subFor = (sid, sec) => S.subs.get(subKey(sid, sec));
 /** Member allowed to take today's roll for this session and section. */

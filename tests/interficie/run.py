@@ -90,23 +90,14 @@ def serve(directory):
     return srv
 
 
-# El rol amb què entra cada usuari de prova (vegeu js/03b-rols.js): el que triaria. Qui només en té un hi entra directament.
-DEFAULT_ROL = {"pol": "admin", "leader": "leader", "arx": "archive"}
-
-
-def rol_param(user, rol):
-    r = DEFAULT_ROL.get(user) if rol is None else rol
-    return f"&rol={r}" if r else ""
-
-
-def open_app(browser, base, user, opts, route="", rol=None):
+def open_app(browser, base, user, opts, route=""):
     ctx = browser.new_context(**opts)
     page = ctx.new_page()
     errors = []
     page.on("pageerror", lambda e: errors.append(f"error: {e}"))
     page.on("console", lambda m: errors.append(f"consola: {m.text}")
             if m.type == "error" and "Failed to load resource" not in m.text else None)
-    page.goto(f"{base}/index.html?u={user}&reset=1{rol_param(user, rol)}{route}")
+    page.goto(f"{base}/index.html?u={user}&reset=1{route}")
     page.wait_for_function(READY, timeout=20000)
     # La primera vegada s'obre sola la benvinguda: es tanca amb el seu botó, com faria la persona.
     page.wait_for_timeout(900)
@@ -116,9 +107,9 @@ def open_app(browser, base, user, opts, route="", rol=None):
     return ctx, page, errors
 
 
-def switch_user(page, base, user, rol=None):
+def switch_user(page, base, user):
     """Una altra persona al mateix navegador: les dades (la base de dades falsa) es conserven."""
-    page.goto(f"{base}/index.html?u={user}{rol_param(user, rol)}")
+    page.goto(f"{base}/index.html?u={user}")
     page.wait_for_function(READY, timeout=20000)
     page.wait_for_timeout(900)
     if page.locator(".sheet").count():
@@ -142,9 +133,6 @@ def main():
                                   ("leader", SMALL, "320 px"), ("singer", SMALL, "320 px"), ("dir", SMALL, "320 px"),
                                   ("prof", SMALL, "320 px"), ("ger", MOBILE, "375 px"), ("dir", DESKTOP, "ordinador")]:
             ctx, page, errors = open_app(browser, base, user, opts)
-            # L'administració pot fer servir l'app com qualsevol rol: al mòbil, es recorren tots.
-            if user == "pol" and label == "375 px":
-                page.evaluate("window.SWEEP_LENSES = [...lensAllOptions()]")
             res = page.evaluate(SWEEP)
             check(res["vistes"] >= 8, f"{user} a {label}: {res['vistes']} pantalles recorregudes")
             check(not res["desbordaments"], f"{user} a {label}: res no surt de la pantalla", "; ".join(res["desbordaments"][:3]))
@@ -175,8 +163,10 @@ def main():
         page.go_back(); page.wait_for_timeout(400)
         check(screen(page) == "#/inici avisos", "tancar amb la creu no deixa passos de més", screen(page))
         page.click('[data-act="tab"][data-tab="calendari"]'); page.wait_for_timeout(300)
-        page.click('[data-act="tab"][data-tab="gestio"]'); page.wait_for_timeout(400)
-        check(screen(page) == "#/gestio/personal gestio" and page.locator(".ph-back").count() == 0, "per a l'administració, Gestió és una pestanya més (comença per Personal)", screen(page))
+        # Amb cinc pestanyes a la barra (l'administració que també canta i fa classes), Gestió s'obre des del menú del compte.
+        page.click("#acct-btn"); page.wait_for_timeout(300)
+        page.click('.acct-item[data-act="manage"]'); page.wait_for_timeout(500)
+        check(screen(page) == "#/gestio/personal gestio" and page.locator(".ph-back").count() == 1, "Gestió s'obre des del menú del compte (comença per Personal, amb la fletxa per tornar)", screen(page))
         page.click('[data-act="manage"][data-k="config"]'); page.wait_for_timeout(300)
         page.go_back(); page.wait_for_timeout(400)
         check(screen(page) == "#/gestio/personal gestio", "dins de Gestió, enrere torna a l'apartat d'abans", screen(page))
@@ -446,13 +436,16 @@ def main():
         check(not res["desbordaments"], f"amb el text «Molt gran», a 320 px res no surt de la pantalla ({res['vistes']} pantalles)", "; ".join(res["desbordaments"][:3]))
         ctx.close()
         ctx, page, errors = open_app(browser, base, "pol", DESKTOP)
-        g = page.locator('.tabs .tab[data-tab="gestio"]')
+        g = page.locator('.tabs .tab-extra[data-act="manage"]')
         check(g.is_visible() and "Gestió" in g.inner_text(), "a l'ordinador, Gestió és al menú lateral")
         g.click(); page.wait_for_timeout(400)
         check(page.evaluate("location.hash").startswith("#/gestio/"), "i l'obre", page.evaluate("location.hash"))
         ctx.close()
         ctx, page, errors = open_app(browser, base, "pol", MOBILE)
-        check(page.locator('.tabs .tab[data-tab="gestio"]').is_visible() and page.locator('.tabs .tab-extra').count() == 0, "al mòbil, Gestió també és una pestanya de l'administració")
+        check(page.locator('.tabs .tab:not(.tab-extra)').count() == 5 and not page.locator('.tabs .tab-extra[data-act="manage"]').is_visible(), "al mòbil, cinc pestanyes com a molt: la Gestió de l'administració va al menú del compte")
+        ctx.close()
+        ctx, page, errors = open_app(browser, base, "ger", MOBILE)
+        check(page.locator('.tabs .tab[data-tab="gestio"]').is_visible(), "si hi cap, Gestió és una pestanya més (gerència)")
         ctx.close()
 
         print("Gestió › Personal: el desplegable dels rols i les llistes de la plantilla")
@@ -695,7 +688,7 @@ def main():
         switch_user(page, base, "arx")
         r.update(page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
           out.todo = archiveTodos().some(x => /per repartir/.test(x.t));
-          ui.tab = 'partitures'; ui.matProd = 'p1'; render(); await s(300);
+          ui.tab = 'tauler'; ui.board = 'materials'; ui.matProd = 'p1'; render(); await s(300);
           out.mySec = /0\/4/.test(document.querySelector('.work .sc-pill')?.textContent || '');
           sheetScoreWork('p1', 'w1'); await s(300);
           out.rows = document.querySelectorAll('.sw-row').length === 4 && !document.querySelector('.sw-row button').disabled;
@@ -756,7 +749,7 @@ def main():
         switch_user(page, base, "arx")
         r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
           const fake = () => JSON.parse(localStorage.getItem('fake:db')), find = (db, end) => db[Object.keys(db).find(k => k.endsWith(end))];
-          ui.tab = 'partitures'; ui.matProd = 'p1'; render(); await s(300);
+          ui.tab = 'tauler'; ui.board = 'materials'; ui.matProd = 'p1'; render(); await s(300);
           out.tools = !!document.querySelector('[data-act="work-new"]') && !!document.querySelector('[data-act="work-link"]') && !!document.querySelector('[data-act="mat-new"]');
           document.querySelector('[data-act="work-new"]').click(); await s(300);
           document.querySelector('#wk-title').value = 'Magnificat'; document.querySelector('#wk-composer').value = 'J. S. Bach';
@@ -796,109 +789,112 @@ def main():
         check(not errors, "sense errors amb el repertori dels arxivers", "; ".join(errors[:3]))
         ctx.close()
 
-        print("Pestanyes per rol: el selector en obrir l'app i què veu cada rol")
-        ctx, page, errors = open_app(browser, base, "pol", MOBILE, rol="tria")
+        print("Rols sumats: ningú no tria cap rol, i cadascú té les pestanyes de tots els seus rols")
+        ctx, page, errors = open_app(browser, base, "pol", MOBILE)
         r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
           const tabs = () => [...document.querySelectorAll('.tabs-in .tab:not(.tab-extra)')].map(b => b.dataset.tab).join(',');
-          out.picker = lensPicking() && document.querySelector('.tabs').hidden && [...document.querySelectorAll('.lp-opt')].map(b => b.dataset.k).join(',') === 'singer,leader,admin';
-          document.querySelector('.lp-opt[data-k="admin"]').click(); await s(300);
-          out.adminTabs = tabs() === 'avisos,llista,calendari,tauler,classes,gestio';
-          ui.tab = 'gestio'; render(); await s(200);
-          out.gestioNoAbs = !document.querySelector('.subtab[data-k="avisos"]') && !document.querySelector('.ph-back');
-          ui.tab = 'llista'; render(); await s(200);
-          out.adminAtt = [...document.querySelectorAll('.att-tabs .subtab')].map(b => b.dataset.k).join(',') === 'llista,stats,risk,abs';
-          ui.tab = 'avisos'; render(); await s(200);
-          out.bar = !!document.querySelector('.lens-bar [data-act="lens-pick"]');
-          document.querySelector('.lens-bar [data-act="lens-pick"]').click(); await s(300);
-          document.querySelector('.sheet .lp-opt[data-k="leader"]').click(); await s(300);
-          out.leaderTabs = tabs() === 'avisos,llista';
+          const subs = q => [...document.querySelectorAll(q)].map(b => b.dataset.k).join(',');
+          out.noPicker = !document.querySelector('.lp-opt, .lens-bar') && !document.querySelector('.tabs').hidden;
+          out.polTabs = tabs() === 'avisos,llista,calendari,tauler,classes' && moreTabs().join() === 'gestio';
+          out.homeLine = /Administració/.test(document.querySelector('.me-line')?.textContent || '') && /Cap de corda/.test(document.querySelector('.me-line')?.textContent || '');
+          out.homeBoth = !!document.querySelector('.h-next [data-act="home-roll"]') && !!document.querySelector('.h-next [data-act="absence-new"]');
+          document.querySelector('#acct-btn').click(); await s(300);
+          const g = document.querySelector('.acct-item[data-act="manage"]');
+          out.menuGestio = !!g && !document.querySelector('.acct-item[data-act="lens-pick"]');
+          g.click(); await s(300);
+          out.gestioAll = subs('#view .subtab[data-act="manage"]') === 'personal,produccions,config' && !!document.querySelector('.ph-back');
           document.querySelector('.tab[data-tab="llista"]').click(); await s(300);
+          out.areas = subs('[data-act="att-area"]') === 'me,sec,all' && attArea() === 'sec';
           out.leaderRoll = ui.rollSec === 'T' && !document.querySelector('[data-act="close-sec"]') && /Tenors/.test(document.querySelector('.secbar-t')?.textContent || '');
+          out.secTabs = subs('.att-tabs .subtab') === 'llista,stats,abs';
           document.querySelector('.att-tabs .subtab[data-k="stats"]').click(); await s(300);
           out.leaderStats = ui.statsSec === 'T' && !document.querySelector('select[data-pick="stats-sec"]');
           document.querySelector('.att-tabs .subtab[data-k="abs"]').click(); await s(300);
           document.querySelector('[data-act="abs-filter"][data-k="all"]').click(); await s(200);
-          out.leaderAbs = !document.querySelector('#view .panel [data-act="abs-accept"]') && myPendingAbsences().length === 0;
-          setLens('singer'); await s(300);
-          out.singerTabs = tabs() === 'avisos,llista,calendari,tauler,classes';
-          document.querySelector('.tab[data-tab="llista"]').click(); await s(300);
-          out.singerAtt = /Assistència/.test(document.querySelector('#view h1')?.textContent || '') && !!document.querySelector('#view [data-act="absence-new"]') && !document.querySelector('#view .quads, #view .roster, #view .att-tabs');
-          out.singerHome = (setLens('singer'), true) && !document.querySelector('.h-att');
-          // L'administració pot fer servir l'app com qualsevol altre rol, amb la corda o el professor que triï.
-          document.querySelector('.lens-bar [data-act="lens-pick"]').click(); await s(300);
-          out.adminOthers = document.querySelectorAll('.sheet .lp-compact .lp-opt[data-k="leader"]').length === 3 && !!document.querySelector('.sheet .lp-compact .lp-opt[data-k="director"]');
-          document.querySelector('.sheet .lp-compact .lp-opt[data-k="archive"][data-sec="C"]').click(); await s(300);
-          out.asArchive = tabs() === 'avisos,partitures' && archiveSec() === 'C' && canRepertoire() && canScores('C') && /Contralts/.test(document.querySelector('.lens-bar')?.textContent || '');
-          setLens('leader', { sec: 'S' }); await s(300);
-          ui.tab = 'llista'; render(); await s(200);
-          out.asLeaderS = ui.rollSec === 'S' && canEdit() && myPendingAbsences().length === 1;
-          setLens('voice', { teacher: 'prof@exemple.cat' }); await s(300);
-          out.asTeacher = tabs() === 'avisos,llista,calendari,alumnes' && myTeacherKey() === 'prof@exemple.cat' && teachesClasses() && myStudents(myTeacherKey()).length > 0;
-          setLens('admin'); await s(200);
+          out.secAbs = !document.querySelector('#view .panel [data-act="abs-accept"]');
+          document.querySelector('[data-act="att-area"][data-k="all"]').click(); await s(300);
+          out.allTabs = subs('.att-tabs .subtab') === 'llista,stats,risk,abs' && !!document.querySelector('.quads');
+          document.querySelector('.att-tabs .subtab[data-k="abs"]').click(); await s(300);
+          document.querySelector('[data-act="abs-filter"][data-k="pending"]').click(); await s(200);
+          out.allAbs = !!document.querySelector('#view .panel [data-act="abs-accept"]');
+          document.querySelector('[data-act="att-area"][data-k="me"]').click(); await s(300);
+          out.mine = /Assistència/.test(document.querySelector('#view h1')?.textContent || '') && !!document.querySelector('#view [data-act="absence-new"]') && !document.querySelector('#view .quads, #view .roster, #view .att-tabs');
           out.overflow = document.documentElement.scrollWidth <= innerWidth;
           return out; }""")
-        switch_user(page, base, "dir", rol="")
-        page.evaluate("sessionStorage.clear()")
-        page.goto(f"{base}/index.html?u=dir&rol=tria"); page.wait_for_function(READY, timeout=20000); page.wait_for_timeout(900)
-        if page.locator(".sheet").count(): page.click('.sheet [data-act="sheet-close"]'); page.wait_for_timeout(300)
+        switch_user(page, base, "leader")
         r.update(page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
           const tabs = () => [...document.querySelectorAll('.tabs-in .tab:not(.tab-extra)')].map(b => b.dataset.tab).join(',');
-          out.dirAuto = !lensPicking() && curLens() === 'director' && tabs() === 'avisos,llista,calendari,tauler';
-          document.querySelector('.tab[data-tab="llista"]').click(); await s(300);
-          out.dirAtt = [...document.querySelectorAll('.att-tabs .subtab')].map(b => b.dataset.k).join(',') === 'stats,risk,abs' && ui.att === 'stats';
-          out.dirAbs = myPendingAbsences().length === 1;
+          out.leaderTabs = /^avisos,llista,calendari,tauler/.test(tabs()) && !roleTabs().includes('gestio');
+          out.leaderAreas = attAreas().join() === 'me,sec';
+          ui.tab = 'tauler'; ui.board = 'anuncis'; render(); await s(300);
+          out.noBoardEdit = !document.querySelector('[data-act="ann-new"], [data-act="ann-edit"]');
+          ui.tab = 'calendari'; render(); await s(300);
+          out.noSessionEdit = !document.querySelector('[data-act="session-new"], [data-act="session-edit"]');
           ui.tab = 'avisos'; render(); await s(200);
-          out.viewer = !!document.querySelector('.lens-bar');
-          setLens('viewer'); await s(300);
-          out.viewerTabs = tabs() === 'avisos,calendari,tauler' && !canEdit();
-          out.noOthers = !validLens('admin') && !validLens('leader');
           return out; }"""))
-        switch_user(page, base, "prof", rol="")
-        page.goto(f"{base}/index.html?u=prof&rol=voice"); page.wait_for_function(READY, timeout=20000); page.wait_for_timeout(900)
-        if page.locator(".sheet").count(): page.click('.sheet [data-act="sheet-close"]'); page.wait_for_timeout(300)
+        switch_user(page, base, "dir")
         r.update(page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
           const tabs = () => [...document.querySelectorAll('.tabs-in .tab:not(.tab-extra)')].map(b => b.dataset.tab).join(',');
-          out.profTabs = tabs() === 'avisos,llista,calendari,alumnes';
+          out.dirTabs = tabs() === 'avisos,llista,calendari,tauler,gestio' && !document.querySelector('.lens-bar');
+          document.querySelector('.tab[data-tab="llista"]').click(); await s(300);
+          out.dirAtt = !document.querySelector('[data-act="att-area"]') && [...document.querySelectorAll('.att-tabs .subtab')].map(b => b.dataset.k).join(',') === 'stats,risk,abs' && ui.att === 'stats';
+          out.dirAbs = myPendingAbsences().length === 1;
+          document.querySelector('.tab[data-tab="gestio"]').click(); await s(300);
+          out.dirGestio = [...document.querySelectorAll('#view .subtab[data-act="manage"]')].map(b => b.dataset.k).join(',') === 'personal,produccions,config';
+          document.querySelector('.tab[data-tab="calendari"]').click(); await s(300);
+          out.dirSessions = !!document.querySelector('[data-act="session-new"]') && canBoard() && canProd();
+          return out; }"""))
+        switch_user(page, base, "ger")
+        r.update(page.evaluate("""async () => ({ gerGestio: gestioTabs().join(',') === 'personal,produccions,config' && tabsForRole().includes('gestio') })"""))
+        switch_user(page, base, "prof")
+        r.update(page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          const tabs = () => [...document.querySelectorAll('.tabs-in .tab:not(.tab-extra)')].map(b => b.dataset.tab).join(',');
+          out.profTabs = tabs() === 'avisos,calendari,classes';
+          ui.tab = 'avisos'; render(); await s(200);
           out.profHome = !!document.querySelector('.h-soon .cl-next, .h-soon .todo-done') && /Properes classes/.test(document.querySelector('.h-soon')?.textContent || '');
-          document.querySelector('.tab[data-tab="alumnes"]').click(); await s(300);
+          document.querySelector('.tab[data-tab="classes"]').click(); await s(300);
+          out.profClTabs = [...document.querySelectorAll('[data-act="cl-tab"]')].map(b => b.dataset.k).join(',') === 'llista,alumnes';
+          out.profAtt = /Assistència/.test(document.querySelector('#view h1')?.textContent || '') && !!document.querySelector('[data-act="cl-stats"]');
+          document.querySelector('[data-act="cl-tab"][data-k="alumnes"]').click(); await s(300);
           out.students = document.querySelectorAll('.stu-row').length === myStudents(myTeacherKey()).length && document.querySelectorAll('.stu-row').length > 0;
           document.querySelector('.tab[data-tab="calendari"]').click(); await s(300);
           out.profCal = !!document.querySelector('.cl-hero') && !document.querySelector('[data-act="cl-back"]');
-          document.querySelector('.tab[data-tab="llista"]').click(); await s(300);
-          out.profAtt = /Assistència/.test(document.querySelector('#view h1')?.textContent || '') && !!document.querySelector('[data-act="cl-stats"]');
           out.overflow2 = document.documentElement.scrollWidth <= innerWidth;
           return out; }"""))
-        for k, label in [("picker", "qui té diversos rols, en obrir l'app, tria amb quin entra"),
-                         ("adminTabs", "l'administració té Inici, Assistència, Calendari, Tauler, Classes i Gestió"),
-                         ("gestioNoAbs", "Gestió és una pestanya, sense les absències"),
-                         ("adminAtt", "a Assistència, llista, estadístiques, risc i absències"),
-                         ("bar", "a Inici hi ha el botó per canviar de rol"),
-                         ("leaderTabs", "el cap de corda té Inici i Assistència (sense Tauler)"),
-                         ("leaderRoll", "i passa llista només de la seva corda"),
+        for k, label in [("noPicker", "en obrir l'app no es tria cap rol"),
+                         ("polTabs", "l'administració que porta una corda i fa classes: cinc pestanyes, i Gestió al menú del compte"),
+                         ("homeLine", "a Inici, sota el nom, la corda i els rols de feina"),
+                         ("homeBoth", "la sessió d'avui porta «Passa llista» i «No hi puc anar» alhora"),
+                         ("menuGestio", "el menú del compte té Gestió (i ja no hi ha «Canvia de rol»)"),
+                         ("gestioAll", "Gestió de l'administració: Personal, Produccions i Ajustos, amb la fletxa per tornar"),
+                         ("areas", "a Assistència, el selector Jo · la corda · tot el cor, i comença per la corda"),
+                         ("leaderRoll", "des de la corda, passa llista només de la seva corda"),
+                         ("secTabs", "amb llista, estadístiques i absències"),
                          ("leaderStats", "les estadístiques són de la seva corda"),
-                         ("leaderAbs", "i les absències, només les de la seva corda"),
-                         ("singerTabs", "el cantaire té Inici, Assistència, Calendari, Tauler i Classes"),
-                         ("singerAtt", "la seva Assistència és només la seva, amb el botó d'avisar"),
-                         ("singerHome", "i Inici ja no hi repeteix la seva assistència"),
-                         ("adminOthers", "l'administració, a Canvia de rol, té tots els altres rols (cada corda, la direcció…)"),
-                         ("asArchive", "i pot fer servir l'app com l'arxiver d'una altra corda, amb el que pot fer"),
-                         ("asLeaderS", "o com el cap de corda d'una altra corda, amb les seves absències"),
-                         ("asTeacher", "o com un professor de cant, amb els seus alumnes"),
+                         ("secAbs", "i les absències, només les de la seva corda"),
+                         ("allTabs", "des de tot el cor, llista, estadístiques, risc i absències de totes les cordes"),
+                         ("allAbs", "i les absències de tothom"),
+                         ("mine", "«Jo» és la seva assistència, amb el botó d'avisar"),
                          ("overflow", "sense eixamplar la pantalla del mòbil"),
-                         ("noOthers", "qui no és de l'administració no pot triar rols que no té"),
-                         ("dirAuto", "amb un sol rol, l'app s'obre directament amb aquest (direcció)"),
-                         ("dirAtt", "la direcció veu les estadístiques, el risc i les absències"),
+                         ("leaderTabs", "el cap de corda que canta té Inici, Assistència, Calendari i Tauler"),
+                         ("leaderAreas", "i a Assistència, la seva i la de la corda"),
+                         ("noBoardEdit", "no hi veu els botons per editar el tauler"),
+                         ("noSessionEdit", "ni per editar les sessions"),
+                         ("dirTabs", "la direcció té Inici, Assistència, Calendari, Tauler i Gestió"),
+                         ("dirAtt", "a Assistència, les estadístiques, el risc i les absències de tot el cor"),
                          ("dirAbs", "i respon les absències de tothom"),
-                         ("viewer", "qui no és cantaire també pot canviar de rol"),
-                         ("viewerTabs", "«Veure l'app com un cantaire» té Inici, Calendari i Tauler, sense editar"),
-                         ("profTabs", "el professor de cant té Inici, Assistència, Calendari i Alumnes"),
+                         ("dirGestio", "a Gestió, Personal, Produccions i Ajustos"),
+                         ("dirSessions", "i porta les sessions i el tauler"),
+                         ("gerGestio", "la gerència també té tota la Gestió"),
+                         ("profTabs", "el professor de cant té Inici, Calendari i Classes"),
                          ("profHome", "a Inici, les seves properes classes"),
-                         ("students", "a Alumnes, els seus alumnes"),
+                         ("profClTabs", "a Classes, l'assistència i els alumnes"),
+                         ("profAtt", "hi passa llista a les classes"),
+                         ("students", "i hi té els seus alumnes"),
                          ("profCal", "el Calendari és el de les seves classes"),
-                         ("profAtt", "i a Assistència passa llista a les classes"),
                          ("overflow2", "sense eixamplar la pantalla del mòbil")]:
             check(r.get(k), label, str(r))
-        check(not errors, "sense errors amb les pestanyes per rol", "; ".join(errors[:3]))
+        check(not errors, "sense errors amb els rols sumats", "; ".join(errors[:3]))
         ctx.close()
 
         print("Canvis d'hora de classe entre els dos dies i a unes quantes persones")
@@ -922,7 +918,7 @@ def main():
           const req = [...S.classReq.values()].find(x => x.classId === 'cdl' && x.kind === 'swap');
           out.req = !!req && req.open && req.to.join() === 'mT1,mS3' && req.offers.mT1 === 'cdc|q3';
           return out; }"""))
-        switch_user(page, base, "pol", rol="singer")
+        switch_user(page, base, "pol")
         r.update(page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
           const req = openSwaps().find(x => x.classId === 'cdl');
           out.offered = !!req;
@@ -1043,7 +1039,7 @@ def main():
         switch_user(page, base, "arx")
         r.update(page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
           out.canMsg = canMessage() && mySecWrite() === 'S' && writableMembers().every(m => m.section === 'S');
-          ui.tab = 'partitures'; ui.matProd = 'p1'; render(); await s(300);
+          ui.tab = 'tauler'; ui.board = 'materials'; ui.matProd = 'p1'; render(); await s(300);
           document.querySelector('.arx-panel [data-act="msg-new"]').click(); await s(300);
           out.preset = /Partitures de/.test(document.querySelector('#mg-title').value);
           document.querySelector('#mg-send').click(); await s(200); flushAll(); await s(500);
@@ -1178,6 +1174,8 @@ def main():
         ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/assistencia/estadistiques")
         r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
           const txt = q => document.querySelector(q)?.innerText || '';
+          // L'administració (que també porta els tenors) mira tot el cor.
+          ui.attArea = 'all'; ui.statsSec = ''; render(); await s(300);
           // 1. Una baixa (Jan Pons, que té una falta) ja no surt a la norma de les estadístiques, i qui hi és sí.
           out.beforeNorm = /Jan Pons/.test(txt('.alerts'));
           saveMember({ ...S.members.get('mT3'), active: false }); render(); await s(300);
@@ -1208,23 +1206,20 @@ def main():
           out.riskLeft = !!rr && getComputedStyle(rr).textAlign === 'left';
           // 6. Classes: «La teva hora: avui · …» i sense la llegenda «Avui hi ha classe».
           saveClassDay({ id: 'cdavui', date: TODAY, place: 'Aula 2', note: '', teacher: 'prof@exemple.cat', teacherName: 'Prat, Berta', slots: [{ id: 'qa', time: '17:00', mins: 40, memberId: 'mT1' }] }); await s(300);
-          setLens('singer'); await s(200);
           applyRoute('classes'); render(); await s(300);
           out.classToday = /La teva hora: avui · 17:00/.test(txt('#view')) && !/Avui hi ha classe/.test(txt('.q-legend') + (document.querySelector('.q-legend') ? '' : ''));
           // 7. Una obra a mig repartir diu «Repartint» amb el recompte.
           setScore('p1', 'w1', S.members.get('mS0'), 'given');
-          setLens('admin'); await s(200);
           applyRoute('tauler/repertori'); ui.matProd = 'p1'; render(); await s(300);
           out.pill = /Repartint · 1\/15/.test(txt('.work .sc-pill.sc-part'));
-          setLens('singer'); await s(200);
           // 8. «No hi puc anar o arribaré tard»: a la fitxa de cada sessió que ve (les files d'Inici l'obren).
           applyRoute('inici'); render(); await s(300);
           const op = [...document.querySelectorAll('.soon-row .soon-open')].find(b => !sessionById(b.dataset.sid)?.rsvp);
           op?.click(); await s(300);
           out.ghost = !!op && !!document.querySelector(`.sheet .sheet-foot [data-act="absence-new"][data-sid="${op.dataset.sid}"], .sheet [data-act="absence-new"][data-sid="${op.dataset.sid}"]`);
           closeSheet(); await s(200);
-          // 9. La meva assistència (a la pestanya Assistència del cantaire): en buit, els assajos que queden.
-          applyRoute('assistencia'); render(); await s(300);
+          // 9. La meva assistència (Assistència › Jo): en buit, els assajos que queden.
+          applyRoute('assistencia/meva'); render(); await s(300);
           out.ahead = document.querySelectorAll('.my-att .dots i.fut').length === 2;
           applyRoute('inici'); render(); await s(200);
           // 10. El Tauler no s'obre a uns anuncis buits, i després recorda on eres.
@@ -1285,10 +1280,8 @@ def main():
           // 13. Els noms: Absències i Notificacions.
           applyRoute('assistencia/absencies'); render(); await s(300);
           out.absTab = [...document.querySelectorAll('.att-tabs .subtab')].some(b => /^Absències/.test(b.textContent.trim())) && ui.att === 'abs';
-          setLens('singer'); await s(200);
-          applyRoute('assistencia'); render(); await s(300);
+          applyRoute('assistencia/meva'); render(); await s(300);
           out.mine = /Avisa d’una absència/.test(txt('#view'));
-          setLens('admin'); await s(200);
           sheetHelp(); await s(300);
           out.help = /Què és cada cosa/.test(txt('.sheet')) && /Notificacions/.test(txt('.sheet')); closeSheet(); await s(200);
           // 15. Risc › Escriu-los: un missatge privat a cadascú, amb les seves xifres.
@@ -1317,7 +1310,7 @@ def main():
         ctx.close()
 
         print("Vestidor: demanar el vestuari i portar-lo des de la secretaria")
-        ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/inici", rol="singer")
+        ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/inici")
         r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
           const txt = q => document.querySelector(q)?.innerText || '';
           out.offMenu = (sheetAccount(), await s(300), !document.querySelector('.acct-item[data-act="ward-open"]')); closeSheet(); await s(200);
@@ -1335,8 +1328,8 @@ def main():
           out.saved = mine.length === 1 && mine[0].item === 'americana' && mine[0].size === '50' && mine[0].status === 'demanat';
           out.card = /Americana 50/.test(txt('.ward-card')) && /Demanat/.test(txt('.ward-card .ward-pill'));
           out.oneOnly = !document.querySelector('.section-title [data-act="ward-ask"]');
-          // La resta la porta l'equip (aquí, l'administració).
-          setLens('admin'); await s(200); applyRoute('vestidor'); render(); await s(300);
+          // La resta la porta l'equip (aquí, l'administració, que també hi té la seva peça).
+          applyRoute('vestidor'); render(); await s(300);
           out.order = /Americana · 50 ×1/.test(txt('.ward-order'));
           out.todoStaff = todoItems().some(x => x.icon === 'ward' && /per encarregar/.test(x.t));
           document.querySelector('[data-act="ward-ordered"]').click(); await s(400);
@@ -1346,10 +1339,9 @@ def main():
           document.querySelector('#wi-st button[data-k="emprovar"]').click(); document.querySelector('#wi-note').value = 'Escurçar les mànigues';
           document.querySelector('#wi-save').click(); await s(500);
           out.fitting = S.wardrobe.get(id).status === 'emprovar' && S.wardrobe.get(id).note === 'Escurçar les mànigues';
-          setLens('singer'); await s(200); applyRoute('vestidor'); render(); await s(300);
+          applyRoute('vestidor'); render(); await s(300);
           out.todoMine = todoItems().some(x => x.icon === 'ward' && /per emprovar/.test(x.t));
           out.steps = document.querySelectorAll('.ward-card .ward-steps li.done').length === 2 && /Pendent d’emprovar/.test(txt('.ward-card .ward-steps li.cur'));
-          setLens('admin'); await s(200); applyRoute('vestidor'); render(); await s(300);
           document.querySelector('[data-act="ward-filter"][data-k="none"]').click(); await s(300);
           out.none = document.querySelectorAll('.ward-list .ward-row').length === membersOf(null).length - 1;
           document.querySelector('.ward-list [data-act="ward-new"][data-mid="mS0"]').click(); await s(300);
@@ -1388,7 +1380,8 @@ def main():
         r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
           const txt = q => document.querySelector(q)?.innerText || '';
           const today = allSessions().find(x => x.date === TODAY);
-          ui.sessionId = today.id; render(); await s(300);
+          // Les eines de la llista són al quadre de totes les cordes (tot el cor, sense cap corda oberta).
+          ui.attArea = 'all'; ui.rollSec = null; ui.sessionId = today.id; render(); await s(300);
           out.noDoor = !document.querySelector('[data-act="door-open"]') && typeof viewDoor === 'undefined';
           out.tools = /Caps de corda en funcions/.test(txt('.roll-tools'));
           // El cap de corda de tenors (Lluc) no fa la producció.
@@ -1491,7 +1484,7 @@ def main():
           saveProduction({ id: 'p2', name: 'Concert de Nadal', start: d(30), end: d(40), excluded: [],
             sessions: [{ id: 'n1', date: d(35), time: '19:00', end: '21:00', type: 'Concert', place: 'Palau', note: '' }] });
           await s(300);
-          ui.tab = 'llista'; ui.att = 'llista'; ui.rollSec = null; ui.sessionId = 's3'; render(); await s(300);
+          ui.tab = 'llista'; ui.attArea = 'all'; ui.att = 'llista'; ui.rollSec = null; ui.sessionId = 's3'; render(); await s(300);
           // Dues de les quatre sopranos no fan la producció: abans de passar llista, «0/2», no «2/4».
           out.quad = document.querySelector('.quad[data-sec="S"] .q-c')?.textContent.trim() === '0/2'
             && document.querySelector('.quad[data-sec="S"] .q-bar span')?.style.width === '0%';
@@ -1562,11 +1555,10 @@ def main():
           saveProduction(p); await s(300);
           // Quantes en surten depèn de l'hora: passades les 22:30, la d'avui també és per acabar.
           const month = isoDate(new Date(Date.now() - 30 * 864e5)), n = sec => pendingSessions(sec).filter(x => x.date >= month).length;
-          setLens('leader'); await s(200);
+          // L'administració que també porta els tenors: les de la seva corda, i a part les de les altres tres.
           out.own = todoItems().some(x => /^(1 llista|\d+ llistes) per acabar/.test(x.t) && /Tenors/.test(x.s) && x.s.includes(ddmm(d(-1))));
-          setLens('admin'); await s(200);
-          const all = todoItems().find(x => /llist(a|es) sense acabar/.test(x.t));
-          out.others = !!all && ['S', 'C', 'T', 'B'].every(k => n(k) > 0 && all.s.includes(`${SEC[k].name} ${n(k)}`)) && all.t.startsWith(`${n('S') + n('C') + n('T') + n('B')} llist`);
+          const all = todoItems().find(x => /llist(a|es) sense acabar a les altres cordes/.test(x.t));
+          out.others = !!all && ['S', 'C', 'B'].every(k => n(k) > 0 && all.s.includes(`${SEC[k].name} ${n(k)}`)) && !all.s.includes(SEC.T.name) && all.t.startsWith(`${n('S') + n('C') + n('B')} llist`);
           ui.people = 'singer'; applyRoute('gestio/personal'); render(); await s(400);
           const rows = [...document.querySelectorAll('details.pm')];
           out.lazy = rows.length > 10 && rows.every(x => !x.open && !x.querySelector('.pm-b').childElementCount);
@@ -1637,8 +1629,7 @@ def main():
           saveProduction({ id: 'p9', name: 'Un sol concert', sessions: [{ id: 's9', date: d(40), time: '19:00', end: '', type: 'Concert', place: '', note: '' }], excluded: [] });
           applyRoute('calendari'); render(); await s(400);
           out.one = [...document.querySelectorAll('.cph-m .mono')].some(x => x.textContent.trim() === '1 sessió') && ![...document.querySelectorAll('.cph-m .mono')].some(x => /^1 sessions/.test(x.textContent.trim()));
-          // «Ha marxat abans», a la llista d'avui dels tenors (amb el rol de cap de corda).
-          setLens('leader'); await s(200);
+          // «Ha marxat abans», a la llista d'avui dels tenors (la corda que porta).
           applyRoute('inici'); render(); await s(300);
           document.querySelector('[data-act="home-roll"]').click(); await s(500);
           const row = () => document.querySelector('#roster .row[data-mid="mT2"]');
@@ -1755,11 +1746,11 @@ def main():
         page.click('.access-acts [data-act="people-tools"]'); page.wait_for_timeout(400)
         page.click('.sheet [data-act="preview-on"]'); page.wait_for_timeout(400)
         r = page.evaluate("({ roles: !!document.querySelector('#pv-role'), who: [...document.querySelectorAll('#pv-who option')].map(o => o.textContent) })")
-        check(not r["roles"] and any(x.startswith("Anna Puig") for x in r["who"]), "es mira com un cantaire concret (els rols són a Canvia de rol)", str(r))
+        check(r["roles"] and any(x.startswith("Anna Puig") for x in r["who"]), "es tria el rol i la persona concreta (de primeres, els cantaires)", str(r))
         page.select_option("#pv-who", page.evaluate("previewPeople('singer').find(x => x.label.startsWith('Anna')).key"))
         page.click("#pv-ok"); page.wait_for_timeout(500)
-        r = page.evaluate("({ edit: canEdit(), admin: isAdmin(), banner: document.querySelector('.preview-banner')?.innerText || '', lens: curLens() })")
-        check(not r["edit"] and not r["admin"] and "Anna" in r["banner"] and r["lens"] == "singer", "com una cantaire: no edita ni administra", str(r))
+        r = page.evaluate("({ edit: canEdit(), admin: isAdmin(), banner: document.querySelector('.preview-banner')?.innerText || '', tabs: tabsForRole().join() })")
+        check(not r["edit"] and not r["admin"] and "Anna" in r["banner"] and r["tabs"].startswith("avisos,llista,calendari,tauler"), "com una cantaire: les seves pestanyes, i no edita ni administra", str(r))
         before = page.evaluate("firebase.firestore().doc(`cors/${GID}/announcements/n1`).get().then(d => JSON.stringify(d.data()))")
         page.evaluate("persist('announcements', 'n1', { ...S.announcements.get('n1'), title: 'Canviat a la vista prèvia' })")
         page.evaluate("db.doc('announcements/n1').set({ title: 'x' }).catch(() => {})")
@@ -1772,12 +1763,17 @@ def main():
         page.wait_for_timeout(400)
         check(page.evaluate("PREVIEW === null && isAdmin()"), "en sortir-ne, tot torna a ser com abans")
         r = page.evaluate("""() => { startPreview({ roles: ['voice'], email: 'prof@exemple.cat', name: 'Prat, Berta', label: 'Professor de cant' });
-          const out = { teach: teachesClasses(), edit: canEdit(), tabs: tabsForRole() }; stopPreview();
+          const out = { teach: teachesClasses(), edit: canEdit(), tabs: tabsForRole(), cl: clTabKeys() }; stopPreview();
           const anna = previewPeople('singer').find(x => x.label.startsWith('Anna'));
-          startPreview({ ...anna.person, label: 'Cantaire' }); out.singerEdit = canEdit(); out.me = myId(); out.gestio = !!document.querySelector('.tabs .tab-extra');
+          startPreview({ ...anna.person, label: 'Cantaire' }); out.singerEdit = canEdit(); out.me = myId(); out.gestio = roleTabs().includes('gestio');
+          stopPreview();
+          // Una persona amb dos rols: el cap de corda dels tenors, que també hi canta (la llavor en té un).
+          const lead = previewPeople('leader').find(x => x.key === 'T');
+          startPreview({ ...lead.person, label: 'Cap de corda' }); out.leadTabs = tabsForRole().join(); out.leadAreas = attAreas().join();
           stopPreview(); out.back = ui.tab === 'gestio' && isAdmin(); return out; }""")
-        check(r["teach"] and not r["edit"] and "alumnes" in r["tabs"], "com el professor de cant: porta les classes (amb els seus alumnes) i no edita res més", str(r))
+        check(r["teach"] and not r["edit"] and "classes" in r["tabs"] and "alumnes" in r["cl"], "com el professor de cant: porta les classes (amb els seus alumnes) i no edita res més", str(r))
         check(not r["singerEdit"] and r["me"] and not r["gestio"], "com un cantaire: veu el seu espai i no Gestió", str(r))
+        check(r["leadTabs"].startswith("avisos,llista,calendari,tauler") and r["leadAreas"] == "me,sec", "com el cap de corda que també canta: les pestanyes dels dos rols", str(r))
         check(r["back"], "i se'n torna a Gestió", str(r))
         check(not errors, "sense errors a la vista prèvia", "; ".join(errors[:3]))
         ctx.close()

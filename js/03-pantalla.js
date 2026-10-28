@@ -33,24 +33,18 @@ const WARD_ICON = '<path d="M12 8.4V7.2a2 2 0 1 0-2-2"/><path d="M12 8.4 3.7 14.
 const TAB_LABEL = { llista: 'Assistència', calendari: 'Calendari', stats: 'Estadístiques', gestio: 'Gestió', avisos: 'Inici', tauler: 'Tauler', classes: 'Classes de cant', partitures: 'Partitures', alumnes: 'Alumnes' };
 // Amb sis pestanyes (qui edita i també és a la plantilla) els noms llargs no hi caben.
 const TAB_SHORT = { stats: 'Estad.', classes: 'Classes', calendari: 'Calend.', llista: 'Assistència' };
-// Una pestanya per feina: Inici (el que tens per fer i el que ve), Assistència (passar llista i
-// estadístiques), Calendari, Tauler (comunicació) i, si n'hi ha, Classes. La gestió s'obre des del menú del compte.
-const tabsForRole = () => {
-  // Cada rol té les seves pestanyes (vegeu 03b-rols); amb tots els rols alhora, les d'abans.
-  const own = lensTabs();
-  if (own) return own;
-  const cl = seeClasses() ? ['classes'] : [];
-  // Amb les llistes privades, qui no les passa no té la pestanya d'Assistència: la seva, la veu a Inici.
-  return ['avisos', ...(attHidden() && !mySubs().length ? [] : ['llista']), 'calendari', 'tauler', ...cl];
-};
-/** La pestanya de baix que s'il·lumina. Gestió no és cap pestanya: s'obre des del menú del compte. */
-const navTab = () => (ui.tab === 'gestio' && !tabsForRole().includes('gestio')) || ui.tab === 'vestidor' ? '' : ui.tab;
+// Una pestanya per feina: Inici (el que tens per fer i el que ve), Assistència (passar llista i estadístiques), Calendari,
+// Tauler (comunicació i repertori), Classes i Gestió. Cadascú té les dels seus rols (vegeu tabsForRole, a 03b-rols).
+/** La pestanya de baix que s'il·lumina. Les que no hi caben (vegeu moreTabs) s'obren des del menú del compte. */
+const navTab = () => ui.tab === 'vestidor' || !tabsForRole().includes(ui.tab) ? '' : ui.tab;
 function renderTabs() {
-  const tabs = tabsForRole();
+  const tabs = tabsForRole(), all = roleTabs();
   if (ui.tab === 'stats' || (ui.tab === 'tauler' && ui.board === 'estadistiques')) { ui.tab = 'llista'; ui.att = 'stats'; ui.board = 'anuncis'; }   // on eren abans
-  if (ui.tab === 'gestio' && !gestioOn()) ui.tab = tabs[0];
+  // Les pestanyes de l'arxiver i dels alumnes ara són dins del Tauler i de les Classes.
+  if (ui.tab === 'partitures') { ui.tab = 'tauler'; ui.board = 'materials'; }
+  if (ui.tab === 'alumnes') { ui.tab = 'classes'; ui.clTab = 'alumnes'; }
   if (ui.tab === 'vestidor' && !(wardOn() && (myId() || wardStaff()))) ui.tab = tabs[0];
-  if (ui.tab !== 'gestio' && ui.tab !== 'vestidor' && !tabs.includes(ui.tab)) ui.tab = tabs[0];
+  if (ui.tab !== 'vestidor' && !all.includes(ui.tab)) ui.tab = tabs[0];
   // Un sol número vermell, a Inici: tot el que espera resposta.
   const badge = todoCount();
   const short = tabs.length > 5;
@@ -61,15 +55,16 @@ function renderTabs() {
   const logo = S.config.brand?.logo || MARCA?.logo;
   const gname = S.config.shortName || S.config.name || MARCA?.short || '';
   const side = `<div class="side-brand" aria-hidden="true">${logo ? `<img src="${esc(logo)}" alt="">` : `<span class="sb-ini">${esc(initials(gname))}</span>`}<span><b>${esc(gname)}</b><small>A Tempo</small></span></div>`;
-  // A l'ordinador, Gestió també és al menú lateral (al mòbil s'obre des del menú del compte).
-  const pend = lensOn() ? 0 : myPendingAbsences().length;
-  const gestio = gestioOn() && !tabs.includes('gestio') ? `<button class="tab tab-extra" data-act="manage" data-k="${pend ? 'avisos' : ROUTE_MANAGE[ui.manage] ? ui.manage : 'personal'}" aria-current="${ui.tab === 'gestio' ? 'page' : 'false'}">
-    <span class="tab-ico"><svg viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>${pend ? `<span class="tab-badge">${pend}</span>` : ''}</span>Gestió</button>` : '';
+  // Les pestanyes que no caben a la barra: a l'ordinador, al menú lateral (al mòbil s'obren des del menú del compte).
+  const more = moreTabs().map(t => `<button class="tab tab-extra" ${t === 'gestio' ? `data-act="manage" data-k="${ROUTE_MANAGE[ui.manage] ? ui.manage : 'personal'}"` : `data-act="tab" data-tab="${t}"`} aria-current="${ui.tab === t ? 'page' : 'false'}">
+    <span class="tab-ico"><svg viewBox="0 0 24 24">${t === 'gestio' ? GESTIO_ICON : TAB_ICONS[t]}</svg></span>${TAB_LABEL[t]}</button>`).join('');
   const vest = wardOn() && (myId() || wardStaff()) ? `<button class="tab tab-extra" data-act="ward-open" aria-current="${ui.tab === 'vestidor' ? 'page' : 'false'}">
     <span class="tab-ico"><svg viewBox="0 0 24 24">${WARD_ICON}</svg></span>Vestidor</button>` : '';
   $('.tabs-in').innerHTML = side + tabs.map(t => `<button class="tab" data-act="tab" data-tab="${t}" aria-current="${t === navTab() ? 'page' : 'false'}"${shortName(t) ? ` aria-label="${TAB_LABEL[t]}"` : ''}>
-    <span class="tab-ico"><svg viewBox="0 0 24 24">${TAB_ICONS[t]}</svg>${t === 'avisos' && badge ? `<span class="tab-badge">${badge > 99 ? '99+' : badge}</span>` : ''}</span>${shortName(t) || TAB_LABEL[t]}</button>`).join('') + gestio + vest;
+    <span class="tab-ico"><svg viewBox="0 0 24 24">${TAB_ICONS[t]}</svg>${t === 'avisos' && badge ? `<span class="tab-badge">${badge > 99 ? '99+' : badge}</span>` : ''}</span>${shortName(t) || TAB_LABEL[t]}</button>`).join('') + more + vest;
 }
+// Gestió, quan no és a la barra (al menú lateral i al del compte): uns controls lliscants.
+const GESTIO_ICON = '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>';
 /* ---------- Brand: logo and accent colour ---------- */
 function hexToHsl(hex) {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex || ''); if (!m) return null;
@@ -207,11 +202,7 @@ function render() {
   renderBanner();
   const v = $('#view');
   $('.tabs').hidden = S.mode !== 'shared';
-  // Qui té diversos rols, en obrir l'app, tria amb quin entra (vegeu 03b-rols).
-  ensureLens();
-  const picking = lensPicking();
-  if (picking) $('.tabs').hidden = true;
-  if (S.mode === 'shared' && !picking) renderTabs();
+  if (S.mode === 'shared') renderTabs();
   const GBTN = `<button class="gbtn" data-act="google-in"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17.1z"/><path fill="#FBBC05" d="M10.5 28.7c-.5-1.4-.8-3-.8-4.7s.3-3.2.8-4.7l-7.9-6.1C.9 16.5 0 20.1 0 24s.9 7.5 2.6 10.8l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2.1 1.4-4.8 2.3-8.5 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>Entra amb Google</button>`;
   const own = !['pick', 'create', 'nostaff'].includes(S.mode) && !!(MARCA || S.ready);
   const hero = () => `<div class="entry-id">
@@ -275,11 +266,9 @@ function render() {
       <div class="sk-grid"><span class="sk sk-tile"></span><span class="sk sk-tile"></span></div></div>`;
     return;
   }
-  if (picking) { v.innerHTML = viewLensPick(); lastViewKey = 'lens'; return; }
-  const html = { llista: viewRoll, calendari: () => curLens() === 'voice' ? viewTeacherCalendar() : viewCalendar(), stats: () => viewStats(false), gestio: viewManage, avisos: viewHome, tauler: viewBoard, classes: viewClasses, vestidor: viewWardrobe,
-    partitures: viewScores, alumnes: viewStudents }[ui.tab]();
+  const html = { llista: viewRoll, calendari: () => teacherOnly() ? viewTeacherCalendar() : viewCalendar(), stats: () => viewStats(false), gestio: viewManage, avisos: viewHome, tauler: viewBoard, classes: viewClasses, vestidor: viewWardrobe }[ui.tab]();
   v.innerHTML = html;
-  const key = [ui.tab, ui.att, ui.board, ui.manage, ui.people, ui.pmFilter, ui.rollSec, ui.clWho, ui.sessionId].join('|');
+  const key = [ui.tab, ui.att, ui.attArea, ui.board, ui.manage, ui.people, ui.pmFilter, ui.rollSec, ui.clWho, ui.clTab, ui.sessionId].join('|');
   if (key !== lastViewKey) { lastViewKey = key; v.classList.remove('view-in'); void v.offsetWidth; v.classList.add('view-in'); }
   afterRender();
   if (typeof syncRoute === 'function') syncRoute();

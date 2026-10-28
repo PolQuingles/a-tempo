@@ -28,24 +28,24 @@ function tripCounts(t) {
 }
 function boardTrips() {
   const me = S.members.get(myMemberId());
-  const list = tripsSorted().filter(t => canEdit() || tripForMe(t, me));
+  const list = tripsSorted().filter(t => canBoard() || tripForMe(t, me));
   const next = list.filter(t => (t.to || t.from || '') >= TODAY), past = list.filter(t => (t.to || t.from || '') < TODAY).reverse();
   const card = t => {
-    const c = canEdit() ? tripCounts(t) : null;
+    const c = canBoard() ? tripCounts(t) : null;
     const mine = me && signupOf(t, me.id);
     const tr = mine?.transport && (t.transports || []).find(x => x.id === mine.transport);
     const rm = mine?.room && (t.rooms || []).find(x => x.id === mine.room);
     return `<article class="trip">
-      <div class="ann-h"><h2 class="ann-t">${esc(t.title)}</h2>${canEdit() ? `<button class="icon-btn" data-act="trip-edit" data-id="${esc(t.id)}" aria-label="Edita la sortida">${ICON.more}</button>` : ''}</div>
+      <div class="ann-h"><h2 class="ann-t">${esc(t.title)}</h2>${canBoard() ? `<button class="icon-btn" data-act="trip-edit" data-id="${esc(t.id)}" aria-label="Edita la sortida">${ICON.more}</button>` : ''}</div>
       <p class="trip-f"><b>${esc(capz(tripDates(t)))}</b>${t.place ? ` · ${esc(t.place)}` : ''}${t.deadline && tripOpen(t) ? ` · <span class="m">apunta’t abans del ${ddmm(t.deadline)}</span>` : t.closed ? ' · <span class="m">inscripcions tancades</span>' : ''}</p>
       ${t.notes ? `<div class="ann-b">${linkify(t.notes)}</div>` : ''}
       ${c ? `<p class="trip-c"><b>${c.yes.length}</b> hi van · ${c.no.length} no · ${c.wait} sense resposta${(t.transports || []).length ? ` · transport ${Object.values(c.seats).reduce((a, b) => a + b, 0)}/${t.transports.reduce((a, x) => a + (+x.seats || 0), 0)}` : ''}${(t.rooms || []).length ? ` · llits ${Object.values(c.beds).reduce((a, b) => a + b, 0)}/${t.rooms.reduce((a, x) => a + (+x.beds || 0), 0)}` : ''}</p>` : ''}
       ${me && tripForMe(t, me) ? `<div class="trip-me">${mine ? `<span class="rsvp ${mine.answer}">${mine.answer === 'yes' ? 'Hi vas' : 'No hi vas'}</span>${tr ? ` <span class="m">· ${esc(tr.name)}</span>` : ''}${rm ? ` <span class="m">· habitació ${esc(rm.name)}</span>` : ''}${tripAnswersText(t, mine) ? `<br><span class="m">${esc(tripAnswersText(t, mine))}</span>` : ''}${mine.note ? `<br><span class="m">${esc(mine.note)}</span>` : ''}` : '<span class="rsvp none">Encara no has respost</span>'}
         ${tripOpen(t) ? `<span class="trip-acts"><button class="btn btn-sm ${mine?.answer === 'yes' ? 'btn-primary' : ''}" data-act="trip-yes" data-id="${esc(t.id)}">${mine?.answer === 'yes' ? 'Canvia la nota' : 'M’hi apunto'}</button><button class="btn btn-sm ${mine?.answer === 'no' ? 'btn-danger' : ''}" data-act="trip-no" data-id="${esc(t.id)}">No hi aniré</button></span>` : ''}</div>` : ''}
-      ${canEdit() ? `<div class="trip-acts"><button class="btn btn-sm" data-act="trip-admin" data-id="${esc(t.id)}">Inscrits, transport i habitacions</button>${tripOpen(t) && c.wait ? `<button class="btn btn-sm" data-act="trip-remind" data-id="${esc(t.id)}">Recorda-ho (${c.wait})</button>` : ''}</div>` : ''}
+      ${canBoard() ? `<div class="trip-acts"><button class="btn btn-sm" data-act="trip-admin" data-id="${esc(t.id)}">Inscrits, transport i habitacions</button>${tripOpen(t) && c.wait ? `<button class="btn btn-sm" data-act="trip-remind" data-id="${esc(t.id)}">Recorda-ho (${c.wait})</button>` : ''}</div>` : ''}
     </article>`;
   };
-  return `${canEdit() ? `<div class="sec-h end" style="margin-top:6px"><button class="btn btn-sm btn-primary" data-act="trip-new">+ Sortida</button></div>` : ''}
+  return `${canBoard() ? `<div class="sec-h end" style="margin-top:6px"><button class="btn btn-sm btn-primary" data-act="trip-new">+ Sortida</button></div>` : ''}
     ${next.length ? `<div class="panel">${next.map(card).join('')}</div>` : `<div class="empty"><p>No hi ha cap sortida prevista.</p></div>`}
     ${past.length ? `<details class="np-group"><summary><span>Fetes (${past.length})</span>${ICON.chev}</summary><div class="panel">${past.map(card).join('')}</div></details>` : ''}`;
 }
