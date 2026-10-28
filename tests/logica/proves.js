@@ -517,6 +517,22 @@ prova('accountForMember i leadsOwn: la marca de cap de corda i el permís del co
   igual([leadsOwn(m, up), leadsOwn(m, acc), leadsOwn(m, null)], [true, false, true], 'amb compte mana el permís; sense, la fitxa');
 });
 
+/* ---------- Desar només el que canvia ---------- */
+prova('changedFields: a les produccions i als Ajustos només es desa el que ha canviat', () => {
+  const FV = { delete: () => '«esborra»', arrayUnion: (...x) => ({ afegeix: x }), arrayRemove: (...x) => ({ treu: x }) };
+  const base = { id: 'p1', name: 'Dido', excluded: ['a', 'b'], roll: { S: 'x', T: 'y' }, sessions: [{ id: 's1', date: '2026-10-01' }], poster: 'p' };
+  igual(changedFields(base, clone(base), FV), {}, 'sense canvis, res');
+  igual(changedFields(base, { ...base, excluded: ['a', 'b', 'c'] }, FV), { excluded: { afegeix: ['c'] } }, 'algú més no la fa: només s’hi afegeix');
+  igual(changedFields(base, { ...base, excluded: ['b'] }, FV), { excluded: { treu: ['a'] } }, 'algú la torna a fer: només se’n treu');
+  igual(changedFields(base, { ...base, excluded: ['c', 'a'] }, FV), { excluded: ['c', 'a'] }, 'si s’afegeix i es treu alhora, la llista sencera');
+  igual(changedFields(base, { ...base, roll: { S: 'x', T: 'z' } }, FV), { roll: { T: 'z' } }, 'dins d’un mapa, només el que canvia');
+  igual(changedFields(base, { ...base, roll: { S: 'x' } }, FV), { roll: { T: '«esborra»' } }, 'i el que se’n treu s’esborra');
+  const { poster, ...sense } = base;
+  igual(changedFields(base, sense, FV), { poster: '«esborra»' }, 'un camp que ja no hi és');
+  igual(changedFields(base, { ...base, sessions: [{ id: 's1', date: '2026-10-02' }] }, FV), { sessions: [{ id: 's1', date: '2026-10-02' }] }, 'les sessions, senceres');
+  igual(changedFields({ a: 1 }, { a: 1, b: { c: 2 } }, FV), { b: { c: 2 } }, 'un mapa nou, sencer');
+});
+
 /** Executa totes les proves: { ok, fail, lines }. */
 function runProves() {
   const lines = [];

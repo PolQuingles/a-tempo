@@ -32,7 +32,6 @@ function messagesForMe(all) {
     .filter(m => all || m.by === myEmail() || (m.to || []).includes('*') || (m.to || []).some(x => secs.includes(x)) || (!!myId() && (m.members || []).includes(myId())))
     .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
 }
-const unreadMessages = () => { const seen = lsGet(LS_MSG) || ''; return messagesForMe().filter(m => (m.createdAt || '') > seen && m.by !== myEmail()); };
 /** Es llegeixen quan ja se sap de quina corda és cadascú: l'equip, tots els recents; la resta, els seus (dues consultes). */
 let msgWatch = null;
 function watchMessages() {
@@ -148,7 +147,7 @@ function sheetMessage(preset = {}) {
         const body = el.querySelector('#mg-body').value.trim();
         if (!body) { toast('Escriu el missatge'); return; }
         const rec = { id: uid('ms'), to: to(), title: el.querySelector('#mg-title').value.trim(), body, by: S.email || '', byName: fullName(S.me?.name || S.userName || S.email || ''),
-          byRole: lead && !all ? `${myLeadSection() ? capz(V.leader) : 'Arxiver'} de ${SEC[lead].name.toLowerCase()}` : (rolesText(S.me).split(' · ')[0] || ''), createdAt: new Date().toISOString() };
+          byRole: lead && !all ? `${myLeadSection() ? capz(V.leader) : 'Arxiu'} de ${SEC[lead].name.toLowerCase()}` : (rolesText(S.me).split(' · ')[0] || ''), createdAt: new Date().toISOString() };
         // A qui fa una producció: la llista de qui la fa ara (qui hi entri després no el rebrà; qui en surti, el conserva).
         if (prod) {
           const secs = secsOf(rec.to), ms = prodRecipients(prod, secs);

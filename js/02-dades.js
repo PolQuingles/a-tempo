@@ -32,10 +32,41 @@ function newKey() {
 
 const isDirty = path => queue.has(path);
 
+/* ---------- Desar només el que ha canviat ---------- */
+// A les produccions (amb totes les sessions a dins) i als Ajustos hi treballen diverses persones alhora. Si es desés el
+// document sencer, el darrer que desa esborraria el que els altres hi han canviat mentrestant (o el que ha canviat mentre un
+// mòbil era sense cobertura, quan en torna a tenir). Per això s'hi escriuen només els camps que han canviat respecte de la
+// versió que aquest mòbil havia llegit (BASE), amb { merge: true }.
+const MERGE_COLS = ['productions', 'config'];
+const BASE = new Map();   // camí -> el document tal com es va llegir
+const noteBase = (path, data) => { if (MERGE_COLS.includes(path.split('/')[0])) BASE.set(path, clone(data)); };
+const isPlainObj = v => !!v && typeof v === 'object' && !Array.isArray(v) && Object.getPrototypeOf(v) === Object.prototype;
+const flatList = a => Array.isArray(a) && new Set(a).size === a.length && a.every(x => typeof x === 'string' || typeof x === 'number');
+/** Els camps de next que no són com a base, per desar-los amb { merge: true }: el que ja no hi és s'esborra, dins dels mapes
+ *  només hi va el que ha canviat, i a una llista de noms (com qui no fa una producció) només s'hi afegeix o se'n treu el que
+ *  toca, perquè dos caps de corda puguin marcar alhora. FV: FieldValue (a les proves, un de fals). */
+function changedFields(base, next, FV = firebase.firestore.FieldValue) {
+  const out = {};
+  for (const k of new Set([...Object.keys(base || {}), ...Object.keys(next || {})])) {
+    const a = base?.[k], b = next?.[k];
+    if (JSON.stringify(a) === JSON.stringify(b)) continue;
+    if (b === undefined) { out[k] = FV.delete(); continue; }
+    if (isPlainObj(a) && isPlainObj(b)) { const sub = changedFields(a, b, FV); if (Object.keys(sub).length) out[k] = sub; continue; }
+    if (flatList(a) && flatList(b)) {
+      const add = b.filter(x => !a.includes(x)), del = a.filter(x => !b.includes(x));
+      if (add.length && !del.length && JSON.stringify(b) === JSON.stringify([...a, ...add])) { out[k] = FV.arrayUnion(...add); continue; }
+      if (del.length && !add.length) { out[k] = FV.arrayRemove(...del); continue; }
+    }
+    out[k] = b;
+  }
+  return out;
+}
+
 /** Write one document (data) or delete it (null). Local state must already be updated. */
 function persist(col, id, data, delay = 350) {
   if (PREVIEW) { previewBlocked(); return; }
   const path = `${col}/${id}`;
+  if (data === null) BASE.delete(path);
   if (data === null && EPOCH_ON_DELETE.includes(col)) bumpSoon(col);
   const q = queue.get(path) || {};
   clearTimeout(q.timer);
@@ -48,10 +79,14 @@ function flush(path) {
   const q = queue.get(path);
   if (!q || !db) return;
   queue.delete(path);
+  // A les col·leccions on hi treballen diversos alhora (MERGE_COLS), només els camps que han canviat.
+  const base = q.data !== null && BASE.get(path);
+  const patch = base ? changedFields(base, q.data) : null;
+  if (patch && !Object.keys(patch).length) { updateSync(); return; }
   inflight++;
   updateSync();
   // Firestore applies the write to its local cache at once (works offline) and syncs when there is signal.
-  const p = q.data === null ? db.doc(path).delete() : db.doc(path).set(stamped(path, q.data));
+  const p = q.data === null ? db.doc(path).delete() : patch ? db.doc(path).set(stamped(path, patch), { merge: true }) : db.doc(path).set(stamped(path, q.data));
   p.then(() => { S.syncErr = false; })
    .catch(writeFailed)
    .finally(() => { inflight--; updateSync(); });
@@ -141,6 +176,7 @@ function take(col, map, d) {
   if (isDirty(path)) { if (S[col].has(d.id)) map.set(d.id, S[col].get(d.id)); return; }
   const { syncAt, ...data } = d.data();
   if (col === 'classes' && (data.deleted || (data.date || '') < CLASS_FROM)) { map.delete(d.id); return; }
+  noteBase(path, data);
   map.set(d.id, col === 'members' ? normPersonName(data) : data);
 }
 /** Una col·lecció gran: sencera o només el que ha canviat (vegeu a dalt). */
@@ -160,6 +196,7 @@ function syncCol(col) {
       const next = new Map();
       for (const d of snap.docs) take(col, next, d);
       for (const [id, v] of S[col]) if (!next.has(id) && isDirty(`${col}/${id}`) && queue.get(`${col}/${id}`)?.data !== null) next.set(id, v);
+      for (const id of S[col].keys()) if (!next.has(id)) BASE.delete(`${col}/${id}`);
       S[col] = next;
       if (!snap.metadata.fromCache) {
         if (SYNC.got[col] == null) SYNC.got[col] = snap.size;
@@ -187,7 +224,7 @@ function syncCol(col) {
         // Ja no hi surt: o s'ha esborrat o l'ha desat una app antiga sense syncAt. Es mira quin dels dos. Si l'acabem de desar
         // nosaltres, és només l'instant en què l'hora del servidor encara no hi és: torna a sortir quan el servidor respon.
         if (ch.type === 'removed' && Date.now() - (SYNC.mine.get(`${col}/${ch.doc.id}`) || 0) < 120000) continue;
-        if (ch.type === 'removed') { ch.doc.ref.get().then(d => { if (d.exists) take(col, S[col], d); else if (!isDirty(`${col}/${d.id}`)) S[col].delete(d.id); scheduleRender(); }).catch(() => {}); continue; }
+        if (ch.type === 'removed') { ch.doc.ref.get().then(d => { if (d.exists) take(col, S[col], d); else if (!isDirty(`${col}/${d.id}`)) { S[col].delete(d.id); BASE.delete(`${col}/${d.id}`); } scheduleRender(); }).catch(() => {}); continue; }
         take(col, S[col], ch.doc);
       }
       if (!snap.metadata.fromCache) {
@@ -225,11 +262,13 @@ function takeSnap(col, snap) {
   for (const [id, v] of S[col]) if (!next.has(id) && isDirty(`${col}/${id}`) && queue.get(`${col}/${id}`)?.data !== null) next.set(id, v);
   S[col] = next;
 }
+// Si una consulta es denega, l'app i les regles no diuen el mateix: es continua sense aquelles dades i queda apuntat al registre
+// d'errors (sense cap nom), perquè la vigilància ho vegi.
+const noteDenied = (col, e) => { if (e && e.code === 'permission-denied') noteFailure('promesa', `Sense permís per llegir ${col}`, 'subscribe'); };
 function subscribe() {
   const staff = S.role === 'edit';
-  // Les notes de classe són privades: només el professorat i l'administració les veuen totes.
+  // Les classes de cant (els avisos, l'horari fix i les notes) les porten el professorat i l'administració.
   const teachCl = hasRole(S.me, 'voice') || hasRole(S.me, 'admin');
-  const teach = staff || hasRole(S.me, 'voice');           // veu tots els avisos de les classes
   // El personal (qui té accés i amb quins rols) només es llegeix quan s'obre Gestió: vegeu ensureStaff.
   const wanted = ['members', 'productions', 'attendance', 'config', 'absences', 'subs', 'rsvp', 'announcements', 'polls', 'pollVotes', 'classes', 'classReq', 'classNotes', 'works', 'trips', 'tripSignups', 'scores'];
   if (teachCl) wanted.push('classPlan');
@@ -240,17 +279,18 @@ function subscribe() {
     markLoaded(col);
     if (S.ready) scheduleRender();
   };
-  const mine = col => staff ? db.collection(col) : db.collection(col).where('memberId', '==', S.memberId || '-');
+  // De tothom (si el compte les pot llegir totes, vegeu les regles) o només les seves.
+  const mine = (col, all = staff) => all ? db.collection(col) : db.collection(col).where('memberId', '==', S.memberId || '-');
   // Les col·leccions grans (vegeu syncCol): la plantilla, les produccions, les llistes, les classes de cant, el repertori,
   // el tauler (anuncis, enquestes i sortides) i, per a l'equip, les respostes a convocatòries i enquestes de tothom.
   // De les classes, només les dues últimes setmanes i el que ve: un curs sencer serien massa lectures. De les llistes,
   // només les dels trimestres que encara no s'han arxivat (vegeu l'arxiu de l'assistència).
   const big = (col, query, err) => BIG.set(col, { query, err: err || (() => markLoaded(col)), done: () => { markLoaded(col); if (S.ready) scheduleRender(); } });
   big('members', () => db.collection('members'), e => { markLoaded('members'); onDbError(e); });
-  // La part privada de les fitxes (vegeu MEMBER_PRIV): l'equip la llegeix sencera i la barreja amb la plantilla.
+  // La part privada de les fitxes (vegeu MEMBER_PRIV): qui porta les persones la llegeix sencera i la barreja amb la plantilla.
   const memDone = BIG.get('members').done;
   BIG.get('members').done = () => { mergePriv(); memDone(); };
-  if (staff) BIG.set('memberPriv', { query: () => db.collection('memberPriv'), err: () => {}, done: () => { mergePriv(); if (S.ready) scheduleRender(); } });
+  if (readsPeople()) BIG.set('memberPriv', { query: () => db.collection('memberPriv'), err: e => noteDenied('memberPriv', e), done: () => { mergePriv(); if (S.ready) scheduleRender(); } });
   big('productions', () => db.collection('productions'), e => { markLoaded('productions'); onDbError(e); });
   big('classes', () => db.collection('classes').where('date', '>=', CLASS_FROM));
   big('works', () => db.collection('works'));
@@ -270,14 +310,26 @@ function subscribe() {
       e => { markLoaded('attendance'); onDbError(e); });
   }
   for (const col of ['announcements', 'polls', 'trips']) big(col, () => db.collection(col));
-  if (staff) for (const col of ['rsvp', 'pollVotes']) big(col, () => db.collection(col));
-  else for (const col of ['rsvp', 'pollVotes']) mine(col).onSnapshot(onCol(col), () => markLoaded(col));
+  // Les respostes a les convocatòries de tothom, l'equip; els vots de tothom, només qui porta el tauler (vegeu les regles).
+  for (const [col, all] of [['rsvp', staff], ['pollVotes', readsBoard()]]) {
+    if (all) big(col, () => db.collection(col));
+    else mine(col, false).onSnapshot(onCol(col), e => { markLoaded(col); noteDenied(col, e); });
+  }
   // L'horari fix de cada professor/a només el fan servir el professorat i l'administració.
   if (teachCl) db.collection('classPlan').onSnapshot(onCol('classPlan'), () => markLoaded('classPlan'));
-  // Les notes de classe són privades: el professorat les veu totes; cada persona, només les seves.
-  if (teachCl) db.collection('classNotes').where('date', '>=', CLASS_FROM).onSnapshot(onCol('classNotes'), () => markLoaded('classNotes'));
+  // Les notes de classe són privades: l'administració les veu totes; cada professor, les de les seves classes, i cada
+  // persona, les seves.
+  if (hasRole(S.me, 'admin')) db.collection('classNotes').where('date', '>=', CLASS_FROM).onSnapshot(onCol('classNotes'), e => { markLoaded('classNotes'); noteDenied('classNotes', e); });
+  else if (hasRole(S.me, 'voice')) {
+    let asTeacher = new Map(), asStudent = new Map();
+    const mergeNotes = () => { S.classNotes = new Map([...asStudent, ...asTeacher]); markLoaded('classNotes'); if (S.ready) scheduleRender(); };
+    db.collection('classNotes').where('teacher', '==', S.email || '-').onSnapshot(snap => { asTeacher = new Map(snap.docs.map(d => [d.id, d.data()])); mergeNotes(); },
+      e => { markLoaded('classNotes'); noteDenied('classNotes', e); });
+    if (S.memberId) db.collection('classNotes').where('memberId', '==', S.memberId).onSnapshot(snap => { asStudent = new Map(snap.docs.map(d => [d.id, d.data()])); mergeNotes(); }, () => {});
+  }
   else db.collection('classNotes').where('memberId', '==', S.memberId || '-').onSnapshot(onCol('classNotes'), () => markLoaded('classNotes'));
-  if (teach) db.collection('classReq').onSnapshot(onCol('classReq'), () => markLoaded('classReq'));
+  // Tots els avisos de les classes, el professorat i l'administració; la resta, els seus i els canvis oberts.
+  if (teachCl) db.collection('classReq').onSnapshot(onCol('classReq'), e => { markLoaded('classReq'); noteDenied('classReq', e); });
   else {
     const mid = S.memberId || '-';
     let fromMe = new Map(), toMe = new Map(), openOnes = new Map();
@@ -288,18 +340,23 @@ function subscribe() {
     // Els canvis d'hora oberts són una crida a qui pugui: els veu tothom de l'agrupació.
     grab(db.collection('classReq').where('open', '==', true), m => { openOnes = m; });
   }
-  mine('tripSignups').onSnapshot(onCol('tripSignups'), () => markLoaded('tripSignups'));
-  for (const col of ['absences', 'subs']) (col === 'absences' && onlySec ? db.collection('absences').where('section', '==', onlySec) : mine(col)).onSnapshot(snap => { onCol(col)(snap); if (col === 'subs') syncSubLists(); }, e => { markLoaded(col); if (staff) onDbError(e); });
+  mine('tripSignups', readsBoard()).onSnapshot(onCol('tripSignups'), e => { markLoaded('tripSignups'); noteDenied('tripSignups', e); });
+  // Les absències: de tot el cor (qui veu l'assistència de tothom), de la corda (el cap de corda) o les seves. Els substituts,
+  // tothom de l'equip.
+  const absQuery = readsAllAtt() ? db.collection('absences') : onlySec ? db.collection('absences').where('section', '==', onlySec) : mine('absences', false);
+  absQuery.onSnapshot(onCol('absences'), e => { markLoaded('absences'); noteDenied('absences', e); });
+  mine('subs').onSnapshot(snap => { onCol('subs')(snap); syncSubLists(); }, e => { markLoaded('subs'); if (staff) onDbError(e); });
   db.doc('config/main').onSnapshot(snap => {
-    if (!isDirty('config/main')) S.config = { name: '', alertFNJ: 3, minAttendance: 80, demo: false, ...(snap.exists ? snap.data() : {}) };
+    if (!isDirty('config/main')) { S.config = { name: '', alertFNJ: 3, minAttendance: 80, demo: false, ...(snap.exists ? snap.data() : {}) }; if (snap.exists) noteBase('config/main', S.config); }
     applyGroupConfig();
     // Si les llistes passen a ser privades (o deixen de ser-ho), qui no les passa torna a començar: llegeix unes altres dades.
-    const priv = !staff && attPrivate();
+    // Amb les llistes privades, qui no les llegeix de tot el cor ni de la seva corda només en llegeix la seva còpia.
+    const priv = !readsAllAtt() && !attScopeSec() && attPrivate();
     if (SYNC.started && priv !== SYNC.priv) { location.reload(); return; }
     if (!priv && !attScopeSec()) watchArchive();
     watchChoices();
     watchWardrobe();
-    if (!staff) watchMyPriv();
+    if (!readsPeople()) watchMyPriv();
     // Les col·leccions grans comencen quan ja se sap si algú n'ha esborrat res (syncEpoch).
     if (!SYNC.started) {
       SYNC.started = true; SYNC.priv = priv; syncLoad();
@@ -315,7 +372,8 @@ function subscribe() {
  *  Ho demanen Gestió, les classes (professorat amb compte) i les eines que miren qui ja té l'app. */
 let staffWatch = null;
 function ensureStaff() {
-  if (staffWatch || !db || S.role !== 'edit') return;
+  // Les fitxes de l'equip (correus i rols) només les llegeix qui porta les persones (vegeu les regles).
+  if (staffWatch || !db || !readsPeople()) return;
   staffWatch = db.collection('staff').onSnapshot(snap => {
     takeSnap('staff', snap);
     S.staffReady = true;

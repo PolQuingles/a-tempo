@@ -13,14 +13,16 @@ function privacyHtml() {
     <h3>Quines dades hi ha</h3>
     <ul><li>El teu nom, el correu amb què entres, la ${esc(V.section)} i la ${esc(V.part)}.</li>
       <li>La teva assistència: cada llista, els retards i les faltes, i els avisos d’absència amb el motiu que hi escriguis.</li>
-      <li>Si les omples: el telèfon, la fitxa personal (talla, contacte d’emergència, al·lèrgies), els documents signats i la quota.</li>
+      <li>Si les omples: el telèfon, la fitxa personal (talla i contacte d’emergència), les al·lèrgies i intoleràncies (amb el teu consentiment), els documents signats i la quota.</li>
       <li>Si fas ${esc(V.classes.toLowerCase())}: l’horari, l’assistència, les notes i els enregistraments de les classes.</li>
       <li>El que hi escriguis tu: respostes a convocatòries i enquestes, inscripcions a sortides i missatges.</li></ul>
     <h3>Qui les veu</h3>
     <ul><li><b>Tu</b> veus totes les teves dades.</li>
       <li>${priv ? `<b>La resta de ${esc(V.members)}</b> no veuen la teva assistència ni els teus avisos; només el teu nom, la ${esc(V.section)} i si estàs de baixa (sense el motiu).` : `<b>La resta de ${esc(V.members)}</b> poden veure les llistes d’assistència de tothom (l’administració ho pot canviar a Ajustos › Llistes privades).`}</li>
-      <li>El teu <b>${esc(V.leader)}</b> veu l’assistència i els avisos de la teva ${esc(V.section)}; la <b>direcció</b>, la <b>gerència</b>, la <b>secretaria</b> i l’<b>administració</b>, els de tothom.</li>
-      <li>Les notes i els enregistraments de classe només els veus tu i el professorat de cant. Els documents signats i la quota, només tu, la secretaria, la gerència, la direcció i l’administració.</li></ul>
+      <li>El teu <b>${esc(V.leader)}</b> veu l’assistència i els avisos de la teva ${esc(V.section)}; la <b>direcció</b>, la <b>gerència</b> i l’<b>administració</b>, els de tothom.</li>
+      <li>El telèfon, la talla i el contacte d’emergència els veuen qui porta les persones: la <b>secretaria</b>, la <b>gerència</b>, la <b>direcció</b> i l’<b>administració</b>. Els documents signats i la quota, també.</li>
+      <li>Les <b>al·lèrgies i intoleràncies</b> només les veus tu, la <b>secretaria</b> i la <b>gerència</b>, per organitzar els àpats de les sortides i els concerts.</li>
+      <li>Les notes i els enregistraments de classe només els veus tu, el teu ${esc(V.Teacher.toLowerCase())} i l’administració.</li></ul>
     <h3>On es guarden</h3>
     <p>A la base de dades de Google Firebase, en servidors de la Unió Europea, amb accés només per a qui entra amb el seu compte. Cada nit se’n fa una còpia de seguretat en un lloc privat, xifrada amb una contrasenya que només té l’administració.</p>
     <h3>Quant de temps</h3>
@@ -58,13 +60,13 @@ async function exportMyData() {
   }
   marks.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
   const own = (map, key = 'memberId') => [...(map?.values?.() || [])].filter(x => x && x[key] === mid);
-  const [profile, docs, student, choice, priv] = await Promise.all([one(`profiles/${mid}`), one(`memberDocs/${mid}`), one(`students/${mid}`), one(`prodChoice/${mid}`), one(`memberPriv/${mid}`)]);
+  const [profile, docs, student, choice, priv, health] = await Promise.all([one(`profiles/${mid}`), one(`memberDocs/${mid}`), one(`students/${mid}`), one(`prodChoice/${mid}`), one(`memberPriv/${mid}`), one(`health/${mid}`)]);
   const m = { ...S.members.get(mid), ...(priv || {}) };
   delete m.syncAt;
   const data = {
     app: 'a-tempo', kind: 'les-meves-dades', group: S.config.name || '', exportedAt: new Date().toISOString(), email: S.email || '',
     fitxa: m, assistencia: marks, absencies: own(S.absences), convocatories: own(S.rsvp), enquestes: own(S.pollVotes), sortides: own(S.tripSignups),
-    fitxaPersonal: profile, documents: docs, produccions: choice, fitxaDeCant: student,
+    fitxaPersonal: profile, alergies: health, documents: docs, produccions: choice, fitxaDeCant: student,
     classes: classDays().flatMap(c => (c.slots || []).filter(x => slotMember(x) === mid).map(x => ({ date: c.date, time: x.time, mark: x.mark || '', teacher: teacherOf(c) }))),
     notesDeClasse: own(S.classNotes).map(n => ({ date: n.date, text: n.text || '', enregistrament: n.file ? n.file.name : '' })),
     missatges: [...S.threads.values()].filter(t => t.memberId === mid).map(t => ({ subject: t.subject || '', msgs: t.msgs || [] })),
@@ -151,4 +153,50 @@ async function runRetention(p) {
     saveConfig({ attArchive: { ...(S.config.attArchive || {}), ids } });
   }
   bumpEpoch('attendance', 'classes');
+}
+
+/* ---------- Dades d'abans, al seu lloc (un cop per agrupació i mòbil) ---------- */
+// Les al·lèrgies es desaven a la fitxa personal (profiles), que llegeix qui porta les persones; ara van a part (health), que
+// només llegeixen la persona, la secretaria i la gerència. I les notes de classe, els enregistraments i les fitxes de cant ara
+// diuen de quin professor són (teacher, teachers), perquè cadascun només vegi els seus alumnes. Qui pot fer-ho ho passa en obrir
+// l'app; si no hi ha res per passar, només costa una lectura per col·lecció.
+async function tidyOldData() {
+  if (PREVIEW || !db) return;
+  const key = k => `atempo:passat:${k}:${GID}`, done = k => lsGet(key(k)) === '1', mark = k => lsSet(key(k), '1');
+  const del = firebase.firestore.FieldValue.delete();
+  const commitAll = async ops => { for (let i = 0; i < ops.length; i += 200) { const b = fs.batch(); ops.slice(i, i + 200).forEach(f => f(b)); await b.commit(); } };
+  if (acctHas('admin', 'secretaria', 'gerencia') && !done('dieta')) {
+    try {
+      const old = (await db.collection('profiles').get()).docs.filter(d => String(d.data().diet || '').trim());
+      await commitAll(old.map(d => b => {
+        const x = d.data();
+        b.set(db.doc(`health/${d.id}`), { memberId: d.id, diet: String(x.diet).trim().slice(0, 200), at: x.at || new Date().toISOString(), by: S.email || '' });
+        b.update(d.ref, { diet: del });
+      }));
+      mark('dieta');
+    } catch { /* es tornarà a provar el pròxim cop */ }
+  }
+  if (isAdmin() && !done('professorat')) {
+    try {
+      const [notes, files, studs] = await Promise.all(['classNotes', 'classFiles', 'students'].map(c => db.collection(c).get()));
+      const teacherOfClass = new Map([...S.classes.values()].map(c => [c.id, c.teacher || '']));
+      for (const n of notes.docs) {
+        const cid = n.data().classId;
+        if (cid && !teacherOfClass.has(cid)) { const c = await db.doc(`classes/${cid}`).get().catch(() => null); teacherOfClass.set(cid, (c && c.exists && c.data().teacher) || ''); }
+      }
+      const ops = [], fileTeacher = new Map();
+      for (const n of notes.docs) {
+        const x = n.data(), t = x.teacher || teacherOfClass.get(x.classId) || '';
+        if (x.file?.id && t) fileTeacher.set(x.file.id, t);
+        if (!x.teacher && t) ops.push(b => b.update(n.ref, { teacher: t }));
+      }
+      for (const f of files.docs) {
+        const t = fileTeacher.get(f.id.replace(/_\d+$/, ''));
+        if (!f.data().teacher && t) ops.push(b => b.update(f.ref, { teacher: t }));
+      }
+      for (const st of studs.docs) if (!Array.isArray(st.data().teachers)) ops.push(b => b.update(st.ref, { teachers: studentTeachers(st.id, []) }));
+      await commitAll(ops);
+      mark('professorat');
+    } catch { /* es tornarà a provar el pròxim cop */ }
+  }
 }

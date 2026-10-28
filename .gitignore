@@ -7,3 +7,8 @@ tests/interficie/site/
 __pycache__/
 node_modules/
 dist/
+
+# Els calendaris (.ics) es fan en publicar (vegeu .github/scripts/calendari.py): no van al repositori, que és públic.
+calendari.ics
+calendaris/
+dist-pages/

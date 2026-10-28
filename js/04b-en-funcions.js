@@ -21,9 +21,11 @@ function syncRollSubs(pid) {
   const p = S.productions.get(pid);
   if (!p || !canEdit() || PREVIEW) return 0;
   const roll = p.roll || {};
+  // Qui porta les produccions, totes les cordes; el cap de corda, només la seva (les regles no li deixen tocar les altres).
+  const secs = rollAll() ? SECTIONS : SECTIONS.filter(x => mySections().includes(x.id));
   let n = 0;
   for (const s of rollSessions(p)) {
-    for (const x of SECTIONS) {
+    for (const x of secs) {
       const key = subKey(s.id, x.id), cur = S.subs.get(key);
       const m = roll[x.id] ? S.members.get(roll[x.id]) : null;
       if (m && convoked(s, x.id)) {

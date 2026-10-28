@@ -34,6 +34,8 @@ function afterReady() {
   watchThreads();
   // Qui edita arxiva els trimestres acabats (vegeu 02-dades), quan ja ha llegit totes les llistes del servidor.
   setTimeout(archiveTerms, window.COR_ARCHIVE_WAIT || 8000);
+  // Les al·lèrgies i les notes de classe d'abans, al seu lloc (vegeu 22c-privacitat).
+  setTimeout(tidyOldData, (window.COR_ARCHIVE_WAIT || 8000) + 4000);
   checkPush();
   syncDirectory();
   // Els avisos d'abans obrien l'app amb ?rol=… (vegeu 03b-rols): es treu de l'adreça.

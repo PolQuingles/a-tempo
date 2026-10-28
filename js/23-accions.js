@@ -18,9 +18,12 @@ const REP_ONLY = new Set(['work-new', 'work-edit', 'work-link', 'mat-new', 'mat-
 // El tauler, qui el porta (canBoard); les sessions, qui porta les produccions (canProd). Vegeu 01-base.
 const BOARD_ONLY = new Set(['ann-new', 'ann-edit', 'poll-new', 'poll-edit', 'poll-remind', 'doc-new', 'doc-edit', 'trip-new', 'trip-edit', 'trip-admin', 'trip-remind']);
 const PROD_ONLY = new Set(['session-new', 'session-edit', 'plan-edit', 'seating-edit', 'participants']);
+// Les fitxes de la plantilla: qui porta les persones (canPeople, com peopleEdit a les regles).
+const PEOPLE_ONLY = new Set(['member-edit', 'member-new', 'member-bulk', 'roster-export']);
 const actions = {
   'tab': el => { if (el.dataset.tab === 'gestio' && ui.tab !== 'gestio') ui.gestioFrom = ui.tab; ui.tab = el.dataset.tab; if (ui.tab === 'tauler') ui.board = boardStart(); ui.rollSec = null; ui._calScrolled = false; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
   'reload': () => location.reload(),
+  'my-cal': () => sheetMyCalendar(),
   'google-in': () => signInGoogle(),
   'cl-new': el => sheetClassDay(null, { teacher: el.dataset.k || '', date: el.dataset.date || '' }),
   'cl-paste': el => sheetClassPaste(el.dataset.k || ''),
@@ -393,6 +396,7 @@ document.addEventListener('click', e => {
   if (REP_ONLY.has(act) && !canRepertoire()) { toast(`Només l’equip i els arxivers poden canviar el repertori`); return; }
   if (BOARD_ONLY.has(act) && !canBoard()) { toast('Només la direcció, la gerència, la secretaria i l’administració porten el tauler'); return; }
   if (PROD_ONLY.has(act) && !canProd()) { toast('Només la direcció, la gerència i l’administració porten les sessions'); return; }
+  if (PEOPLE_ONLY.has(act) && !canPeople()) { toast('Només l’administració, la direcció, la gerència i la secretaria porten les fitxes'); return; }
   if (ADMIN_ONLY.has(act) && !isAdmin()) { toast('Només l’administració de l’agrupació pot fer-ho'); return; }
   if (PRO_ONLY.has(act) && !canManageGroup()) { toast('Només un Usuari Pro que administri l’agrupació pot canviar-ho'); return; }
   if (CLASS_ONLY.has(act) && !teachesClasses()) { toast(`Només el ${V.Teacher.toLowerCase()} pot fer-ho`); return; }

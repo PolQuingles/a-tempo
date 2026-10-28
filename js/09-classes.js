@@ -39,7 +39,6 @@ function savePlan(who, rows, places = planPlaces(who)) {
 /* ---------- View: Classes de cant ---------- */
 // El calendari de les classes, hora per hora. El professorat el fa i el manté; cada persona pot
 // avisar que arribarà tard o que no hi anirà, i demanar el canvi d'hora d'un dia a un company.
-const REQ_WORD = { late: 'Arribarà tard', absent: 'No hi anirà', swap: 'Canvi d’hora' };
 const reqMemberName = r => S.members.get(r.memberId)?.name || fullName(r.memberName);
 const slotAt = (c, id) => (c.slots || []).find(x => x.id === id);
 const slotTime = (c, id) => c ? slotAt(c, id)?.time || '' : '';

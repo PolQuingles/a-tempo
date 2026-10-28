@@ -32,7 +32,9 @@ import norma
 VAPID = os.environ["PUSH_PRIVATE_KEY"]
 # Els camps de cada fitxa que, amb les llistes privades, van a memberPriv (vegeu js/02-dades.js).
 MEMBER_PRIV = ("phone", "notes", "leaves", "history")
-APP_URL = os.environ.get("APP_URL", "https://polquingles.github.io/a-tempo/")
+# L'adreça de l'app (Firebase Hosting). Els mòbils que encara tenen els avisos activats a l'adreça antiga (GitHub Pages) els
+# reben igualment i, en tocar-los, s'obre aquesta (vegeu tools/adreca_antiga.py).
+APP_URL = os.environ.get("APP_URL", "https://cor-present.web.app/")
 # Adreça de contacte que demana l'estàndard, per si el servei de push ha d'avisar de res.
 # Es pot canviar amb el secret PUSH_CONTACT; no cal que sigui personal.
 CLAIMS = {"sub": os.environ.get("PUSH_CONTACT") or "mailto:a-tempo@polquingles.github.io"}

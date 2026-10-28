@@ -67,13 +67,6 @@ function visibleAnnouncements() {
     .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (b.createdAt || '').localeCompare(a.createdAt || ''));
 }
 const openPolls = () => [...S.polls.values()].filter(p => forMe(p) && !p.closed && (!p.closesAt || p.closesAt >= TODAY));
-function boardBadge() {
-  let seen = '';
-  seen = lsGet(LS_SEEN) || '';
-  const news = visibleAnnouncements().filter(a => (a.createdAt || '') > seen).length;
-  const polls = myId() && !canBoard() ? openPolls().filter(p => !S.pollVotes.get(`${p.id}_${myId()}`)).length : 0;
-  return news + polls;
-}
 /** On s'obre el Tauler en tocar-ne la pestanya: als anuncis si n'hi ha de nous; si no, on es va quedar, però mai a uns
  *  anuncis buits (llavors, al repertori). */
 function boardStart() {
@@ -203,7 +196,7 @@ async function uploadFile(file, onProgress, opts = {}) {
   const n = Math.max(1, Math.ceil(bytes.length / FILE_CHUNK));
   for (let i = 0; i < n; i++) {
     const part = bytes.subarray(i * FILE_CHUNK, (i + 1) * FILE_CHUNK);
-    await db.doc(chunkPath(id, i, opts.where)).set({ d: firebase.firestore.Blob.fromUint8Array(part), i, of: n, ...(opts.memberId ? { memberId: opts.memberId } : {}) });
+    await db.doc(chunkPath(id, i, opts.where)).set({ d: firebase.firestore.Blob.fromUint8Array(part), i, of: n, ...(opts.memberId ? { memberId: opts.memberId } : {}), ...(opts.teacher ? { teacher: opts.teacher } : {}) });
     onProgress?.(i + 1, n);
   }
   return { id, name: file.name, type: file.type || '', size: file.size, chunks: n, at: new Date().toISOString(), ...(opts.where ? { where: opts.where } : {}) };

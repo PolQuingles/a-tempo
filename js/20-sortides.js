@@ -175,7 +175,7 @@ function sheetTripAdmin(id) {
       return `<div class="section-title" style="margin-top:12px"><h2 class="h2">${esc(x.name)}</h2><span class="eyebrow">${ms.filter(m => signupOf(t, m.id)?.answer === 'yes').length} de ${ms.length}</span></div>
         <ul class="mini-list" style="max-height:none">${ms.map(m => {
           const s = signupOf(t, m.id);
-          const diet = s?.answer === 'yes' ? profileOf(m.id).diet : '';
+          const diet = s?.answer === 'yes' ? dietOf(m.id) : '';
           return `<li class="ta-row" data-mid="${m.id}"><span><b>${esc(m.name)}</b>${tripAnswersText(t, s) ? `<br><span class="m">${esc(tripAnswersText(t, s))}</span>` : ''}${diet ? `<br><span class="m diet">Al·lèrgies: ${esc(diet)}</span>` : ''}${s?.note ? `<br><span class="m">${esc(s.note)}</span>` : ''}</span>
             <span class="ta-sel"><select class="inp" data-f="answer" aria-label="Hi va?"><option value="" ${!s ? 'selected' : ''}>—</option><option value="yes" ${s?.answer === 'yes' ? 'selected' : ''}>Hi va</option><option value="no" ${s?.answer === 'no' ? 'selected' : ''}>No hi va</option></select>
             ${s?.answer === 'yes' && (t.transports || []).length ? `<select class="inp" data-f="transport" aria-label="Transport">${opt(t.transports, 'transport', 'seats', s.transport, c.seats)}</select>` : ''}
@@ -207,10 +207,12 @@ function sheetTripAdmin(id) {
 function tripRows(t) {
   const name = (list, id) => (list || []).find(x => x.id === id)?.name || '';
   const qs = t.questions || [];
-  const rows = [['Nom i cognoms', V.Section, 'Hi va', ...qs.map(q => q.label), 'Transport', 'Habitació', 'Al·lèrgies i intoleràncies', 'Telèfon', 'Contacte d’emergència', 'Nota']];
+  // Les al·lèrgies, només per a qui les pot veure (la secretaria i la gerència).
+  const diet = seesHealth();
+  const rows = [['Nom i cognoms', V.Section, 'Hi va', ...qs.map(q => q.label), 'Transport', 'Habitació', ...(diet ? ['Al·lèrgies i intoleràncies'] : []), 'Telèfon', 'Contacte d’emergència', 'Nota']];
   for (const m of tripPeople(t)) {
     const s = signupOf(t, m.id), p = profileOf(m.id);
-    rows.push([fullName(m.name), SEC[m.section].name, s ? (s.answer === 'yes' ? 'Sí' : 'No') : '', ...qs.map(q => s?.answer === 'yes' ? s.answers?.[q.id] || '' : ''), name(t.transports, s?.transport), name(t.rooms, s?.room), s?.answer === 'yes' ? p.diet || '' : '', phoneOf(m), [p.emergencyName, p.emergencyPhone].filter(Boolean).join(' · '), s?.note || '']);
+    rows.push([fullName(m.name), SEC[m.section].name, s ? (s.answer === 'yes' ? 'Sí' : 'No') : '', ...qs.map(q => s?.answer === 'yes' ? s.answers?.[q.id] || '' : ''), name(t.transports, s?.transport), name(t.rooms, s?.room), ...(diet ? [s?.answer === 'yes' ? dietOf(m.id) : ''] : []), phoneOf(m), [p.emergencyName, p.emergencyPhone].filter(Boolean).join(' · '), s?.note || '']);
   }
   return rows;
 }
@@ -221,20 +223,25 @@ function tripHtml(t) {
     ${(t.transports || []).length ? `<h2>Transport</h2>${by(t.transports, 'transport').map(({ x, ms }) => `<h3>${esc(x.name)} · ${ms.length}/${x.seats || 0}</h3><ol class="pr-list">${ms.map(m => `<li>${esc(fullName(m.name))} <small>${esc(phoneOf(m))}</small></li>`).join('')}</ol>`).join('')}` : ''}
     ${(t.rooms || []).length ? `<h2>Habitacions</h2><table class="pr-table"><tbody>${by(t.rooms, 'room').map(({ x, ms }) => `<tr><td><b>${esc(x.name)}</b></td><td>${ms.map(m => esc(fullName(m.name))).join(', ')}</td><td>${ms.length}/${x.beds || 0}</td></tr>`).join('')}</tbody></table>` : ''}
     ${(t.questions || []).map(q => { const counts = {}; for (const m of c.yes) { const v = signupOf(t, m.id)?.answers?.[q.id]; if (v) counts[v] = (counts[v] || 0) + 1; } return Object.keys(counts).length ? `<p class="pr-sub"><b>${esc(q.label)}</b> ${Object.entries(counts).map(([v, n]) => `${esc(v)}: ${n}`).join(' · ')}</p>` : ''; }).join('')}
-    ${c.yes.some(m => profileOf(m.id).diet) ? `<h2>Al·lèrgies i intoleràncies</h2><ul class="pr-list">${c.yes.filter(m => profileOf(m.id).diet).map(m => `<li>${esc(fullName(m.name))}: ${esc(profileOf(m.id).diet)}</li>`).join('')}</ul>` : ''}
+    ${c.yes.some(m => dietOf(m.id)) ? `<h2>Al·lèrgies i intoleràncies</h2><ul class="pr-list">${c.yes.filter(m => dietOf(m.id)).map(m => `<li>${esc(fullName(m.name))}: ${esc(dietOf(m.id))}</li>`).join('')}</ul>` : ''}
     <h2>Qui hi va</h2><table class="pr-table"><thead><tr><th>Nom i cognoms</th><th>${esc(V.Section)}</th><th>Telèfon</th><th>Contacte d’emergència</th></tr></thead>
     <tbody>${c.yes.map(m => { const p = profileOf(m.id); return `<tr><td>${esc(fullName(m.name))}</td><td>${esc(SEC[m.section].name)}</td><td>${esc(phoneOf(m))}</td><td>${esc([p.emergencyName, p.emergencyPhone].filter(Boolean).join(' · '))}</td></tr>`; }).join('')}</tbody></table>`;
 }
 
 /* ---------- La meva fitxa ---------- */
-// profiles/<membre> = { memberId, phone, size, emergencyName, emergencyPhone, at }: l'omple cadascú, i només la veuen
-// ell mateix i l'equip (per a les llistes dels concerts i de les sortides).
+// profiles/<membre> = { memberId, phone, size, emergencyName, emergencyPhone, at }: l'omple cadascú, i només la veuen ell
+// mateix i qui porta les persones (per a les llistes dels concerts i de les sortides). Les al·lèrgies i intoleràncies són
+// dades de salut: van a part, a health/<membre> = { memberId, diet, at, consentAt }, amb el consentiment de la persona, i només
+// les veuen ella, la secretaria i la gerència.
 const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
 async function sheetMyProfile() {
   const mid = myMemberId();
   if (!mid) { toast('El teu compte no està vinculat a cap fitxa de la plantilla'); return; }
-  let p = {};
+  let p = {}, h = null;
   try { const d = await db.doc(`profiles/${mid}`).get(); if (d.exists) p = d.data(); } catch {}
+  try { const d = await db.doc(`health/${mid}`).get(); if (d.exists) h = d.data(); } catch {}
+  // Les d'abans (a la fitxa), mentre no s'han passat a part.
+  const diet0 = h?.diet || p.diet || '';
   openSheet({
     title: 'La meva fitxa',
     body: `${choiceBox(mid, true)}<div class="kv">
@@ -242,8 +249,9 @@ async function sheetMyProfile() {
       <div class="field"><span>Talla de vestuari</span><div class="pickers" id="pf-size">${SIZES.map(z => `<button type="button" class="pick" data-k="${z}" aria-pressed="${p.size === z}">${z}</button>`).join('')}</div></div>
       <div class="row2"><label class="field"><span>Contacte d’emergència</span><input class="inp" id="pf-en" maxlength="60" value="${esc(p.emergencyName || '')}" placeholder="Nom (i qui és: mare, parella…)"></label>
         <label class="field"><span>El seu telèfon</span><input class="inp" id="pf-ep" type="tel" maxlength="20" value="${esc(p.emergencyPhone || '')}"></label></div>
-      <label class="field"><span>Al·lèrgies i intoleràncies alimentàries</span><input class="inp" id="pf-diet" maxlength="200" value="${esc(p.diet || '')}" placeholder="p. ex. Celíac · Al·lèrgia als fruits secs · Vegetarià"><small>Per als àpats de les sortides i els caps de setmana.</small></label>
-      <p class="muted" style="font-size:calc(13px*var(--ts));margin:0">Només ho veu l’equip ${esc(V.del)} (administració, direcció, gerència, secretaria i ${esc(V.leaders)}), per a les llistes dels concerts i de les sortides. La resta, no.</p>
+      <p class="muted" style="font-size:calc(13px*var(--ts));margin:0">El telèfon, la talla i el contacte d’emergència només els veu qui porta les persones ${esc(V.del)} (administració, direcció, gerència i secretaria), per a les llistes dels concerts i de les sortides.</p>
+      <label class="field"><span>Al·lèrgies i intoleràncies alimentàries</span><input class="inp" id="pf-diet" maxlength="200" value="${esc(diet0)}" placeholder="p. ex. Celíac · Al·lèrgia als fruits secs · Vegetarià"><small>Per als àpats de les sortides i els caps de setmana. Només les veuen la secretaria i la gerència.</small></label>
+      <div class="toggle-row" id="pf-diet-ok-row"${diet0 ? '' : ' hidden'}><span><b>Consentiment</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Accepto que la secretaria i la gerència ${esc(V.del)} sàpiguen les meves al·lèrgies per organitzar els àpats.</span></span><label class="switch"><input type="checkbox" id="pf-diet-ok" aria-label="Accepto que la secretaria i la gerència sàpiguen les meves al·lèrgies" ${h?.consentAt ? 'checked' : ''}><span></span></label></div>
       <fieldset class="fieldset"><legend>Consentiments</legend>
         <div class="field"><span>Drets d’imatge: puc sortir a les fotos i els vídeos ${esc(V.del)}</span><div class="pickers" id="pf-img">${[['yes', 'Sí'], ['no', 'No']].map(([v, t]) => `<button type="button" class="pick" data-k="${v}" aria-pressed="${p.imageOk === v}">${t}</button>`).join('')}</div></div>
         <div class="toggle-row"><span><b>Protecció de dades</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Accepto que ${esc(ofName())} tracti les meves dades per organitzar l’activitat.</span></span><label class="switch"><input type="checkbox" id="pf-data" ${p.dataOk === 'yes' ? 'checked' : ''}><span></span></label></div>
@@ -255,6 +263,7 @@ async function sheetMyProfile() {
     onMount: el => {
       el.querySelectorAll('#pf-size .pick').forEach(b => b.onclick = () => { const on = b.getAttribute('aria-pressed') !== 'true'; el.querySelectorAll('#pf-size .pick').forEach(x => x.setAttribute('aria-pressed', on && x === b)); });
       el.querySelectorAll('#pf-img .pick').forEach(b => b.onclick = () => el.querySelectorAll('#pf-img .pick').forEach(x => x.setAttribute('aria-pressed', x === b)));
+      el.querySelector('#pf-diet').oninput = e => { el.querySelector('#pf-diet-ok-row').hidden = !e.target.value.trim(); };
       // La quota (si l'agrupació en té) i els documents que té posats la secretaria (només es poden mirar).
       db.doc(`memberDocs/${mid}`).get().then(d => {
         const box = el.querySelector('#pf-mine');
@@ -265,25 +274,36 @@ async function sheetMyProfile() {
       }).catch(() => {});
       el.querySelector('#pf-save').onclick = async () => {
         const rec = { memberId: mid, phone: el.querySelector('#pf-phone').value.trim(), size: el.querySelector('#pf-size .pick[aria-pressed="true"]')?.dataset.k || '',
-          emergencyName: el.querySelector('#pf-en').value.trim(), emergencyPhone: el.querySelector('#pf-ep').value.trim(), diet: el.querySelector('#pf-diet').value.trim(), at: new Date().toISOString(),
+          emergencyName: el.querySelector('#pf-en').value.trim(), emergencyPhone: el.querySelector('#pf-ep').value.trim(), at: new Date().toISOString(),
           imageOk: el.querySelector('#pf-img .pick[aria-pressed="true"]')?.dataset.k || '', dataOk: el.querySelector('#pf-data').checked ? 'yes' : '' };
         rec.consentAt = rec.imageOk !== (p.imageOk || '') || rec.dataOk !== (p.dataOk || '') ? rec.at : (p.consentAt || '');
-        try { await db.doc(`profiles/${mid}`).set(rec); if (S.profiles) S.profiles.set(mid, rec); closeSheet(); toast('Fitxa desada'); }
+        const diet = el.querySelector('#pf-diet').value.trim();
+        if (diet && !el.querySelector('#pf-diet-ok').checked) { toast('Per desar les al·lèrgies, marca que hi estàs d’acord'); return; }
+        try {
+          const b = fs.batch();
+          b.set(db.doc(`profiles/${mid}`), rec);
+          if (diet) b.set(db.doc(`health/${mid}`), { memberId: mid, diet, at: rec.at, consentAt: h?.diet === diet && h.consentAt ? h.consentAt : rec.at });
+          else if (h) b.delete(db.doc(`health/${mid}`));
+          await b.commit();
+          if (S.profiles) S.profiles.set(mid, rec);
+          closeSheet(); toast('Fitxa desada');
+        }
         catch { toast('No s’ha pogut desar. Comprova la connexió.'); }
       };
     },
   });
 }
-/** Per a l'equip, a la fitxa d'una persona: el que ha omplert ella mateixa. */
+/** Per a l'equip, a la fitxa d'una persona: el que ha omplert ella mateixa (les al·lèrgies, només la secretaria i la gerència). */
 async function profileBox(el, mid) {
   const box = el.querySelector('#me-profile');
   if (!box || !canEdit()) return;
   // Si cadascú tria les produccions, les que farà (i l'equip les hi pot canviar).
   if (choicesOn()) box.insertAdjacentHTML('afterend', choiceBox(mid, false));
-  let p = null;
+  let p = null, diet = '';
   try { const d = await db.doc(`profiles/${mid}`).get(); p = d.exists ? d.data() : null; } catch {}
+  if (seesHealth()) try { const d = await db.doc(`health/${mid}`).get(); diet = d.exists ? d.data().diet || '' : ''; } catch {}
   if (!box.isConnected) return;
-  box.innerHTML = p && (p.phone || p.size || p.emergencyName || p.emergencyPhone || p.diet)
-    ? `<dl class="fitxa">${[['Telèfon', p.phone], ['Talla', p.size], ['Emergència', [p.emergencyName, p.emergencyPhone].filter(Boolean).join(' · ')], ['Al·lèrgies', p.diet]].filter(([, v]) => v).map(([l, v]) => `<div><dt>${l}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>`
+  box.innerHTML = p && (p.phone || p.size || p.emergencyName || p.emergencyPhone) || diet
+    ? `<dl class="fitxa">${[['Telèfon', p?.phone], ['Talla', p?.size], ['Emergència', [p?.emergencyName, p?.emergencyPhone].filter(Boolean).join(' · ')], ['Al·lèrgies', diet]].filter(([, v]) => v).map(([l, v]) => `<div><dt>${l}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>`
     : '<span class="muted" style="font-size:calc(13px*var(--ts))">Encara no ha omplert la seva fitxa (telèfon, talla i contacte d’emergència).</span>';
 }

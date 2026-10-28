@@ -26,14 +26,21 @@ function offerCSV(name, rows) {
   const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
   offerFile(`${slugify(name)}.csv`, '﻿' + rows.map(r => r.map(q).join(';')).join('\r\n'), 'text/csv');
 }
-/** La fitxa que omple cada persona (telèfon, talla, contacte d'emergència): només l'equip la pot llegir, i es llegeix quan cal. */
+/** La fitxa que omple cada persona (telèfon, talla, contacte d'emergència): només la llegeix qui porta les persones, i es llegeix
+ *  quan cal. Les al·lèrgies (health) només les llegeixen la secretaria i la gerència. */
 async function loadProfiles() {
-  if (!canEdit()) return new Map();
+  if (!readsPeople()) return new Map();
   try { const snap = await db.collection('profiles').get(); S.profiles = new Map(snap.docs.map(d => [d.id, d.data()])); }
   catch { S.profiles = S.profiles || new Map(); }
+  if (readsHealth()) {
+    try { const snap = await db.collection('health').get(); S.health = new Map(snap.docs.map(d => [d.id, d.data()])); }
+    catch { S.health = S.health || new Map(); }
+  }
   return S.profiles;
 }
 const profileOf = mid => (S.profiles && S.profiles.get(mid)) || {};
+/** Les al·lèrgies d'una persona, si qui mira les pot veure (seesHealth); si no, res. */
+const dietOf = mid => (seesHealth() && S.health && S.health.get(mid)?.diet) || '';
 const phoneOf = m => profileOf(m.id).phone || m.phone || '';
 
 /* ---------- Equilibri de veus d'un concert ---------- */
@@ -205,15 +212,17 @@ function concertPeople(s, onlyYes) {
   return stageMembers(s).filter(m => !onlyYes || !s.rsvp || S.rsvp.get(`${s.id}_${m.id}`)?.answer === 'yes')
     .sort((a, b) => secIdx(a.section) - secIdx(b.section) || (a.part || '').localeCompare(b.part || '') || byName(a, b));
 }
-const PART_COLS = [['sec', 'Corda i veu', true], ['phone', 'Telèfon', false], ['emerg', 'Contacte d’emergència', false], ['size', 'Talla', false], ['bus', 'Autocar', false], ['diet', 'Al·lèrgies', false], ['sign', 'Signatura', false]];
+const PART_COLS_ALL = [['sec', 'Corda i veu', true], ['phone', 'Telèfon', false], ['emerg', 'Contacte d’emergència', false], ['size', 'Talla', false], ['bus', 'Autocar', false], ['diet', 'Al·lèrgies', false], ['sign', 'Signatura', false]];
+/** Les columnes de la llista; les al·lèrgies, només per a la secretaria i la gerència. */
+const partCols = () => PART_COLS_ALL.filter(([k]) => k !== 'diet' || seesHealth());
 function participantRows(s, onlyYes, cols) {
-  const head = ['Núm.', 'Nom i cognoms', ...PART_COLS.filter(([k]) => cols.has(k)).map(([, l]) => l)];
+  const head = ['Núm.', 'Nom i cognoms', ...partCols().filter(([k]) => cols.has(k)).map(([, l]) => l)];
   const rows = concertPeople(s, onlyYes).map((m, i) => {
     const p = profileOf(m.id);
     const a = S.rsvp.get(`${s.id}_${m.id}`);
     const cell = { sec: `${SEC[m.section].name}${m.part ? ` ${m.part}` : ''}`, phone: phoneOf(m), emerg: [p.emergencyName, p.emergencyPhone].filter(Boolean).join(' · '), size: p.size || '',
-      bus: a?.transport === 'bus' ? 'Sí' : a?.transport === 'own' ? 'Pel seu compte' : '', diet: p.diet || '', sign: '' };
-    return [i + 1, fullName(m.name), ...PART_COLS.filter(([k]) => cols.has(k)).map(([k]) => cell[k])];
+      bus: a?.transport === 'bus' ? 'Sí' : a?.transport === 'own' ? 'Pel seu compte' : '', diet: dietOf(m.id), sign: '' };
+    return [i + 1, fullName(m.name), ...partCols().filter(([k]) => cols.has(k)).map(([k]) => cell[k])];
   });
   return { head, rows };
 }
@@ -222,7 +231,7 @@ async function sheetParticipants(sid) {
   if (!s) return;
   await loadProfiles();
   let onlyYes = !!s.rsvp;
-  const cols = new Set(PART_COLS.filter(([, , on]) => on).map(([k]) => k));
+  const cols = new Set(partCols().filter(([, , on]) => on).map(([k]) => k));
   const title = `${s.type || V.sh.Show} · ${prodNames(s)}`;
   const count = el => { el.querySelector('#pt-n').textContent = `${concertPeople(s, onlyYes).length} persones a la llista`; };
   openSheet({
@@ -231,7 +240,7 @@ async function sheetParticipants(sid) {
       ${s.rsvp ? `<div class="field"><span>Qui hi surt</span><div class="pickers" id="pt-who">
         <button type="button" class="pick" data-k="yes" aria-pressed="true">Els que han confirmat</button>
         <button type="button" class="pick" data-k="all" aria-pressed="false">Tots menys els que no hi van</button></div></div>` : ''}
-      <div class="field" style="margin-top:10px"><span>Columnes</span><div class="pickers" id="pt-cols">${PART_COLS.filter(([k]) => k !== 'bus' || s.bus).map(([k, l]) => `<button type="button" class="pick" data-k="${k}" aria-pressed="${cols.has(k)}">${l}</button>`).join('')}</div>
+      <div class="field" style="margin-top:10px"><span>Columnes</span><div class="pickers" id="pt-cols">${partCols().filter(([k]) => k !== 'bus' || s.bus).map(([k, l]) => `<button type="button" class="pick" data-k="${k}" aria-pressed="${cols.has(k)}">${l}</button>`).join('')}</div>
         <small>El telèfon, la talla, el contacte d’emergència i les al·lèrgies els omple cadascú a «La meva fitxa». Per al teatre, l’assegurança o l’autocar.</small></div>
       <p class="muted" id="pt-n" style="margin:12px 0 0;font-size:calc(13.5px*var(--ts))"></p>`,
     foot: `<span class="spacer"></span><button class="btn" id="pt-xls">Excel</button><button class="btn btn-primary" id="pt-pdf">PDF</button>`,
@@ -297,7 +306,8 @@ function sheetCertificate(mid) {
       el.querySelectorAll('#ce-per, #ce-who, #ce-role, #ce-place').forEach(x => x.addEventListener('input', prev));
       el.querySelector('#ce-pdf').onclick = () => {
         const place = el.querySelector('#ce-place').value.trim();
-        if (place && place !== S.config.city && canEdit()) saveConfig({ city: place });
+        // El lloc es recorda per a la pròxima vegada (als Ajustos): només qui els pot canviar.
+        if (place && place !== S.config.city && canProd()) saveConfig({ city: place });
         printDoc(`Certificat · ${fullName(m.name)}`, certificateHtml(opts()));
       };
     },
@@ -401,7 +411,6 @@ function compressImage(file, max = 820) {
     img.src = url;
   });
 }
-const posterOf = pid => S.productions.get(pid)?.poster || '';
 /** La miniatura del cartell (un botó que l'obre en gran). */
 const posterThumb = (p, cls = '') => p && p.poster ? `<button class="poster-th ${cls}" data-act="poster" data-pid="${esc(p.id)}" aria-label="Cartell de ${esc(p.name)}"><img src="${esc(p.poster)}" alt=""></button>` : '';
 function sheetPoster(pid) {

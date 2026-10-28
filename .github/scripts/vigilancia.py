@@ -1,7 +1,8 @@
 """Vigilància: saber que l'app falla abans que ho digui ningú.
 
 Cada hora comprova:
-  · que l'app s'obre a cada adreça publicada (APP_URLS) i que hi carrega el codi que enllaça;
+  · que l'app s'obre a cada adreça publicada (APP_URLS; per defecte, cor-present.web.app) i que hi carrega el codi que enllaça;
+  · que l'adreça antiga (OLD_URL, GitHub Pages) continua portant a la nova;
   · que la versió publicada de l'app és la del repositori (després de 40 minuts de marge per publicar);
   · que les regles de seguretat publicades a Firebase són les del repositori (firestore.rules): ho mira demanant
     reglesVersio/<empremta>, que només les regles d'aquesta mateixa versió deixen llegir (vegeu tools/stamp.py);
@@ -18,7 +19,8 @@ import datetime, hashlib, json, os, re, subprocess, sys, urllib.error, urllib.re
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import dades
 
-URLS = [u.strip().rstrip("/") + "/" for u in (os.environ.get("APP_URLS") or "https://polquingles.github.io/a-tempo/").split(",") if u.strip()]
+URLS = [u.strip().rstrip("/") + "/" for u in (os.environ.get("APP_URLS") or "https://cor-present.web.app/").split(",") if u.strip()]
+OLD_URL = (os.environ.get("OLD_URL") or "https://polquingles.github.io/a-tempo/").rstrip("/") + "/"
 STATE_DIR = sys.argv[1] if len(sys.argv) > 1 else None
 NOW = datetime.datetime.now(datetime.timezone.utc)
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -82,6 +84,15 @@ for base in URLS:
     if want and live != want.group(1) and when and NOW - when > GRACE:
         problems.append((f"web:{base}:versio:{want.group(1)}", f"A {base} hi ha la versió {live} de l'app, però la del repositori és la {want.group(1)} (desada fa {int((NOW - when).total_seconds() // 60)} minuts)."))
 
+# ---------- 1a. L'adreça antiga porta a la nova ----------
+if OLD_URL and OLD_URL not in URLS:
+    code, html = get(OLD_URL + "?vigilancia=" + NOW.strftime("%H%M"))
+    host = URLS[0].split("//", 1)[-1].rstrip("/") if URLS else ""
+    if code != 200 or (host and host not in html):
+        problems.append((f"antiga:{OLD_URL}:{code}", f"L'adreça antiga ({OLD_URL}) ja no porta a l'app (resposta {code or 'cap'})."))
+    else:
+        print(f"{OLD_URL}: porta a {host}")
+
 # ---------- 1b. Les regles de seguretat publicades són les del repositori ----------
 rules_v = re.search(r"match /reglesVersio/\{v\} \{\s*allow get: if v == '([^']*)'", repo_file("firestore.rules"))
 if rules_v:
@@ -96,7 +107,7 @@ if rules_v:
 
 # ---------- 2. GitHub Pages activat ----------
 repo, token = os.environ.get("GITHUB_REPOSITORY"), os.environ.get("GITHUB_TOKEN")
-if repo and token and any("github.io" in u for u in URLS):
+if repo and token and any("github.io" in u for u in URLS + [OLD_URL]):
     req = urllib.request.Request(f"https://api.github.com/repos/{repo}/pages",
                                  headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"})
     try:
