@@ -725,7 +725,7 @@ expect("S1g ni els materials d'una producció", commit([upd(f"cors/{F}/productio
 expect("S1h ni posa el transport d'una sortida", commit([upd(f"cors/{F}/tripSignups/t1_m1", {"tripId": "t1", "memberId": "m1", "answer": "yes", "transport": "bus"})], T["pau"]), False)
 expect("S1i ni esborra un anunci", commit([dele(f"cors/{F}/announcements/n1")], T["pau"]), False)
 expect("S2 però continua marcant qui no fa una producció", commit([upd(f"cors/{F}/productions/p1", {"excluded": ["m2"]}, ["excluded"])], T["pau"]), True)
-expect("S2b però ja no canvia la norma", commit([upd(f"cors/{F}/config/main", {"minAttendance": 80}, ["minAttendance"])], T["pau"]), False)
+expect("S2b però ja no canvia la norma", commit([upd(f"cors/{F}/config/main", {"minAttendance": 81}, ["minAttendance"])], T["pau"]), False)
 expect("S2c i vota la seva enquesta", commit([upd(f"cors/{F}/polls/s3", {"id": "s3", "title": "Q"})], T["dir"]) == 200 and commit([upd(f"cors/{F}/pollVotes/s3_m3", {"pollId": "s3", "memberId": "m3", "choices": ["a"]})], T["pau"]), True)
 expect("S3 la direcció sí que hi publica", commit([upd(f"cors/{F}/announcements/s3", {"id": "s3", "title": "Hola"})], T["dir"]), True)
 expect("S3b i hi canvia els documents", commit([upd(f"cors/{F}/config/main", {"documents": []}, ["documents"])], T["dir"]), True)
