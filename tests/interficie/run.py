@@ -1174,6 +1174,8 @@ def main():
         ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/assistencia/estadistiques")
         r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
           const txt = q => document.querySelector(q)?.innerText || '';
+          // L'administració (que també porta els tenors) mira tot el cor.
+          ui.attArea = 'all'; ui.statsSec = ''; render(); await s(300);
           // 1. Una baixa (Jan Pons, que té una falta) ja no surt a la norma de les estadístiques, i qui hi és sí.
           out.beforeNorm = /Jan Pons/.test(txt('.alerts'));
           saveMember({ ...S.members.get('mT3'), active: false }); render(); await s(300);
@@ -1378,7 +1380,8 @@ def main():
         r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
           const txt = q => document.querySelector(q)?.innerText || '';
           const today = allSessions().find(x => x.date === TODAY);
-          ui.sessionId = today.id; render(); await s(300);
+          // Les eines de la llista són al quadre de totes les cordes (tot el cor).
+          ui.attArea = 'all'; ui.sessionId = today.id; render(); await s(300);
           out.noDoor = !document.querySelector('[data-act="door-open"]') && typeof viewDoor === 'undefined';
           out.tools = /Caps de corda en funcions/.test(txt('.roll-tools'));
           // El cap de corda de tenors (Lluc) no fa la producció.
@@ -1481,7 +1484,7 @@ def main():
           saveProduction({ id: 'p2', name: 'Concert de Nadal', start: d(30), end: d(40), excluded: [],
             sessions: [{ id: 'n1', date: d(35), time: '19:00', end: '21:00', type: 'Concert', place: 'Palau', note: '' }] });
           await s(300);
-          ui.tab = 'llista'; ui.att = 'llista'; ui.rollSec = null; ui.sessionId = 's3'; render(); await s(300);
+          ui.tab = 'llista'; ui.attArea = 'all'; ui.att = 'llista'; ui.rollSec = null; ui.sessionId = 's3'; render(); await s(300);
           // Dues de les quatre sopranos no fan la producció: abans de passar llista, «0/2», no «2/4».
           out.quad = document.querySelector('.quad[data-sec="S"] .q-c')?.textContent.trim() === '0/2'
             && document.querySelector('.quad[data-sec="S"] .q-bar span')?.style.width === '0%';
