@@ -1,6 +1,29 @@
 // Només per a proves locals: substitueix Firebase per una base de dades a memòria (i a localStorage),
 // sense regles ni xarxa. L'usuari es tria amb ?u=pol | leader | singer | prof | dir | ger | arx (l'arxiver, si se li ha donat compte).
 (function () {
+  // El rellotge. Les dades (seed.js) són d'un dia, SEED_DAY, i l'app hi viu sempre, a l'hora que és: si el dia de veritat
+  // és un altre (les proves han passat la mitjanit), la data es mou dies sencers. Així «avui» (TODAY) és el de les dades,
+  // també per a una pàgina que ja estava oberta, i l'app no es recarrega sola per canvi de dia (vegeu checkNewDay). Només
+  // es mou l'hora d'ara (new Date() i Date.now()): new Date(…) amb arguments, Date.UTC i Date.parse fan el de sempre.
+  const RealDate = Date, DAY = window.SEED_DAY;
+  const ymd = x => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`;
+  // Quant s'ha de moure l'hora de veritat t perquè caigui el dia de les dades, a la mateixa hora del rellotge (0 si ja hi és).
+  const shiftAt = t => {
+    const x = new RealDate(t);
+    if (!DAY || ymd(x) === DAY) return 0;
+    const [y, mo, d] = DAY.split('-').map(Number);
+    return t - new RealDate(y, mo - 1, d, x.getHours(), x.getMinutes(), x.getSeconds(), x.getMilliseconds()).getTime();
+  };
+  if (DAY) {
+    const now = () => { const t = RealDate.now(); return t - shiftAt(t); };
+    window.Date = new Proxy(RealDate, {
+      construct: (D, args, nt) => Reflect.construct(D, args.length ? args : [now()], nt),
+      apply: () => new RealDate(now()).toString(),
+      get: (D, k) => k === 'now' ? now : D[k],
+    });
+    RealDate.prototype.constructor = window.Date;
+  }
+
   const KEY = 'fake:db';
   const USERS = {
     pol: { uid: 'uid-pol', email: 'pol@exemple.cat', displayName: 'Pol Proves' },
@@ -17,8 +40,15 @@
   if (/[?&]reset=1/.test(location.search)) localStorage.removeItem(KEY);
   const who = USERS[localStorage.getItem('fake:user') || 'pol'];
 
-  let DB = {};
-  try { DB = JSON.parse(localStorage.getItem(KEY) || 'null') || window.FAKE_SEED || {}; } catch { DB = window.FAKE_SEED || {}; }
+  // Les dades de seed.js. Si el rellotge s'ha mogut, també l'hora en què es van fer (SEED_NOW): si no, els anuncis, els
+  // missatges i l'última entrada a l'app que hi porten serien de més tard que ara.
+  const fromSeed = () => {
+    const seed = window.FAKE_SEED || {}, at = window.SEED_NOW, sh = shiftAt(RealDate.now());
+    return at && sh ? JSON.parse(JSON.stringify(seed).split(at).join(new RealDate(RealDate.parse(at) - sh).toISOString())) : seed;
+  };
+  let DB = null;
+  try { DB = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch {}
+  if (!DB) DB = fromSeed();
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(DB)); } catch {} };
   const clone = v => v === undefined ? undefined : JSON.parse(JSON.stringify(v));
   // L'hora del servidor (syncAt): es desa com a { __t: ms } i es llegeix com a Timestamp.
