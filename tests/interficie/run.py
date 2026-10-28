@@ -962,10 +962,14 @@ def main():
         r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
           const ti = todoItems; todoItems = () => []; render(); await s(200);
           out.allDone = !!document.querySelector('.home .pf-ok') && !document.querySelector('.home .todo-done');
+          // Prou coses per fer perquè se'n pleguin: les del cantaire i tres més.
+          const extra = [1, 2, 3].map(i => ({ icon: Object.keys(TODO_ICONS)[0], t: `Prova ${i}`, act: '', btn: 'Fes-ho' }));
+          todoItems = () => [...ti(), ...extra]; render(); await s(200);
+          const n = +(document.querySelector('.h-todo .todo-n')?.textContent || 0);
+          const shown = document.querySelectorAll('.h-todo .todo > .todo-row, .h-todo .todo > .todo-conv').length, folded = document.querySelectorAll('.h-todo .todo-more > .todo-row, .h-todo .todo-more > .todo-conv').length;
+          out.fold = n > 3 && shown === 3 && folded === n - 3 && !document.querySelector('.h-todo .todo-more')?.open;
           todoItems = ti; render(); await s(200);
           out.noticesQuiet = !document.querySelector('.h-notices') && !document.querySelector('.home .my-att') && !!document.querySelector('.next-card [data-act="absence-new"]');
-          const shown = document.querySelectorAll('.h-todo .todo > .todo-row, .h-todo .todo > .todo-conv').length, folded = document.querySelectorAll('.h-todo .todo-more > .todo-row, .h-todo .todo-more > .todo-conv').length;
-          out.fold = todoItems().length > 3 && shown === 3 && folded === todoItems().length - 3 && !document.querySelector('.h-todo .todo-more').open;
           const row = [...document.querySelectorAll('.soon-row')].find(x => x.querySelector('[data-act="cl-avisa"]'));
           out.oneBtn = !!row && row.querySelectorAll('.soon-a .btn').length === 1;
           row?.querySelector('[data-act="cl-avisa"]').click(); await s(300);
@@ -1877,11 +1881,16 @@ def main():
         r = page.evaluate("""async () => { const out = {};
           await loadProfiles();
           const rows = tripRows(S.trips.get('t1'));
-          out.tripXls = rows[0].includes('Dinaràs dissabte?') && rows[0].includes('Al·lèrgies i intoleràncies') && rows.some(x => x.includes('Celíaca') && x.includes('Sí'));
+          // L'administració hi té les respostes, però no les al·lèrgies: només les veuen la secretaria i la gerència.
+          out.tripXls = rows[0].includes('Dinaràs dissabte?') && !rows[0].includes('Al·lèrgies i intoleràncies') && rows.some(x => x.includes('Sí')) && !rows.some(x => x.includes('Celíaca'));
           out.tasks = taskPeople(sessionById('s6'), 'k1').length === 1 && rsvpPanel(sessionById('s6')).includes('Autocar: <b>1</b>');
           return out; }""")
-        check(r["tripXls"], "l'Excel de la sortida porta les respostes i les al·lèrgies", str(r))
+        check(r["tripXls"], "l'Excel de la sortida porta les respostes, i les al·lèrgies no hi surten per a l'administració", str(r))
         check(r["tasks"], "l'equip veu qui va amb autocar i qui s'ha apuntat de voluntari", str(r))
+        switch_user(page, base, "ger")
+        r = page.evaluate("""async () => { await loadProfiles(); const rows = tripRows(S.trips.get('t1'));
+          return rows[0].includes('Al·lèrgies i intoleràncies') && rows.some(x => x.includes('Celíaca') && x.includes('Sí')); }""")
+        check(r, "per a la gerència, l'Excel de la sortida porta les al·lèrgies", str(r))
         check(not errors, "sense errors a l'equip", "; ".join(errors[:3]))
         ctx.close()
 
