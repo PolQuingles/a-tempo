@@ -1380,8 +1380,8 @@ def main():
         r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
           const txt = q => document.querySelector(q)?.innerText || '';
           const today = allSessions().find(x => x.date === TODAY);
-          // Les eines de la llista són al quadre de totes les cordes (tot el cor).
-          ui.attArea = 'all'; ui.sessionId = today.id; render(); await s(300);
+          // Les eines de la llista són al quadre de totes les cordes (tot el cor, sense cap corda oberta).
+          ui.attArea = 'all'; ui.rollSec = null; ui.sessionId = today.id; render(); await s(300);
           out.noDoor = !document.querySelector('[data-act="door-open"]') && typeof viewDoor === 'undefined';
           out.tools = /Caps de corda en funcions/.test(txt('.roll-tools'));
           // El cap de corda de tenors (Lluc) no fa la producció.
