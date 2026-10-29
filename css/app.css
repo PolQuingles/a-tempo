@@ -261,6 +261,11 @@ details.np-group summary{list-style:none;cursor:pointer;display:flex;align-items
 details.np-group summary::-webkit-details-marker{display:none}
 details.np-group summary .chev{transition:transform .2s}
 details.np-group[open] summary .chev{transform:rotate(180deg)}
+details.poll-mine{margin-top:10px;border-top:1px solid var(--line)}
+details.poll-mine summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 0 4px;font-size:calc(13.5px*var(--ts));font-weight:600;color:var(--ink-2)}
+details.poll-mine summary::-webkit-details-marker{display:none}
+details.poll-mine summary .chev{transition:transform .2s}
+details.poll-mine[open] summary .chev{transform:rotate(180deg)}
 .chev{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
 
 .empty{text-align:center;padding:48px 16px;color:var(--muted)}

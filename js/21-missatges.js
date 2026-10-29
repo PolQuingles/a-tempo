@@ -5,12 +5,12 @@
 /* ---------- Missatges ---------- */
 // messages/<id> = { id, to: ['*'] (tothom) o [corda…], title, body, by (correu), byName, byRole, createdAt }.
 // A qui fa una producció: to: ['p:<producció>'], prod, secs (les cordes, o cap = totes) i members (qui la fa en enviar-lo).
-// Els caps de corda i els arxivers escriuen només a la seva corda; administració, direcció, gerència i secretaria, a tothom o a les
-// cordes que triïn. Les regles només deixen llegir cada missatge a qui és de la corda (i a l'equip), i arriba al mòbil
+// Els caps de corda i els arxivers escriuen només a la seva corda; administració, direcció, gerència, secretaria i la comissió de
+// festes, a tothom o a les cordes que triïn. Les regles només deixen llegir cada missatge a qui és de la corda (i a l'equip), i arriba al mòbil
 // com un avís (avisos.py, «missatges»).
 const LS_MSG = 'atempo:missatges-vist';
 const MSG_DAYS = 120;
-const WRITE_ALL = ['admin', 'director', 'gerencia', 'secretaria'];
+const WRITE_ALL = ['admin', 'director', 'gerencia', 'secretaria', 'festes'];
 const canWriteAll = () => WRITE_ALL.some(iHave);
 const myLeadSection = () => { const me = ME(); return hasRole(me, 'leader') && me.section && SEC_MAP[me.section] ? me.section : null; };
 /** Els arxivers també escriuen a la seva corda (p. ex. per recordar que cal tornar les partitures). */
@@ -43,11 +43,13 @@ function watchMessages() {
     return;
   }
   const sec = mySectionNow();
-  const got = [new Map(), new Map(), new Map()];
+  const got = [new Map(), new Map(), new Map(), new Map()];
   const on = (i, q) => q.onSnapshot(snap => { got[i] = new Map(snap.docs.map(d => [d.id, d.data()]).filter(([, m]) => (m.createdAt || '') >= since)); take(got); }, () => {});
   msgWatch = [on(0, db.collection('messages').where('to', 'array-contains', '*')), sec ? on(1, db.collection('messages').where('to', 'array-contains', sec)) : null,
     // Els que són per a qui fa una producció: hi ha la llista de qui la fa.
-    S.memberId ? on(2, db.collection('messages').where('members', 'array-contains', S.memberId)) : null];
+    S.memberId ? on(2, db.collection('messages').where('members', 'array-contains', S.memberId)) : null,
+    // La comissió de festes, que pot escriure a les altres cordes: també els que ha escrit.
+    hasRole(S.me, 'festes') && S.email ? on(3, db.collection('messages').where('by', '==', S.email)) : null];
 }
 function msgCard(m, full) {
   const seen = lsGet(LS_MSG) || '';

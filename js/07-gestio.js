@@ -20,9 +20,9 @@ function viewManage() {
 }
 /* ---------- Personal: la gent de l'agrupació, rol per rol ---------- */
 // Al menú, la plantilla va primer (és la llista que més es mira) i els noms van en plural.
-const PEOPLE_MENU = ['singer', 'admin', 'director', 'gerencia', 'secretaria', 'leader', 'archive', 'voice'];
+const PEOPLE_MENU = ['singer', 'admin', 'director', 'gerencia', 'secretaria', 'leader', 'archive', 'festes', 'voice'];
 const rolePlural = r => ({ admin: 'Administració', director: 'Direcció', gerencia: 'Gerència', secretaria: 'Secretaria',
-  leader: capz(V.leaders), archive: 'Arxiu', singer: V.Members, voice: V.Teaching }[r] || roleLabel(r));
+  leader: capz(V.leaders), archive: 'Arxiu', festes: 'Comissió de festes', singer: V.Members, voice: V.Teaching }[r] || roleLabel(r));
 /** Qui té aquest rol. Els de la plantilla són tota la plantilla, tinguin compte o no. */
 const peopleWithRole = r => peopleSorted().filter(p => hasRole(p, r));
 const roleCount = r => r === 'singer' ? membersOf(null, true).filter(m => m.active !== false).length : peopleWithRole(r).length;

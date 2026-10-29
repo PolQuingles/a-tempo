@@ -248,9 +248,9 @@ function saveUI() {
 }
 // Rols de les persones de l'agrupació. Una persona pot tenir-ne més d'un (p. ex. cap de corda i cantaire).
 // Administració ho pot fer tot; direcció, caps i equip passen llista i editen; cantaires i músics només llegeixen.
-const ROLE_KEYS = ['admin', 'director', 'gerencia', 'secretaria', 'leader', 'archive', 'voice', 'singer'];
+const ROLE_KEYS = ['admin', 'director', 'gerencia', 'secretaria', 'leader', 'archive', 'festes', 'voice', 'singer'];
 // Els rols de l'equip es diuen per la funció (Direcció, Arxiu…), no per qui la fa.
-const roleLabel = r => ({ admin: 'Administració', director: 'Direcció', gerencia: 'Gerència', secretaria: 'Secretaria', leader: V.Leader, archive: 'Arxiu', singer: V.Member, voice: V.Teaching }[r] || r);
+const roleLabel = r => ({ admin: 'Administració', director: 'Direcció', gerencia: 'Gerència', secretaria: 'Secretaria', leader: V.Leader, archive: 'Arxiu', festes: 'Comissió de festes', singer: V.Member, voice: V.Teaching }[r] || r);
 const EDIT_ROLES = new Set(['admin', 'director', 'gerencia', 'secretaria', 'leader']);
 /** The roles of a person record, in ROLE_KEYS order: the list, or the single role of older records. */
 const rolesOf = p => {
@@ -266,10 +266,12 @@ const rolesHint = roles => !roles.length ? 'Tria almenys un rol.' : [
     : roles.some(r => ['director', 'gerencia'].includes(r)) ? `Porta les produccions, les sessions, els Ajustos i el tauler, i veu l’assistència de tot ${V.el}${roles.includes('director') ? ' (la direcció també en respon les absències)' : ''}.`
     : roles.includes('secretaria') ? 'Porta les persones (fitxes, altes i baixes, documents i quotes) i el tauler.'
     : roles.includes('leader') ? `Passa llista de la seva ${V.section} i en respon les absències.`
+    : roles.includes('festes') ? ''
     : 'Veu tota l’app en mode lectura, sense poder-hi canviar res.',
   roles.some(r => ['secretaria', 'gerencia'].includes(r)) && !roles.includes('admin') ? 'Veu les al·lèrgies, per organitzar els àpats.' : '',
   roles.includes('singer') ? `Té el seu espai: avisa de les seves absències i veu la seva assistència.` : '',
   roles.includes('leader') ? `Porta una ${V.section}.` : '',
+  roles.includes('festes') && !roles.some(r => BOARD_ROLES.includes(r)) ? `Porta el tauler amb l’equip (anuncis, enquestes, les bandes, documents i sortides; el repertori, no), en veu les respostes i els resultats i pot escriure missatges a tothom o a les ${V.sections} que triï. La resta, només la veu.` : '',
   roles.includes('archive') ? `Porta el repertori (obres, solos, partitures, àudios i materials), reparteix les partitures en paper (les de la seva ${V.section} i, si cal, les de les altres), les recull en acabar cada producció i pot escriure missatges a la seva ${V.section}.` : '',
   roles.includes('gerencia') || roles.includes('secretaria') ? 'Forma part de l’equip de l’agrupació.' : '',
   roles.includes('voice') ? `Porta les ${V.classes.toLowerCase()}: en fa el calendari i rep les absències i els canvis dels ${V.members}.` : '',
@@ -283,9 +285,12 @@ const ME = () => PREVIEW ? { email: PREVIEW.email || '', name: PREVIEW.name || '
 const myEmail = () => PREVIEW ? PREVIEW.email || '' : S.email || '';
 const iHave = r => hasRole(ME(), r);
 const canEdit = () => S.role === 'edit' && (!PREVIEW || PREVIEW.roles.some(r => EDIT_ROLES.has(r)));
-/** Qui porta el tauler (anuncis, enquestes, documents i sortides) i, amb els arxivers, el repertori: com boardEdit a les regles. */
+/** L'equip del tauler, que també porta el repertori (amb els arxivers): com boardEdit a les regles. */
 const BOARD_ROLES = ['admin', 'director', 'gerencia', 'secretaria'];
-const canBoard = () => S.role === 'edit' && BOARD_ROLES.some(iHave);
+const canBoardTeam = () => S.role === 'edit' && BOARD_ROLES.some(iHave);
+/** Qui porta el tauler (anuncis, enquestes i bandes, documents i sortides) i en veu les respostes: l'equip i la comissió de
+ *  festes, que són cantaires i no editen res més (com boardPost a les regles). */
+const canBoard = () => canBoardTeam() || iHave('festes');
 /** Qui porta les produccions i les seves sessions (Gestió › Produccions i el calendari): l'administració, la direcció i la gerència. */
 const PROD_ROLES = ['admin', 'director', 'gerencia'];
 const canProd = () => S.role === 'edit' && PROD_ROLES.some(iHave);
@@ -306,7 +311,7 @@ const readsAllAtt = () => acctHas(...ALL_ATT_ROLES);
 const writesAllAtt = () => acctHas('admin', 'director');
 const readsPeople = () => acctHas(...PEOPLE_ROLES);
 const readsHealth = () => acctHas(...HEALTH_ROLES);
-const readsBoard = () => acctHas(...BOARD_ROLES);
+const readsBoard = () => acctHas(...BOARD_ROLES) || (!!S.me && hasRole(S.me, 'festes'));
 const seesHealth = () => S.role === 'edit' && HEALTH_ROLES.some(iHave) && readsHealth();
 const isAdmin = () => S.role === 'edit' && !PREVIEW && hasRole(S.me, 'admin');
 /** Name, type, sections and look of the group, and deleting it: only a Pro user who runs it. */

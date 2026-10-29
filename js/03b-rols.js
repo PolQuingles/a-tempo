@@ -8,6 +8,7 @@
 // Les de cada rol, que se sumen:
 //  · cantaire (qui té fitxa a la plantilla): Inici · Assistència (la seva) · Calendari · Tauler · Classes (si en fa)
 //  · cap de corda: Assistència (la seva corda) · arxiver: Tauler (l'arxiu de partitures és dins del Repertori)
+//  · comissió de festes: Tauler (en porta els anuncis, les enquestes i les bandes, els documents i les sortides)
 //  · professor de cant: Classes (la llista de cada dia i els alumnes) · Calendari
 //  · direcció i gerència: Assistència (tot el cor) · Calendari · Tauler · Gestió (Personal, Produccions i Ajustos)
 //  · secretaria: Tauler · Gestió (Personal) · administració: totes
@@ -19,7 +20,7 @@ function roleTabs() {
   const add = (...ks) => ks.forEach(k => t.add(k));
   if (myId()) { add('llista', 'calendari', 'tauler'); if (classesOn() && inClasses()) add('classes'); }
   if (leadSec()) add('llista');
-  if (iHave('archive')) add('tauler');
+  if (iHave('archive') || iHave('festes')) add('tauler');
   if (iHave('voice') && classesOn()) add('classes', 'calendari');
   if (S.role === 'edit') {
     if (['director', 'gerencia'].some(iHave)) add('llista', 'calendari', 'tauler', 'gestio');

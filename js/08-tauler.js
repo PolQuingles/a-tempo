@@ -476,6 +476,14 @@ function boardPolls() {
     if (isBandes(p)) return bandesCard(p);
     const closed = p.closed || (p.closesAt && p.closesAt < TODAY);
     const meta = `<div class="ann-m">${closed ? '<span class="st-pill st-rejected">Tancada</span>' : '<span class="st-pill st-accepted">Oberta</span>'}${p.closesAt ? `<span>Fins al ${ddmm(p.closesAt)}</span>` : ''}${p.sections?.length ? `<span>Per a: ${esc(p.sections.map(x => SEC[x].name).join(', '))}</span>` : ''}<span>${p.multi ? 'Pots triar-ne diverses' : 'Una opció'}</span></div>`;
+    // Per respondre-hi: qui porta el tauler i també canta (la comissió de festes, part de l'equip) ho fa des del desplegable
+    // de sota dels resultats.
+    const canVote = !!myId() && !closed;
+    const mine = S.pollVotes.get(`${p.id}_${myId()}`);
+    const chosen = new Set(mine?.choices || []);
+    const form = `${(p.options || []).map(o => `<label class="opt-row"><input type="${p.multi ? 'checkbox' : 'radio'}" name="poll-${p.id}" value="${o.id}" ${chosen.has(o.id) ? 'checked' : ''} ${canVote ? '' : 'disabled'}><span>${esc(o.label)}</span><span></span></label>`).join('')}
+      ${canVote && p.allowNote ? `<label class="field" style="margin-top:8px"><span>Comentari (opcional)</span><textarea class="inp" data-poll-note maxlength="300" style="min-height:60px">${esc(mine?.note || '')}</textarea></label>` : !canVote && mine?.note ? `<p class="m" style="margin:6px 0 0">«${esc(mine.note)}»</p>` : ''}
+      ${canVote ? `<div class="c-a" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="btn btn-sm btn-primary" data-act="poll-vote" data-id="${p.id}">${mine ? 'Actualitza la resposta' : 'Envia la resposta'}</button>${mine ? '<span class="rsvp yes">Resposta desada</span>' : ''}</div>` : ''}`;
     if (canBoard()) {
       const r = pollResults(p);
       const max = Math.max(1, ...Object.values(r.counts));
@@ -483,16 +491,12 @@ function boardPolls() {
         ${p.description ? `<div class="ann-b">${linkify(p.description)}</div>` : ''}${meta}
         ${(p.options || []).map(o => `<div class="opt-row ${r.counts[o.id] === max && max > 0 ? 'best' : ''}"><span></span><span>${esc(o.label)}</span><span class="n">${r.counts[o.id]}</span><span class="opt-bar"><span style="width:${(r.counts[o.id] / Math.max(1, r.voters)) * 100}%"></span></span></div>`).join('')}
         <div class="c-a" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="muted" style="font-size:calc(13px*var(--ts))">${r.voters} de ${r.expected} han respost</span>
-          <button class="btn btn-sm" data-act="poll-results" data-id="${p.id}">Qui ha votat</button>${closed ? '' : `<button class="btn btn-sm" data-act="poll-remind" data-id="${p.id}">Recorda-ho</button>`}</div></div>`;
+          <button class="btn btn-sm" data-act="poll-results" data-id="${p.id}">Qui ha votat</button>${closed ? '' : `<button class="btn btn-sm" data-act="poll-remind" data-id="${p.id}">Recorda-ho</button>`}</div>
+        ${canVote && forMySection(p) ? `<details class="poll-mine" data-poll="${p.id}"><summary>${mine ? 'La teva resposta · desada' : 'Encara no hi has respost'}${ICON.chev}</summary>${form}</details>` : ''}</div>`;
     }
-    const canVote = !!myId() && !closed;
-    const mine = S.pollVotes.get(`${p.id}_${myId()}`);
-    const chosen = new Set(mine?.choices || []);
     return `<div class="poll" data-poll="${p.id}"><h2 class="ann-t">${esc(p.title)}</h2>
       ${p.description ? `<div class="ann-b">${linkify(p.description)}</div>` : ''}${meta}
-      ${(p.options || []).map(o => `<label class="opt-row"><input type="${p.multi ? 'checkbox' : 'radio'}" name="poll-${p.id}" value="${o.id}" ${chosen.has(o.id) ? 'checked' : ''} ${canVote ? '' : 'disabled'}><span>${esc(o.label)}</span><span></span></label>`).join('')}
-      ${canVote && p.allowNote ? `<label class="field" style="margin-top:8px"><span>Comentari (opcional)</span><textarea class="inp" data-poll-note maxlength="300" style="min-height:60px">${esc(mine?.note || '')}</textarea></label>` : !canVote && mine?.note ? `<p class="m" style="margin:6px 0 0">«${esc(mine.note)}»</p>` : ''}
-      ${canVote ? `<div class="c-a" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="btn btn-sm btn-primary" data-act="poll-vote" data-id="${p.id}">${mine ? 'Actualitza la resposta' : 'Envia la resposta'}</button>${mine ? '<span class="rsvp yes">Resposta desada</span>' : ''}</div>` : ''}</div>`;
+      ${form}</div>`;
   };
   return `${canBoard() ? '<div class="sec-h" style="margin-top:6px"><span class="muted" style="font-size:calc(13px*var(--ts))">Per saber quan pot venir la gent.</span><span style="display:flex;gap:6px"><button class="btn btn-sm" data-act="bandes-new">+ Bandes</button><button class="btn btn-sm btn-primary" data-act="poll-new">+ Enquesta</button></span></div>' : ''}
     ${all.length ? `<div class="panel">${all.map(card).join('')}</div>` : '<div class="empty"><p>No hi ha enquestes.</p></div>'}`;

@@ -19,7 +19,7 @@ const scoreOf = (pid, wid, m) => S.scores.get(scoreKey(pid, wid, m.section))?.ma
 const isArchivist = () => iHave('archive');
 const archiveSec = () => isArchivist() ? (ME()?.section || '') : '';
 /** Pot repartir i recollir les d'aquesta corda: qui porta el tauler i els arxivers, les de totes (cada arxiver comença per la seva). */
-const canScores = sec => canBoard() || (isArchivist() && !!sec);
+const canScores = sec => canBoardTeam() || (isArchivist() && !!sec);
 /** Veu l'arxiu sencer (l'estat de tothom): l'equip i els arxivers. */
 const seesArchive = () => canEdit() || isArchivist();
 /** Per què algú ja no fa una producció (i, per tant, no n'ha de tenir les partitures): 'cor' si ja no és al cor, 'prod' si

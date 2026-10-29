@@ -2147,6 +2147,75 @@ def main():
         check(not errors, "sense errors amb les propostes, el recompte i els diplomes", "; ".join(errors[:3]))
         ctx.close()
 
+        print("La comissió de festes: porta el tauler (menys el repertori), en veu els resultats i escriu a tothom")
+        ctx, page, errors = open_app(browser, base, "pol", MOBILE)
+        page.evaluate("""async () => { const s = ms => new Promise(r => setTimeout(r, ms));
+          ensureStaff(); for (let i = 0; i < 20 && !S.staffReady; i++) await s(200);
+          await writeAccount({ email: 'fest@exemple.cat', name: 'Júlia Mas', roles: ['festes', 'singer'], role: 'festes', memberId: 'mC0', addedAt: new Date().toISOString() });
+          const q = { id: 'fq1', title: 'Sopar de Nadal', options: [{ id: 'a', label: 'Hi vinc' }, { id: 'b', label: 'No puc' }], sections: [], closesAt: addDays(TODAY, 5), createdAt: new Date().toISOString() };
+          S.polls.set(q.id, q); persist('polls', q.id, q, 10);
+          const b = { id: 'fb1', kind: 'bandes', title: 'Bandes de la comissió', description: '', picks: 1, win: 1, sections: [], out: [], selfOk: false, closed: true,
+            cats: [{ id: 'k1', name: 'Cor', desc: '', pair: false, sec: '', win: 1 }], closesAt: addDays(TODAY, -1), createdAt: new Date().toISOString() };
+          S.polls.set(b.id, b); persist('polls', b.id, b, 10);
+          const v = { pollId: 'fb1', memberId: 'mS0', section: 'S', picks: { k1: ['mT1'] }, n: 1, choices: [], at: new Date().toISOString() };
+          S.pollVotes.set('fb1_mS0', v); persist('pollVotes', 'fb1_mS0', v, 10);
+          flushAll(); await s(900); }""")
+        switch_user(page, base, "fest")
+        r = page.evaluate("""async () => { const s = ms => new Promise(r => setTimeout(r, ms)), out = {};
+          const fake = () => JSON.parse(localStorage.getItem('fake:db')), find = (db, end) => db[Object.keys(db).find(k => k.endsWith(end))];
+          const tabs = () => [...document.querySelectorAll('.tabs-in .tab:not(.tab-extra)')].map(b => b.dataset.tab).join(',');
+          out.tabs = tabs().split(',').includes('tauler') && !tabs().includes('gestio') && !canEdit() && canBoard();
+          ui.tab = 'tauler'; ui.board = 'anuncis'; render(); await s(300);
+          document.querySelector('[data-act="ann-new"]').click(); await s(300);
+          document.querySelector('#an-title').value = 'Calçotada de primavera'; document.querySelector('#an-body').value = 'Ens apuntem?';
+          document.querySelector('#an-save').click(); await s(600); flushAll(); await s(400);
+          const a = [...S.announcements.values()].find(x => x.title === 'Calçotada de primavera');
+          out.ann = !!a && !!find(fake(), `/announcements/${a.id}`) && !S.error;
+          ui.board = 'enquestes'; render(); await s(300);
+          const card = [...document.querySelectorAll('.poll')].find(x => /Sopar de Nadal/.test(x.innerText));
+          out.results = !!card?.querySelector('[data-act="poll-results"]') && !!card?.querySelector('[data-act="poll-edit"]');
+          card.querySelector('details.poll-mine summary').click(); await s(150);
+          card.querySelector('details.poll-mine input[value="a"]').click();
+          card.querySelector('details.poll-mine [data-act="poll-vote"]').click(); await s(500); flushAll(); await s(300);
+          out.voted = (S.pollVotes.get('fq1_mC0')?.choices || []).join() === 'a' && !!find(fake(), '/pollVotes/fq1_mC0');
+          document.querySelector('[data-act="poll-results"][data-id="fq1"]').click(); await s(300);
+          out.who = !!document.querySelector('.sheet') && !/no pots fer/.test(document.querySelector('.toast')?.innerText || '');
+          closeSheet(); await s(200);
+          document.querySelector('[data-act="bandes-results"][data-id="fb1"]').click(); await s(400);
+          out.bandes = /Cor/.test(document.querySelector('.sheet')?.innerText || '') && !!document.querySelector('.sheet .bd-pie, .sheet svg');
+          closeSheet(); await s(200);
+          document.querySelector('[data-act="bandes-edit"][data-id="fb1"]').click(); await s(300);
+          out.bandesEdit = !!document.querySelector('.sheet #bd-gname');
+          closeSheet(); await s(200);
+          ui.board = 'materials'; render(); await s(300);
+          out.noRep = !document.querySelector('[data-act="work-new"], [data-act="mat-new"], [data-act="work-edit"]');
+          ui.tab = 'avisos'; render(); await s(300);
+          sheetWrite(); await s(300);
+          out.write = !!document.querySelector('.sheet [data-act="msg-new"]') && !!document.querySelector('.sheet [data-act="ann-new"]') && !!document.querySelector('.sheet [data-act="bandes-new"]')
+            && !document.querySelector('.sheet [data-act="thread-to"]');
+          document.querySelector('.sheet [data-act="msg-new"]').click(); await s(300);
+          document.querySelector('#mg-to .pick[data-sec="T"]').click();
+          document.querySelector('#mg-body').value = 'Assaig de la gala dijous!';
+          document.querySelector('#mg-send').click(); await s(600); flushAll(); await s(400);
+          const m = [...S.messages.values()].find(x => /Assaig de la gala/.test(x.body));
+          out.msg = !!m && m.to.join() === 'T' && m.byRole === 'Comissió de festes' && !!find(fake(), `/messages/${m.id}`);
+          out.overflow = document.documentElement.scrollWidth <= innerWidth;
+          return out; }""")
+        for k, label in [("tabs", "la comissió té les pestanyes d'un cantaire i porta el tauler sense editar res més"),
+                         ("ann", "publica un anunci al tauler"),
+                         ("results", "a les enquestes, en veu les respostes i les pot editar"),
+                         ("voted", "i hi respon ella mateixa (també canta)"),
+                         ("who", "mira qui ha respost"),
+                         ("bandes", "veu els resultats de les bandes"),
+                         ("bandesEdit", "i les pot editar (la Nit, els finalistes…)"),
+                         ("noRep", "el repertori no el toca"),
+                         ("write", "escriu missatges i anuncis, però no converses privades"),
+                         ("msg", "envia un missatge a una altra corda, signat com a comissió de festes"),
+                         ("overflow", "sense eixamplar la pantalla del mòbil")]:
+            check(r.get(k), label, str(r))
+        check(not errors, "sense errors amb la comissió de festes", "; ".join(errors[:3]))
+        ctx.close()
+
         print("Registre d'errors")
         ctx, page, errors = open_app(browser, base, "pol", MOBILE)
         page.evaluate("setTimeout(() => { funcioQueNoExisteix(); }, 0)")

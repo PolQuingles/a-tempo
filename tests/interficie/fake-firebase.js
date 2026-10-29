@@ -1,5 +1,5 @@
 // Només per a proves locals: substitueix Firebase per una base de dades a memòria (i a localStorage),
-// sense regles ni xarxa. L'usuari es tria amb ?u=pol | leader | singer | prof | dir | ger | arx (l'arxiver, si se li ha donat compte).
+// sense regles ni xarxa. L'usuari es tria amb ?u=pol | leader | singer | prof | dir | ger | arx (l'arxiver, si se li ha donat compte) | fest.
 (function () {
   const KEY = 'fake:db';
   const USERS = {
@@ -10,6 +10,7 @@
     dir: { uid: 'uid-dir', email: 'dir@exemple.cat', displayName: 'Dídac Director' },
     ger: { uid: 'uid-ger', email: 'ger@exemple.cat', displayName: 'Gemma Gerent' },
     arx: { uid: 'uid-arx', email: 'arx@exemple.cat', displayName: 'Laia Ferrer' },
+    fest: { uid: 'uid-fest', email: 'fest@exemple.cat', displayName: 'Júlia Mas' },   // la comissió de festes, si se li ha donat compte
     nou: { uid: 'uid-nou', email: 'nou@exemple.cat', displayName: 'Oriol Camps' },   // encara no té accés: entra amb l'enllaç del cor
   };
   const m = location.search.match(/[?&]u=(\w+)/);
