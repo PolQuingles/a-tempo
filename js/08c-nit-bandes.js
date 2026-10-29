@@ -10,6 +10,21 @@
 const BANDES_FINAL = 5;
 const dayDiff = (a, b) => Math.round((parseISO(b).getTime() - parseISO(a).getTime()) / 864e5);
 const galaName = p => p.galaName || 'La Nit de les Bandes';
+/** El nom de la Nit com als cartells: els mots petits del mig en cursiva («La Nit <i>de les</i> Bandes»). */
+function galaTitle(p) {
+  const w = galaName(p).split(/\s+/);
+  return w.map((x, i) => i > 0 && i < w.length - 1 && /^[a-zà-ú’']{1,4}$/.test(x) ? `<i>${esc(x)}</i>` : esc(x)).join(' ').replace(/<\/i> <i>/g, ' ');
+}
+/** Quan comença: el dia i l'hora (si no en té, la mitjanit d'aquell dia). */
+const galaStart = p => p.galaAt ? new Date(`${p.galaAt}T${p.galaTime || '00:00'}:00`) : null;
+/** El programa de la Nit, una línia per moment: «21:00 Arribada i photocall» (l'hora és opcional). */
+function parseProgram(text) {
+  return String(text || '').split('\n').map(l => l.trim()).filter(Boolean).slice(0, 20).map(l => {
+    const m = l.match(/^(\d{1,2})(?:[:.’'](\d{2})\s*h?|\s*h)\s*[-–·:]?\s+(.+)$/);
+    return m && +m[1] < 24 ? { t: `${pad(+m[1])}:${m[2] || '00'}`, what: m[3].slice(0, 120) } : { t: '', what: l.slice(0, 120) };
+  });
+}
+const programText = p => (p.program || []).map(x => `${x.t ? `${x.t} ` : ''}${x.what}`).join('\n');
 /** El nom d'una categoria per posar-lo entre «»: sense les cometes que ja porti («"Soprano"» → «Soprano»). */
 const catQ = c => `«${String(c?.name || '').replace(/^["“”«»']+|["“”«»']+$/g, '')}»`;
 /** Els finalistes d'una categoria (d'un recompte ordenat): els k més votats i, si n'hi ha d'empatats a l'últim lloc, també
@@ -69,18 +84,87 @@ function nomRange(p) {
   const a = when[0], b = when[when.length - 1];
   return a === b ? `el ${ddmm(a)}` : `del ${ddmm(a)} al ${ddmm(b)}`;
 }
+/** El compte enrere: dies, hores i minuts si la Nit té hora (es va actualitzant sol, vegeu bandesTick); si no, els dies. */
+function bandesCount(p) {
+  const days = p.galaAt ? dayDiff(TODAY, p.galaAt) : null;
+  if (days == null || days < 0 || p.results) return '';
+  const at = galaStart(p), ms = at.getTime() - Date.now();
+  if (days === 0 || ms <= 0) return `<div class="bn-count today"><b>Avui</b>${p.galaTime && ms > 0 ? `<span>a les ${esc(p.galaTime)}</span>` : ''}</div>`;
+  if (!p.galaTime) return `<div class="bn-count" aria-label="Falten ${days} dies"><span class="bn-u"><b class="mono">${days}</b><small>${days === 1 ? 'dia' : 'dies'}</small></span></div>`;
+  const d = Math.floor(ms / 864e5), h = Math.floor(ms % 864e5 / 36e5), m = Math.floor(ms % 36e5 / 6e4);
+  const u = (k, n, one, many) => `<span class="bn-u"><b class="mono" data-u="${k}">${k === 'd' ? n : pad(n)}</b><small data-l="${k}" data-one="${one}" data-many="${many}">${n === 1 ? one : many}</small></span>`;
+  return `<div class="bn-count" data-at="${at.getTime()}" role="timer" aria-label="Falten ${d} dies i ${h} hores">${u('d', d, 'dia', 'dies')}${u('h', h, 'hora', 'hores')}${u('m', m, 'minut', 'minuts')}</div>`;
+}
+let BN_TICK = null;
+/** Mentre la pàgina és oberta, el compte enrere va baixant (cada 20 s); quan arriba a zero, es torna a pintar la pàgina. */
+function bandesTick() {
+  if (BN_TICK) return;
+  BN_TICK = setInterval(() => {
+    const el = document.querySelector('.bn-count[data-at]');
+    if (!el) { clearInterval(BN_TICK); BN_TICK = null; return; }
+    const ms = +(el.getAttribute('data-at') || 0) - Date.now();
+    if (ms <= 0) { clearInterval(BN_TICK); BN_TICK = null; scheduleRender(); return; }
+    const v = { d: Math.floor(ms / 864e5), h: Math.floor(ms % 864e5 / 36e5), m: Math.floor(ms % 36e5 / 6e4) };
+    for (const [k, n] of Object.entries(v)) {
+      const b = el.querySelector(`[data-u="${k}"]`), l = el.querySelector(`[data-l="${k}"]`);
+      if (b) b.textContent = k === 'd' ? String(n) : pad(n);
+      if (l) l.textContent = (n === 1 ? l.getAttribute('data-one') : l.getAttribute('data-many')) || '';
+    }
+    el.setAttribute('aria-label', `Falten ${v.d} dies i ${v.h} hores`);
+  }, 20e3);
+}
+/** La invitació: qui la presenta, el nom, quan i on, l'etiqueta, el compte enrere, «afegeix-la al calendari» i el camí fins a
+ *  la Nit (propostes, votació, finalistes i la Nit). */
 function bandesHero(p) {
-  const ph = bandesPhase(p), days = p.galaAt ? dayDiff(TODAY, p.galaAt) : null;
+  const ph = bandesPhase(p);
   const year = (p.galaAt || p.closesAt || TODAY).slice(0, 4);
-  const steps = [...(p.propUntil ? [['prop', 'Propostes', `fins al ${ddmm(p.propUntil)}`]] : []), ['vote', 'Votació', p.closesAt ? `fins al ${ddmm(p.closesAt)}` : ''], ['nom', 'Finalistes', nomRange(p)], ['gala', galaName(p).replace(/^La /, ''), p.galaAt ? ddmm(p.galaAt) : '']];
+  const steps = [...(p.propUntil ? [['prop', 'Propostes', `fins al ${ddmm(p.propUntil)}`]] : []), ['vote', 'Votació', p.closesAt ? `fins al ${ddmm(p.closesAt)}` : ''], ['nom', 'Finalistes', nomRange(p)], ['gala', 'La Nit', p.galaAt ? ddmm(p.galaAt) : '']];
   const at = BN_AT[ph] === 'end' ? steps.length : Math.max(0, steps.findIndex(([k]) => k === BN_AT[ph]));
-  const count = days == null || days < 0 || p.results ? '' : `<div class="bn-count" aria-label="${days === 0 ? 'És avui' : `Falten ${days} dies`}">${days === 0 ? '<b>Avui</b>' : days === 1 ? '<b>Demà</b>' : `<b class="mono">${days}</b><span>dies</span>`}</div>`;
+  const when = p.galaAt ? [capz(longDate(p.galaAt)), p.galaTime ? `${p.galaTime} h` : ''].filter(Boolean) : [];
+  const count = bandesCount(p);
+  if (count.includes('data-at')) bandesTick();
   return `<section class="bn-hero">
-    <div class="bn-hero-t"><p class="bn-k">${esc(S.config.shortName || S.config.name || '')} · ${year}</p>
-      <h1 class="bn-t">${esc(galaName(p))}</h1>
-      ${p.galaAt ? `<p class="bn-when">${esc(longDate(p.galaAt))}${p.galaPlace ? ` · ${esc(p.galaPlace)}` : ''}</p>` : ''}</div>
+    <p class="bn-k">${esc(S.config.shortName || S.config.name || '')} presenta · ${year}</p>
+    <h1 class="bn-t">${galaTitle(p)}</h1>
+    ${when.length ? `<p class="bn-when">${when.map(esc).join('<span class="bn-dot" aria-hidden="true">·</span>')}${p.galaPlace ? `<span class="bn-where">${esc(p.galaPlace)}</span>` : ''}</p>` : ''}
+    ${p.galaDress ? `<p class="bn-dress"><span>Etiqueta</span> ${esc(p.galaDress)}</p>` : ''}
     ${count}
+    ${p.galaAt && !p.results && ph !== 'after' ? `<div class="bn-hero-acts"><button class="bn-hb" data-act="bandes-ics" data-id="${esc(p.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Afegeix-la al calendari</button>${p.galaPlace ? `<a class="bn-hb" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.galaPlace)}" target="_blank" rel="noopener">Com s’hi arriba</a>` : ''}</div>` : ''}
     <ol class="bn-steps" style="grid-template-columns:repeat(${steps.length},minmax(0,1fr))">${steps.map(([, t, s], i) => `<li class="${i < at ? 'done' : i === at ? 'cur' : ''}"><b>${esc(t)}</b>${s ? `<small>${esc(s)}</small>` : ''}</li>`).join('')}</ol>
+  </section>`;
+}
+/** «Afegeix-la al calendari»: un .ics amb la Nit (amb l'hora i el lloc, l'etiqueta i el programa). */
+function galaIcs(p) {
+  const stamp = new Date().toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z';
+  const loc = dt => `${isoDate(dt).replace(/-/g, '')}T${pad(dt.getHours())}${pad(dt.getMinutes())}00`;
+  const start = galaStart(p), end = new Date(start.getTime() + 4 * 36e5);
+  const desc = [p.galaDress ? `Etiqueta: ${p.galaDress}` : '', ...(p.program || []).map(x => `${x.t ? `${x.t} ` : ''}${x.what}`)].filter(Boolean).join('\n');
+  return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//A Tempo//CA', 'CALSCALE:GREGORIAN', 'BEGIN:VEVENT', `UID:gala-${p.id}@a-tempo`, `DTSTAMP:${stamp}`,
+    ...(p.galaTime ? [`DTSTART;TZID=Europe/Madrid:${loc(start)}`, `DTEND;TZID=Europe/Madrid:${loc(end)}`]
+      : [`DTSTART;VALUE=DATE:${p.galaAt.replace(/-/g, '')}`, `DTEND;VALUE=DATE:${addDays(p.galaAt, 1).replace(/-/g, '')}`]),
+    `SUMMARY:${icsEscape(galaName(p))}`, ...(p.galaPlace ? [`LOCATION:${icsEscape(p.galaPlace)}`] : []), ...(desc ? [`DESCRIPTION:${icsEscape(desc)}`] : []),
+    'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
+}
+function bandesIcs(pid) {
+  const p = S.polls.get(pid);
+  if (!p?.galaAt) return;
+  offerFile(`${galaName(p).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}.ics`, galaIcs(p), 'text/calendar');
+}
+/** Tot el que cal saber de la Nit: el programa, on és, l'etiqueta, la informació pràctica i, si n'hi ha, la inscripció al sopar
+ *  (una sortida del tauler, amb les seves preguntes i el seu preu). */
+function bandesInfo(p) {
+  const trip = p.tripId ? S.trips.get(p.tripId) : null, prog = p.program || [];
+  if (!prog.length && !p.galaInfo && !trip) return '';
+  let sign = '';
+  if (trip) {
+    const me = myId(), mine = me ? signupOf(trip, me) : null, n = tripCounts(trip).yes.length, open = tripOpen(trip);
+    const state = mine?.answer === 'yes' ? '<span class="rsvp yes">T’hi has apuntat</span>' : mine?.answer === 'no' ? '<span class="rsvp no">Has dit que no hi vas</span>' : '';
+    sign = `<div class="bn-sign"><div><b>${esc(trip.title)}</b><small>${!n ? 'Encara no s’hi ha apuntat ningú' : n === 1 ? 'Hi va 1 persona' : `Hi van ${n} persones`}${trip.deadline && open ? ` · inscripcions fins al ${ddmm(trip.deadline)}` : ''}${open ? '' : ' · inscripcions tancades'}</small></div>
+      <div class="bd-acts">${state}${open && me ? `<button class="btn btn-sm${mine?.answer === 'yes' ? '' : ' btn-primary'}" data-act="trip-yes" data-id="${esc(trip.id)}">${mine?.answer === 'yes' ? 'Canvia-ho' : 'M’hi apunto'}</button>${mine?.answer !== 'no' ? `<button class="btn btn-sm btn-ghost" data-act="trip-no" data-id="${esc(trip.id)}">No hi vaig</button>` : ''}` : ''}</div></div>`;
+  }
+  return `<section class="bn-info">
+    ${prog.length ? `<div class="bn-prog"><h2 class="bn-h">El programa</h2><ol>${prog.map(x => `<li><span class="bn-pt">${esc(x.t || '·')}</span><span>${esc(x.what)}</span></li>`).join('')}</ol></div>` : ''}
+    ${p.galaInfo || trip ? `<div class="bn-prac"><h2 class="bn-h">Bon a saber</h2>${p.galaInfo ? `<div class="rich">${richText(p.galaInfo)}</div>` : ''}${sign}</div>` : ''}
   </section>`;
 }
 function bandesVoteBlock(p) {
@@ -95,27 +179,52 @@ function bandesVoteBlock(p) {
     ${turnoutHtml(p)}</section>`;
 }
 const bnWho = k => `<span class="bn-av">${keyIds(k).map(id => avatar(S.members.get(id))).join('')}</span><span class="bn-nm">${esc(keyName(k))}</span>`;
+/* Els finalistes del dia arriben dins d'un sobre tancat: cadascú l'obre quan vol (una vegada; el mòbil se'n recorda). */
+const LS_SOBRES = 'atempo:sobres';
+const sobresOberts = () => { try { return new Set(JSON.parse(lsGet(LS_SOBRES) || '[]')); } catch { return new Set(); } };
+function bandesEnvelope(el) {
+  const card = el.closest('.bn-nom');
+  const key = `${el.dataset.id}:${el.dataset.cat}`, open = sobresOberts();
+  open.add(key); lsSet(LS_SOBRES, JSON.stringify([...open].slice(-300)));
+  if (card) { card.classList.remove('sealed'); card.classList.add('opening'); }
+}
 function bandesNomBlock(p) {
   if (!p.nominees) return '';
   const { shown, next } = nomReveal(p), today = shown.filter(x => x.date === TODAY), past = shown.filter(x => x.date !== TODAY).reverse();
-  const card = x => `<li class="bn-nom${x.date === TODAY ? ' today' : ''}"><div class="bn-nom-h"><span class="bn-date">${x.date === TODAY ? 'Avui' : esc(shortDate(x.date))}</span><h3>${esc(x.cat.name)}</h3>${x.cat.pair ? '<span class="tag">Parella</span>' : ''}</div>
+  const open = sobresOberts(), me = myId();
+  const mine = me ? shown.filter(x => x.keys.some(k => keyIds(k).includes(me))) : [];
+  const card = x => {
+    const sealed = x.date === TODAY && x.keys.length && !open.has(`${p.id}:${x.cat.id}`);
+    return `<li class="bn-nom${x.date === TODAY ? ' today' : ''}${sealed ? ' sealed' : ''}"><div class="bn-nom-h"><span class="bn-date">${x.date === TODAY ? 'Avui es revelen' : esc(shortDate(x.date))}</span><h3>${esc(x.cat.name)}</h3>${x.cat.pair ? '<span class="tag">Parella</span>' : x.cat.sec ? `<span class="tag">${esc(SEC[x.cat.sec]?.name || x.cat.sec)}</span>` : ''}</div>
     ${x.cat.desc ? `<p class="bn-desc">${esc(x.cat.desc)}</p>` : ''}
-    ${x.keys.length ? `<ul class="bn-fin">${x.keys.map(k => `<li>${bnWho(k)}</li>`).join('')}</ul>` : '<p class="m" style="margin:0">Ningú no hi va rebre vots.</p>'}</li>`;
+    ${sealed ? `<button class="bn-seal" data-act="bandes-envelope" data-id="${esc(p.id)}" data-cat="${esc(x.cat.id)}"><svg class="bn-seal-i" viewBox="0 0 48 36" aria-hidden="true"><rect x="1.5" y="1.5" width="45" height="33" rx="4"/><path d="M2.5 4l21.5 17L45.5 4"/><circle cx="24" cy="21" r="5.5"/></svg><span><b>Obre el sobre</b><small>${x.keys.length} finalistes</small></span></button>` : ''}
+    ${x.keys.length ? `<ul class="bn-fin">${x.keys.map((k, j) => `<li style="--d:${j * 110}ms">${bnWho(k)}</li>`).join('')}</ul>` : '<p class="m" style="margin:0">Ningú no hi va rebre vots.</p>'}</li>`;
+  };
   return `<div class="section-title"><h2 class="h2">Finalistes</h2><span class="bn-n mono">${shown.length}/${shown.length + next.length}</span></div>
+    ${mine.length ? `<p class="bn-me"><b>Ets finalista</b> a ${esc(mine.map(x => catQ(x.cat)).join(', '))}. Ens veiem a la Nit!</p>` : ''}
     ${shown.length ? `<ol class="bn-noms">${[...today, ...past].map(card).join('')}</ol>` : `<p class="m">Els primers finalistes es revelen ${esc(longDate(next[0]?.date || TODAY).toLowerCase())}.</p>`}
     ${next.length ? `<details class="np-group bn-next"><summary><span>Encara per revelar (${next.length})</span>${ICON.chev}</summary>
       <ul class="bn-next-l">${next.map(x => `<li><span>${esc(x.cat.name)}</span><span class="mono">${dayDiff(TODAY, x.date) === 1 ? 'demà' : esc(ddmm(x.date))}</span></li>`).join('')}</ul></details>` : ''}`;
+}
+/** Qui s'ha endut més bandes aquesta Nit (si algú en té més d'una). */
+function bandesRecord(p) {
+  const n = new Map();
+  for (const ks of Object.values(p.results || {})) for (const k of ks) for (const id of keyIds(k)) n.set(id, (n.get(id) || 0) + 1);
+  const max = Math.max(0, ...n.values());
+  return max < 2 ? null : { n: max, ids: [...n].filter(([, v]) => v === max).map(([id]) => id) };
 }
 function bandesPalmPage(p) {
   const res = p.results || {}, me = myId(), list = (p.cats || []).filter(c => res[c.id]?.length);
   if (!list.length) return '';
   const mine = me ? list.filter(c => res[c.id].some(k => keyIds(k).includes(me))) : [];
-  return `<div class="section-title"><h2 class="h2">Palmarès</h2></div>
-    ${mine.length ? `<div class="bd-mine"><p style="margin:0"><b>${mine.length === 1 ? 'T’has endut una banda' : `T’has endut ${mine.length} bandes`}:</b> ${esc(mine.map(c => c.name).join(', '))}. Enhorabona!</p>
+  const rec = bandesRecord(p);
+  return `<div class="section-title"><h2 class="h2">Palmarès</h2><span class="bn-n mono">${list.length} ${list.length === 1 ? 'banda' : 'bandes'}</span></div>
+    ${mine.length ? `<div class="bd-mine bn-mine"><p style="margin:0"><b>${mine.length === 1 ? 'T’has endut una banda' : `T’has endut ${mine.length} bandes`}:</b> ${esc(mine.map(c => c.name).join(', '))}. Enhorabona!</p>
       <button class="btn btn-sm" data-act="bandes-my-diploma" data-id="${esc(p.id)}">${mine.length === 1 ? 'El teu diploma' : 'Els teus diplomes'}</button></div>` : ''}
+    ${rec ? `<p class="bn-rec"><span>Rècord de la Nit</span> ${esc(rec.ids.map(id => fullName(S.members.get(id)?.name || '')).filter(Boolean).join(' i '))}, amb ${rec.n} bandes</p>` : ''}
     <ol class="bn-palm">${list.map(c => {
       const fin = (p.nominees?.[c.id] || []).filter(k => !res[c.id].includes(k));
-      return `<li><span class="bn-cat">${esc(c.name)}</span><b class="bn-winner">${res[c.id].map(k => esc(keyName(k))).join('<br>')}</b>${fin.length ? `<small>Finalistes: ${esc(fin.map(keyName).join(', '))}</small>` : ''}</li>`;
+      return `<li><span class="bn-cat">${esc(c.name)}</span>${res[c.id].map(k => `<span class="bn-win-r">${bnWho(k).replace('class="bn-nm"', 'class="bn-nm bn-winner"')}</span>`).join('')}${fin.length ? `<small>Finalistes: ${esc(fin.map(keyName).join(', '))}</small>` : ''}</li>`;
     }).join('')}</ol>`;
 }
 function bandesCatsBlock(p, open, already) {
@@ -159,6 +268,7 @@ function viewBandes() {
   return `${head}<div class="bn-page">
     ${bandesHero(p)}
     ${ph === 'gala' ? `<p class="bn-today">Avui és ${esc(galaName(p).replace(/^L/, 'l'))}! Els guanyadors es descobreixen a la festa.</p>` : ''}
+    ${['draft', 'prop', 'done'].includes(ph) ? '' : bandesInfo(p)}
     ${['draft', 'prop'].includes(ph) && (p.propOpen || propsFor(p).length) ? bandesPropsBlock(p) : ''}
     ${ph === 'vote' ? bandesVoteBlock(p) : ''}
     ${ph === 'done' ? bandesPalmPage(p) : ''}

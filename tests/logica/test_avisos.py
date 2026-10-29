@@ -37,6 +37,11 @@ _today = datetime.datetime.now(_zi.ZoneInfo("Europe/Madrid")).date()
 DB[f"cors/{G}/polls/b4"] = {"id": "b4", "kind": "bandes", "title": "Bandes velles", "closed": True, "sections": [], "createdAt": "2026-01-01T00:00:00Z",
                             "cats": [{"id": "k1", "name": "Pescanova"}, {"id": "k2", "name": "Radiopatio"}], "nominees": {"k1": ["m1"], "k2": ["m2"]},
                             "nomFrom": _today.isoformat(), "galaAt": (_today + datetime.timedelta(days=5)).isoformat()}
+# La vigília de la Nit (amb l'etiqueta) i el mateix dia (amb l'hora i el lloc).
+DB[f"cors/{G}/polls/b5"] = {"id": "b5", "kind": "bandes", "title": "Demà", "closed": True, "sections": [], "createdAt": "2026-01-01T00:00:00Z",
+                            "galaAt": (_today + datetime.timedelta(days=1)).isoformat(), "galaDress": "Vestit de gala"}
+DB[f"cors/{G}/polls/b6"] = {"id": "b6", "kind": "bandes", "title": "Avui", "closed": True, "sections": [], "createdAt": "2026-01-01T00:00:00Z",
+                            "galaAt": _today.isoformat(), "galaTime": "21:00", "galaPlace": "Can Culleretes", "galaName": "La Gala dels Premis"}
 class Reader:
     reads = 0
     full = True
@@ -90,7 +95,9 @@ ok = sorted(SENT) == sorted([("https://push.example/e2", "Lluc: Tenors: assaig p
                              ("https://push.example/e3", "Equip: Demà no hi ha assaig"),
                              ("https://push.example/e3", "Anna Puig no podrà venir a una sessió. Respon-ho a Assistència › Absències."),
                              ("https://push.example/e1", "Ja podeu votar: Bandes"), ("https://push.example/e3", "Ja podeu votar: Bandes")]
-                            + [(f"https://push.example/e{i}", "La Nit de les Bandes: avui es revelen els finalistes de «Pescanova».") for i in (1, 2, 3)])
+                            + [(f"https://push.example/e{i}", "La Nit de les Bandes: avui es revelen els finalistes de «Pescanova».") for i in (1, 2, 3)]
+                            + [(f"https://push.example/e{i}", "Demà és la Nit de les Bandes! Etiqueta: vestit de gala.") for i in (1, 2, 3)]
+                            + [(f"https://push.example/e{i}", "Avui és la Gala dels Premis! A les 21:00, Can Culleretes.") for i in (1, 2, 3)])
 ok = ok and "b2" not in st["polls_new"] and "b3" in st["polls_new"]
 # De nit no s'envia res (i les passades curtes s'acaben): aleshores la prova només comprova que no s'ha enviat res.
 import zoneinfo

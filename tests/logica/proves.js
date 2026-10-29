@@ -260,6 +260,22 @@ prova('rols sumats: cadascú té les pestanyes i els permisos de tots els seus r
   igual(as(['festes']).tabs, 'avisos,tauler', 'comissió de festes sense fitxa: el Tauler');
   S.me = null; S.memberId = null; S.role = 'edit'; S.config.classesOn = false; S.classes = new Map();
 });
+prova('la Nit de les Bandes: el programa, el nom com als cartells, el rècord i el calendari', () => {
+  igual(parseProgram('21:00 Arribada i photocall\n21.30 - Sopar\n23 h Entrega de les bandes\n1 de cada 3 cantaires ballen\n\nFesta'),
+    [{ t: '21:00', what: 'Arribada i photocall' }, { t: '21:30', what: 'Sopar' }, { t: '23:00', what: 'Entrega de les bandes' }, { t: '', what: '1 de cada 3 cantaires ballen' }, { t: '', what: 'Festa' }],
+    'una hora només si ho sembla (21:00, 21.30, 23 h); la resta, sense hora');
+  igual(programText({ program: parseProgram('21:00 Sopar\nFesta') }), '21:00 Sopar\nFesta', 'i es torna a escriure igual a l’editor');
+  igual(galaTitle({ galaName: 'La Nit de les Bandes' }), 'La Nit <i>de les</i> Bandes');
+  igual(galaTitle({ galaName: 'Gala dels Premis' }), 'Gala <i>dels</i> Premis');
+  igual(galaTitle({ galaName: 'Els Òscars' }), 'Els Òscars', 'el primer mot no es posa mai en cursiva');
+  escenari({ members: [{ id: 'a', name: 'Puig, Anna', section: 'S' }, { id: 'b', name: 'Vila, Clara', section: 'S' }, { id: 'c', name: 'Bosch, Marc', section: 'T' }] });
+  igual(bandesRecord({ results: { k1: ['a'], k2: ['b'] } }), null, 'sense ningú amb dues bandes, no hi ha rècord');
+  igual(bandesRecord({ results: { k1: ['a'], k2: ['a+c'], k3: ['b'] } }), { n: 2, ids: ['a'] }, 'una banda de parella també compta');
+  const ics = galaIcs({ id: 'q', galaName: 'La Nit de les Bandes', galaAt: '2026-12-26', galaTime: '22:30', galaPlace: 'Can Culleretes', galaDress: 'Gala', program: [{ t: '23:00', what: 'Bandes' }] });
+  cert(ics.includes('DTSTART;TZID=Europe/Madrid:20261226T223000') && ics.includes('DTEND;TZID=Europe/Madrid:20261227T023000'), 'quatre hores, encara que passi de mitjanit: ' + ics);
+  cert(ics.includes('LOCATION:Can Culleretes') && ics.includes('DESCRIPTION:Etiqueta: Gala\\n23:00 Bandes'), 'amb el lloc, l’etiqueta i el programa');
+  cert(galaIcs({ id: 'q', galaAt: '2026-12-26' }).includes('DTSTART;VALUE=DATE:20261226'), 'sense hora, tot el dia');
+});
 prova('canvis d’hora de classe entre els dos dies de la setmana, i a unes quantes persones', () => {
   escenari({ members: [{ id: 'a', name: 'Puig, Anna', section: 'S' }, { id: 'b', name: 'Vila, Clara', section: 'S' }, { id: 'c', name: 'Bosch, Marc', section: 'T' }] });
   const mon = (() => { let d = addDays(TODAY, 7); while (new Date(d + 'T12:00:00').getDay() !== 1) d = addDays(d, 1); return d; })();
