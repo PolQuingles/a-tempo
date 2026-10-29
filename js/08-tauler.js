@@ -66,7 +66,7 @@ function visibleAnnouncements() {
     .filter(a => forMe(a) && (canBoard() || !a.until || a.until >= TODAY))
     .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (b.createdAt || '').localeCompare(a.createdAt || ''));
 }
-const openPolls = () => [...S.polls.values()].filter(p => forMe(p) && !p.closed && (!p.closesAt || p.closesAt >= TODAY));
+const openPolls = () => [...S.polls.values()].filter(p => forMe(p) && !p.draft && !p.closed && (!p.closesAt || p.closesAt >= TODAY));
 /** On s'obre el Tauler en tocar-ne la pestanya: als anuncis si n'hi ha de nous; si no, on es va quedar, però mai a uns
  *  anuncis buits (llavors, al repertori). */
 function boardStart() {
@@ -99,7 +99,7 @@ function annCard(a, board) {
       ${attachList(a.files, 'ann-file', a.id)}
       <div class="ann-m">${a.pinned ? '<span class="pin">Fixat</span>' : ''}<span>${esc(fullName(a.author))}</span><span class="mono">${a.createdAt ? ddmm(a.createdAt.slice(0, 10)) : ''}</span>
         ${a.sections?.length ? `<span>Per a: ${esc(a.sections.map(x => SEC[x].name).join(', '))}</span>` : ''}${a.until ? `<span>Fins al ${ddmm(a.until)}</span>` : ''}</div>
-      ${canReply(a.by) ? `<div class="ann-acts"><button class="btn btn-sm" data-act="reply" data-ref="ann:${esc(a.id)}">Respon a ${esc(firstName(fullName(a.author)) || 'l’equip')}</button></div>` : ''}
+      ${canReply(a.by) || bandesAnnActs(a) ? `<div class="ann-acts">${bandesAnnActs(a)}${canReply(a.by) ? `<button class="btn btn-sm" data-act="reply" data-ref="ann:${esc(a.id)}">Respon a ${esc(firstName(fullName(a.author)) || 'l’equip')}</button>` : ''}</div>` : ''}
       ${board && canBoard() && (!a.until || a.until >= TODAY) ? annSeenLine(a) : ''}
     </article>`;
 }
@@ -471,8 +471,9 @@ function pollResults(p) {
   return { counts, voters, expected: pollExpected(p).length };
 }
 function boardPolls() {
-  const all = [...S.polls.values()].filter(forMe).sort((a, b) => (a.closed ? 1 : 0) - (b.closed ? 1 : 0) || (b.createdAt || '').localeCompare(a.createdAt || ''));
+  const all = [...S.polls.values()].filter(p => forMe(p) && (!p.draft || canBoard())).sort((a, b) => (a.closed ? 1 : 0) - (b.closed ? 1 : 0) || (b.createdAt || '').localeCompare(a.createdAt || ''));
   const card = p => {
+    if (isBandes(p)) return bandesCard(p);
     const closed = p.closed || (p.closesAt && p.closesAt < TODAY);
     const meta = `<div class="ann-m">${closed ? '<span class="st-pill st-rejected">Tancada</span>' : '<span class="st-pill st-accepted">Oberta</span>'}${p.closesAt ? `<span>Fins al ${ddmm(p.closesAt)}</span>` : ''}${p.sections?.length ? `<span>Per a: ${esc(p.sections.map(x => SEC[x].name).join(', '))}</span>` : ''}<span>${p.multi ? 'Pots triar-ne diverses' : 'Una opció'}</span></div>`;
     if (canBoard()) {
@@ -493,6 +494,6 @@ function boardPolls() {
       ${canVote && p.allowNote ? `<label class="field" style="margin-top:8px"><span>Comentari (opcional)</span><textarea class="inp" data-poll-note maxlength="300" style="min-height:60px">${esc(mine?.note || '')}</textarea></label>` : !canVote && mine?.note ? `<p class="m" style="margin:6px 0 0">«${esc(mine.note)}»</p>` : ''}
       ${canVote ? `<div class="c-a" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="btn btn-sm btn-primary" data-act="poll-vote" data-id="${p.id}">${mine ? 'Actualitza la resposta' : 'Envia la resposta'}</button>${mine ? '<span class="rsvp yes">Resposta desada</span>' : ''}</div>` : ''}</div>`;
   };
-  return `${canBoard() ? '<div class="sec-h" style="margin-top:6px"><span class="muted" style="font-size:calc(13px*var(--ts))">Per saber quan pot venir la gent.</span><button class="btn btn-sm btn-primary" data-act="poll-new">+ Enquesta</button></div>' : ''}
+  return `${canBoard() ? '<div class="sec-h" style="margin-top:6px"><span class="muted" style="font-size:calc(13px*var(--ts))">Per saber quan pot venir la gent.</span><span style="display:flex;gap:6px"><button class="btn btn-sm" data-act="bandes-new">+ Bandes</button><button class="btn btn-sm btn-primary" data-act="poll-new">+ Enquesta</button></span></div>' : ''}
     ${all.length ? `<div class="panel">${all.map(card).join('')}</div>` : '<div class="empty"><p>No hi ha enquestes.</p></div>'}`;
 }

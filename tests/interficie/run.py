@@ -1920,6 +1920,108 @@ def main():
         check(not errors, "sense errors a l'arxiu", "; ".join(errors[:3]))
         ctx.close()
 
+        print("Bandes: l'esborrany, l'anunci, la papereta, el recompte, el desempat, el palmarès i la gala")
+        ctx, page, errors = open_app(browser, base, "pol", MOBILE)
+        r = page.evaluate("""async () => { const s = ms => new Promise(r => setTimeout(r, ms)), out = {};
+          ui.tab = 'tauler'; ui.board = 'enquestes'; render(); await s(200);
+          document.querySelector('[data-act="bandes-new"]').click(); await s(400);
+          const el = document.querySelector('.sheet');
+          el.querySelector('#bd-cats').value = 'Cor: qui més hi és\\nSoprano: la millor\\n\\nDe parella\\nParella: la del cor';
+          el.querySelector('#bd-cats').dispatchEvent(new Event('input', { bubbles: true })); await s(300);
+          const prev = el.querySelector('#bd-prev').innerText;
+          out.prev = /3 categories/i.test(prev) && prev.includes('Sopranos') && prev.includes('Parella');
+          el.querySelector('#bd-close').value = addDays(TODAY, 5);
+          el.querySelector('#bd-save').click(); await s(400); flushAll(); await s(300);
+          const p = [...S.polls.values()].find(isBandes);
+          out.draft = !!p && p.draft === true && p.cats.length === 3 && p.cats[1].sec === 'S' && p.cats[2].pair && !openPolls().some(x => x.id === p.id);
+          document.querySelector(`[data-act="bandes-publish"][data-id="${p.id}"]`).click(); await s(300);
+          document.querySelector('#bp-ok').click(); await s(400); flushAll(); await s(400);
+          const q = S.polls.get(p.id), a = S.announcements.get(q.annId);
+          out.pub = !q.draft && !!a && a.pollId === q.id && a.pinned && a.body.includes('**Soprano**') && a.body.includes('BANDES DE PARELLA');
+          return out; }""")
+        for k, label in [("prev", "l'editor de bandes llegeix les categories (les d'una corda i les de parella) i les ensenya"),
+                         ("draft", "les bandes es desen com a esborrany, que encara no es pot votar"),
+                         ("pub", "en publicar-les surt un anunci fixat amb totes les categories i el botó per votar")]:
+            check(r.get(k), label, str(r))
+        switch_user(page, base, "singer")
+        r = page.evaluate("""async () => { const s = ms => new Promise(r => setTimeout(r, ms)), out = {};
+          const p = [...S.polls.values()].find(isBandes);
+          out.todo = !!document.querySelector('.h-todo [data-act="bandes-vote"]');
+          sheetBallot(p.id); await s(300);
+          out.intro = /vot és secret/.test(document.querySelector('.sheet-b').innerText);
+          const next = async () => { document.querySelector('.sheet [data-bb="next"]').click(); await s(150); };
+          const names = () => [...document.querySelectorAll('.bb-p .bb-n')].map(x => x.textContent);
+          await next();
+          out.noSelf = names().length === 15 && !names().includes('Anna Puig');
+          document.querySelector('.bb-p').click(); await s(100);
+          await next();
+          out.secOnly = names().length === 3 && names().every(n => ['Laia Ferrer', 'Marta Soler', 'Clara Vila'].includes(n));
+          document.querySelector('.bb-p').click(); await s(100);
+          await next();
+          document.querySelectorAll('.bb-p')[0].click(); await s(100);
+          await next(); out.pairNeedsTwo = document.querySelector('.bb-name')?.textContent === 'Parella';
+          document.querySelectorAll('.bb-p')[1].click(); await s(100);
+          await next();
+          out.review = /Has votat 3 de 3/.test(document.querySelector('.sheet-b').innerText);
+          document.querySelector('.sheet [data-bb="send"]').click(); await s(300); flushAll(); await s(400);
+          const v = (await firebase.firestore().doc(`cors/${GID}/pollVotes/${p.id}_${myId()}`).get()).data();
+          out.sent = !!v && v.n === 3 && v.picks[p.cats[2].id].length === 2;
+          out.todoGone = !document.querySelector('.h-todo [data-act="bandes-vote"]');
+          return out; }""")
+        for k, label in [("todo", "a Inici, el cantaire hi té «Vota»"), ("intro", "la papereta explica que el vot és secret"),
+                         ("noSelf", "a la papereta hi surt tothom menys un mateix"), ("secOnly", "a la banda d'una corda només hi surt aquella corda"),
+                         ("pairNeedsTwo", "una parella necessita dues persones"), ("review", "abans d'enviar-lo es revisa el vot"),
+                         ("sent", "el vot s'envia amb el que s'ha triat a cada categoria"), ("todoGone", "i ja no surt a «Per fer»")]:
+            check(r.get(k), label, str(r))
+        switch_user(page, base, "pol")
+        r = page.evaluate("""async () => { const s = ms => new Promise(r => setTimeout(r, ms)), out = {};
+          const F = firebase.firestore(), TS = firebase.firestore.FieldValue.serverTimestamp, p = [...S.polls.values()].find(isBandes), [k1, k2, k3] = p.cats.map(c => c.id);
+          const id = n => [...S.members.values()].find(m => m.name === n).id;
+          const put = async (n, picks) => { const m = S.members.get(id(n)); await F.doc(`cors/${GID}/pollVotes/${p.id}_${m.id}`).set({ pollId: p.id, memberId: m.id, section: m.section, picks, n: Object.keys(picks).length, choices: [], at: new Date().toISOString(), syncAt: TS() }); };
+          await put('Júlia Mas', { [k1]: [id('Clara Vila'), id('Marta Soler')], [k2]: [id('Laia Ferrer')] });
+          await put('Pere Font', { [k1]: [id('Clara Vila')], [k3]: [id('Marta Soler'), id('Laia Ferrer')] });
+          await s(900); ui.tab = 'tauler'; ui.board = 'enquestes'; render(); await s(200);
+          out.part = /Han votat 3 de 16/.test(document.querySelector(`[data-poll="${p.id}"]`)?.innerText || '');
+          remindPoll(p.id); await s(300);
+          out.remind = /13 persones encara no han respost/.test(document.querySelector('.sheet-b').innerText);
+          sheetBandesResults(p.id); await s(300);
+          out.gate = !!document.querySelector('#br-peek');
+          document.querySelector('#br-peek').click(); await s(300);
+          out.tie = /Hi ha un empat per decidir: Cor/.test(document.querySelector('.sheet-b').innerText);
+          document.querySelector('#br-pub').click(); await s(200);
+          out.blocked = /Primer cal desfer/.test(document.querySelector('.toast')?.innerText || '');
+          document.querySelector(`[data-tie][data-k="${id('Marta Soler')}"]`).click(); await s(400);
+          out.decided = (S.polls.get(p.id).ties?.[k1] || [])[0] === id('Marta Soler') && !document.querySelector('.bd-warn');
+          document.querySelector('#br-pub').click(); await s(300); document.querySelector('#cf-yes').click(); await s(500); flushAll(); await s(300);
+          const q = S.polls.get(p.id), sorted = l => JSON.stringify([...l].sort());
+          out.results = q.closed && sorted(q.results[k1]) === sorted([id('Clara Vila'), id('Marta Soler')]) && q.results[k2][0] === id('Laia Ferrer')
+            && q.results[k3][0] === [id('Laia Ferrer'), id('Marta Soler')].sort().join('+');
+          closeSheet(); sheetPollResults(p.id); await s(300);
+          const who = document.querySelector('.sheet-b').innerText;
+          out.whoNoPicks = /Ha votat/.test(who) && !who.includes('Parella') && !who.includes('Soprano ·');
+          closeSheet(); bandesGala(p.id); await s(200);
+          const g = document.querySelector('.gala');
+          g.querySelector('[data-g="next"]').click(); await s(100); g.querySelector('[data-g="next"]').click(); await s(200);
+          out.gala = g.innerText.includes('Clara Vila') && g.innerText.includes('Marta Soler');
+          document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); await s(200);
+          out.galaClosed = !document.querySelector('.gala') && document.body.style.overflow === '';
+          return out; }""")
+        for k, label in [("part", "l'equip veu quanta gent ha votat"), ("remind", "«Recorda-ho» va a qui encara no ha votat"),
+                         ("gate", "amb la votació oberta, els resultats s'ensenyen només si es vol"), ("tie", "els resultats diuen on hi ha un empat"),
+                         ("blocked", "no es pot publicar el palmarès amb un empat sense desfer"), ("decided", "l'equip desfà l'empat"),
+                         ("results", "el palmarès publicat té qui guanya cada banda (també la parella) i tanca la votació"),
+                         ("whoNoPicks", "«Qui ha votat» no diu què ha votat ningú"), ("gala", "la gala revela qui guanya cada banda"),
+                         ("galaClosed", "i es tanca amb Esc")]:
+            check(r.get(k), label, str(r))
+        switch_user(page, base, "singer")
+        r = page.evaluate("""async () => { const s = ms => new Promise(r => setTimeout(r, ms));
+          ui.tab = 'tauler'; ui.board = 'enquestes'; render(); await s(200);
+          const c = document.querySelector('.poll.bandes');
+          return !!c && c.innerText.includes('Palmarès') && c.innerText.includes('Clara Vila') && !c.querySelector('[data-act="bandes-vote"]'); }""")
+        check(r, "el cantaire veu el palmarès, i ja no pot votar", str(r))
+        check(not errors, "sense errors a les bandes", "; ".join(errors[:3]))
+        ctx.close()
+
         print("Registre d'errors")
         ctx, page, errors = open_app(browser, base, "pol", MOBILE)
         page.evaluate("setTimeout(() => { funcioQueNoExisteix(); }, 0)")

@@ -533,6 +533,51 @@ prova('changedFields: a les produccions i als Ajustos només es desa el que ha c
   igual(changedFields({ a: 1 }, { a: 1, b: { c: 2 } }, FV), { b: { c: 2 } }, 'un mapa nou, sencer');
 });
 
+/* ---------- Bandes ---------- */
+prova('parseBandes: una categoria per línia, les de parella, les d’una corda i el text enganxat d’un PDF', () => {
+  escenari({});
+  const txt = ['BANDES INDIVIDUALS', '- Cor Jove: les que millor representen el cor.', '- "Soprano": la millor soprano.',
+    '- Contralt: la millor contralt (no ens enganyarem,', 'la majoria són mezzos).', '- Jove Promesa: arriba i ho peta.', 'Apunten maneres!!',
+    'Sense descripció', 'Tres de cop [3]: una prova', '', 'BANDES DE PARELLA', '- Parella de l’any: la del Hola.', 'Solta [individual, T]: una de tenors'].join('\n');
+  const c = parseBandes(txt, { win: 2 });
+  igual(c.map(x => x.name), ['Cor Jove', '"Soprano"', 'Contralt', 'Jove Promesa', 'Sense descripció', 'Tres de cop', 'Parella de l’any', 'Solta'], 'noms');
+  igual(c.map(x => [x.pair, x.sec, x.win]), [[false, '', 2], [false, 'S', 1], [false, 'C', 1], [false, '', 2], [false, '', 2], [false, '', 3], [true, '', 1], [false, 'T', 1]], 'tipus, corda i bandes');
+  igual(c[2].desc, 'la millor contralt (no ens enganyarem, la majoria són mezzos).', 'la descripció continua a la línia de sota');
+  igual(c[3].desc, 'arriba i ho peta. Apunten maneres!!', 'una frase curta després d’una descripció acabada també hi va');
+  igual(parseBandes(bandesText({ cats: c, win: 2 }), { win: 2, old: c }), c, 'el text de les categories es torna a llegir igual, amb els mateixos ids');
+  igual(parseBandes('A\nB\nC').map(x => x.name), ['A', 'B', 'C'], 'una llista de noms sols');
+});
+prova('bandesTally: el recompte, els vots que no valen, l’empat i el desempat', () => {
+  escenari({ members: [{ id: 'a', name: 'Puig, Anna', section: 'S' }, { id: 'b', name: 'Ferrer, Laia', section: 'S' }, { id: 'c', name: 'Mas, Júlia', section: 'C' },
+    { id: 'd', name: 'Bosch, Marc', section: 'T' }, { id: 'e', name: 'Font, Pere', section: 'B' }] });
+  const p = { id: 'q', kind: 'bandes', picks: 2, sections: [], out: ['e'], cats: [{ id: 'k1', name: 'Cor', pair: false, sec: '', win: 2 },
+    { id: 'k2', name: 'Soprano', pair: false, sec: 'S', win: 1 }, { id: 'k3', name: 'Parella', pair: true, sec: '', win: 1 }] };
+  const v = (m, picks, at) => ({ pollId: 'q', memberId: m, picks, at });
+  const votes = [
+    v('a', { k1: ['b', 'c', 'd'], k2: ['b'], k3: ['c', 'd'] }, '2026-11-02T10:00:00Z'),   // la tercera persona ja no compta
+    v('b', { k1: ['b', 'c'], k2: ['a'], k3: ['d', 'c'] }, '2026-11-02T11:00:00Z'),        // no es pot votar: només compta la c
+    v('c', { k1: ['d', 'd'], k2: ['c'], k3: ['a'] }, '2026-11-04T09:00:00Z'),             // repetida; no és soprano; parella d'una
+    v('d', { k1: ['e', 'a'], k2: ['b'] }, '2026-11-04T19:00:00Z'),                        // la e no hi participa
+    v('e', { k1: ['a'] }), { pollId: 'altra', memberId: 'a', picks: { k1: ['d'] } }];
+  const people = bandesPeople(p);
+  igual(people.map(m => m.id).sort(), ['a', 'b', 'c', 'd'], 'qui hi participa');
+  let t = bandesTally(p, votes, people);
+  igual([t.voters, t.expected, t.filled], [4, 4, 9 / 4], 'participació i categories per papereta');
+  igual(t.days, { '2026-11-02': 2, '2026-11-04': 2 }, 'paperetes per dia');
+  const [k1, k2, k3] = t.cats;
+  igual(k1.rows, [{ key: 'c', n: 2 }, { key: 'a', n: 1 }, { key: 'b', n: 1 }, { key: 'd', n: 1 }], 'recompte (els empatats, per nom)');
+  igual([k1.winners, k1.tied, k1.open], [['c'], ['a', 'b', 'd'], 1], 'dues bandes: una de clara i un empat a tres per l’altra');
+  igual([k2.rows, k2.winners, k2.ballots, k2.blank], [[{ key: 'b', n: 2 }, { key: 'a', n: 1 }], ['b'], 3, 1], 'la de sopranos');
+  igual([k3.rows, k3.winners], [[{ key: 'c+d', n: 2 }], ['c+d']], 'la parella, en qualsevol ordre');
+  igual(t.people.find(x => x.id === 'c'), { id: 'c', nominations: 2, votes: 4, wins: ['k1', 'k3'] }, 'qui ha rebut vots on');
+  t = bandesTally({ ...p, ties: { k1: ['b'] } }, votes, people);
+  igual([t.cats[0].winners, t.cats[0].open, !!t.cats[0].decided], [['c', 'b'], 0, true], 'el desempat de l’equip');
+  t = bandesTally({ ...p, ties: { k1: ['a', 'b'] } }, votes, people);
+  igual(t.cats[0].open, 1, 'un desempat que no tria just les que falten no val');
+  igual(bandesBallot(p, { k1: ['b', 'c', 'd'], k2: ['c'], k3: ['a'] }, 'a'), { k1: ['b', 'c'] }, 'el que s’envia d’una papereta');
+  igual(bandesWinners({ win: 2 }, [{ key: 'x', n: 3 }], null).winners, ['x'], 'menys gent votada que bandes');
+});
+
 /** Executa totes les proves: { ok, fail, lines }. */
 function runProves() {
   const lines = [];

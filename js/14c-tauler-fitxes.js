@@ -212,6 +212,7 @@ function votePoll(id) {
 function sheetPollResults(id) {
   const p = S.polls.get(id);
   if (!p) return;
+  if (isBandes(p)) { bandesWhoVoted(p); return; }
   const label = Object.fromEntries((p.options || []).map(o => [o.id, o.label]));
   const block = x => {
     const ms = membersOf(x.id);
@@ -273,7 +274,14 @@ function remindRsvp(sid) {
 function remindPoll(id) {
   const p = S.polls.get(id);
   if (!p) return;
-  const pending = pollExpected(p).filter(m => !S.pollVotes.get(`${id}_${m.id}`));
+  const pending = (isBandes(p) ? bandesPeople(p) : pollExpected(p)).filter(m => !S.pollVotes.get(`${id}_${m.id}`));
+  const until = p.closesAt ? ` (fins al ${ddmm(p.closesAt)})` : '';
+  if (isBandes(p)) {
+    sheetReminder(`Recordatori: encara podeu votar «${p.title}»${until}. El vot és secret.`, pending,
+      m => `Hola ${firstName(m.name)}! Encara no has votat «${p.title}»${until}. Pots votar a l’app, a Tauler › Enquestes: ${appUrl()}`,
+      { kind: 'poll', ref: id, title: `Encara no has votat «${p.title}»${until}.` });
+    return;
+  }
   sheetReminder(`Recordatori: responeu l’enquesta «${p.title}»${p.closesAt ? ` abans del ${ddmm(p.closesAt)}` : ''}.`, pending,
     m => `Hola ${firstName(m.name)}! Tens pendent l’enquesta «${p.title}»${p.closesAt ? ` (fins al ${ddmm(p.closesAt)})` : ''}. Respon-la aquí, a Tauler › Enquestes: ${appUrl()}`,
     { kind: 'poll', ref: id, title: `Tens pendent l’enquesta «${p.title}»${p.closesAt ? ` (fins al ${ddmm(p.closesAt)})` : ''}.` });

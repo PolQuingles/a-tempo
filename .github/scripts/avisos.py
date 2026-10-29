@@ -284,14 +284,22 @@ class Group:
         if QUIET:
             return
         for pid, p in fresh.items():
-            if pid in self.state["polls_new"] or p.get("closed"):
+            # Un esborrany encara no el veu ningú: se n'avisarà quan es publiqui (llavors el createdAt és el d'aquell moment).
+            if pid in self.state["polls_new"] or p.get("closed") or p.get("draft"):
+                continue
+            self.state["polls_new"].append(pid)
+            # Una votació que presenta un anunci (les bandes): ja n'avisa l'anunci.
+            if p.get("annId"):
                 continue
             secs = p.get("sections") or []
+            out = set(p.get("out") or [])
+            text = f"Ja podeu votar: {p.get('title', '')}" if p.get("kind") == "bandes" else f"Nova enquesta: {p.get('title', '')}"
             for did, d in self.targets("enquestes"):
                 if secs and d.get("section") and d["section"] not in secs:
                     continue
-                self.deliver(f"pollnew:{pid}:{did}", d, f"Nova enquesta: {p.get('title', '')}", f"poll-{pid}")
-            self.state["polls_new"].append(pid)
+                if d.get("memberId") in out:
+                    continue
+                self.deliver(f"pollnew:{pid}:{did}", d, text, f"poll-{pid}")
 
     # ---------- 1c. Converses privades ----------
     def thread_staff(self, t, d):
@@ -426,7 +434,7 @@ class Group:
     # ---------- 3. Enquestes que es tanquen demà ----------
     def polls(self):
         tomorrow = (TODAY + datetime.timedelta(days=1)).isoformat()
-        closing = {pid: p for pid, p in r.query(self.base, "polls", [("closesAt", "==", tomorrow)]).items() if not p.get("closed")}
+        closing = {pid: p for pid, p in r.query(self.base, "polls", [("closesAt", "==", tomorrow)]).items() if not p.get("closed") and not p.get("draft")}
         if not closing:
             return
         votes = {}
@@ -441,7 +449,10 @@ class Group:
                     continue
                 if secs and d.get("section") and d["section"] not in secs:
                     continue
-                self.deliver(f"poll:{pid}:{did}", d, f"Demà es tanca l'enquesta «{p.get('title', '')}».", f"poll-{pid}")
+                if mid in (p.get("out") or []):
+                    continue
+                text = f"Demà és l'últim dia per votar «{p.get('title', '')}»." if p.get("kind") == "bandes" else f"Demà es tanca l'enquesta «{p.get('title', '')}»."
+                self.deliver(f"poll:{pid}:{did}", d, text, f"poll-{pid}")
 
     # ---------- 3b. Sortides: noves, i la vespra del termini a qui encara no ha dit res ----------
     def trips(self):

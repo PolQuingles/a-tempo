@@ -25,6 +25,11 @@ DB = {
     f"cors/{G}/staff/c@x.cat": {"email": "c@x.cat", "roles": ["leader", "singer"], "memberId": "m3", "section": "S"},
     f"cors/{G}/members/m3": {"id": "m3", "name": "Vila, Clara", "section": "S", "leader": True},
     f"cors/{G}/messages/old": {"id": "old", "to": ["*"], "body": "Vell", "byName": "Equip", "by": "z@x.cat", "createdAt": now()},
+    # Unes bandes: la publicada avisa qui hi participa (no qui se n'ha tret); l'esborrany, ningú; la que presenta un anunci, ja
+    # n'avisa l'anunci.
+    f"cors/{G}/polls/b1": {"id": "b1", "kind": "bandes", "title": "Bandes", "out": ["m2"], "sections": [], "createdAt": now()},
+    f"cors/{G}/polls/b2": {"id": "b2", "kind": "bandes", "title": "Esborrany", "draft": True, "sections": [], "createdAt": now()},
+    f"cors/{G}/polls/b3": {"id": "b3", "kind": "bandes", "title": "Amb anunci", "annId": "n9", "sections": [], "createdAt": now()},
 }
 class Reader:
     reads = 0
@@ -77,7 +82,9 @@ st = json.load(open(os.path.join(root, "avisos-estat.json")))
 print("ESTAT missatges:", st["messages"])
 ok = sorted(SENT) == sorted([("https://push.example/e2", "Lluc: Tenors: assaig parcial"), ("https://push.example/e2", "Equip: Demà no hi ha assaig"),
                              ("https://push.example/e3", "Equip: Demà no hi ha assaig"),
-                             ("https://push.example/e3", "Anna Puig no podrà venir a una sessió. Respon-ho a Assistència › Absències.")])
+                             ("https://push.example/e3", "Anna Puig no podrà venir a una sessió. Respon-ho a Assistència › Absències."),
+                             ("https://push.example/e1", "Ja podeu votar: Bandes"), ("https://push.example/e3", "Ja podeu votar: Bandes")])
+ok = ok and "b2" not in st["polls_new"] and "b3" in st["polls_new"]
 # De nit no s'envia res (i les passades curtes s'acaben): aleshores la prova només comprova que no s'ha enviat res.
 import zoneinfo
 night = not (8 <= datetime.datetime.now(zoneinfo.ZoneInfo("Europe/Madrid")).hour < 22)

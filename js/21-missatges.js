@@ -104,6 +104,7 @@ function sheetWrite() {
       ${canWriteTo() ? `<button class="write-o" data-act="thread-to"><b>Un missatge a una persona</b><small>Una conversa privada${sec ? ` amb algú de la ${esc(SEC[sec].name.toLowerCase())}` : ''}: només la veieu tu i ella, i li arriba al mòbil.</small></button>` : ''}
       ${canWriteAll() ? `<button class="write-o" data-act="ann-new"><b>Un anunci al tauler</b><small>Queda fixat al Tauler (també es pot adreçar a unes ${esc(V.sections)}), amb data de caducitat.</small></button>
       <button class="write-o" data-act="poll-new"><b>Una enquesta</b><small>Una pregunta amb opcions: disponibilitat, vestuari, sopar…</small></button>
+      <button class="write-o" data-act="bandes-new"><b>Unes bandes o uns premis</b><small>Tothom vota qui s’emporta cada categoria. Vot secret, amb el recompte, les estadístiques, el palmarès i una gala per anunciar-les.</small></button>
       <button class="write-o" data-act="trip-new"><b>Una sortida o un cap de setmana</b><small>Amb inscripció, preguntes (àpats, autocar…), transport i habitacions.</small></button>` : ''}
     </div>`,
   });
