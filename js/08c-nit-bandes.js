@@ -235,9 +235,20 @@ function turnoutFor(p) {
   if (BN_TURN.pid !== p.id) {
     BN_TURN.off?.();
     Object.assign(BN_TURN, { pid: p.id, data: null });
-    BN_TURN.off = db.doc(`turnout/${p.id}`).onSnapshot(d => { BN_TURN.data = d.exists ? d.data() : {}; scheduleRender(); }, () => { BN_TURN.data = null; });
+    BN_TURN.off = db.doc(`turnout/${p.id}`).onSnapshot(d => { BN_TURN.data = d.exists ? d.data() : {}; fixTurnout(p); scheduleRender(); }, () => { BN_TURN.data = null; });
   }
   return BN_TURN.data;
+}
+/** Qui porta el tauler (que té tots els vots) hi posa el recompte de veritat si no hi coincideix: els vots fets abans que hi
+ *  hagués recompte, o els de qui ja no hi participa. Com a molt un cop per minut. */
+function fixTurnout(p) {
+  if (!canBoard() || !readsBoard() || !BN_TURN.data || Date.now() - (BN_TURN.fixAt || 0) < 60e3) return;
+  const secOf = new Map(bandesPeople(p).map(m => [m.id, m.section])), real = {};
+  for (const v of bandesVotes(p)) { const sec = secOf.get(v.memberId); if (sec) real[sec] = (real[sec] || 0) + 1; }
+  const keys = new Set([...Object.keys(real), ...Object.keys(BN_TURN.data)]);
+  if ([...keys].every(k => (+BN_TURN.data[k] || 0) === (real[k] || 0))) return;
+  BN_TURN.fixAt = Date.now();
+  db.doc(`turnout/${p.id}`).set(real).catch(() => {});
 }
 /** Quants han votat de quants hi participen, en total i per cordes (mai més dels que hi ha a la corda). */
 function turnoutSum(p, d) {

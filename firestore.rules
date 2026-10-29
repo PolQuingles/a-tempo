@@ -178,7 +178,7 @@ service cloud.firestore {
     // tools/stamp.py hi escriu l'empremta d'aquest fitxer. La vigilància comprova que les regles publicades són les del
     // repositori demanant reglesVersio/<empremta>: si les publicades són unes altres, la lectura es denega.
     match /reglesVersio/{v} {
-      allow get: if v == 'c215ccfe3860';
+      allow get: if v == '31c0d908e4b4';
     }
 
     match /plataforma/equip {
@@ -396,8 +396,11 @@ service cloud.firestore {
       // Quanta gent ha votat unes bandes, per cordes i sense noms: turnout/<votació> = { S: 12, C: 9… }, que veu tothom.
       // Cada persona hi suma 1 a la seva corda el primer cop que vota, en el mateix lot que el vot i amb
       // turnout/<votació>/by/<persona>, que només llegeix ella (així no compta dos cops i ningú no sap qui ha votat).
+      // Qui porta el tauler, que llegeix tots els vots, hi posa el recompte de veritat quan no hi coincideix (els vots d'abans
+      // que hi hagués aquest recompte, o de gent que ja no hi participa).
       match /turnout/{pid} {
         allow read: if isStaff(c) || hasRole(c, ['backup']) || isService();
+        allow create, update: if boardEdit(c);
         allow create: if votedOnce(c, pid)
           && request.resource.data.keys().hasOnly([memberSection(c)])
           && request.resource.data[memberSection(c)] == 1;

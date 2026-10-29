@@ -990,6 +990,8 @@ expect("AB10c ni en pot fer la llista", lst(f"cors/{F}/turnout/bt1/by", T["pol"]
 code, body = req("GET", f"{BASE}/cors/{F}/turnout/bt1", tok=OWNER)
 got = {k: int(v.get("integerValue", 0)) for k, v in (body.get("fields") or {}).items()} if code == 200 else {}
 expect(f"AB11 el recompte és S 1 · B 1 ({got})", 200 if got == {"S": 1, "B": 1} else 403, True)
+expect("AB12 qui porta el tauler hi posa el recompte de veritat", commit([upd(f"cors/{F}/turnout/bt1", {"S": 1, "B": 1, "T": 1})], T["sec"]), True)
+expect("AB12b un cap de corda no", commit([upd(f"cors/{F}/turnout/bt1", {"S": 9})], T["pau"]), False)
 
 print("AC. Bandes: les propostes de categories, abans de votar")
 seed(f"cors/{F}/polls/bt2", {"id": "bt2", "kind": "bandes", "title": "Bandes noves", "draft": True, "propOpen": True})
