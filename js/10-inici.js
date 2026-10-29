@@ -66,6 +66,7 @@ const TODO_ICONS = {
   thread: '<path d="M4 5.5h11v8H8l-4 3.5z"/><path d="M15 9.5h5v8l-3-2.5h-6.5v-2"/>',
   plan: '<path d="M9 18V6.5l10-2.5v11.5"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="15.5" r="2.5"/>',
   ward: WARD_ICON,
+  bandes: BANDES_ICON,
   score: '<path d="M6 3.5h9l3 3v14H6z"/><path d="M15 3.5v3h3M9 11h6M9 14h6M9 17h4"/>',
   join: '<circle cx="10" cy="8" r="3.5"/><path d="M3.5 19.5a6.5 6.5 0 0113 0M18.5 8v6M15.5 11h6"/>',
 };
@@ -122,6 +123,9 @@ function todoItems() {
     const polls = openPolls().filter(p => !isBandes(p) && forMySection(p) && !S.pollVotes.get(`${p.id}_${me.id}`));
     if (polls.length) out.push({ icon: 'poll', t: `${polls.length === 1 ? '1 enquesta' : `${polls.length} enquestes`} per respondre`, s: esc(polls[0].title || ''), btn: 'Respon', act: 'data-act="board-polls"', n: polls.length });
   }
+  // Les bandes: quan es tanca la votació, l'equip n'ha de publicar els finalistes.
+  if (canBoard()) for (const p of [...S.polls.values()].filter(p => isBandes(p) && bandesPhase(p) === 'closed'))
+    out.push({ icon: 'bandes', t: `${esc(p.title)}: s’ha tancat la votació`, s: p.galaAt ? `Publica els finalistes, que es revelaran fins al ${ddmm(p.galaAt)}` : 'Publica els finalistes', btn: 'Publica’ls', act: `data-act="bandes-nominate" data-id="${esc(p.id)}"`, n: 1 });
   // No hi va ser: què s'hi va treballar (el pla de l'assaig on va faltar).
   const missed = missedPlan(me);
   if (missed) out.push({ icon: 'plan', t: `Què es va fer el ${esc(shortDate(missed.date))}`, s: `No hi vas ser: mira el pla ${esc(missed.type ? `de l’${missed.type.toLowerCase()}` : 'de l’assaig')}`, btn: 'Mira-ho', act: `data-act="session-info" data-sid="${esc(missed.id)}"`, n: 0 });
@@ -423,6 +427,7 @@ function viewHome() {
   const msgs = messagesBlock();
   return `${head}
     ${roleHomeCards()}
+    ${bandesHomeCard()}
     ${installCard()}
     <div class="home">
       <div class="home-a">${feat ? `<section class="h-next">${nextCard(feat, me)}</section>` : ''}<section class="h-todo">${todoBlock(me, feat)}</section><section class="h-soon">${teacher ? teacherSoonBlock() : soonBlock(me, feat)}</section></div>
@@ -434,7 +439,8 @@ function viewHome() {
 // El que abans era el correu setmanal, fet sol amb el que ja hi ha a l'app: què es va fer els últims set dies (el pla de cada
 // assaig i «què s'hi va fer»), què ve els pròxims deu (hores, aules, horari del dia i pla, només el que toca a cadascú), què cal
 // respondre i què hi ha de nou al tauler. Si la direcció omple el pla de cada assaig, ningú no ha d'escriure res més.
-const addDays = (iso, n) => isoDate(new Date(parseISO(iso).getTime() + n * 864e5));
+// Per dies del calendari, no per 24 hores: el dia que s'endarrereix el rellotge (l'últim diumenge d'octubre) en té 25.
+const addDays = (iso, n) => { const d = parseISO(iso); d.setDate(d.getDate() + n); return isoDate(d); };
 function weekData() {
   const me = S.members.get(myMemberId());
   const staffView = seesAllSessions() || !me;

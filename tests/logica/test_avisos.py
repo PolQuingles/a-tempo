@@ -31,6 +31,12 @@ DB = {
     f"cors/{G}/polls/b2": {"id": "b2", "kind": "bandes", "title": "Esborrany", "draft": True, "sections": [], "createdAt": now()},
     f"cors/{G}/polls/b3": {"id": "b3", "kind": "bandes", "title": "Amb anunci", "annId": "n9", "sections": [], "createdAt": now()},
 }
+# Unes bandes ja tancades amb els finalistes publicats: avui es revelen els de la primera categoria (la segona, d'aquí a tres dies).
+import zoneinfo as _zi
+_today = datetime.datetime.now(_zi.ZoneInfo("Europe/Madrid")).date()
+DB[f"cors/{G}/polls/b4"] = {"id": "b4", "kind": "bandes", "title": "Bandes velles", "closed": True, "sections": [], "createdAt": "2026-01-01T00:00:00Z",
+                            "cats": [{"id": "k1", "name": "Pescanova"}, {"id": "k2", "name": "Radiopatio"}], "nominees": {"k1": ["m1"], "k2": ["m2"]},
+                            "nomFrom": _today.isoformat(), "galaAt": (_today + datetime.timedelta(days=5)).isoformat()}
 class Reader:
     reads = 0
     full = True
@@ -83,7 +89,8 @@ print("ESTAT missatges:", st["messages"])
 ok = sorted(SENT) == sorted([("https://push.example/e2", "Lluc: Tenors: assaig parcial"), ("https://push.example/e2", "Equip: Demà no hi ha assaig"),
                              ("https://push.example/e3", "Equip: Demà no hi ha assaig"),
                              ("https://push.example/e3", "Anna Puig no podrà venir a una sessió. Respon-ho a Assistència › Absències."),
-                             ("https://push.example/e1", "Ja podeu votar: Bandes"), ("https://push.example/e3", "Ja podeu votar: Bandes")])
+                             ("https://push.example/e1", "Ja podeu votar: Bandes"), ("https://push.example/e3", "Ja podeu votar: Bandes")]
+                            + [(f"https://push.example/e{i}", "La Nit de les Bandes: avui es revelen els finalistes de «Pescanova».") for i in (1, 2, 3)])
 ok = ok and "b2" not in st["polls_new"] and "b3" in st["polls_new"]
 # De nit no s'envia res (i les passades curtes s'acaben): aleshores la prova només comprova que no s'ha enviat res.
 import zoneinfo

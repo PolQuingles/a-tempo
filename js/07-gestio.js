@@ -488,6 +488,7 @@ const ACCT_ICONS = {
   profile: '<rect x="3.5" y="5" width="17" height="14" rx="2.5"/><circle cx="9" cy="11" r="2.2"/><path d="M5.8 16.2a3.4 3.4 0 016.4 0M14 10h4M14 13.5h3"/>',
   threads: '<path d="M4 5.5h11v8H8l-4 3.5z"/><path d="M15 9.5h5v8l-3-2.5h-6.5v-2"/>',
   wardrobe: WARD_ICON,
+  bandes: BANDES_ICON,
   week: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4M7 14h2M11 14h2M15 14h2M7 17h2M11 17h2"/>',
 };
 /** Les finestres del menú. S'obren amb una fletxa per tornar-hi (vegeu openSheet). */
@@ -506,7 +507,8 @@ function sheetAccount() {
     // Les pestanyes que no caben a la barra de baix (vegeu moreTabs): Gestió o les classes.
     moreTabs().map(t => t === 'gestio' ? item('gestio', 'Gestió', `data-act="manage" data-k="${ROUTE_MANAGE[ui.manage] ? ui.manage : 'personal'}"`)
       : item(t, TAB_LABEL[t], `data-act="tab" data-tab="${t}"`)),
-    [(myId() || S.threads.size) && item('threads', 'Converses', 'data-act="acct-open" data-k="threads"', unreadThreads().length), open('week', 'La setmana'),
+    [bandesMenuOn() && item('bandes', esc(galaName(currentBandes())), 'data-act="bandes-open"', bandesPending(currentBandes()) ? 1 : 0),
+      (myId() || S.threads.size) && item('threads', 'Converses', 'data-act="acct-open" data-k="threads"', unreadThreads().length), open('week', 'La setmana'),
       myId() && !PREVIEW && open('profile', 'La meva fitxa'), wardOn() && (myId() || wardStaff()) && item('wardrobe', 'Vestidor', 'data-act="ward-open"', myId() ? wardOf(myId()).filter(x => x.status === 'emprovar').length : 0), open('calendar', icsOn() ? 'Calendari al mòbil' : 'Exporta el calendari'), pushSupported() && open('push', 'Notificacions')],
     [groupsVisible() && open('groups', 'Agrupacions'), open('theme', 'Aparença'), canInstall() && open('install', 'Instal·la l’app'), open('help', 'Com funciona'), open('privacy', 'Les teves dades')],
   ].map(g => g.filter(Boolean)).filter(g => g.length);

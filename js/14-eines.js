@@ -273,8 +273,7 @@ function buildIcs(sessions, name) {
       const end = s.end || `${pad(Math.min(23, +s.time.slice(0, 2) + 2))}:${s.time.slice(3, 5)}`;
       lines.push(`DTEND;TZID=Europe/Madrid:${dt(s.date, end)}`);
     } else {
-      const next = new Date(parseISO(s.date).getTime() + 86400000);
-      lines.push(`DTSTART;VALUE=DATE:${s.date.replace(/-/g, '')}`, `DTEND;VALUE=DATE:${isoDate(next).replace(/-/g, '')}`);
+      lines.push(`DTSTART;VALUE=DATE:${s.date.replace(/-/g, '')}`, `DTEND;VALUE=DATE:${addDays(s.date, 1).replace(/-/g, '')}`);
     }
     lines.push(`SUMMARY:${icsEscape(`${s.type || 'Assaig'} · ${prodNames(s)}`)}`);
     if (s.place) lines.push(`LOCATION:${icsEscape(s.place)}`);
