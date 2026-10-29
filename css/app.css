@@ -912,7 +912,7 @@ button.mday:hover{background:var(--surface-2)}
 .bd-bar{display:block;height:6px;border-radius:6px;background:var(--surface-2);overflow:hidden}
 .bd-bar span{display:block;height:100%;border-radius:inherit;background:var(--accent)}
 /* Qui s'ha endut una banda: una franja en diagonal, com la banda que se li posa. */
-.bd-mine{margin:0;padding:10px 70px 10px 12px;border-radius:var(--r-md);font-size:calc(14px*var(--ts));background:linear-gradient(118deg,transparent 0 calc(100% - 62px),var(--accent) calc(100% - 62px) calc(100% - 44px),transparent calc(100% - 44px)),var(--accent-soft)}
+.bd-mine{margin:0;padding:10px 70px 10px 12px;border-radius:var(--r-md);border:1px solid var(--gold-line);font-size:calc(14px*var(--ts));background:linear-gradient(118deg,transparent 0 calc(100% - 62px),var(--gold-line) calc(100% - 62px) calc(100% - 44px),transparent calc(100% - 44px)),var(--gold-soft)}
 .bd-palm-l{list-style:none;margin:6px 0 0;padding:0}
 .bd-palm-l li{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:12px;padding:8px 0;border-top:1px solid var(--line);font-size:calc(14px*var(--ts))}
 .bd-palm-l li:first-child{border-top:0}
@@ -1001,31 +1001,59 @@ button.mday:hover{background:var(--surface-2)}
 .bd-tie{display:grid;gap:8px;padding:10px 12px;border-radius:var(--r-md);background:var(--fj-soft)}
 .bd-tie p{margin:0;font-size:calc(13.5px*var(--ts));color:var(--fj-text)}
 /* La gala es fa en una pantalla gran, a la festa: sempre fosca, amb la banda creuant la pantalla. */
-.gala{position:fixed;inset:0;z-index:80;display:grid;grid-template-rows:1fr auto;place-items:center;gap:20px;padding:56px 20px calc(20px + env(safe-area-inset-bottom));overflow:hidden;background:#1B1022;color:#F6EEFB;text-align:center}
-.gala::before{content:"";position:absolute;inset:-30% -50%;background:linear-gradient(118deg,transparent 0 57%,rgba(201,167,230,.14) 57% 63%,transparent 63%);pointer-events:none}
-.gala-c{position:relative;display:grid;justify-items:center;gap:18px;max-width:min(1100px,100%)}
-.gala-k{margin:0;font-size:clamp(13px,1.6vw,20px);font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#C9A7E6}
+.gala{position:fixed;inset:0;z-index:80;display:grid;grid-template-rows:1fr auto;place-items:center;gap:20px;padding:56px 20px calc(20px + env(safe-area-inset-bottom));overflow:hidden;color:#F6EEFB;text-align:center;
+  background:radial-gradient(70% 55% at 50% 0%,rgba(242,213,138,.17),transparent 70%),radial-gradient(45% 55% at 12% 100%,rgba(201,167,230,.13),transparent 70%),radial-gradient(45% 55% at 88% 100%,rgba(201,167,230,.13),transparent 70%),#110814}
+.gala::before{content:"";position:absolute;inset:-30% -50%;background:linear-gradient(118deg,transparent 0 57%,rgba(242,213,138,.09) 57% 63%,transparent 63%);pointer-events:none}
+/* Un focus que escombra l'escenari, a poc a poc. */
+.gala::after{content:"";position:absolute;left:50%;top:-30%;width:180vmax;height:180vmax;margin-left:-90vmax;background:conic-gradient(from 180deg at 50% 0%,transparent 165deg,rgba(255,241,201,.07) 175deg,transparent 185deg);transform-origin:50% 0;animation:gala-sweep 14s ease-in-out infinite alternate;pointer-events:none}
+@keyframes gala-sweep{from{transform:rotate(-16deg)}to{transform:rotate(16deg)}}
+.gala-c{position:relative;z-index:1;display:grid;justify-items:center;gap:18px;max-width:min(1100px,100%)}
+.gala-k{margin:0;font-size:clamp(13px,1.6vw,20px);font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#C9A7E6}
 .gala-t{margin:0;font-family:var(--f-display);font-weight:600;font-size:clamp(40px,8vw,120px);line-height:1;text-wrap:balance;overflow-wrap:anywhere}
+.gala-t i,.bn-t i{font-style:italic;font-weight:500;color:#F2D58A}
+.gala-t::after,.bn-t::after{content:"";display:block;width:clamp(56px,8vw,120px);height:1px;margin:.32em auto 0;background:linear-gradient(90deg,transparent,#F2D58A,transparent)}
+.gala-t.small{font-size:clamp(30px,5.4vw,72px)}
 .gala-s,.gala-d{margin:0;max-width:36ch;font-size:clamp(16px,2.2vw,30px);line-height:1.35;color:#D9CCE4;text-wrap:balance}
-.gala-w{display:grid;gap:8px;margin-top:10px}
+.gala-s2{margin:0;font-size:clamp(13px,1.5vw,18px);color:#A898B8}
+.gala-w{display:grid;justify-items:center;gap:8px;margin-top:10px}
 .gala-warn{margin:6px 0 0;max-width:40ch;padding:10px 14px;border-radius:12px;background:rgba(242,213,138,.14);color:#F2D58A;font-size:clamp(14px,1.6vw,18px)}
-.gala-n{margin:0;font-family:var(--f-display);font-style:italic;font-size:clamp(34px,6.5vw,96px);line-height:1.05;color:#F2D58A;overflow-wrap:anywhere;animation:gala-in .6s cubic-bezier(.2,.8,.2,1) both;animation-delay:var(--d,0ms)}
-@keyframes gala-in{from{opacity:0;transform:translateY(18px) scale(.97)}to{opacity:1;transform:none}}
-.gala-f{position:relative;display:flex;gap:10px}
+/* El suspens: tres punts que bateguen i, quan s'obre el sobre (.now), el nom en daurat. */
+.gala-roll{display:flex;gap:14px;padding:18px 0}
+.gala-roll i{width:clamp(10px,1.4vw,18px);height:clamp(10px,1.4vw,18px);border-radius:50%;background:#F2D58A;animation:gala-dot 1s ease-in-out infinite}
+.gala-roll i:nth-child(2){animation-delay:.16s}.gala-roll i:nth-child(3){animation-delay:.32s}
+@keyframes gala-dot{0%,100%{opacity:.25;transform:scale(.7)}50%{opacity:1;transform:scale(1)}}
+.gala-w.now .gala-roll{display:none}
+.gala-n{margin:0;font-family:var(--f-display);font-style:italic;font-weight:600;font-size:clamp(34px,6.5vw,96px);line-height:1.08;overflow-wrap:anywhere;opacity:0;
+  background:linear-gradient(100deg,#C99A3E 0%,#F2D58A 38%,#FFF4D2 50%,#E2B75E 62%,#C99A3E 100%);background-size:220% 100%;-webkit-background-clip:text;background-clip:text;color:transparent}
+.gala-w.now .gala-n{animation:gala-in .7s cubic-bezier(.2,.8,.2,1) both,gala-shine 3.5s ease-in-out .7s infinite;animation-delay:var(--d,0ms),calc(var(--d,0ms) + .7s)}
+@keyframes gala-in{from{opacity:0;transform:translateY(18px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes gala-shine{0%,100%{background-position:100% 0}50%{background-position:0 0}}
+.gala-f{position:relative;z-index:1;display:grid;justify-items:center;gap:14px}
+.gala-fb{display:flex;gap:10px}
+.gala-dots{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;max-width:min(560px,90vw)}
+.gala-dots span{width:7px;height:7px;border-radius:50%;background:rgba(246,238,251,.22)}
+.gala-dots span.done{background:rgba(242,213,138,.55)}
+.gala-dots span.cur{background:#F2D58A;box-shadow:0 0 0 3px rgba(242,213,138,.25)}
 .gala-b{min-height:48px;padding:0 22px;border-radius:999px;border:1px solid rgba(246,238,251,.35);background:transparent;color:inherit;font-size:16px;font-weight:600}
-.gala-b.main{background:#F6EEFB;border-color:#F6EEFB;color:#1B1022}
+.gala-b.main{background:linear-gradient(180deg,#F6DFA0,#E2B75E);border-color:#F2D58A;color:#1B1022}
 .gala-b:disabled{opacity:.35}
 .gala-b:focus-visible,.gala-x:focus-visible{outline:3px solid #F2D58A;outline-offset:3px}
-.gala-x{position:absolute;top:calc(10px + env(safe-area-inset-top));right:10px;z-index:1;display:grid;place-items:center;width:44px;height:44px;border-radius:50%;color:inherit}
+.gala-x{position:absolute;top:calc(10px + env(safe-area-inset-top));right:10px;z-index:2;display:grid;place-items:center;width:44px;height:44px;border-radius:50%;color:inherit}
 .gala-x svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2}
+.gala-fx{position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none}
+.gala-fin ul{list-style:none;margin:14px 0 0;padding:0;display:flex;flex-wrap:wrap;justify-content:center;gap:10px 12px;max-width:min(1000px,94vw)}
+.gala-fin li{padding:.2em .75em;border:1px solid rgba(242,213,138,.38);border-radius:999px;font-family:var(--f-display);font-size:clamp(20px,3.4vw,44px);line-height:1.2;color:#F6EEFB;overflow-wrap:anywhere;animation:gala-in .5s cubic-bezier(.2,.8,.2,1) both;animation-delay:var(--d,0ms)}
+/* Al final, el palmarès sencer. */
+.gala-palm{list-style:none;margin:8px 0 0;padding:0 4px;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(240px,100%),1fr));gap:4px 28px;width:min(1100px,94vw);max-height:46vh;overflow:auto;text-align:left}
+.gala-palm li{display:grid;gap:1px;padding:8px 0;border-bottom:1px solid rgba(242,213,138,.18)}
+.gala-palm span{font-size:clamp(11px,1.1vw,13px);font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#C9A7E6}
+.gala-palm b{font-family:var(--f-display);font-style:italic;font-weight:600;font-size:clamp(17px,1.8vw,24px);color:#F2D58A;overflow-wrap:anywhere}
 /* Els finalistes, a la gala: entren un rere l'altre. */
-.gala-fin ul{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:6px}
-.gala-fin li{font-family:var(--f-display);font-size:clamp(22px,3.8vw,48px);line-height:1.15;color:#F6EEFB;overflow-wrap:anywhere;animation:gala-in .5s cubic-bezier(.2,.8,.2,1) both;animation-delay:var(--d,0ms)}
-@media (prefers-reduced-motion:reduce){.gala-n,.gala-fin li{animation:none}.bb-prog span{transition:none}}
+@media (prefers-reduced-motion:reduce){.gala-fin li,.gala-roll i,.gala::after,.bn-seal-i circle,.bn-nom.opening .bn-fin li{animation:none}.gala-w.now .gala-n{animation:none;opacity:1}.bb-prog span{transition:none}}
 /* Com es reparteixen els vots: qui guanya, amb el color de l'agrupació; els altres finalistes, en grisos; un empat, en ambre. */
-:root{--bd-g1:#8E809D;--bd-g2:#AFA3BC;--bd-g3:#CDC4D6;--bd-r:#E4DEE9}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bd-g1:#9A8EA6;--bd-g2:#776C83;--bd-g3:#5A5164;--bd-r:#3D3645}}
-:root[data-theme="dark"]{--bd-g1:#9A8EA6;--bd-g2:#776C83;--bd-g3:#5A5164;--bd-r:#3D3645}
+:root{--bd-g1:#8E809D;--bd-g2:#AFA3BC;--bd-g3:#CDC4D6;--bd-r:#E4DEE9;--gold:#8A6216;--gold-soft:#F8F0DE;--gold-line:#DFC68F}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bd-g1:#9A8EA6;--bd-g2:#776C83;--bd-g3:#5A5164;--bd-r:#3D3645;--gold:#E7C77B;--gold-soft:#272017;--gold-line:#5C4A2B}}
+:root[data-theme="dark"]{--bd-g1:#9A8EA6;--bd-g2:#776C83;--bd-g3:#5A5164;--bd-r:#3D3645;--gold:#E7C77B;--gold-soft:#272017;--gold-line:#5C4A2B}
 .bd-pie{display:grid;grid-template-columns:120px minmax(0,1fr);align-items:center;gap:14px}
 .bd-pie svg{display:block;width:120px;height:120px}
 .bd-pie circle{fill:none;stroke-width:16;transition:opacity .15s}
@@ -1053,23 +1081,56 @@ button.mday:hover{background:var(--surface-2)}
 @media (prefers-reduced-motion:reduce){.bd-pie circle{transition:none}}
 /* ---------- La Nit de les Bandes (08c-nit-bandes.js): un escenari fosc, amb la banda creuant-lo, com la gala ---------- */
 .bn-page{display:grid;gap:14px}
-.bn-hero{position:relative;overflow:hidden;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:14px 18px;padding:22px 18px 16px;border-radius:var(--r-lg);border:1px solid rgba(246,238,251,.08);background:#1B1022;color:#F6EEFB}
-.bn-hero::before{content:"";position:absolute;inset:-40% -30%;background:linear-gradient(118deg,transparent 0 58%,rgba(201,167,230,.16) 58% 66%,transparent 66%);pointer-events:none}
-.bn-hero>*{position:relative}
-.bn-k{margin:0 0 6px;font-size:calc(12px*var(--ts));font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#C9A7E6}
-.bn-t{margin:0;font-family:var(--f-display);font-weight:600;font-size:clamp(30px,7vw,46px);line-height:1.02;text-wrap:balance;overflow-wrap:anywhere}
-.bn-when{margin:8px 0 0;font-size:calc(14px*var(--ts));color:#D9CCE4}
-.bn-count{display:grid;justify-items:end;line-height:1}
-.bn-count b{font-family:var(--f-display);font-style:italic;font-weight:600;font-size:clamp(40px,10vw,64px);color:#F2D58A}
-.bn-count span{font-size:calc(12px*var(--ts));letter-spacing:.12em;text-transform:uppercase;color:#C9A7E6}
-.bn-steps{grid-column:1 / -1;list-style:none;margin:4px 0 0;padding:12px 0 0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;border-top:1px solid rgba(246,238,251,.18)}
-.bn-steps li{display:grid;align-content:start;gap:2px;font-size:calc(13px*var(--ts));color:#A898B8}
-.bn-steps li b{font-weight:600}
-.bn-steps li small{font-size:calc(12px*var(--ts))}
+/* La invitació: escenari fosc amb dos focus, un marc daurat i la banda (la faixa) creuant-lo. */
+.bn-hero{position:relative;overflow:hidden;display:grid;justify-items:center;gap:12px;padding:30px 20px 18px;border-radius:var(--r-lg);text-align:center;color:#F6EEFB;
+  background:radial-gradient(110% 70% at 50% -15%,rgba(242,213,138,.2),transparent 62%),radial-gradient(60% 60% at 100% 110%,rgba(201,167,230,.18),transparent 70%),#140A18}
+.bn-hero::before{content:"";position:absolute;inset:-40% -30%;background:linear-gradient(118deg,transparent 0 62%,rgba(242,213,138,.10) 62% 68%,transparent 68%);pointer-events:none}
+.bn-hero::after{content:"";position:absolute;inset:7px;border:1px solid rgba(242,213,138,.36);border-radius:calc(var(--r-lg) - 5px);pointer-events:none}
+.bn-hero>*{position:relative;z-index:1}
+.bn-k{margin:0;font-size:calc(11.5px*var(--ts));font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:#C9A7E6}
+.bn-t{margin:0;font-family:var(--f-display);font-weight:600;font-size:clamp(34px,9.5vw,58px);line-height:1.02;text-wrap:balance;overflow-wrap:anywhere}
+.bn-when{margin:0;max-width:34ch;font-size:calc(14.5px*var(--ts));line-height:1.45;color:#E4D9EC;text-wrap:balance}
+.bn-dot{margin:0 .45em;color:#F2D58A}
+.bn-where{display:block;color:#C9B8D6}
+.bn-dress{margin:-4px 0 0;font-size:calc(13.5px*var(--ts));color:#D9CCE4}
+.bn-dress span{margin-right:.4em;font-size:calc(10.5px*var(--ts));font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#F2D58A}
+.bn-count{display:flex;justify-content:center;gap:8px;margin-top:2px}
+.bn-u{display:grid;justify-items:center;gap:3px;min-width:64px;padding:9px 8px 7px;border:1px solid rgba(242,213,138,.34);border-radius:12px;background:rgba(255,255,255,.03)}
+.bn-u b{font-family:var(--f-display);font-style:italic;font-weight:600;font-size:calc(32px*var(--ts));line-height:1;color:#F2D58A;font-variant-numeric:tabular-nums}
+.bn-u small{font-size:calc(10px*var(--ts));font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#C9A7E6}
+.bn-count.today{display:grid;justify-items:center;gap:2px}
+.bn-count.today b{font-family:var(--f-display);font-style:italic;font-weight:600;font-size:calc(44px*var(--ts));line-height:1;color:#F2D58A}
+.bn-count.today span{font-size:calc(12px*var(--ts));letter-spacing:.14em;text-transform:uppercase;color:#C9A7E6}
+.bn-hero-acts{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+.bn-hb{display:inline-flex;align-items:center;gap:7px;min-height:36px;padding:0 14px;border-radius:999px;border:1px solid rgba(242,213,138,.45);background:transparent;color:#F6EEFB;font:inherit;font-size:calc(13.5px*var(--ts));font-weight:600;text-decoration:none;cursor:pointer}
+.bn-hb svg{width:16px;height:16px;fill:none;stroke:#F2D58A;stroke-width:1.8;stroke-linecap:round}
+.bn-hb:hover{background:rgba(242,213,138,.1)}
+.bn-hb:focus-visible{outline:3px solid #F2D58A;outline-offset:2px}
+/* El camí fins a la Nit: una línia daurada amb un punt per pas. */
+.bn-steps{justify-self:stretch;list-style:none;margin:6px 0 0;padding:16px 0 0;display:grid;gap:8px;border-top:1px solid rgba(242,213,138,.28)}
+.bn-steps li{position:relative;display:grid;align-content:start;gap:2px;font-size:calc(12.5px*var(--ts));color:#A898B8}
+.bn-steps li::before{content:"";position:absolute;top:-20px;left:50%;width:9px;height:9px;margin-left:-4.5px;border-radius:50%;background:#140A18;border:1px solid rgba(242,213,138,.55)}
 .bn-steps li.done{color:#D9CCE4}
+.bn-steps li.done::before{background:rgba(242,213,138,.6)}
 .bn-steps li.cur{color:#F2D58A}
+.bn-steps li.cur::before{background:#F2D58A;box-shadow:0 0 0 4px rgba(242,213,138,.22)}
+.bn-steps li b{font-weight:600}
 .bn-steps li.cur b{color:#F6EEFB}
-.bn-today{margin:0;padding:12px 14px;border-radius:var(--r-md);background:var(--accent-soft);font-weight:600}
+.bn-steps li small{font-size:calc(11.5px*var(--ts))}
+.bn-today{margin:0;padding:12px 14px;border-radius:var(--r-md);border:1px solid var(--gold-line);background:var(--gold-soft);font-weight:600;text-align:center}
+/* Tot el que cal saber: el programa i la informació pràctica (i la inscripció al sopar). */
+.bn-info{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(270px,100%),1fr));gap:10px}
+.bn-info>div{display:grid;align-content:start;gap:10px;padding:16px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface)}
+.bn-h{margin:0;font-family:var(--f-display);font-weight:600;font-size:calc(20px*var(--ts));line-height:1.15}
+.bn-prog ol{list-style:none;margin:0;padding:0}
+.bn-prog li{display:grid;grid-template-columns:56px minmax(0,1fr);gap:10px;align-items:baseline;padding:8px 0;border-top:1px solid var(--line);font-size:calc(14.5px*var(--ts))}
+.bn-prog li:first-child{border-top:0;padding-top:0}
+.bn-pt{font-family:var(--f-display);font-style:italic;font-weight:600;font-size:calc(16px*var(--ts));color:var(--gold);font-variant-numeric:tabular-nums}
+.bn-prac .rich{font-size:calc(14.5px*var(--ts))}
+.bn-prac .rich>:first-child{margin-top:0}.bn-prac .rich>:last-child{margin-bottom:0}
+.bn-sign{display:grid;gap:10px;padding:12px 14px;border-radius:var(--r-md);border:1px solid var(--gold-line);background:var(--gold-soft)}
+.bn-sign>div:first-child{display:grid;gap:2px}
+.bn-sign small{font-size:calc(13px*var(--ts));color:var(--ink-2)}
 .bn-card{display:grid;gap:10px;padding:14px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface)}
 .bn-vote{grid-template-columns:minmax(0,1fr) auto;align-items:center}
 .bn-vote .h2{margin:0 0 4px}
@@ -1077,27 +1138,48 @@ button.mday:hover{background:var(--surface-2)}
 @media (max-width:420px){.bn-vote{grid-template-columns:1fr}.bn-vote .btn{justify-self:start}}
 .bn-n{font-size:calc(13px*var(--ts));color:var(--muted)}
 .bn-noms{list-style:none;margin:0;padding:0;display:grid;gap:10px}
-.bn-nom{display:grid;gap:8px;padding:14px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface)}
-.bn-nom.today{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
-.bn-nom-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px}
-.bn-nom-h h3{margin:0;font-family:var(--f-display);font-weight:600;font-size:calc(21px*var(--ts));line-height:1.15;overflow-wrap:anywhere}
+/* Cada categoria, una targeta amb la banda creuant-ne la cantonada. */
+.bn-nom{position:relative;overflow:hidden;display:grid;gap:8px;padding:16px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface)}
+.bn-nom::after,.bn-palm li::after{content:"";position:absolute;top:0;right:0;width:78px;height:78px;background:linear-gradient(225deg,transparent 0 36%,var(--gold-line) 36% 46%,transparent 46%);pointer-events:none}
+.bn-nom.today{border-color:var(--gold-line);box-shadow:0 0 0 1px var(--gold-line);background:linear-gradient(180deg,var(--gold-soft),var(--surface) 70%)}
+.bn-nom-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;padding-right:34px}
+.bn-nom-h h3{margin:0;font-family:var(--f-display);font-weight:600;font-size:calc(22px*var(--ts));line-height:1.15;overflow-wrap:anywhere}
 .bn-nom-h .tag{padding:1px 6px;border-radius:6px}
-.bn-date{flex-basis:100%;font-size:calc(11.5px*var(--ts));font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
+.bn-date{flex-basis:100%;font-size:calc(11.5px*var(--ts));font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
 .bn-desc{margin:0;font-size:calc(14px*var(--ts));color:var(--ink-2)}
-.bn-fin{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.bn-fin{list-style:none;margin:0;padding:0;display:grid;gap:7px}
 .bn-fin li{display:flex;align-items:center;gap:10px;font-size:calc(15px*var(--ts));font-weight:600}
 .bn-av{display:inline-flex;flex:none}
 .bn-av .pav+.pav{margin-left:-8px;box-shadow:0 0 0 2px var(--surface)}
 .bn-nm{min-width:0;overflow-wrap:anywhere}
+/* El sobre: els finalistes del dia, tancats fins que s'obre. */
+.bn-nom.sealed .bn-fin{display:none}
+.bn-seal{display:flex;align-items:center;gap:14px;width:100%;padding:14px 16px;border-radius:var(--r-md);border:1px solid rgba(242,213,138,.5);color:#F6EEFB;text-align:left;cursor:pointer;
+  background:linear-gradient(118deg,transparent 0 70%,rgba(242,213,138,.14) 70% 78%,transparent 78%),#1B1022}
+.bn-seal-i{width:46px;height:34px;flex:none;fill:none;stroke:#F2D58A;stroke-width:1.6;stroke-linejoin:round}
+.bn-seal-i circle{fill:#E2B75E;stroke:#F6DFA0;animation:bn-wax 2.4s ease-in-out infinite}
+@keyframes bn-wax{50%{fill:#F6DFA0}}
+.bn-seal span{display:grid;gap:1px}
+.bn-seal b{font-family:var(--f-display);font-style:italic;font-weight:600;font-size:calc(20px*var(--ts));color:#F2D58A}
+.bn-seal small{font-size:calc(12.5px*var(--ts));color:#C9A7E6}
+.bn-seal:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.bn-nom.opening .bn-seal{display:none}
+.bn-nom.opening .bn-fin li{animation:gala-in .55s cubic-bezier(.2,.8,.2,1) both;animation-delay:var(--d,0ms)}
+.bn-me{margin:0;padding:12px 14px;border-radius:var(--r-md);border:1px solid var(--gold-line);background:var(--gold-soft);font-size:calc(14.5px*var(--ts))}
+.bn-me b{font-family:var(--f-display);font-style:italic;font-weight:600;font-size:calc(17px*var(--ts));color:var(--gold)}
 .bn-next-l{list-style:none;margin:8px 0 0;padding:0}
 .bn-next-l li{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px solid var(--line);font-size:calc(14px*var(--ts))}
 .bn-next-l li:first-child{border-top:0}
 .bn-next-l .mono{flex:none;color:var(--muted)}
-.bn-palm{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
-.bn-palm li{display:grid;align-content:start;gap:4px;padding:14px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface)}
-.bn-cat{font-size:calc(11.5px*var(--ts));font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
-.bn-winner{font-family:var(--f-display);font-style:italic;font-weight:600;font-size:calc(22px*var(--ts));line-height:1.15;overflow-wrap:anywhere}
+.bn-palm{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(230px,100%),1fr));gap:10px}
+.bn-palm li{position:relative;overflow:hidden;display:grid;align-content:start;gap:6px;padding:16px;border:1px solid var(--gold-line);border-radius:var(--r-lg);background:linear-gradient(180deg,var(--gold-soft),var(--surface) 75%)}
+.bn-cat{padding-right:34px;font-size:calc(11.5px*var(--ts));font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+.bn-win-r{display:flex;align-items:center;gap:10px}
+.bn-palm .pav{width:34px;height:34px;font-size:12px}
+.bn-winner{font-family:var(--f-display);font-style:italic;font-weight:600;font-size:calc(21px*var(--ts));line-height:1.15;overflow-wrap:anywhere}
 .bn-palm small{font-size:calc(12.5px*var(--ts));color:var(--muted)}
+.bn-rec{margin:0;padding:10px 14px;border-radius:var(--r-md);background:var(--surface-2);font-size:calc(14.5px*var(--ts));text-align:center}
+.bn-rec span{display:block;font-size:calc(10.5px*var(--ts));font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--gold)}
 .bn-cat-l{list-style:none;margin:8px 0 0;padding:0}
 .bn-cat-l li{display:grid;gap:2px;padding:9px 0;border-top:1px solid var(--line)}
 .bn-cat-l li:first-child{border-top:0}

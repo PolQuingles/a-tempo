@@ -334,8 +334,14 @@ class Group:
                     msgs.append((f"bandnom:{pid}:{today}", f"{gala}: ja hi ha els finalistes de totes les categories!"))
                 elif due:
                     msgs.append((f"bandnom:{pid}:{today}", f"{gala}: avui es revelen els finalistes de {' i '.join(f'«{x}»' for x in due)}."))
+            gala_l = gala[0].lower() + gala[1:]
             if p.get("galaAt") == today and not p.get("results"):
-                msgs.append((f"bandgala:{pid}", f"Avui és {gala[0].lower() + gala[1:]}!"))
+                # El dia de la Nit, amb l'hora i el lloc; la vigília, un recordatori (amb l'etiqueta, si n'hi ha).
+                det = ", ".join(x for x in [f"a les {p['galaTime']}" if p.get("galaTime") else "", p.get("galaPlace") or ""] if x)
+                msgs.append((f"bandgala:{pid}", f"Avui és {gala_l}!" + (f" {det[0].upper() + det[1:]}." if det else "")))
+            if p.get("galaAt") == (TODAY + datetime.timedelta(days=1)).isoformat() and not p.get("results"):
+                dress = (p.get("galaDress") or "").rstrip(".")
+                msgs.append((f"bandeve:{pid}", f"Demà és {gala_l}!" + (f" Etiqueta: {dress[0].lower() + dress[1:]}." if dress else "")))
             if (p.get("resultsAt") or "") >= FRESH:
                 msgs.append((f"bandres:{pid}", f"Ja hi ha el palmarès: {p.get('title', '')}."))
             secs, out = p.get("sections") or [], set(p.get("out") or [])

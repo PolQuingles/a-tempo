@@ -2048,8 +2048,24 @@ def main():
             && JSON.stringify(nomSchedule(q)) === JSON.stringify([TODAY, addDays(TODAY, 1), addDays(TODAY, 2)]);
           document.querySelector('[data-act="bandes-open"]').click(); await s(400);
           out.route = location.hash === '#/bandes' && ui.tab === 'bandes';
+          const pg0 = document.querySelector('.bn-page')?.innerText || '';
+          out.sealed = !!document.querySelector('.bn-nom.sealed .bn-seal') && !pg0.includes('Pau Riera');
+          document.querySelector('.bn-seal').click(); await s(700);
           const pg = document.querySelector('.bn-page')?.innerText || '';
           out.page = /finalistes/i.test(pg) && /avui/i.test(pg) && pg.includes('Pau Riera') && pg.includes('Encara per revelar (2)') && !!document.querySelector('.bn-team');
+          render(); await s(200);
+          out.stays = !document.querySelector('.bn-nom.sealed') && (document.querySelector('.bn-page')?.innerText || '').includes('Pau Riera');
+          // La invitació sencera: l'hora (compte enrere per hores), l'etiqueta, el programa, la inscripció al sopar i el calendari.
+          const t = { id: 'tn1', title: 'Sopar de la Nit', from: q.galaAt, to: q.galaAt, deadline: addDays(TODAY, 1), sections: [], questions: [] };
+          S.trips.set(t.id, t); persist('trips', t.id, t, 10);
+          const q2 = { ...clone(S.polls.get('bn1')), galaTime: '21:30', galaDress: 'Vestit de gala', program: parseProgram('21:30 Sopar\\n23h Entrega de les bandes\\nFesta'), galaInfo: 'Són **35 €**', tripId: 'tn1' };
+          S.polls.set('bn1', q2); persist('polls', 'bn1', q2, 10); flushAll(); render(); await s(300);
+          out.invite = document.querySelectorAll('.bn-count[data-at] .bn-u').length === 3 && /Vestit de gala/.test(document.querySelector('.bn-hero').innerText)
+            && document.querySelector('.bn-t i')?.textContent === 'de les' && !!document.querySelector('.bn-hero [data-act="bandes-ics"]');
+          out.prog = [...document.querySelectorAll('.bn-prog li')].map(li => li.innerText.replace(/\\s+/g, ' ').trim()).join('|') === '21:30 Sopar|23:00 Entrega de les bandes|· Festa'
+            && /35 €/.test(document.querySelector('.bn-prac')?.innerText || '') && !!document.querySelector('.bn-sign [data-act="trip-yes"][data-id="tn1"]');
+          const ics = galaIcs(q2);
+          out.ics = /SUMMARY:La Nit de les Bandes/.test(ics) && ics.includes(`DTSTART;TZID=Europe/Madrid:${q2.galaAt.replace(/-/g, '')}T213000`) && /Etiqueta: Vestit de gala/.test(ics);
           sheetAccount(); await s(200);
           out.menu = !!document.querySelector('.acct-item[data-act="bandes-open"]'); closeSheet(); await s(100);
           sheetBandesResults('bn1'); await s(400);
@@ -2058,13 +2074,22 @@ def main():
           const g = document.querySelector('.gala'), nx = async () => { g.querySelector('[data-g="next"]').click(); await s(150); };
           await nx(); await nx(); out.galaFin = /els finalistes són/i.test(g.innerText) && g.innerText.includes('Pau Riera');
           await nx(); out.galaWin = /la banda és per a/i.test(g.innerText) && g.innerText.includes('Laia Ferrer') && g.innerText.includes('Marc Bosch') && !g.innerText.includes('Pau Riera');
+          out.suspense = !!g.querySelector('.gala-w:not(.now) .gala-roll');
+          g.querySelector('.gala-c').click(); await s(100);
+          out.reveal = !!g.querySelector('.gala-w.now');
+          for (let k = 0; k < 7; k++) await nx();
+          out.galaEnd = /Enhorabona a tothom/.test(g.innerText) && g.querySelectorAll('.gala-palm li').length === 3;
           document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); await s(200);
           return out; }""")
         for k, label in [("home", "a Inici surt el compte enrere de la Nit"), ("todo", "quan es tanca la votació, l'equip té a «Per fer» publicar els finalistes"),
                          ("plan", "en publicar-los, diu com es revelaran"), ("noms", "els finalistes es desen per ordre alfabètic, i es revelen un cada dia fins a la Nit"),
-                         ("route", "la Nit té la seva pàgina (#/bandes)"), ("page", "la pàgina ensenya els finalistes d'avui i diu quants en falten"),
+                         ("route", "la Nit té la seva pàgina (#/bandes)"), ("sealed", "els finalistes d'avui arriben dins d'un sobre tancat"),
+                         ("page", "en obrir el sobre, la pàgina ensenya els finalistes d'avui i diu quants en falten"), ("stays", "i el sobre queda obert"),
+                         ("invite", "la invitació té el compte enrere per hores, l'etiqueta i «afegeix-la al calendari»"),
+                         ("prog", "el programa, la informació pràctica i la inscripció al sopar"), ("ics", "el calendari porta l'hora, el nom i l'etiqueta"),
                          ("menu", "la Nit surt al menú del compte"), ("pies", "els resultats tenen l'anell de cada categoria, l'índex i qui ha rebut més vots"),
-                         ("galaFin", "a la gala, primer els finalistes"), ("galaWin", "i després qui s'emporta la banda")]:
+                         ("galaFin", "a la gala, primer els finalistes"), ("galaWin", "i després qui s'emporta la banda"),
+                         ("suspense", "amb un moment de suspens"), ("reveal", "que es pot saltar tocant la pantalla"), ("galaEnd", "i al final, el palmarès sencer")]:
             check(r.get(k), label, str(r))
         switch_user(page, base, "singer")
         r = page.evaluate("""async () => { const s = ms => new Promise(r => setTimeout(r, ms));

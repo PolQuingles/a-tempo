@@ -355,7 +355,13 @@ function sheetBandes(id) {
       <div class="eyebrow" style="margin-top:6px">La Nit: l’entrega de les bandes</div>
       <label class="field"><span>Com es diu</span><input class="inp" id="bd-gname" maxlength="60" value="${esc(galaName(p))}"></label>
       <label class="field"><span>Quin dia és</span><input class="inp" id="bd-gala" type="date" value="${esc(p.galaAt || '')}"><small>Surt a Inici amb el compte enrere. Els finalistes es revelen un dia rere l’altre, de l’endemà de tancar la votació fins a la Nit.</small></label>
-      <label class="field"><span>On (opcional)</span><input class="inp" id="bd-gplace" maxlength="80" value="${esc(p.galaPlace || '')}" placeholder="p. ex. el sopar de Sant Esteve"></label>
+      <label class="field"><span>A quina hora (opcional)</span><input class="inp" id="bd-gtime" type="time" value="${esc(p.galaTime || '')}"><small>Amb l’hora, el compte enrere va per hores i minuts.</small></label>
+      <label class="field"><span>On (opcional)</span><input class="inp" id="bd-gplace" maxlength="80" value="${esc(p.galaPlace || '')}" placeholder="p. ex. Restaurant Can Culleretes, Barcelona"><small>Surt amb el botó «Com s’hi arriba» (obre el mapa).</small></label>
+      <label class="field"><span>Etiqueta (opcional)</span><input class="inp" id="bd-gdress" maxlength="80" value="${esc(p.galaDress || '')}" placeholder="p. ex. Vestit de gala: és la nit de l’any"></label>
+      <label class="field"><span>El programa (opcional), un moment per línia</span><textarea class="inp" id="bd-gprog" style="min-height:110px" placeholder="21:00 Arribada i photocall&#10;21:30 Sopar&#10;23:00 Entrega de les bandes&#10;00:30 Festa">${esc(programText(p))}</textarea></label>
+      <label class="field"><span>Bon a saber (opcional)</span><textarea class="inp" id="bd-ginfo" maxlength="1500" style="min-height:80px" placeholder="El preu del sopar, com es paga, què cal portar…">${esc(p.galaInfo || '')}</textarea><small>Amb el format dels anuncis (**negreta**, llistes amb «-», enllaços).</small></label>
+      <label class="field"><span>Inscripció (opcional)</span><select class="inp" id="bd-trip"><option value="">Sense inscripció</option>${tripsSorted().filter(t => t.id === p.tripId || (t.to || t.from || '') >= TODAY).map(t => `<option value="${esc(t.id)}" ${t.id === p.tripId ? 'selected' : ''}>${esc(t.title)} · ${esc(ddmm(t.from))}</option>`).join('')}</select>
+        <small>Si hi ha sopar amb inscripció, fes-ne una sortida al Tauler (amb el preu i les preguntes, p. ex. el menú) i tria-la aquí: a la pàgina de la Nit hi haurà el botó per apuntar-s’hi.</small></label>
       <div class="field"><span>Finalistes per categoria</span>${choose('bd-fin', +p.finalists || BANDES_FINAL, [3, 5])}</div>
       ${ex && !ex.draft ? `<div class="toggle-row"><span><b>Tancada</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Ja no s’hi pot votar</span></span><label class="switch"><input type="checkbox" id="bd-closed" ${p.closed ? 'checked' : ''}><span></span></label></div>` : ''}
     </div>`,
@@ -371,6 +377,8 @@ function sheetBandes(id) {
           sections: readSections(el, '#bd-secs'), out: $$('.bd-out input:not(:checked)', el).map(i => i.dataset.mid),
           selfOk: el.querySelector('#bd-self').checked, closesAt: el.querySelector('#bd-close').value,
           galaName: el.querySelector('#bd-gname').value.trim() || 'La Nit de les Bandes', galaAt: el.querySelector('#bd-gala').value, galaPlace: el.querySelector('#bd-gplace').value.trim(), finalists: val('#bd-fin'),
+          galaTime: el.querySelector('#bd-gtime').value, galaDress: el.querySelector('#bd-gdress').value.trim(), program: parseProgram(el.querySelector('#bd-gprog').value),
+          galaInfo: el.querySelector('#bd-ginfo').value.trim(), tripId: el.querySelector('#bd-trip').value,
           closed: el.querySelector('#bd-closed')?.checked ?? !!p.closed, author: ex?.author || authorName(), createdAt: ex?.createdAt || new Date().toISOString() };
       };
       const preview = () => {
@@ -422,7 +430,7 @@ function bandesAnnBody(p) {
     ind.length ? `${par.length ? 'BANDES INDIVIDUALS\n' : ''}${ind.map(line).join('\n')}` : '',
     par.length ? `BANDES DE PARELLA\n${par.map(line).join('\n')}` : '',
     `**Com es vota:** a l’app, amb el botó d’aquí sota${p.closesAt ? `, fins al ${longDate(p.closesAt).toLowerCase()}` : ''}. El vot és secret: ningú no veu qui has votat.`,
-    p.galaAt ? `**${galaName(p)}:** ${longDate(p.galaAt).toLowerCase()}${p.galaPlace ? `, ${p.galaPlace}` : ''}. Abans, a la pàgina de les bandes (menú del compte i Inici) es revelaran els ${+p.finalists || BANDES_FINAL} finalistes de cada categoria, un dia rere l’altre.` : '',
+    p.galaAt ? `**${galaName(p)}:** ${longDate(p.galaAt).toLowerCase()}${p.galaTime ? ` a les ${p.galaTime}` : ''}${p.galaPlace ? `, ${p.galaPlace}` : ''}${p.galaDress ? ` (etiqueta: ${p.galaDress.replace(/^./, c => c.toLowerCase())})` : ''}. Abans, a la pàgina de les bandes (menú del compte i Inici) es revelaran els ${+p.finalists || BANDES_FINAL} finalistes de cada categoria, un dia rere l’altre.` : '',
   ].filter(Boolean).join('\n\n').slice(0, 12000);
 }
 /** Publicar-la: deixa de ser un esborrany, li arriba a tothom i, si es vol, surt un anunci al tauler que la presenta. */
@@ -627,12 +635,41 @@ function bandesWhoVoted(p) {
 
 /* ---------- La gala: per anunciar-les una a una, en una pantalla gran ---------- */
 // Cada banda en tres passos, com als Òscars: la categoria, els finalistes i qui se l'emporta.
+// La gala és la pantalla que es projecta a la Nit: el títol, i per a cada banda, la categoria, els finalistes i, després d'un
+// moment de suspens, qui se l'emporta (amb confeti daurat). Al final, el palmarès sencer. Es passa amb el botó, les fletxes o
+// l'espai, com unes diapositives; tocant la pantalla durant el suspens, el nom surt de seguida.
+const GALA_SUSPENSE = 1800;
+function galaConfetti(root) {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  root.querySelector('.gala-fx')?.remove();
+  const cv = document.createElement('canvas'), dpr = Math.min(2, window.devicePixelRatio || 1);
+  cv.className = 'gala-fx'; cv.setAttribute('aria-hidden', 'true');
+  root.appendChild(cv);
+  const W = cv.width = root.clientWidth * dpr, H = cv.height = root.clientHeight * dpr, g = cv.getContext('2d');
+  if (!g) return;
+  const cols = ['#F2D58A', '#E7C77B', '#FFF1C9', '#C9A7E6', '#F6EEFB'];
+  const bits = Array.from({ length: 150 }, () => ({ x: W / 2 + (Math.random() - .5) * W * .3, y: H * .42, vx: (Math.random() - .5) * 18 * dpr, vy: (-6 - Math.random() * 14) * dpr,
+    r: Math.random() * Math.PI, vr: (Math.random() - .5) * .3, w: (5 + Math.random() * 6) * dpr, h: (8 + Math.random() * 10) * dpr, c: cols[Math.floor(Math.random() * cols.length)] }));
+  const t0 = performance.now();
+  const tick = t => {
+    if (!cv.isConnected) return;
+    const k = (t - t0) / 2600;
+    g.clearRect(0, 0, W, H);
+    g.globalAlpha = Math.max(0, 1 - k * k);
+    for (const b of bits) {
+      b.vy += .32 * dpr; b.vx *= .99; b.x += b.vx; b.y += b.vy; b.r += b.vr;
+      g.save(); g.translate(b.x, b.y); g.rotate(b.r); g.fillStyle = b.c; g.fillRect(-b.w / 2, -b.h / 2, b.w, b.h * Math.abs(Math.cos(b.r * 2))); g.restore();
+    }
+    if (k < 1) requestAnimationFrame(tick); else cv.remove();
+  };
+  requestAnimationFrame(tick);
+}
 function bandesGala(pid) {
   const p = S.polls.get(pid);
   if (!p) return;
   const t = bandesTally(p, bandesVotes(p), bandesPeople(p));
   const cards = t.cats.filter(x => x.rows.length), ties = cards.filter(x => x.open);
-  let i = -1, stage = 0;
+  let i = -1, stage = 0, timer = 0;
   const root = document.createElement('div');
   root.className = 'gala';
   root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true'); root.setAttribute('aria-label', `Gala · ${p.title}`);
@@ -642,25 +679,44 @@ function bandesGala(pid) {
   try { root.requestFullscreen?.().catch(() => {}); } catch {}
   const winners = x => x.open ? [...x.winners, ...x.tied] : x.winners;
   const finals = x => [...(p.nominees?.[x.cat.id] || bandesFinalists(x.rows, +p.finalists || BANDES_FINAL))].sort(byKeyName);
+  const when = [p.galaAt ? capz(longDate(p.galaAt)) : '', p.galaTime ? `${p.galaTime} h` : '', p.galaPlace || ''].filter(Boolean).join(' · ');
+  // El suspens: «I la banda és per a…», uns punts que bateguen i, al cap d'una estona, el nom (o, si es toca la pantalla, ara).
+  const reveal = () => {
+    clearTimeout(timer);
+    const w = root.querySelector('.gala-w');
+    if (!w || w.classList.contains('now')) return;
+    w.classList.add('now');
+    galaConfetti(root);
+  };
   const paint = () => {
+    clearTimeout(timer);
+    root.querySelector('.gala-fx')?.remove();
     let inner;
-    if (i < 0) inner = `<p class="gala-k">${esc(S.config.name || '')}</p><h1 class="gala-t">${esc(galaName(p))}</h1><p class="gala-s">${esc(p.title)} · ${cards.length} ${cards.length === 1 ? 'banda' : 'bandes'} per repartir · hi han votat ${t.voters} persones</p>
+    if (i < 0) inner = `<p class="gala-k">${esc(S.config.shortName || S.config.name || '')} presenta</p><h1 class="gala-t">${galaTitle(p)}</h1>${when ? `<p class="gala-s">${esc(when)}</p>` : ''}
+      <p class="gala-s2">${cards.length} ${cards.length === 1 ? 'banda' : 'bandes'} per repartir · hi han votat ${t.voters} persones</p>
       ${ties.length ? `<p class="gala-warn">Abans de començar: ${ties.length === 1 ? 'hi ha un empat' : `hi ha ${ties.length} empats`} sense desfer (${esc(ties.map(x => x.cat.name).join(', '))}). Es desfan a Resultats.</p>` : ''}`;
-    else if (i >= cards.length) inner = `<h1 class="gala-t">Enhorabona a tothom!</h1><p class="gala-s">${esc(galaName(p))}</p>`;
+    else if (i >= cards.length) inner = `<p class="gala-k">${esc(galaName(p))}</p><h1 class="gala-t">Enhorabona a tothom!</h1>
+      <ol class="gala-palm">${cards.map(x => `<li><span>${esc(x.cat.name)}</span><b>${winners(x).map(k => esc(keyName(k))).join(' · ')}</b></li>`).join('')}</ol>`;
     else {
       const x = cards[i];
-      inner = `<p class="gala-k">Banda ${i + 1} de ${cards.length}${x.cat.pair ? ' · de parella' : x.cat.sec ? ` · ${esc((SEC[x.cat.sec]?.name || '').toLowerCase())}` : ''}</p><h1 class="gala-t">${esc(x.cat.name)}</h1>
+      inner = `<p class="gala-k">Banda ${i + 1} de ${cards.length}${x.cat.pair ? ' · de parella' : x.cat.sec ? ` · ${esc((SEC[x.cat.sec]?.name || '').toLowerCase())}` : ''}</p><h1 class="gala-t${stage ? ' small' : ''}">${esc(x.cat.name)}</h1>
         ${stage === 0 && x.cat.desc ? `<p class="gala-d">${esc(x.cat.desc)}</p>` : ''}
-        ${stage === 1 ? `<div class="gala-fin"><p class="gala-k">Els finalistes són</p><ul>${finals(x).map((k, j) => `<li style="--d:${j * 140}ms">${esc(keyName(k))}</li>`).join('')}</ul></div>` : ''}
-        ${stage === 2 ? `<div class="gala-w"><p class="gala-k">${x.open ? 'Empat! La banda és per a' : 'I la banda és per a'}</p>${winners(x).map((k, j) => `<p class="gala-n" style="--d:${j * 180}ms">${esc(keyName(k))}</p>`).join('')}</div>` : ''}`;
+        ${stage === 1 ? `<div class="gala-fin"><p class="gala-k">Els finalistes són</p><ul>${finals(x).map((k, j) => `<li style="--d:${j * 160}ms">${esc(keyName(k))}</li>`).join('')}</ul></div>` : ''}
+        ${stage === 2 ? `<div class="gala-w" style="--wait:${GALA_SUSPENSE}ms"><p class="gala-k">${x.open ? 'Empat! La banda és per a' : 'I la banda és per a…'}</p><div class="gala-roll" aria-hidden="true"><i></i><i></i><i></i></div>${winners(x).map((k, j) => `<p class="gala-n" style="--d:${j * 200}ms">${esc(keyName(k))}</p>`).join('')}</div>` : ''}`;
     }
-    const label = i < 0 ? 'Comença' : i >= cards.length ? 'Tanca' : stage === 0 ? 'Els finalistes' : stage === 1 ? 'Revela' : i === cards.length - 1 ? 'Al final' : 'La següent';
+    const label = i < 0 ? 'Comença' : i >= cards.length ? 'Tanca' : stage === 0 ? 'Els finalistes' : stage === 1 ? 'Obre el sobre' : i === cards.length - 1 ? 'Al final' : 'La següent';
+    const dots = i >= 0 && i < cards.length ? `<div class="gala-dots" aria-hidden="true">${cards.map((_, j) => `<span class="${j < i ? 'done' : j === i ? 'cur' : ''}"></span>`).join('')}</div>` : '';
     root.innerHTML = `<button class="gala-x" data-g="close" aria-label="Tanca la gala">${ICON.close}</button>
       <div class="gala-c" aria-live="polite">${inner}</div>
-      <div class="gala-f"><button class="gala-b" data-g="back" ${i < 0 ? 'disabled' : ''}>Enrere</button><button class="gala-b main" data-g="next">${label}</button></div>`;
+      <div class="gala-f">${dots}<div class="gala-fb"><button class="gala-b" data-g="back" ${i < 0 ? 'disabled' : ''}>Enrere</button><button class="gala-b main" data-g="next">${label}</button></div></div>`;
     root.querySelector('[data-g="next"]').focus({ preventScroll: true });
+    if (stage === 2 && i >= 0 && i < cards.length) {
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches) root.querySelector('.gala-w')?.classList.add('now');
+      else timer = setTimeout(reveal, GALA_SUSPENSE);
+    }
   };
   const close = () => {
+    clearTimeout(timer);
     document.removeEventListener('keydown', onKey);
     if (fsOn && document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
     root.remove(); document.body.style.overflow = '';
@@ -676,6 +732,7 @@ function bandesGala(pid) {
     if (i < cards.length && stage > 0) stage--;
     else { i--; stage = i >= 0 ? 2 : 0; }
     paint();
+    if (stage === 2) reveal();   // tornant enrere, el nom ja se sap
   };
   const onKey = e => {
     if (e.key === 'Escape') { e.preventDefault(); close(); }
@@ -683,6 +740,10 @@ function bandesGala(pid) {
     else if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); back(); }
   };
   document.addEventListener('keydown', onKey);
-  root.addEventListener('click', e => { const g = e.target.closest('[data-g]')?.dataset.g; if (g === 'next') next(); else if (g === 'back') back(); else if (g === 'close') close(); });
+  root.addEventListener('click', e => {
+    const g = e.target.closest('[data-g]')?.dataset.g;
+    if (g === 'next') next(); else if (g === 'back') back(); else if (g === 'close') close();
+    else if (e.target.closest('.gala-c')) reveal();
+  });
   paint();
 }
