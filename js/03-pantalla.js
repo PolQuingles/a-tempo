@@ -29,6 +29,8 @@ const TAB_ICONS = {
   alumnes: '<circle cx="9" cy="8" r="3.2"/><path d="M3.5 19.5c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><path d="M16 5.2a3 3 0 010 5.6M18 14.8c1.5.7 2.4 2.2 2.6 4.7"/>',
 };
 // El penja-robes del vestidor (al menú del compte, a «Per fer» i al menú lateral de l'ordinador).
+// La medalla de les bandes (08c-nit-bandes): al menú del compte, a «Per fer» i al menú lateral.
+const BANDES_ICON = '<circle cx="12" cy="9" r="5.5"/><path d="M8.7 13.4 7.2 21l4.8-2.6 4.8 2.6-1.5-7.6"/>';
 const WARD_ICON = '<path d="M12 8.4V7.2a2 2 0 1 0-2-2"/><path d="M12 8.4 3.7 14.7a1.6 1.6 0 0 0 1 2.9h14.6a1.6 1.6 0 0 0 1-2.9z"/>';
 const TAB_LABEL = { llista: 'Assistència', calendari: 'Calendari', stats: 'Estadístiques', gestio: 'Gestió', avisos: 'Inici', tauler: 'Tauler', classes: 'Classes de cant', partitures: 'Partitures', alumnes: 'Alumnes' };
 // Amb sis pestanyes (qui edita i també és a la plantilla) els noms llargs no hi caben.
@@ -36,7 +38,7 @@ const TAB_SHORT = { stats: 'Estad.', classes: 'Classes', calendari: 'Calend.', l
 // Una pestanya per feina: Inici (el que tens per fer i el que ve), Assistència (passar llista i estadístiques), Calendari,
 // Tauler (comunicació i repertori), Classes i Gestió. Cadascú té les dels seus rols (vegeu tabsForRole, a 03b-rols).
 /** La pestanya de baix que s'il·lumina. Les que no hi caben (vegeu moreTabs) s'obren des del menú del compte. */
-const navTab = () => ui.tab === 'vestidor' || !tabsForRole().includes(ui.tab) ? '' : ui.tab;
+const navTab = () => ui.tab === 'vestidor' || ui.tab === 'bandes' || !tabsForRole().includes(ui.tab) ? '' : ui.tab;
 function renderTabs() {
   const tabs = tabsForRole(), all = roleTabs();
   if (ui.tab === 'stats' || (ui.tab === 'tauler' && ui.board === 'estadistiques')) { ui.tab = 'llista'; ui.att = 'stats'; ui.board = 'anuncis'; }   // on eren abans
@@ -44,7 +46,7 @@ function renderTabs() {
   if (ui.tab === 'partitures') { ui.tab = 'tauler'; ui.board = 'materials'; }
   if (ui.tab === 'alumnes') { ui.tab = 'classes'; ui.clTab = 'alumnes'; }
   if (ui.tab === 'vestidor' && !(wardOn() && (myId() || wardStaff()))) ui.tab = tabs[0];
-  if (ui.tab !== 'vestidor' && !all.includes(ui.tab)) ui.tab = tabs[0];
+  if (ui.tab !== 'vestidor' && ui.tab !== 'bandes' && !all.includes(ui.tab)) ui.tab = tabs[0];
   // Un sol número vermell, a Inici: tot el que espera resposta.
   const badge = todoCount();
   const short = tabs.length > 5;
@@ -60,8 +62,10 @@ function renderTabs() {
     <span class="tab-ico"><svg viewBox="0 0 24 24">${t === 'gestio' ? GESTIO_ICON : TAB_ICONS[t]}</svg></span>${TAB_LABEL[t]}</button>`).join('');
   const vest = wardOn() && (myId() || wardStaff()) ? `<button class="tab tab-extra" data-act="ward-open" aria-current="${ui.tab === 'vestidor' ? 'page' : 'false'}">
     <span class="tab-ico"><svg viewBox="0 0 24 24">${WARD_ICON}</svg></span>Vestidor</button>` : '';
+  const band = bandesMenuOn() ? `<button class="tab tab-extra" data-act="bandes-open" aria-current="${ui.tab === 'bandes' ? 'page' : 'false'}">
+    <span class="tab-ico"><svg viewBox="0 0 24 24">${BANDES_ICON}</svg></span>Bandes</button>` : '';
   $('.tabs-in').innerHTML = side + tabs.map(t => `<button class="tab" data-act="tab" data-tab="${t}" aria-current="${t === navTab() ? 'page' : 'false'}"${shortName(t) ? ` aria-label="${TAB_LABEL[t]}"` : ''}>
-    <span class="tab-ico"><svg viewBox="0 0 24 24">${TAB_ICONS[t]}</svg>${t === 'avisos' && badge ? `<span class="tab-badge">${badge > 99 ? '99+' : badge}</span>` : ''}</span>${shortName(t) || TAB_LABEL[t]}</button>`).join('') + more + vest;
+    <span class="tab-ico"><svg viewBox="0 0 24 24">${TAB_ICONS[t]}</svg>${t === 'avisos' && badge ? `<span class="tab-badge">${badge > 99 ? '99+' : badge}</span>` : ''}</span>${shortName(t) || TAB_LABEL[t]}</button>`).join('') + more + band + vest;
 }
 // Gestió, quan no és a la barra (al menú lateral i al del compte): uns controls lliscants.
 const GESTIO_ICON = '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>';
@@ -269,7 +273,7 @@ function render() {
       <div class="sk-grid"><span class="sk sk-tile"></span><span class="sk sk-tile"></span></div></div>`;
     return;
   }
-  const html = { llista: viewRoll, calendari: () => teacherOnly() ? viewTeacherCalendar() : viewCalendar(), stats: () => viewStats(false), gestio: viewManage, avisos: viewHome, tauler: viewBoard, classes: viewClasses, vestidor: viewWardrobe }[ui.tab]();
+  const html = { llista: viewRoll, calendari: () => teacherOnly() ? viewTeacherCalendar() : viewCalendar(), stats: () => viewStats(false), gestio: viewManage, avisos: viewHome, tauler: viewBoard, classes: viewClasses, vestidor: viewWardrobe, bandes: viewBandes }[ui.tab]();
   v.innerHTML = html;
   const key = [ui.tab, ui.att, ui.attArea, ui.board, ui.manage, ui.people, ui.pmFilter, ui.rollSec, ui.clWho, ui.clTab, ui.sessionId].join('|');
   if (key !== lastViewKey) { lastViewKey = key; v.classList.remove('view-in'); void v.offsetWidth; v.classList.add('view-in'); }

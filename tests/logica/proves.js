@@ -578,6 +578,40 @@ prova('bandesTally: el recompte, els vots que no valen, l’empat i el desempat'
   igual(bandesWinners({ win: 2 }, [{ key: 'x', n: 3 }], null).winners, ['x'], 'menys gent votada que bandes');
 });
 
+prova('addDays: per dies del calendari, també quan canvia l’hora', () => {
+  igual([addDays('2026-10-24', 2), addDays('2026-10-25', 1), addDays('2026-10-26', -2), addDays('2026-03-28', 2), addDays('2026-12-31', 1)],
+    ['2026-10-26', '2026-10-26', '2026-10-24', '2026-03-30', '2027-01-01'], 'el dia de 25 hores i el de 23');
+});
+prova('La Nit de les Bandes: els finalistes, el dia que es revelen i en quin moment és', () => {
+  const rows = ns => ns.map((n, i) => ({ key: `p${i}`, n }));
+  igual(bandesFinalists(rows([9, 7, 5, 4, 3, 2, 1])), ['p0', 'p1', 'p2', 'p3', 'p4'], 'els cinc més votats');
+  igual(bandesFinalists(rows([9, 7, 5, 4, 3, 3, 3, 1])), ['p0', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6'], 'amb els empatats al cinquè lloc');
+  igual(bandesFinalists(rows([5, 4, 1, 1, 1, 1, 1, 1, 1, 1])), ['p0', 'p1'], 'un empat massa gran: només els de davant');
+  igual(bandesFinalists(rows([3, 2])), ['p0', 'p1'], 'menys gent votada que finalistes');
+  const cats = Array.from({ length: 26 }, (_, i) => ({ id: `c${i}`, name: `C${i}` }));
+  const w = nomSchedule({ cats, closesAt: '2026-11-30', galaAt: '2026-12-26' });
+  igual([w[0], w[1], w[25], new Set(w).size], ['2026-12-01', '2026-12-02', '2026-12-26', 26], '26 categories de l’1 al 26 de desembre: una cada dia');
+  const w2 = nomSchedule({ cats, closesAt: '2026-12-01', galaAt: '2026-12-26' });
+  igual([w2[0], w2[1], w2[25], new Set(w2).size], ['2026-12-02', '2026-12-02', '2026-12-26', 25], 'si en falten dies, algun dia en surten dues');
+  igual(new Set(nomSchedule({ cats, nomFrom: '2026-12-03', nomEvery: 'all', galaAt: '2026-12-26' })).size, 1, 'totes alhora');
+  const r = nomReveal({ cats: cats.slice(0, 3), nomFrom: '2026-12-01', galaAt: '2026-12-03', nominees: { c0: ['a'], c1: ['b'], c2: ['c'] } }, '2026-12-02');
+  igual([r.shown.map(x => x.cat.id), r.next.map(x => x.cat.id)], [['c0', 'c1'], ['c2']], 'el que ja es pot veure i el que falta');
+  const p = { cats, closesAt: '2026-11-30', galaAt: '2026-12-26' };
+  igual(['2026-11-30', '2026-12-05', '2026-12-26', '2026-12-27'].map(d => bandesPhase(p, d)), ['vote', 'closed', 'gala', 'after'], 'les fases sense finalistes');
+  igual([bandesPhase({ ...p, nominees: {} }, '2026-12-05'), bandesPhase({ ...p, results: {} }, '2026-12-27'), bandesPhase({ ...p, draft: true }, '2026-11-01')], ['nom', 'done', 'draft'], 'amb finalistes, amb palmarès i en esborrany');
+});
+
+prova('Bandes: un diploma per persona i banda, i quanta gent ha votat per cordes', () => {
+  escenari({ members: [{ id: 'a', name: 'Puig, Anna', section: 'S' }, { id: 'b', name: 'Ferrer, Laia', section: 'S' }, { id: 'c', name: 'Mas, Júlia', section: 'C' }, { id: 'd', name: 'Bosch, Marc', section: 'T' }] });
+  const p = { id: 'q', cats: [{ id: 'k1', name: 'Cor' }, { id: 'k2', name: 'Parella', pair: true }], sections: [], out: ['d'] };
+  const w = { k1: ['a', 'b'], k2: ['a+c'] };
+  igual(diplomaList(p, w).map(x => [x.cat.id, x.id, x.with]), [['k1', 'a', []], ['k1', 'b', []], ['k2', 'a', ['c']], ['k2', 'c', ['a']]], 'les de parella, un per a cadascú');
+  igual(diplomaList(p, w, 'a').map(x => x.cat.id), ['k1', 'k2'], 'els d’una sola persona');
+  const s = turnoutSum(p, { S: 5, C: 1, T: 1 });
+  igual([s.n, s.total, s.per.map(x => `${x.sec} ${x.n}/${x.total}`)], [3, 3, ['S 2/2', 'C 1/1']], 'mai més dels que hi ha a la corda (ni de qui no hi participa)');
+  igual(turnoutSum(p, null), null, 'sense recompte, res');
+});
+
 /** Executa totes les proves: { ok, fail, lines }. */
 function runProves() {
   const lines = [];

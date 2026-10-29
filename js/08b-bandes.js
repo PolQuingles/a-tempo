@@ -159,7 +159,7 @@ function bandesBallot(p, picks, voter) {
 function bandesCard(p) {
   const closed = pollClosed(p), people = bandesPeople(p), me = myId(), mine = me ? S.pollVotes.get(`${p.id}_${me}`) : null;
   const voter = !!me && !p.draft && people.some(m => m.id === me), cats = p.cats || [];
-  const state = p.draft ? '<span class="st-pill st-pending">Esborrany</span>' : closed ? '<span class="st-pill st-rejected">Tancada</span>' : '<span class="st-pill st-accepted">Oberta</span>';
+  const state = p.draft ? (p.propOpen ? '<span class="st-pill st-accepted">Propostes</span>' : '<span class="st-pill st-pending">Esborrany</span>') : closed ? '<span class="st-pill st-rejected">Tancada</span>' : '<span class="st-pill st-accepted">Oberta</span>';
   const meta = `<div class="ann-m">${state}<span>${cats.length} ${cats.length === 1 ? 'categoria' : 'categories'}</span>${p.closesAt ? `<span>Fins al ${ddmm(p.closesAt)}</span>` : ''}${p.sections?.length ? `<span>Per a: ${esc(p.sections.map(x => SEC[x]?.name || x).join(', '))}</span>` : ''}<span>Vot secret</span></div>`;
   const draft = voter && !mine ? ballotDraft(p) : null;
   const acts = [];
@@ -169,14 +169,14 @@ function bandesCard(p) {
   let board = '';
   if (canBoard()) {
     const voted = people.filter(m => S.pollVotes.get(`${p.id}_${m.id}`)).length;
-    board = `${p.draft ? '<p class="m" style="margin:0">Només la veu l’equip. Quan la publiquis, rebran la notificació i la podran votar.</p>' : `<div class="bd-part"><div class="bd-part-h"><span>Han votat <b class="mono">${voted}</b> de ${people.length}</span><span class="mono">${pct(people.length ? voted / people.length : null)}</span></div><span class="bd-bar"><span style="width:${people.length ? voted / people.length * 100 : 0}%"></span></span></div>`}
+    board = `${p.draft ? `<p class="m" style="margin:0">${p.propOpen ? 'S’hi recullen propostes de categories: la votació encara no és oberta.' : 'Només la veu l’equip. Quan la publiquis, rebran la notificació i la podran votar.'}</p>` : `<div class="bd-part"><div class="bd-part-h"><span>Han votat <b class="mono">${voted}</b> de ${people.length}</span><span class="mono">${pct(people.length ? voted / people.length : null)}</span></div><span class="bd-bar"><span style="width:${people.length ? voted / people.length * 100 : 0}%"></span></span></div>`}
       <div class="c-a bd-acts">${p.draft ? `<button class="btn btn-sm btn-primary" data-act="bandes-publish" data-id="${esc(p.id)}">Publica-la</button><button class="btn btn-sm" data-act="bandes-edit" data-id="${esc(p.id)}">Edita-la</button>` : `<button class="btn btn-sm" data-act="bandes-results" data-id="${esc(p.id)}">Resultats</button><button class="btn btn-sm" data-act="poll-results" data-id="${esc(p.id)}">Qui ha votat</button>${closed ? '' : `<button class="btn btn-sm" data-act="poll-remind" data-id="${esc(p.id)}">Recorda-ho</button>`}`}</div>`;
   }
   return `<div class="poll bandes" data-poll="${esc(p.id)}">
     <div class="ann-h"><h2 class="ann-t">${esc(p.title)}</h2>${canBoard() ? `<button class="icon-btn" data-act="bandes-edit" data-id="${esc(p.id)}" aria-label="Edita la votació">${ICON.more}</button>` : ''}</div>
     ${p.description ? `<div class="ann-b rich">${richText(cutText(p.description, 320))}</div>` : ''}${meta}
     ${p.results ? bandesPalmares(p) : ''}
-    ${acts.length ? `<div class="c-a bd-acts">${acts.join('')}</div>` : ''}${board}</div>`;
+    <div class="c-a bd-acts">${acts.join('')}${p.draft && !canBoard() && !p.propOpen ? '' : `<button class="btn btn-sm${p.propOpen && !canBoard() ? ' btn-primary' : ''}" data-act="bandes-open">${p.propOpen && p.draft ? 'Proposa una categoria' : `Obre ${esc(galaName(p).replace(/^L/, 'l'))}`}</button>`}</div>${board}</div>`;
 }
 /** El palmarès publicat: qui s'ha endut cada banda (sense els vots). Si n'hi ha cap per a mi, a dalt. */
 function bandesPalmares(p) {
@@ -191,11 +191,11 @@ function bandesPalmares(p) {
 /** Als anuncis que presenten una votació: el botó per votar-hi (o per veure com va). */
 function bandesAnnActs(a) {
   const p = a.pollId ? S.polls.get(a.pollId) : null;
+  if (p && bandesPhase(p) === 'prop') return `<button class="btn btn-sm btn-primary" data-act="bandes-open">${propOpenNow(p) ? 'Proposa una categoria' : 'Mira les propostes'}</button>`;
   if (!p || p.draft) return '';
   const me = myId(), voter = !!me && bandesPeople(p).some(m => m.id === me), mine = me && S.pollVotes.get(`${p.id}_${me}`);
   if (voter && !pollClosed(p)) return `<button class="btn btn-sm btn-primary" data-act="bandes-vote" data-id="${esc(p.id)}">${mine ? 'Canvia el vot' : 'Vota'}</button>`;
-  if (p.results || canBoard()) return `<button class="btn btn-sm" data-act="board-polls">${p.results ? 'Mira el palmarès' : 'Mira com va la votació'}</button>`;
-  return '';
+  return `<button class="btn btn-sm" data-act="bandes-open">${p.results ? 'Mira el palmarès' : `Obre ${esc(galaName(p).replace(/^L/, 'l'))}`}</button>`;
 }
 
 /* ---------- La papereta ---------- */
@@ -291,7 +291,9 @@ function sheetBallot(pid) {
     const picks = bandesBallot(p, st.picks, me.id), key = `${pid}_${me.id}`;
     if (!Object.keys(picks).length) { toast('Vota almenys una categoria'); return; }
     const rec = { pollId: pid, memberId: me.id, section: me.section, picks, n: Object.keys(picks).length, choices: [], at: new Date().toISOString(), uid: S.uid };
-    S.pollVotes.set(key, rec); persist('pollVotes', key, rec, 10);
+    S.pollVotes.set(key, rec);
+    // El primer cop, el vot suma 1 al recompte que veu tothom (vegeu sendFirstVote, a 08c).
+    if (sent) persist('pollVotes', key, rec, 10); else sendFirstVote(key, rec);
     lsSet(ballotKey(p), null);
     closeSheet(); toast(sent ? 'Vot canviat' : 'Vot enviat. Gràcies!'); render();
   };
@@ -350,12 +352,17 @@ function sheetBandes(id) {
       <details class="np-group"><summary><span id="bd-out-h"></span>${ICON.chev}</summary><p class="m" style="margin:8px 0 0">Qui no hi surt ni vota ni pot ser votat (p. ex. qui és de baixa tota la temporada).</p>${outList()}</details>
       <div class="toggle-row"><span><b>Es pot votar a un mateix</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Si no, cadascú no surt a les seves llistes</span></span><label class="switch"><input type="checkbox" id="bd-self" ${p.selfOk ? 'checked' : ''}><span></span></label></div>
       <label class="field"><span>Es pot votar fins al (inclòs)</span><input class="inp" id="bd-close" type="date" value="${esc(p.closesAt || '')}"><small>La vespra, l’app ho recorda a qui encara no ha votat.</small></label>
+      <div class="eyebrow" style="margin-top:6px">La Nit: l’entrega de les bandes</div>
+      <label class="field"><span>Com es diu</span><input class="inp" id="bd-gname" maxlength="60" value="${esc(galaName(p))}"></label>
+      <label class="field"><span>Quin dia és</span><input class="inp" id="bd-gala" type="date" value="${esc(p.galaAt || '')}"><small>Surt a Inici amb el compte enrere. Els finalistes es revelen un dia rere l’altre, de l’endemà de tancar la votació fins a la Nit.</small></label>
+      <label class="field"><span>On (opcional)</span><input class="inp" id="bd-gplace" maxlength="80" value="${esc(p.galaPlace || '')}" placeholder="p. ex. el sopar de Sant Esteve"></label>
+      <div class="field"><span>Finalistes per categoria</span>${choose('bd-fin', +p.finalists || BANDES_FINAL, [3, 5])}</div>
       ${ex && !ex.draft ? `<div class="toggle-row"><span><b>Tancada</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Ja no s’hi pot votar</span></span><label class="switch"><input type="checkbox" id="bd-closed" ${p.closed ? 'checked' : ''}><span></span></label></div>` : ''}
     </div>`,
     foot: `${ex ? '<button class="btn btn-danger-ghost" id="bd-del">Esborra</button>' : ''}<span class="spacer"></span>${p.draft ? '<button class="btn" id="bd-save">Desa l’esborrany</button><button class="btn btn-primary" id="bd-pub">Publica…</button>' : '<button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="bd-save">Desa</button>'}`,
     onMount: el => {
       bindToggles(el, '#bd-secs');
-      for (const k of ['#bd-picks', '#bd-win']) el.querySelectorAll(`${k} .pick`).forEach(b => b.onclick = () => el.querySelectorAll(`${k} .pick`).forEach(x => x.setAttribute('aria-pressed', x === b)));
+      for (const k of ['#bd-picks', '#bd-win', '#bd-fin']) el.querySelectorAll(`${k} .pick`).forEach(b => b.onclick = () => el.querySelectorAll(`${k} .pick`).forEach(x => x.setAttribute('aria-pressed', x === b)));
       const val = k => +el.querySelector(`${k} .pick[aria-pressed="true"]`)?.dataset.v || 2;
       const read = () => {
         const win = val('#bd-win');
@@ -363,6 +370,7 @@ function sheetBandes(id) {
           cats: parseBandes(el.querySelector('#bd-cats').value, { win, old: p.cats }), picks: val('#bd-picks'), win,
           sections: readSections(el, '#bd-secs'), out: $$('.bd-out input:not(:checked)', el).map(i => i.dataset.mid),
           selfOk: el.querySelector('#bd-self').checked, closesAt: el.querySelector('#bd-close').value,
+          galaName: el.querySelector('#bd-gname').value.trim() || 'La Nit de les Bandes', galaAt: el.querySelector('#bd-gala').value, galaPlace: el.querySelector('#bd-gplace').value.trim(), finalists: val('#bd-fin'),
           closed: el.querySelector('#bd-closed')?.checked ?? !!p.closed, author: ex?.author || authorName(), createdAt: ex?.createdAt || new Date().toISOString() };
       };
       const preview = () => {
@@ -381,6 +389,7 @@ function sheetBandes(id) {
         if (!r.title) { toast('Posa un títol'); return false; }
         if (!r.cats.length) { toast('Escriu almenys una categoria'); return false; }
         if (bandesPeople(r).length < 2) { toast('Hi ha de participar almenys dues persones'); return false; }
+        if (r.galaAt && r.closesAt && r.galaAt <= r.closesAt) { toast('La Nit ha de ser després de tancar la votació'); return false; }
         return true;
       };
       el.querySelector('#bd-save').onclick = () => {
@@ -412,7 +421,8 @@ function bandesAnnBody(p) {
   return [p.description,
     ind.length ? `${par.length ? 'BANDES INDIVIDUALS\n' : ''}${ind.map(line).join('\n')}` : '',
     par.length ? `BANDES DE PARELLA\n${par.map(line).join('\n')}` : '',
-    `**Com es vota:** a l’app, amb el botó d’aquí sota o a Tauler › Enquestes${p.closesAt ? `, fins al ${longDate(p.closesAt).toLowerCase()}` : ''}. El vot és secret: ningú no veu qui has votat.`,
+    `**Com es vota:** a l’app, amb el botó d’aquí sota${p.closesAt ? `, fins al ${longDate(p.closesAt).toLowerCase()}` : ''}. El vot és secret: ningú no veu qui has votat.`,
+    p.galaAt ? `**${galaName(p)}:** ${longDate(p.galaAt).toLowerCase()}${p.galaPlace ? `, ${p.galaPlace}` : ''}. Abans, a la pàgina de les bandes (menú del compte i Inici) es revelaran els ${+p.finalists || BANDES_FINAL} finalistes de cada categoria, un dia rere l’altre.` : '',
   ].filter(Boolean).join('\n\n').slice(0, 12000);
 }
 /** Publicar-la: deixa de ser un esborrany, li arriba a tothom i, si es vol, surt un anunci al tauler que la presenta. */
@@ -429,7 +439,7 @@ function bandesPublish(pid) {
     onMount: el => {
       el.querySelector('#bp-ann').onchange = e => { el.querySelector('#bp-t-f').hidden = !e.target.checked; };
       el.querySelector('#bp-ok').onclick = () => {
-        const now = new Date().toISOString(), rec = { ...clone(S.polls.get(pid)), draft: false, createdAt: now, publishedAt: now };
+        const now = new Date().toISOString(), rec = { ...clone(S.polls.get(pid)), draft: false, propOpen: false, createdAt: now, publishedAt: now };
         if (el.querySelector('#bp-ann').checked) {
           const a = { id: uid('n'), title: el.querySelector('#bp-title').value.trim() || rec.title, body: bandesAnnBody(rec), pinned: true, sections: rec.sections || [], until: rec.closesAt || '',
             pollId: rec.id, author: authorName(), by: S.email || '', createdAt: now, updatedAt: now };
@@ -477,15 +487,49 @@ function bandesDays(days) {
       <text x="${W}" y="9" text-anchor="end">màx. ${max}</text>
     </svg><figcaption>Paperetes enviades cada dia</figcaption></figure>`;
 }
-function bandesCatHtml(x, i) {
+/** Com es reparteixen els vots d'una categoria: un anell amb els cinc més votats i «la resta». Qui s'emporta la banda va amb
+ *  el color de l'agrupació i els altres, en grisos (el que compta és qui guanya i per quant); la llegenda en diu els vots i el
+ *  percentatge. Els vots són els noms que hi ha posat cada papereta (fins a dos per categoria). */
+function bandesDonut(x) {
+  const total = x.rows.reduce((n, r) => n + r.n, 0);
+  if (!total) return '';
+  const wins = new Set(x.winners), tied = new Set(x.open ? x.tied : []);
+  let g = 0;
+  const segs = x.rows.slice(0, 5).map(r => ({ label: keyName(r.key), n: r.n, cls: wins.has(r.key) ? 'w' : tied.has(r.key) ? 't' : `g${Math.min(3, ++g)}` }));
+  const rest = x.rows.slice(5);
+  if (rest.length) segs.push({ label: rest.length === 1 ? keyName(rest[0].key) : `La resta (${rest.length})`, n: rest.reduce((n, r) => n + r.n, 0), cls: 'r' });
+  const R = 42, C = 2 * Math.PI * R, gap = segs.length > 1 ? 1.6 : 0;
+  let at = 0;
+  const arcs = segs.map((s, i) => {
+    const len = Math.max(0, s.n / total * C - gap);
+    const arc = `<circle data-i="${i}" class="${s.cls}" r="${R}" cx="60" cy="60" stroke-dasharray="${len.toFixed(2)} ${(C - len).toFixed(2)}" stroke-dashoffset="${(-at).toFixed(2)}"><title>${esc(s.label)}: ${s.n} ${s.n === 1 ? 'vot' : 'vots'} (${pct(s.n / total)})</title></circle>`;
+    at += s.n / total * C;
+    return arc;
+  }).join('');
+  return `<div class="bd-pie"><svg viewBox="0 0 120 120" role="img" aria-label="Repartiment dels ${total} vots: ${esc(segs.map(s => `${s.label}, ${pct(s.n / total)}`).join('; '))}">
+      <g transform="rotate(-90 60 60)">${arcs}</g><text x="60" y="60" class="c1">${total}</text><text x="60" y="75" class="c2">${total === 1 ? 'vot' : 'vots'}</text></svg>
+    <ul class="bd-leg">${segs.map((s, i) => `<li data-i="${i}"><i class="${s.cls}" aria-hidden="true"></i><span class="bd-who">${esc(s.label)}${s.cls === 'w' ? '<span class="bd-band">Banda</span>' : s.cls === 't' ? '<span class="bd-band tie">Empat</span>' : ''}</span><span class="mono">${s.n}</span><span class="mono bd-pc">${pct(s.n / total)}</span></li>`).join('')}</ul></div>`;
+}
+function bandesCatHtml(x, p) {
   const c = x.cat, w = c.win || 1, rows = x.rows, max = rows[0]?.n || 1;
   const wins = new Set(x.winners), tied = new Set(x.tied);
+  const fin = [...(p.nominees?.[c.id] || bandesFinalists(rows, +p.finalists || BANDES_FINAL))].sort(byKeyName);
   const row = (r, j) => `<li class="${wins.has(r.key) ? 'win' : tied.has(r.key) && x.open ? 'tie' : ''}"><span class="bd-pos mono">${rankPos(rows, j)}</span><span class="bd-who">${esc(keyName(r.key))}${wins.has(r.key) ? '<span class="bd-band">Banda</span>' : ''}</span><span class="mono bd-n">${r.n}</span><span class="bd-bar"><span style="width:${r.n / max * 100}%"></span></span></li>`;
   const tie = x.tied.length && (x.open || x.decided) ? `<div class="bd-tie"><p><b>Empat a ${x.cut} ${x.cut === 1 ? 'vot' : 'vots'}.</b> ${x.open ? `Tria ${x.open === 1 ? 'qui s’emporta la banda' : `les ${x.open} que s’emporten la banda`}:` : 'Ho ha decidit l’equip:'}</p>
       <div class="pickers">${x.tied.map(k => `<button type="button" class="pick" data-tie="${esc(c.id)}" data-k="${esc(k)}" aria-pressed="${x.decided && wins.has(k)}">${esc(keyName(k))}</button>`).join('')}</div></div>` : '';
-  return `<section class="bd-cr"><div class="bd-cr-h"><h3>${esc(c.name)}</h3><span class="m">${esc(catKind(c))} · ${w === 1 ? '1 banda' : `${w} bandes`} · ${x.ballots} ${x.ballots === 1 ? 'papereta' : 'paperetes'}${x.blank ? ` · ${x.blank} en blanc` : ''}</span></div>
+  return `<section class="bd-cr" id="bd-c-${esc(c.id)}"><div class="bd-cr-h"><h3>${esc(c.name)}</h3><span class="m">${esc(catKind(c))} · ${w === 1 ? '1 banda' : `${w} bandes`} · ${x.ballots} ${x.ballots === 1 ? 'papereta' : 'paperetes'}${x.blank ? ` · ${x.blank} en blanc` : ''}</span></div>
     ${tie}
-    ${rows.length ? `<ol class="bd-rank">${rows.slice(0, 5).map(row).join('')}</ol>${rows.length > 5 ? `<details class="np-group"><summary><span>Mostra’ls tots (${rows.length})</span>${ICON.chev}</summary><ol class="bd-rank">${rows.slice(5).map((r, j) => row(r, j + 5)).join('')}</ol></details>` : ''}` : '<p class="m" style="margin:0">Encara no hi ha cap vot.</p>'}</section>`;
+    ${rows.length ? `${bandesDonut(x)}<p class="bd-fin"><b>${p.nominees ? 'Finalistes' : 'Finalistes, si es publiquessin ara'}:</b> ${esc(fin.map(keyName).join(', '))}</p>
+      ${rows.length > 5 ? `<details class="np-group"><summary><span>Tots els vots (${rows.length})</span>${ICON.chev}</summary><ol class="bd-rank">${rows.map(row).join('')}</ol></details>` : ''}` : '<p class="m" style="margin:0">Encara no hi ha cap vot.</p>'}</section>`;
+}
+/** Qui ha rebut més vots, sumant totes les categories. */
+function bandesTopPeople(t) {
+  const top = [...t.people].sort((a, b) => b.votes - a.votes || bdName(a.id).localeCompare(bdName(b.id), 'ca')).slice(0, 8);
+  if (!top.length) return '';
+  const max = top[0].votes || 1;
+  return `<div class="eyebrow" style="margin:16px 0 6px">Qui ha rebut més vots</div>
+    <div class="bd-top">${top.map(x => `<div class="bar-row"><span class="lbl"><span>${esc(bdName(x.id))}</span></span><span class="bd-bar"><span style="width:${x.votes / max * 100}%"></span></span><span class="val">${x.votes}</span></div>`).join('')}</div>
+    <p class="m bd-note">Sumant totes les categories; les de parella compten per a totes dues persones.</p>`;
 }
 function sheetBandesResults(pid) {
   const p = S.polls.get(pid);
@@ -502,6 +546,10 @@ function sheetBandesResults(pid) {
   const t = bandesTally(p, bandesVotes(p), bandesPeople(p));
   const open = t.cats.filter(x => x.open);
   const hl = bandesHighlights(t);
+  const ph = bandesPhase(p);
+  const status = p.results ? `<p class="bd-ok">Palmarès publicat el ${ddmm(isoDate(new Date(p.resultsAt)))}: tothom el veu a ${esc(galaName(p))}.</p>`
+    : open.length ? `<p class="bd-warn">${open.length === 1 ? 'Hi ha un empat' : `Hi ha ${open.length} empats`} per decidir: ${esc(open.map(x => x.cat.name).join(', '))}.</p>`
+    : p.nominees ? `<p class="bd-ok">Finalistes publicats: es revelen ${esc(nomRange(p))}.</p>` : '';
   openSheet({
     title: `Resultats · ${p.title}`,
     wide: true,
@@ -511,17 +559,21 @@ function sheetBandesResults(pid) {
         <div><b class="mono">${pct(t.expected ? t.voters / t.expected : null)}</b><span>de participació</span></div>
         <div><b class="mono">${t.filled.toFixed(1).replace('.', ',')}</b><span>categories per papereta</span></div>
       </div>
-      ${p.results ? `<p class="bd-ok">Palmarès publicat el ${ddmm(isoDate(new Date(p.resultsAt)))}: tothom el veu a Tauler › Enquestes.</p>` : open.length ? `<p class="bd-warn">${open.length === 1 ? 'Hi ha un empat' : `Hi ha ${open.length} empats`} per decidir: ${esc(open.map(x => x.cat.name).join(', '))}.</p>` : ''}
+      ${status}
       <div class="eyebrow" style="margin:16px 0 6px">Participació per ${esc(V.section)}</div>
       <div class="bd-secs-l">${t.bySec.map(x => `<div class="bar-row"><span class="lbl"><em>${esc(SEC[x.sec]?.short || x.sec)}</em><span>${esc(SEC[x.sec]?.name || x.sec)}</span></span><span class="bd-bar"><span style="width:${x.n / x.total * 100}%"></span></span><span class="val">${x.n}/${x.total}</span></div>`).join('')}</div>
       ${bandesDays(t.days)}
       ${hl.length ? `<div class="eyebrow" style="margin:16px 0 6px">El que diuen els números</div><ul class="bd-hl">${hl.map(([k, v, s]) => `<li><span class="k">${esc(k)}</span><b>${esc(v)}</b><small>${esc(s)}</small></li>`).join('')}</ul>` : ''}
+      ${bandesTopPeople(t)}
       <div class="eyebrow" style="margin:18px 0 6px">Categoria per categoria</div>
-      ${t.cats.map(bandesCatHtml).join('')}
+      <div class="chips bd-idx">${t.cats.map(x => `<button type="button" class="chip" data-go="bd-c-${esc(x.cat.id)}">${esc(x.cat.name)}</button>`).join('')}</div>
+      ${t.cats.map(x => bandesCatHtml(x, p)).join('')}
     </div>`,
-    foot: `<button class="btn btn-sm" id="br-xls">Excel</button><button class="btn btn-sm" id="br-print">Palmarès</button><button class="btn btn-sm" id="br-gala">Gala</button><span class="spacer"></span>
-      ${p.results ? '<button class="btn" id="br-unpub">Amaga el palmarès</button>' : '<button class="btn btn-primary" id="br-pub">Publica el palmarès</button>'}`,
+    foot: `<button class="btn btn-sm" id="br-xls">Excel</button><button class="btn btn-sm" id="br-print">Palmarès</button><button class="btn btn-sm" id="br-dip">Diplomes</button><button class="btn btn-sm" id="br-gala">Gala</button><span class="spacer"></span>
+      ${!p.nominees && !p.results && ph !== 'draft' ? `<button class="btn${pollClosed(p) ? ' btn-primary' : ''}" id="br-nom">Publica els finalistes</button>` : ''}
+      ${p.results ? '<button class="btn" id="br-unpub">Amaga el palmarès</button>' : `<button class="btn${p.nominees || !pollClosed(p) ? ' btn-primary' : ''}" id="br-pub">Publica el palmarès</button>`}`,
     onMount: el => {
+      el.querySelectorAll('[data-go]').forEach(b => b.onclick = () => el.querySelector(`#${b.dataset.go}`)?.scrollIntoView({ block: 'start', behavior: 'smooth' }));
       el.querySelectorAll('[data-tie]').forEach(b => b.onclick = () => {
         const x = t.cats.find(c => c.cat.id === b.dataset.tie), need = x.open || (x.decided ? x.winners.filter(k => x.tied.includes(k)).length : 0);
         const cur = (p.ties?.[x.cat.id] || []).filter(k => x.tied.includes(k));
@@ -532,15 +584,21 @@ function sheetBandesResults(pid) {
         sheetBandesResults(pid);
         const b2 = $('#sheet-root .sheet-b'); if (b2) b2.scrollTop = top;
       });
-      el.querySelector('#br-xls').onclick = () => offerCSV(`resultats ${p.title}`, [['Categoria', 'Tipus', 'Posició', 'Qui', 'Vots', 'Banda'],
-        ...t.cats.flatMap(x => x.rows.map((r, j) => [x.cat.name, catKind(x.cat), rankPos(x.rows, j), keyName(r.key), r.n, x.winners.includes(r.key) ? 'Sí' : x.open && x.tied.includes(r.key) ? 'Empat' : ''])),
-        [], ['Participació', '', '', `${t.voters} de ${t.expected}`, pct(t.expected ? t.voters / t.expected : null), '']]);
-      el.querySelector('#br-print').onclick = () => printDoc(`Palmarès · ${p.title}`, `<p class="pr-sub">Hi han votat ${t.voters} de ${t.expected} persones.</p>
-        <table class="pr-table"><thead><tr><th>Banda</th><th>Qui se l’emporta</th></tr></thead><tbody>${t.cats.map(x => `<tr><td><b>${esc(x.cat.name)}</b>${x.cat.desc ? `<br><small>${esc(x.cat.desc)}</small>` : ''}</td><td>${x.winners.map(k => esc(keyName(k))).join('<br>')}${x.open ? `${x.winners.length ? '<br>' : ''}<i>Empat: ${esc(x.tied.map(keyName).join(', '))}</i>` : ''}</td></tr>`).join('')}</tbody></table>`);
+      el.querySelector('#br-xls').onclick = () => offerCSV(`resultats ${p.title}`, [['Categoria', 'Tipus', 'Posició', 'Qui', 'Vots', 'Finalista', 'Banda'],
+        ...t.cats.flatMap(x => { const fin = p.nominees?.[x.cat.id] || bandesFinalists(x.rows, +p.finalists || BANDES_FINAL); return x.rows.map((r, j) => [x.cat.name, catKind(x.cat), rankPos(x.rows, j), keyName(r.key), r.n, fin.includes(r.key) ? 'Sí' : '', x.winners.includes(r.key) ? 'Sí' : x.open && x.tied.includes(r.key) ? 'Empat' : '']); }),
+        [], ['Participació', '', '', `${t.voters} de ${t.expected}`, pct(t.expected ? t.voters / t.expected : null), '', '']]);
+      el.querySelector('#br-print').onclick = () => printDoc(`Palmarès · ${p.title}`, `<p class="pr-sub">${esc(galaName(p))}${p.galaAt ? `, ${esc(longDate(p.galaAt).toLowerCase())}` : ''}. Hi han votat ${t.voters} de ${t.expected} persones.</p>
+        <table class="pr-table"><thead><tr><th>Banda</th><th>Qui se l’emporta</th><th>Finalistes</th></tr></thead><tbody>${t.cats.map(x => { const fin = [...(p.nominees?.[x.cat.id] || bandesFinalists(x.rows, +p.finalists || BANDES_FINAL))].sort(byKeyName).filter(k => !x.winners.includes(k)); return `<tr><td><b>${esc(x.cat.name)}</b>${x.cat.desc ? `<br><small>${esc(x.cat.desc)}</small>` : ''}</td><td>${x.winners.map(k => esc(keyName(k))).join('<br>')}${x.open ? `${x.winners.length ? '<br>' : ''}<i>Empat: ${esc(x.tied.map(keyName).join(', '))}</i>` : ''}</td><td><small>${esc(fin.map(keyName).join(', '))}</small></td></tr>`; }).join('')}</tbody></table>`);
       el.querySelector('#br-gala').onclick = () => { closeSheet(); bandesGala(pid); };
+      // Per imprimir-los abans de la Nit (i donar-los a qui guanya), amb el recompte d'ara; els empats, primer desfets.
+      el.querySelector('#br-dip').onclick = () => {
+        if (open.length) { toast(`Primer cal desfer ${open.length === 1 ? 'l’empat' : 'els empats'}: ${open.map(x => x.cat.name).join(', ')}`); return; }
+        printDiplomas(p, p.results || Object.fromEntries(t.cats.map(x => [x.cat.id, x.winners])));
+      };
+      el.querySelector('#br-nom')?.addEventListener('click', () => bandesNominate(pid));
       el.querySelector('#br-pub')?.addEventListener('click', async () => {
         if (open.length) { toast(`Primer cal desfer ${open.length === 1 ? 'l’empat' : 'els empats'}: ${open.map(x => x.cat.name).join(', ')}`); return; }
-        const ok = await confirmSheet('Publicar el palmarès?', `Tothom veurà a Tauler › Enquestes qui s’ha endut cada banda (sense els vots).${pollClosed(p) ? '' : ' La votació es tanca: ja no s’hi podrà votar.'}`, 'Publica’l', false);
+        const ok = await confirmSheet('Publicar el palmarès?', `Tothom veurà a ${esc(galaName(p))} qui s’ha endut cada banda (sense els vots).${pollClosed(p) ? '' : ' La votació es tanca: ja no s’hi podrà votar.'}${p.galaAt && TODAY < p.galaAt ? ` <b>Encara no és la Nit</b> (${ddmm(p.galaAt)}).` : ''}`, 'Publica’l', false);
         if (!ok) { sheetBandesResults(pid); return; }
         const now = new Date().toISOString();
         const rec = { ...clone(S.polls.get(pid)), closed: true, results: Object.fromEntries(t.cats.filter(x => x.winners.length).map(x => [x.cat.id, x.winners])), resultsAt: now };
@@ -568,12 +626,13 @@ function bandesWhoVoted(p) {
 }
 
 /* ---------- La gala: per anunciar-les una a una, en una pantalla gran ---------- */
+// Cada banda en tres passos, com als Òscars: la categoria, els finalistes i qui se l'emporta.
 function bandesGala(pid) {
   const p = S.polls.get(pid);
   if (!p) return;
   const t = bandesTally(p, bandesVotes(p), bandesPeople(p));
-  const cards = t.cats.filter(x => x.rows.length);
-  let i = -1, shown = false;
+  const cards = t.cats.filter(x => x.rows.length), ties = cards.filter(x => x.open);
+  let i = -1, stage = 0;
   const root = document.createElement('div');
   root.className = 'gala';
   root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true'); root.setAttribute('aria-label', `Gala · ${p.title}`);
@@ -582,17 +641,20 @@ function bandesGala(pid) {
   const fsOn = !!root.requestFullscreen;
   try { root.requestFullscreen?.().catch(() => {}); } catch {}
   const winners = x => x.open ? [...x.winners, ...x.tied] : x.winners;
+  const finals = x => [...(p.nominees?.[x.cat.id] || bandesFinalists(x.rows, +p.finalists || BANDES_FINAL))].sort(byKeyName);
   const paint = () => {
     let inner;
-    if (i < 0) inner = `<p class="gala-k">${esc(S.config.name || '')}</p><h1 class="gala-t">${esc(p.title)}</h1><p class="gala-s">${cards.length} ${cards.length === 1 ? 'banda' : 'bandes'} per repartir · hi han votat ${t.voters} persones</p>`;
-    else if (i >= cards.length) inner = `<h1 class="gala-t">Enhorabona a tothom!</h1><p class="gala-s">${esc(p.title)}</p>`;
+    if (i < 0) inner = `<p class="gala-k">${esc(S.config.name || '')}</p><h1 class="gala-t">${esc(galaName(p))}</h1><p class="gala-s">${esc(p.title)} · ${cards.length} ${cards.length === 1 ? 'banda' : 'bandes'} per repartir · hi han votat ${t.voters} persones</p>
+      ${ties.length ? `<p class="gala-warn">Abans de començar: ${ties.length === 1 ? 'hi ha un empat' : `hi ha ${ties.length} empats`} sense desfer (${esc(ties.map(x => x.cat.name).join(', '))}). Es desfan a Resultats.</p>` : ''}`;
+    else if (i >= cards.length) inner = `<h1 class="gala-t">Enhorabona a tothom!</h1><p class="gala-s">${esc(galaName(p))}</p>`;
     else {
       const x = cards[i];
       inner = `<p class="gala-k">Banda ${i + 1} de ${cards.length}${x.cat.pair ? ' · de parella' : x.cat.sec ? ` · ${esc((SEC[x.cat.sec]?.name || '').toLowerCase())}` : ''}</p><h1 class="gala-t">${esc(x.cat.name)}</h1>
-        ${x.cat.desc ? `<p class="gala-d">${esc(x.cat.desc)}</p>` : ''}
-        ${shown ? `<div class="gala-w">${x.open ? '<p class="gala-k">Empat</p>' : ''}${winners(x).map((k, j) => `<p class="gala-n" style="--d:${j * 180}ms">${esc(keyName(k))}</p>`).join('')}</div>` : ''}`;
+        ${stage === 0 && x.cat.desc ? `<p class="gala-d">${esc(x.cat.desc)}</p>` : ''}
+        ${stage === 1 ? `<div class="gala-fin"><p class="gala-k">Els finalistes són</p><ul>${finals(x).map((k, j) => `<li style="--d:${j * 140}ms">${esc(keyName(k))}</li>`).join('')}</ul></div>` : ''}
+        ${stage === 2 ? `<div class="gala-w"><p class="gala-k">${x.open ? 'Empat! La banda és per a' : 'I la banda és per a'}</p>${winners(x).map((k, j) => `<p class="gala-n" style="--d:${j * 180}ms">${esc(keyName(k))}</p>`).join('')}</div>` : ''}`;
     }
-    const label = i < 0 ? 'Comença' : i >= cards.length ? 'Tanca' : !shown ? 'Revela' : i === cards.length - 1 ? 'Al final' : 'La següent';
+    const label = i < 0 ? 'Comença' : i >= cards.length ? 'Tanca' : stage === 0 ? 'Els finalistes' : stage === 1 ? 'Revela' : i === cards.length - 1 ? 'Al final' : 'La següent';
     root.innerHTML = `<button class="gala-x" data-g="close" aria-label="Tanca la gala">${ICON.close}</button>
       <div class="gala-c" aria-live="polite">${inner}</div>
       <div class="gala-f"><button class="gala-b" data-g="back" ${i < 0 ? 'disabled' : ''}>Enrere</button><button class="gala-b main" data-g="next">${label}</button></div>`;
@@ -603,8 +665,18 @@ function bandesGala(pid) {
     if (fsOn && document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
     root.remove(); document.body.style.overflow = '';
   };
-  const next = () => { if (i >= cards.length) return close(); if (i >= 0 && !shown) shown = true; else { i++; shown = false; } paint(); };
-  const back = () => { if (shown) shown = false; else if (i >= 0) { i--; shown = i >= 0 && i < cards.length; } paint(); };
+  const next = () => {
+    if (i >= cards.length) return close();
+    if (i >= 0 && stage < 2) stage++;
+    else { i++; stage = 0; }
+    paint();
+  };
+  const back = () => {
+    if (i < 0) return;
+    if (i < cards.length && stage > 0) stage--;
+    else { i--; stage = i >= 0 ? 2 : 0; }
+    paint();
+  };
   const onKey = e => {
     if (e.key === 'Escape') { e.preventDefault(); close(); }
     else if (['ArrowRight', ' ', 'Enter', 'PageDown'].includes(e.key)) { e.preventDefault(); next(); }

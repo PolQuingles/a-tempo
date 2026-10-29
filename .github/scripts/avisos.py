@@ -70,6 +70,21 @@ DEFAULT_PREFS = {"missatges": True, "calendari": True, "anuncis": True, "convoca
 EDIT_ROLES = {"admin", "director", "gerencia", "secretaria", "leader"}
 
 
+def nom_schedule(p):
+    """El dia que es revelen els finalistes de cada categoria d'unes bandes (com nomSchedule, a 08c-nit-bandes.js): a partir de
+    nomFrom, un cada dia fins a la Nit (galaAt), en l'ordre de les categories, o tots alhora."""
+    n = len(p.get("cats") or [])
+    start = p.get("nomFrom") or ""
+    if not start:
+        return [""] * n
+    gala = p.get("galaAt") or ""
+    if p.get("nomEvery") == "all" or not gala or gala < start:
+        return [start] * n
+    a = datetime.date.fromisoformat(start)
+    days = (datetime.date.fromisoformat(gala) - a).days + 1
+    return [(a + datetime.timedelta(days=(i * days) // n)).isoformat() for i in range(n)]
+
+
 def roles_of(person):
     """Els rols d'una fitxa: la llista roles o, a les fitxes d'abans, el rol únic."""
     roles = person.get("roles")
@@ -300,6 +315,37 @@ class Group:
                 if d.get("memberId") in out:
                     continue
                 self.deliver(f"pollnew:{pid}:{did}", d, text, f"poll-{pid}")
+
+    # ---------- 1b'. Bandes: els finalistes de cada dia, la Nit i el palmarès ----------
+    def bandes(self):
+        """Unes bandes amb els finalistes publicats: cada matí, de quina categoria es revelen avui; el dia de la Nit, que és
+        avui; i, quan l'equip publica el palmarès, que ja es pot veure. Només a qui hi participa."""
+        if QUIET:
+            return
+        today = TODAY.isoformat()
+        for pid, p in r.query(self.base, "polls", [("kind", "==", "bandes")]).items():
+            if p.get("draft"):
+                continue
+            gala = p.get("galaName") or "La Nit de les Bandes"
+            msgs = []
+            if p.get("nominees") and not p.get("results"):
+                due = [c.get("name", "").strip("\"“”«»' ") for c, d in zip(p.get("cats") or [], nom_schedule(p)) if d == today and (p["nominees"].get(c.get("id")) or [])]
+                if len(due) > 3:
+                    msgs.append((f"bandnom:{pid}:{today}", f"{gala}: ja hi ha els finalistes de totes les categories!"))
+                elif due:
+                    msgs.append((f"bandnom:{pid}:{today}", f"{gala}: avui es revelen els finalistes de {' i '.join(f'«{x}»' for x in due)}."))
+            if p.get("galaAt") == today and not p.get("results"):
+                msgs.append((f"bandgala:{pid}", f"Avui és {gala[0].lower() + gala[1:]}!"))
+            if (p.get("resultsAt") or "") >= FRESH:
+                msgs.append((f"bandres:{pid}", f"Ja hi ha el palmarès: {p.get('title', '')}."))
+            secs, out = p.get("sections") or [], set(p.get("out") or [])
+            for key, text in msgs:
+                for did, d in self.targets("enquestes"):
+                    if secs and d.get("section") and d["section"] not in secs:
+                        continue
+                    if d.get("memberId") in out:
+                        continue
+                    self.deliver(f"{key}:{did}", d, text, f"bandes-{pid}")
 
     # ---------- 1c. Converses privades ----------
     def thread_staff(self, t, d):
@@ -822,6 +868,8 @@ class Group:
         self.nudges()
         self.calendar()
         self.new_polls()
+        if not self.first_run:
+            self.bandes()
         self.trips()
         if not self.first_run and EVENING and not QUIET:
             self.convocations()

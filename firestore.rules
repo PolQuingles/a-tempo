@@ -154,6 +154,19 @@ service cloud.firestore {
         && existsAfter(/databases/$(database)/documents/cors/$(c)/annSeen/$(aid)/by/$(request.auth.uid));
     }
 
+    // Una persona de la plantilla compta per primer cop que ha votat unes bandes: el seu vot hi és després del lot, i
+    // turnout/<votació>/by/<persona> no hi era abans i sí després (vegeu turnout).
+    function votedOnce(c, pid) {
+      return isStaff(c) && myMember(c) != '-' && memberSection(c) != '-'
+        && existsAfter(/databases/$(database)/documents/cors/$(c)/pollVotes/$(pid + '_' + myMember(c)))
+        && !exists(/databases/$(database)/documents/cors/$(c)/turnout/$(pid)/by/$(myMember(c)))
+        && existsAfter(/databases/$(database)/documents/cors/$(c)/turnout/$(pid)/by/$(myMember(c)));
+    }
+    // Les propostes de categories d'unes bandes es poden fer (i dir-hi «m'agrada») mentre la votació les recull.
+    function propsOpen(c, pid) {
+      return get(/databases/$(database)/documents/cors/$(c)/polls/$(pid)).data.get('propOpen', false) == true;
+    }
+
     // Es crea una agrupació nova en aquest mateix lot d'escriptures: abans no hi havia res i després sí.
     function creating(c) {
       return !exists(dirDoc(c)) && existsAfter(dirDoc(c))
@@ -165,7 +178,7 @@ service cloud.firestore {
     // tools/stamp.py hi escriu l'empremta d'aquest fitxer. La vigilància comprova que les regles publicades són les del
     // repositori demanant reglesVersio/<empremta>: si les publicades són unes altres, la lectura es denega.
     match /reglesVersio/{v} {
-      allow get: if v == '5df7ee3957f8';
+      allow get: if v == '31c0d908e4b4';
     }
 
     match /plataforma/equip {
@@ -380,6 +393,50 @@ service cloud.firestore {
       // Quanta gent ha vist cada anunci, per cordes i sense noms: annSeen/<anunci> = { S: 12, C: 9… }, que només llegeix l'equip.
       // Cada compte amb fitxa a la plantilla hi suma 1 a la seva corda, un sol cop: en el mateix lot ha de crear
       // annSeen/<anunci>/by/<uid>, que encara no hi era i que només pot llegir ell mateix (així ningú no sap qui l'ha vist).
+      // Quanta gent ha votat unes bandes, per cordes i sense noms: turnout/<votació> = { S: 12, C: 9… }, que veu tothom.
+      // Cada persona hi suma 1 a la seva corda el primer cop que vota, en el mateix lot que el vot i amb
+      // turnout/<votació>/by/<persona>, que només llegeix ella (així no compta dos cops i ningú no sap qui ha votat).
+      // Qui porta el tauler, que llegeix tots els vots, hi posa el recompte de veritat quan no hi coincideix (els vots d'abans
+      // que hi hagués aquest recompte, o de gent que ja no hi participa).
+      match /turnout/{pid} {
+        allow read: if isStaff(c) || hasRole(c, ['backup']) || isService();
+        allow create, update: if boardEdit(c);
+        allow create: if votedOnce(c, pid)
+          && request.resource.data.keys().hasOnly([memberSection(c)])
+          && request.resource.data[memberSection(c)] == 1;
+        allow update: if votedOnce(c, pid)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([memberSection(c)])
+          && request.resource.data[memberSection(c)] == resource.data.get(memberSection(c), 0) + 1;
+        allow delete: if boardEdit(c);
+        match /by/{mid} {
+          allow read: if hasSpace(c) && mine(c, mid);
+          allow create: if hasSpace(c) && mine(c, mid)
+            && request.resource.data.keys().hasOnly(['at']) && shortText(request.resource.data, 'at', 40)
+            && existsAfter(/databases/$(database)/documents/cors/$(c)/turnout/$(pid));
+          allow delete: if boardEdit(c);
+        }
+      }
+      // Les propostes de categories d'unes bandes (catProps/<id>), abans de votar: les fa qualsevol de la plantilla, a nom seu, i
+      // les veu tothom (l'app no diu de qui són); cadascú hi suma o hi treu el seu «m'agrada», i pot treure les seves. Les porta
+      // qui porta el tauler (les afegeix a les categories o les descarta).
+      match /catProps/{id} {
+        allow read: if isStaff(c) || hasRole(c, ['backup']) || isService();
+        allow create: if hasSpace(c) && mine(c, request.resource.data.get('by', '-'))
+          && request.resource.data.id == id
+          && request.resource.data.keys().hasOnly(['id', 'pollId', 'name', 'desc', 'pair', 'by', 'at', 'likes'])
+          && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 60
+          && shortText(request.resource.data, 'desc', 300) && shortText(request.resource.data, 'at', 40)
+          && request.resource.data.get('likes', []).size() == 0
+          && propsOpen(c, request.resource.data.pollId);
+        allow update: if hasSpace(c) && myMember(c) != '-'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes'])
+          && request.resource.data.likes.toSet().difference(resource.data.get('likes', []).toSet()).hasOnly([myMember(c)])
+          && resource.data.get('likes', []).toSet().difference(request.resource.data.likes.toSet()).hasOnly([myMember(c)])
+          && request.resource.data.likes.size() <= 400
+          && propsOpen(c, resource.data.pollId);
+        allow delete: if hasSpace(c) && mine(c, resource.data.by) && resource.data.get('taken', false) == false;
+        allow update, delete: if boardEdit(c);
+      }
       match /annSeen/{aid} {
         allow read: if canEdit(c) || hasRole(c, ['backup']) || isService();
         allow create: if seenOnce(c, aid)
