@@ -246,6 +246,18 @@ prova('rols sumats: cadascú té les pestanyes i els permisos de tots els seus r
   igual([canBoard(), canProd(), absencesOn()], [true, true, true], 'la direcció porta el tauler, les sessions i les absències');
   as(['secretaria']);
   igual([canBoard(), canProd(), absencesOn()], [true, false, false], 'la secretaria porta el tauler');
+  // La comissió de festes: cantaires que porten el tauler (menys el repertori) i escriuen a tothom, sense editar res més.
+  igual(as(['festes', 'singer'], { memberId: 'a' }), { tabs: 'avisos,llista,calendari,tauler', more: '', gestio: '', areas: 'me' }, 'comissió de festes: les pestanyes d’un cantaire');
+  const mail = S.email; S.email = 'x@x.cat';
+  igual([S.role, canEdit(), canBoard(), readsBoard(), canRepertoire(), canScores('S'), canProd(), canPeople(), canWriteAll(), canWriteTo()], ['read', false, true, true, false, false, false, false, true, false],
+    'la comissió de festes porta el tauler i en llegeix els vots, escriu a tothom (no en privat) i no toca el repertori ni res més');
+  as(['secretaria']);
+  igual(canWriteTo(), true, 'la secretaria sí que pot escriure en privat');
+  S.email = mail;
+  as(['festes', 'singer'], { memberId: 'a' });
+  igual(rolesText(S.me), 'Comissió de festes · ' + V.Member, 'primer el rol de la comissió (és el que signa els missatges)');
+  cert(/Porta el tauler amb l’equip/.test(rolesHint(['festes', 'singer'])) && !/mode lectura/.test(rolesHint(['festes', 'singer'])), 'la pista del rol diu el que fa');
+  igual(as(['festes']).tabs, 'avisos,tauler', 'comissió de festes sense fitxa: el Tauler');
   S.me = null; S.memberId = null; S.role = 'edit'; S.config.classesOn = false; S.classes = new Map();
 });
 prova('canvis d’hora de classe entre els dos dies de la setmana, i a unes quantes persones', () => {

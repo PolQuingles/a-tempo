@@ -10,8 +10,9 @@
 const worksSorted = () => [...S.works.values()].sort((a, b) => (a.title || '').localeCompare(b.title || '', 'ca'));
 const worksOf = pid => worksSorted().filter(w => (w.prods || []).includes(pid));
 function saveWork(w) { S.works.set(w.id, w); persist('works', w.id, w, 50); }
-/** Qui porta el repertori (obres, solos, partitures, àudios i altres materials): l'equip i els arxivers (vegeu 18b-arxiu). */
-const canRepertoire = () => canBoard() || isArchivist();
+/** Qui porta el repertori (obres, solos, partitures, àudios i altres materials): l'equip i els arxivers (vegeu 18b-arxiu). La
+ *  comissió de festes porta la resta del tauler, però no el repertori. */
+const canRepertoire = () => canBoardTeam() || isArchivist();
 const durSecs = d => { const m = String(d || '').match(/^(\d{1,3})(?:[:'.](\d{1,2}))?$/); return m ? +m[1] * 60 + (+m[2] || 0) : 0; };
 const fmtDur = secs => secs ? `${Math.floor(secs / 60)}:${pad(secs % 60)}` : '';
 /** El material que és per a aquesta persona: de la seva corda (o de tots) i de la seva veu (o de totes). */

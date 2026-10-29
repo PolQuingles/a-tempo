@@ -20,7 +20,7 @@ function roleSummary(p) {
   return bits.join(' · ');
 }
 /** Els rols en l'ordre que es pensen: primer si canta, després què més fa. */
-const PERSON_ROLES = ['singer', 'leader', 'archive', 'voice', 'director', 'gerencia', 'secretaria', 'admin'];
+const PERSON_ROLES = ['singer', 'leader', 'archive', 'festes', 'voice', 'director', 'gerencia', 'secretaria', 'admin'];
 /** Qui no canta només existeix com a compte: sense correu no hi ha res a desar. */
 const needsMail = roles => roles.some(r => r !== 'singer' && r !== 'leader');
 const NAME_SKIP = new Set(['de', 'del', 'dels', 'la', 'les', 'el', 'els', 'i', 'y', 'da', 'van']);
@@ -425,7 +425,7 @@ function peoplePlan(text, role, section, admin) {
     r.holder = r.mail ? S.staff.get(r.mail) || null : null;
     r.member = (r.name && rosterMatch(r.name, { free: false })) || S.members.get(r.holder?.memberId || '') || null;
     r.acc = r.member ? accountFor(r.member.id) : null;
-    const singing = role === 'singer' || role === 'leader' || role === 'archive';
+    const singing = ['singer', 'leader', 'archive', 'festes'].includes(role);
     r.sec = r.member?.section || r.sec || section;
     if (!r.name) r.name = r.member?.name || r.holder?.name || '';
     if (!r.name && (singing || !r.mail)) return { ...r, skip: 'Falta el nom' };
@@ -465,7 +465,7 @@ function sheetPeopleBulk(sec) {
       const section = () => q('#pb-sec .pick[aria-pressed="true"]')?.dataset.sec || SECTIONS[0]?.id;
       const plan = () => peoplePlan(q('#pb-text').value, role, section(), admin);
       const draw = () => {
-        q('#pb-sec-f').hidden = role !== 'singer' && role !== 'leader' && role !== 'archive';
+        q('#pb-sec-f').hidden = !['singer', 'leader', 'archive', 'festes'].includes(role);
         const rows = plan(), ok = rows.filter(r => !r.skip);
         if (!rows.length) { q('#pb-prev').innerHTML = ''; return; }
         const nNew = ok.filter(r => r.newMember).length, nMail = ok.filter(r => r.adds).length, bad = rows.length - ok.length;
@@ -531,10 +531,10 @@ function indexPerson(mail) {
 }
 /* ---------- «Mira l'app com…»: la vista prèvia de qualsevol persona ---------- */
 // L'administració pot veure l'app tal com la veu una persona concreta, amb tots els seus rols: un cantaire, un cap de corda
-// (que també canta), la direcció, la gerència, la secretaria, un arxiver o un professor de cant. Si encara no hi ha ningú
+// (que també canta), la direcció, la gerència, la secretaria, un arxiver, la comissió de festes o un professor de cant. Si encara no hi ha ningú
 // amb un rol, se'n fa servir una fitxa genèrica. Només canvia el que es veu en aquest mòbil i no es desa res.
-const PREVIEW_ROLES = ['singer', 'leader', 'archive', 'director', 'gerencia', 'secretaria', 'voice'];
-const previewLabel = r => ({ singer: V.Member, leader: capz(V.leader), archive: 'Arxiu', director: 'Direcció', gerencia: 'Gerència', secretaria: 'Secretaria', voice: V.Teaching }[r] || r);
+const PREVIEW_ROLES = ['singer', 'leader', 'archive', 'festes', 'director', 'gerencia', 'secretaria', 'voice'];
+const previewLabel = r => ({ singer: V.Member, leader: capz(V.leader), archive: 'Arxiu', festes: 'Comissió de festes', director: 'Direcció', gerencia: 'Gerència', secretaria: 'Secretaria', voice: V.Teaching }[r] || r);
 /** Les persones que es poden triar per a un rol: [{ key, label, person }]. */
 function previewPeople(role) {
   if (role === 'singer') return membersOf(null).sort(byName).map(m => ({ key: m.id, label: `${m.name} · ${SEC[m.section].name}`, person: { roles: ['singer'], memberId: m.id, section: m.section, name: m.name, email: accountFor(m.id)?.email || '' } }));
@@ -554,7 +554,9 @@ function previewPeople(role) {
     return { key: t.key, label: t.name, person: { roles: p ? rolesOf(p).filter(r => r !== 'admin') : ['voice'], email: t.key, name: t.name, memberId: p?.memberId || '', section: p?.section || '' } };
   });
   const people = peopleWithRole(role).map(p => ({ key: p.email, label: fullName(p.name || p.email), person: { roles: rolesOf(p).filter(r => r !== 'admin'), email: p.email, name: p.name || '', memberId: p.memberId || '', section: p.section || '' } }));
-  return people.length ? people : [{ key: '', label: `${previewLabel(role)} (encara no hi ha ningú amb aquest rol)`, person: { roles: [role], email: '', name: '', memberId: '', section: '' } }];
+  // La comissió de festes són cantaires: la genèrica també canta (amb la primera fitxa de la plantilla).
+  const m = role === 'festes' ? membersOf(null)[0] : null;
+  return people.length ? people : [{ key: '', label: `${previewLabel(role)} (encara no hi ha ningú amb aquest rol)`, person: { roles: m ? [role, 'singer'] : [role], email: '', name: m?.name || '', memberId: m?.id || '', section: m?.section || '' } }];
 }
 function sheetPreview() {
   let role = 'singer';

@@ -57,6 +57,7 @@ Cada persona té un o més rols (`roles` a la seva fitxa):
 - **Secretaria**: porta les persones (fitxes, altes i baixes, documents i quotes) i el tauler. No veu l'assistència.
 - **Cap de corda o de secció**: passa llista de la seva corda, en respon les absències, en tria els substituts i qui passa llista en funcions, i hi marca qui no fa una producció.
 - **Arxiu** (`archive`): el repertori i les partitures en paper.
+- **Comissió de festes** (`festes`, cantaires): porten el tauler amb l'equip (anuncis, enquestes i bandes amb els resultats, documents i sortides; el repertori, no) i escriuen missatges a tothom o a les cordes que triïn. No és un rol d'edició (`EDIT_ROLES`): la resta de l'app la veuen com un cantaire. A l'app, `canBoard()` (que és `canBoardTeam()` o la comissió) i `readsBoard()`; a les regles, `boardPost` (i `boardEdit` per al repertori i les partitures, que és només de l'equip). No hi tenen converses privades.
 - **Professorat de cant** (`voice`): porta les classes i només veu els seus alumnes (les notes, els enregistraments i les fitxes de cant diuen de quin professor són: `teacher`, `teachers`).
 - **Membre de la plantilla** (cantaire, músic): veu tota l'app en mode lectura i té el seu espai personal.
 - Les **al·lèrgies i intoleràncies** (`health/<membre>`, amb el consentiment de la persona) només les veuen la persona, la secretaria i la gerència.

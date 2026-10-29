@@ -409,9 +409,11 @@ document.addEventListener('click', e => {
   if (!fn) return;
   e.preventDefault();
   const subAllowed = SUB_OK.has(act) && canMark(sessionById(ui.sessionId), ui.rollSec || ui.section);
-  if (EDIT_ONLY.has(act) && !canEdit() && !subAllowed) { toast('Amb aquest enllaç no pots fer aquesta acció'); return; }
+  // La comissió de festes no edita res més, però porta el tauler (BOARD_ONLY) i en mira qui ha respost.
+  const festesOk = (BOARD_ONLY.has(act) || act === 'poll-results') && canBoard();
+  if (EDIT_ONLY.has(act) && !canEdit() && !subAllowed && !festesOk) { toast('Amb aquest enllaç no pots fer aquesta acció'); return; }
   if (REP_ONLY.has(act) && !canRepertoire()) { toast(`Només l’equip i els arxivers poden canviar el repertori`); return; }
-  if (BOARD_ONLY.has(act) && !canBoard()) { toast('Només la direcció, la gerència, la secretaria i l’administració porten el tauler'); return; }
+  if (BOARD_ONLY.has(act) && !canBoard()) { toast('Només la direcció, la gerència, la secretaria, la comissió de festes i l’administració porten el tauler'); return; }
   if (PROD_ONLY.has(act) && !canProd()) { toast('Només la direcció, la gerència i l’administració porten les sessions'); return; }
   if (PEOPLE_ONLY.has(act) && !canPeople()) { toast('Només l’administració, la direcció, la gerència i la secretaria porten les fitxes'); return; }
   if (ADMIN_ONLY.has(act) && !isAdmin()) { toast('Només l’administració de l’agrupació pot fer-ho'); return; }

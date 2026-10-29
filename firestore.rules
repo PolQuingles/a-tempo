@@ -18,6 +18,8 @@ service cloud.firestore {
     //   voice                     → professor de cant: porta les classes (classes i classReq) i veu només els seus alumnes
     //   archive                   → arxiver d'una corda (section): porta el repertori (obres, partitures, àudios, materials) i
     //                             reparteix i recull les partitures en paper (scores) de totes les cordes; la resta, només lectura
+    //   festes                    → comissió de festes (cantaires): porta el tauler amb l'equip (boardPost: anuncis, enquestes i
+    //                             bandes, documents i sortides; el repertori no), en veu els vots i escriu missatges a tothom
     //   singer                    → només lectura de tota l'app
     // Cadascú pot fer el que diuen tots els seus rols sumats (vegeu js/03b-rols.js). Les al·lèrgies (health) només les
     // veuen la persona, la secretaria i la gerència.
@@ -81,6 +83,9 @@ service cloud.firestore {
     // El tauler (anuncis, enquestes, sortides, repertori, materials i documents) el porten l'administració, la direcció, la
     // gerència i la secretaria (el repertori, també els arxivers). Els caps de corda passen llista, però no hi editen res.
     function boardEdit(c) { return staffHas(c, ['admin', 'director', 'gerencia', 'secretaria']); }
+    // Qui hi publica i en veu les respostes: l'equip del tauler i la comissió de festes (cantaires que porten la vida del cor:
+    // anuncis, enquestes i bandes, documents i sortides). El repertori i les partitures, no: són de l'equip i dels arxivers.
+    function boardPost(c) { return staffHas(c, ['admin', 'director', 'gerencia', 'secretaria', 'festes']); }
     // Les produccions, les seves sessions i els Ajustos: l'administració, la direcció i la gerència (Gestió › Produccions).
     function prodEdit(c) { return staffHas(c, ['admin', 'director', 'gerencia']); }
     // Les persones (Gestió › Personal): les fitxes de la plantilla, els comptes, els telèfons i les fitxes personals.
@@ -178,7 +183,7 @@ service cloud.firestore {
     // tools/stamp.py hi escriu l'empremta d'aquest fitxer. La vigilància comprova que les regles publicades són les del
     // repositori demanant reglesVersio/<empremta>: si les publicades són unes altres, la lectura es denega.
     match /reglesVersio/{v} {
-      allow get: if v == '31c0d908e4b4';
+      allow get: if v == '6dcd20f61b09';
     }
 
     match /plataforma/equip {
@@ -297,6 +302,9 @@ service cloud.firestore {
         // La secretaria hi desa els documents del tauler i, en obrir Personal, quins rols té l'equip (per a les converses).
         allow update: if staffHas(c, ['secretaria'])
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['documents', 'teamRoles', 'syncEpoch']);
+        // La comissió de festes hi desa els documents del tauler.
+        allow update: if staffHas(c, ['festes'])
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['documents', 'syncEpoch']);
         // La resta de l'equip i els arxivers, en esborrar alguna cosa, només avisen els altres mòbils que la tornin a baixar
         // (syncEpoch). Un cap de corda no pot apagar les llistes privades ni canviar la norma.
         allow update: if (canEdit(c) || staffHas(c, ['archive']))
@@ -322,6 +330,9 @@ service cloud.firestore {
         // El tauler (anuncis, enquestes i vots, repertori i sortides) i els fitxers que s'hi pugen (config/…): qui el porta
         // (boardEdit). La plantilla, les produccions, les llistes i els substituts tenen les seves regles a sota.
         allow create, update, delete: if (boardCol(col) || (col == 'config' && doc != 'main')) && boardEdit(c);
+        // La comissió de festes: el tauler menys el repertori (works), i els fitxers que s'hi pugen (config/fitxer_…).
+        allow create, update, delete: if staffHas(c, ['festes'])
+          && (col in ['announcements', 'polls', 'pollVotes', 'trips'] || (col == 'config' && doc.matches('fitxer_[A-Za-z0-9]+_[0-9]+')));
         // Els arxivers porten el repertori: les obres (amb els seus solos, partitures i àudios) i els fitxers que s'hi
         // pugen (config/fitxer_…).
         allow create, update, delete: if staffHas(c, ['archive'])
@@ -400,20 +411,20 @@ service cloud.firestore {
       // que hi hagués aquest recompte, o de gent que ja no hi participa).
       match /turnout/{pid} {
         allow read: if isStaff(c) || hasRole(c, ['backup']) || isService();
-        allow create, update: if boardEdit(c);
+        allow create, update: if boardPost(c);
         allow create: if votedOnce(c, pid)
           && request.resource.data.keys().hasOnly([memberSection(c)])
           && request.resource.data[memberSection(c)] == 1;
         allow update: if votedOnce(c, pid)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([memberSection(c)])
           && request.resource.data[memberSection(c)] == resource.data.get(memberSection(c), 0) + 1;
-        allow delete: if boardEdit(c);
+        allow delete: if boardPost(c);
         match /by/{mid} {
           allow read: if hasSpace(c) && mine(c, mid);
           allow create: if hasSpace(c) && mine(c, mid)
             && request.resource.data.keys().hasOnly(['at']) && shortText(request.resource.data, 'at', 40)
             && existsAfter(/databases/$(database)/documents/cors/$(c)/turnout/$(pid));
-          allow delete: if boardEdit(c);
+          allow delete: if boardPost(c);
         }
       }
       // Les propostes de categories d'unes bandes (catProps/<id>), abans de votar: les fa qualsevol de la plantilla, a nom seu, i
@@ -435,10 +446,10 @@ service cloud.firestore {
           && request.resource.data.likes.size() <= 400
           && propsOpen(c, resource.data.pollId);
         allow delete: if hasSpace(c) && mine(c, resource.data.by) && resource.data.get('taken', false) == false;
-        allow update, delete: if boardEdit(c);
+        allow update, delete: if boardPost(c);
       }
       match /annSeen/{aid} {
-        allow read: if canEdit(c) || hasRole(c, ['backup']) || isService();
+        allow read: if canEdit(c) || boardPost(c) || hasRole(c, ['backup']) || isService();
         allow create: if seenOnce(c, aid)
           && request.resource.data.keys().hasOnly([memberSection(c)])
           && request.resource.data[memberSection(c)] == 1;
@@ -498,7 +509,7 @@ service cloud.firestore {
       // reparteix avisos.py al mòbil de cadascú.
       match /nudges/{id} {
         allow read: if canEdit(c) || hasRole(c, ['backup']) || isService();
-        allow create: if canEdit(c) && request.resource.data.by == email()
+        allow create: if (canEdit(c) || boardPost(c)) && request.resource.data.by == email()
           && request.resource.data.memberIds is list && request.resource.data.memberIds.size() <= 500
           && request.resource.data.kind in ['poll', 'rsvp', 'trip']
           && request.resource.data.title is string && request.resource.data.title.size() <= 300;
@@ -507,17 +518,17 @@ service cloud.firestore {
       // Inscripcions a una sortida: cadascú diu si hi va (i una nota); qui porta el tauler les veu totes i hi posa el transport i
       // l'habitació, que la persona no es pot canviar.
       match /tripSignups/{id} {
-        allow read: if boardEdit(c) || (hasSpace(c) && mine(c, resource.data.memberId));
-        allow create: if boardEdit(c) || (hasSpace(c)
+        allow read: if boardPost(c) || (hasSpace(c) && mine(c, resource.data.memberId));
+        allow create: if boardPost(c) || (hasSpace(c)
           && mine(c, request.resource.data.memberId)
           && id == request.resource.data.tripId + '_' + myMember(c)
           && request.resource.data.answer in ['yes', 'no']
           && !request.resource.data.keys().hasAny(['transport', 'room']));
-        allow update: if boardEdit(c) || (hasSpace(c)
+        allow update: if boardPost(c) || (hasSpace(c)
           && mine(c, resource.data.memberId)
           && request.resource.data.answer in ['yes', 'no']
           && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['transport', 'room', 'tripId', 'memberId']));
-        allow delete: if boardEdit(c);
+        allow delete: if boardPost(c);
       }
       // La fitxa que omple cada persona (telèfon, talla, contacte d'emergència): només la veuen ella i qui porta les persones.
       // Les al·lèrgies no hi van: són a health/<membre>.
@@ -595,22 +606,23 @@ service cloud.firestore {
           && request.resource.data.token.size() >= 24 && request.resource.data.token.size() <= 64;
         allow delete: if isAdmin(c) || (hasSpace(c) && mine(c, mid));
       }
-      // Missatges dins l'app: el cap de corda escriu només a la seva corda; administració, direcció, gerència i
-      // secretaria, a tothom ('*'), a les cordes que triïn o a qui fa una producció (members: la llista de qui la fa).
-      // Cadascú llegeix els de la seva corda, els de tothom i els que porten el seu nom a members.
+      // Missatges dins l'app: el cap de corda escriu només a la seva corda; administració, direcció, gerència,
+      // secretaria i la comissió de festes, a tothom ('*'), a les cordes que triïn o a qui fa una producció (members: la llista
+      // de qui la fa). Cadascú llegeix els de la seva corda, els de tothom, els que porten el seu nom a members i els seus.
       match /messages/{id} {
         allow read: if canEdit(c) || hasRole(c, ['backup']) || isService()
           || (isStaff(c) && ('*' in resource.data.to || memberSection(c) in resource.data.to))
-          || (isStaff(c) && myMember(c) in resource.data.get('members', []));
+          || (isStaff(c) && myMember(c) in resource.data.get('members', []))
+          || (isStaff(c) && resource.data.by == email());
         // Els arxivers també escriuen a la seva corda (p. ex. per recordar que cal tornar les partitures).
-        allow create: if (canEdit(c) || staffHas(c, ['archive']))
+        allow create: if (canEdit(c) || staffHas(c, ['archive', 'festes']))
           && request.resource.data.by == email()
           && request.resource.data.to is list && request.resource.data.to.size() > 0 && request.resource.data.to.size() <= 20
           && request.resource.data.body is string && request.resource.data.body.size() <= 2000
           && (!('members' in request.resource.data) || (request.resource.data.members is list && request.resource.data.members.size() <= 400))
-          && (staffHas(c, ['admin', 'director', 'gerencia', 'secretaria'])
+          && (staffHas(c, ['admin', 'director', 'gerencia', 'secretaria', 'festes'])
               || (request.resource.data.to == [staffSection(c)] && !('members' in request.resource.data)));
-        allow delete: if isAdmin(c) || ((canEdit(c) || staffHas(c, ['archive'])) && resource.data.by == email());
+        allow delete: if isAdmin(c) || ((canEdit(c) || staffHas(c, ['archive', 'festes'])) && resource.data.by == email());
       }
       // Notes de seguiment de cada persona: només la direcció, l'administració i els caps de corda (de la seva corda).
       match /memberNotes/{id} {
@@ -710,7 +722,7 @@ service cloud.firestore {
       }
       // Els vots de les enquestes: cadascú el seu; els de tothom, qui porta el tauler (per als resultats i els recordatoris).
       match /pollVotes/{id} {
-        allow read: if (hasSpace(c) && mine(c, resource.data.memberId)) || boardEdit(c);
+        allow read: if (hasSpace(c) && mine(c, resource.data.memberId)) || boardPost(c);
         allow create, update: if hasSpace(c)
           && mine(c, request.resource.data.memberId)
           && id == request.resource.data.pollId + '_' + myMember(c)

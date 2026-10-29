@@ -120,9 +120,10 @@ function sheetThreadNew(preset = {}) {
 /* ---------- L'equip escriu a una persona ---------- */
 // La direcció, la gerència, la secretaria, l'administració i el professorat de cant poden escriure a qualsevol persona de la
 // plantilla; els caps de corda i els arxivers, a la seva corda. És una conversa a nom de qui escriu (toEmail), com les altres:
-// la persona la veu a «Converses», li arriba al mòbil i hi pot respondre.
-const canWriteTo = () => !!S.email && !PREVIEW && (canWriteAll() || iHave('voice') || !!mySecWrite());
-const writableMembers = () => (canWriteAll() || iHave('voice') ? membersOf(null) : membersOf(mySecWrite())).filter(m => m.id !== myId());
+// la persona la veu a «Converses», li arriba al mòbil i hi pot respondre. La comissió de festes escriu a tothom, però no en privat.
+const writesAnyone = () => BOARD_ROLES.some(iHave) || iHave('voice');
+const canWriteTo = () => !!S.email && !PREVIEW && (writesAnyone() || !!mySecWrite());
+const writableMembers = () => (writesAnyone() ? membersOf(null) : membersOf(mySecWrite())).filter(m => m.id !== myId());
 const myThreadWith = mid => threadsSorted().find(t => t.memberId === mid && t.toEmail === S.email && !t.ref);
 /** Escriu a una persona com a equip: a la conversa que ja hi teníeu, o en una de nova. */
 async function sendThreadTo(m, text, subject = '') {
