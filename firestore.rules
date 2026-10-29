@@ -183,7 +183,7 @@ service cloud.firestore {
     // tools/stamp.py hi escriu l'empremta d'aquest fitxer. La vigilància comprova que les regles publicades són les del
     // repositori demanant reglesVersio/<empremta>: si les publicades són unes altres, la lectura es denega.
     match /reglesVersio/{v} {
-      allow get: if v == '6dcd20f61b09';
+      allow get: if v == '981ed5a7cde7';
     }
 
     match /plataforma/equip {
@@ -330,9 +330,12 @@ service cloud.firestore {
         // El tauler (anuncis, enquestes i vots, repertori i sortides) i els fitxers que s'hi pugen (config/…): qui el porta
         // (boardEdit). La plantilla, les produccions, les llistes i els substituts tenen les seves regles a sota.
         allow create, update, delete: if (boardCol(col) || (col == 'config' && doc != 'main')) && boardEdit(c);
-        // La comissió de festes: el tauler menys el repertori (works), i els fitxers que s'hi pugen (config/fitxer_…).
-        allow create, update, delete: if staffHas(c, ['festes'])
-          && (col in ['announcements', 'polls', 'pollVotes', 'trips'] || (col == 'config' && doc.matches('fitxer_[A-Za-z0-9]+_[0-9]+')));
+        // La comissió de festes: el tauler menys el repertori (works), i els fitxers que s'hi pugen (config/fitxer_…). Els vots,
+        // només els esborra (amb l'enquesta). La col·lecció es mira primer: així les altres escriptures no avaluen staffHas
+        // un cop més (una conversa d'un cap de corda ja és a prop del límit d'expressions de les regles).
+        allow create, update, delete: if (col in ['announcements', 'polls', 'trips'] || (col == 'config' && doc.matches('fitxer_[A-Za-z0-9]+_[0-9]+')))
+          && staffHas(c, ['festes']);
+        allow delete: if col == 'pollVotes' && staffHas(c, ['festes']);
         // Els arxivers porten el repertori: les obres (amb els seus solos, partitures i àudios) i els fitxers que s'hi
         // pugen (config/fitxer_…).
         allow create, update, delete: if staffHas(c, ['archive'])
