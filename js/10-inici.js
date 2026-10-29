@@ -117,7 +117,9 @@ function todoItems() {
     const conv = openConvocations(me).filter(s => !S.rsvp.get(`${s.id}_${me.id}`));
     for (const s of conv) out.push({ icon: 'conv', conv: s, n: 1 });
     if (choicesPending(me.id)) { const s = choiceSummary(me.id); out.push({ icon: 'conv', t: 'Digues quines produccions faràs', s: `${s.none} de ${s.total} per dir · cal fer-ne com a mínim el ${s.min}%`, btn: 'Tria-les', act: `data-act="choice-open" data-mid="${esc(me.id)}"`, n: 1 }); }
-    const polls = openPolls().filter(p => forMySection(p) && !S.pollVotes.get(`${p.id}_${me.id}`));
+    for (const p of openPolls().filter(p => isBandes(p) && !S.pollVotes.get(`${p.id}_${me.id}`) && bandesPeople(p).some(m => m.id === me.id)))
+      out.push({ icon: 'poll', t: `Vota: ${esc(p.title)}`, s: p.closesAt ? `Fins al ${ddmm(p.closesAt)} · vot secret` : 'Vot secret', btn: 'Vota', act: `data-act="bandes-vote" data-id="${esc(p.id)}"`, n: 1 });
+    const polls = openPolls().filter(p => !isBandes(p) && forMySection(p) && !S.pollVotes.get(`${p.id}_${me.id}`));
     if (polls.length) out.push({ icon: 'poll', t: `${polls.length === 1 ? '1 enquesta' : `${polls.length} enquestes`} per respondre`, s: esc(polls[0].title || ''), btn: 'Respon', act: 'data-act="board-polls"', n: polls.length });
   }
   // No hi va ser: què s'hi va treballar (el pla de l'assaig on va faltar).
@@ -463,7 +465,7 @@ function weekHtml(d) {
   const block = (t, body) => body ? `<div class="section-title"><h2 class="h2">${t}</h2></div>${body}` : '';
   const ask = [
     ...d.conv.map(s => `<li><span><b>${esc(s.type)} del ${esc(shortDate(s.date))}</b><small>${d.sec ? 'Confirma si hi seràs' : `Convocatòria${s.rsvpBy ? ` · fins al ${ddmm(s.rsvpBy)}` : ''}`}</small></span></li>`),
-    ...d.polls.map(p => `<li><span><b>${esc(p.title)}</b><small>Enquesta${p.closesAt ? ` · fins al ${ddmm(p.closesAt)}` : ''}</small></span></li>`),
+    ...d.polls.map(p => `<li><span><b>${esc(p.title)}</b><small>${isBandes(p) ? 'Votació' : 'Enquesta'}${p.closesAt ? ` · fins al ${ddmm(p.closesAt)}` : ''}</small></span></li>`),
     ...d.trips.map(t => `<li><span><b>${esc(t.title)}</b><small>Sortida · ${esc(tripDates(t))}${t.deadline ? ` · respon fins al ${ddmm(t.deadline)}` : ''}</small></span></li>`),
   ];
   return `<p class="muted" style="margin:0 0 6px;font-size:calc(13px*var(--ts))">${esc(capz(shortDate(addDays(TODAY, -7))))} – ${esc(shortDate(addDays(TODAY, 10)))}${d.sec ? ` · el que toca a ${esc(SEC[d.sec].name.toLowerCase())}` : ''}</p>

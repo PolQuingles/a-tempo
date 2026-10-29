@@ -9,14 +9,14 @@ const ADMIN_ONLY = new Set(['retention', 'join-link', 'join-reqs', 'join-approve
 const PRO_ONLY = new Set(['brand-color', 'logo-remove', 'kind-set', 'group-delete', 'sections-save', 'sections-undo']);
 // El calendari de les classes: només el professorat de cant i l'administració.
 const CLASS_ONLY = new Set(['cl-new', 'cl-edit', 'cl-review', 'cl-paste', 'cl-plan', 'cl-note', 'cl-mark', 'cl-stats', 'cl-cancel-day']);
-const EDIT_ONLY = new Set(['prod-roll', 'mark', 'min', 'early', 'early-open', 'mark-rest', 'session-new', 'sub-set', 'ann-new', 'ann-edit', 'poll-new', 'poll-edit', 'poll-results', 'poll-remind', 'rsvp-remind', 'doc-new', 'doc-edit', 'share-app', 'staff-bulk', 'preview-on', 'who-in', 'mail-check', 'concert-list', 'concert-toggle', 'session-edit', 'member-edit', 'member-new', 'member-bulk', 'prod-new', 'prod-edit',
+const EDIT_ONLY = new Set(['prod-roll', 'mark', 'min', 'early', 'early-open', 'mark-rest', 'session-new', 'sub-set', 'ann-new', 'ann-edit', 'poll-new', 'poll-edit', 'poll-results', 'poll-remind', 'bandes-new', 'bandes-edit', 'bandes-publish', 'bandes-results', 'rsvp-remind', 'doc-new', 'doc-edit', 'share-app', 'staff-bulk', 'preview-on', 'who-in', 'mail-check', 'concert-list', 'concert-toggle', 'session-edit', 'member-edit', 'member-new', 'member-bulk', 'prod-new', 'prod-edit',
   'wipe-demo', 'wipe-all', 'load-demo', 'export-json', 'abs-accept', 'abs-reject', 'abs-delete', 'manage',
   'roster-export', 'docs-copy-noimg',
   'choices-overview', 'plan-edit', 'seating-edit', 'participants', 'certificate', 'season-report', 'trip-new', 'trip-edit', 'trip-admin', 'trip-remind']);
 // El repertori: l'equip i els arxivers (canRepertoire, a 18-repertori).
 const REP_ONLY = new Set(['work-new', 'work-edit', 'work-link', 'mat-new', 'mat-edit']);
 // El tauler, qui el porta (canBoard); les sessions, qui porta les produccions (canProd). Vegeu 01-base.
-const BOARD_ONLY = new Set(['ann-new', 'ann-edit', 'poll-new', 'poll-edit', 'poll-remind', 'doc-new', 'doc-edit', 'trip-new', 'trip-edit', 'trip-admin', 'trip-remind']);
+const BOARD_ONLY = new Set(['ann-new', 'ann-edit', 'poll-new', 'poll-edit', 'poll-remind', 'bandes-new', 'bandes-edit', 'bandes-publish', 'bandes-results', 'doc-new', 'doc-edit', 'trip-new', 'trip-edit', 'trip-admin', 'trip-remind']);
 const PROD_ONLY = new Set(['session-new', 'session-edit', 'plan-edit', 'seating-edit', 'participants']);
 // Les fitxes de la plantilla: qui porta les persones (canPeople, com peopleEdit a les regles).
 const PEOPLE_ONLY = new Set(['member-edit', 'member-new', 'member-bulk', 'roster-export']);
@@ -194,10 +194,15 @@ const actions = {
   'mat-prod': el => { ui.matProd = el.dataset.id; render(); },
   'mat-mine': () => { ui.matMine = ui.matMine === false; render(); },
   'poll-new': () => sheetPoll(null),
-  'poll-edit': el => sheetPoll(el.dataset.id),
+  'poll-edit': el => isBandes(S.polls.get(el.dataset.id)) ? sheetBandes(el.dataset.id) : sheetPoll(el.dataset.id),
   'poll-results': el => sheetPollResults(el.dataset.id),
   'poll-remind': el => remindPoll(el.dataset.id),
   'poll-vote': el => votePoll(el.dataset.id),
+  'bandes-new': () => sheetBandes(null),
+  'bandes-edit': el => sheetBandes(el.dataset.id),
+  'bandes-publish': el => bandesPublish(el.dataset.id),
+  'bandes-results': el => sheetBandesResults(el.dataset.id),
+  'bandes-vote': el => sheetBallot(el.dataset.id),
   'rsvp-remind': el => remindRsvp(el.dataset.sid),
   'my-att': () => sheetMyAttendance(),
   'brand-color': el => setBrandColor(el.dataset.color),
