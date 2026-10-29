@@ -2077,6 +2077,76 @@ def main():
         check(not errors, "sense errors a la Nit de les Bandes", "; ".join(errors[:3]))
         ctx.close()
 
+        print("Bandes: les propostes de categories, quanta gent ha votat i els diplomes")
+        ctx, page, errors = open_app(browser, base, "pol", MOBILE)
+        r = page.evaluate("""async () => { const s = ms => new Promise(r => setTimeout(r, ms)), out = {};
+          const p = { id: 'bp1', kind: 'bandes', title: 'Bandes de proves', description: '', picks: 2, win: 2, sections: [], out: [], selfOk: false, draft: true,
+            cats: [{ id: 'k1', name: 'Cor', desc: '', pair: false, sec: '', win: 2 }, { id: 'k2', name: 'Parella', desc: '', pair: true, sec: '', win: 1 }],
+            closesAt: addDays(TODAY, 10), galaAt: addDays(TODAY, 20), createdAt: new Date().toISOString(), author: 'Pol' };
+          S.polls.set(p.id, p); persist('polls', p.id, p, 10); flushAll(); await s(300);
+          ui.tab = 'bandes'; render(); await s(300);
+          document.querySelector('.bn-team [data-act="bandes-props-open"]').click(); await s(300);
+          document.querySelector('#pp-ok').click(); await s(400); flushAll(); await s(300);
+          const q = S.polls.get('bp1');
+          out.open = q.propOpen && bandesPhase(q) === 'prop' && !!S.announcements.get(q.propAnnId);
+          return out; }""")
+        check(r.get("open"), "l'equip obre les propostes de categories (amb un anunci)", str(r))
+        switch_user(page, base, "singer")
+        r = page.evaluate("""async () => { const s = ms => new Promise(r => setTimeout(r, ms)), out = {};
+          ui.tab = 'bandes'; render(); await s(400);
+          out.form = !!document.querySelector('#pr-name') && !document.querySelector('[data-act="bandes-vote"]');
+          document.querySelector('#pr-name').value = 'Rei del karaoke'; document.querySelector('#pr-desc').value = 'Qui no deixa el micro';
+          document.querySelector('[data-act="bandes-propose"]').click(); await s(500);
+          document.querySelector('#pr-name').value = 'Cor'; document.querySelector('[data-act="bandes-propose"]').click(); await s(300);
+          out.dup = /ja hi és/.test(document.querySelector('.toast')?.innerText || '');
+          document.querySelector('[data-act="bandes-like"]').click(); await s(500);
+          const docs = (await firebase.firestore().collection(`cors/${GID}/catProps`).get()).docs.map(d => d.data());
+          out.saved = docs.length === 1 && docs[0].name === 'Rei del karaoke' && docs[0].by === myId() && docs[0].likes.length === 1;
+          out.anon = !document.querySelector('.bn-prop')?.innerText.includes('Anna');
+          return out; }""")
+        for k, label in [("form", "el cantaire hi pot proposar categories (encara no hi ha votació)"), ("dup", "una categoria que ja hi és no es torna a proposar"),
+                         ("saved", "la proposta es desa, i s'hi pot dir «m'agrada»"), ("anon", "sense dir de qui és")]:
+            check(r.get(k), label, str(r))
+        switch_user(page, base, "pol")
+        r = page.evaluate("""async () => { const s = ms => new Promise(r => setTimeout(r, ms)), out = {};
+          ui.tab = 'bandes'; render(); await s(500);
+          document.querySelector('[data-act="bandes-prop-take"]').click(); await s(400); flushAll(); await s(300);
+          out.taken = S.polls.get('bp1').cats.map(c => c.name).join('|') === 'Cor|Parella|Rei del karaoke';
+          document.querySelector('.bn-team [data-act="bandes-publish"]').click(); await s(300);
+          document.querySelector('#bp-ok').click(); await s(400); flushAll(); await s(300);
+          const q = S.polls.get('bp1');
+          out.vote = !q.draft && !q.propOpen && bandesPhase(q) === 'vote';
+          return out; }""")
+        check(r.get("taken"), "l'equip afegeix la proposta a les categories", str(r))
+        check(r.get("vote"), "i en obrir la votació, les propostes es tanquen", str(r))
+        switch_user(page, base, "singer")
+        r = page.evaluate("""async () => { const s = ms => new Promise(r => setTimeout(r, ms)), out = {};
+          ui.tab = 'bandes'; render(); await s(400);
+          out.zero = /0 de 16 ja han votat/.test(document.querySelector('.bn-turn')?.innerText || '');
+          sheetBallot('bp1'); await s(300);
+          document.querySelector('.sheet [data-bb="next"]').click(); await s(150);
+          document.querySelector('.bb-p').click(); await s(100);
+          document.querySelector('.sheet [data-bb="go"]').click(); await s(200);
+          document.querySelector('.sheet [data-bb="send"]').click(); await s(800); flushAll(); await s(600);
+          const tn = (await firebase.firestore().doc(`cors/${GID}/turnout/bp1`).get()).data() || {};
+          render(); await s(300);
+          out.one = tn.S === 1 && /1 de 16 ja han votat/.test(document.querySelector('.bn-turn')?.innerText || '');
+          sheetBallot('bp1'); await s(300); document.querySelector('.sheet [data-bb="send"]').click(); await s(800); flushAll(); await s(400);
+          out.once = ((await firebase.firestore().doc(`cors/${GID}/turnout/bp1`).get()).data() || {}).S === 1;
+          return out; }""")
+        for k, label in [("zero", "tothom veu quanta gent ha votat"), ("one", "en votar, hi suma (a la seva corda)"), ("once", "i canviar el vot no hi torna a sumar")]:
+            check(r.get(k), label, str(r))
+        switch_user(page, base, "pol")
+        r = page.evaluate("""async () => { const s = ms => new Promise(r => setTimeout(r, ms));
+          let printed = 0; window.print = () => { printed++; };
+          BD_PEEK.add('bp1'); sheetBandesResults('bp1'); await s(400);
+          document.querySelector('#br-dip').click(); await s(300);
+          const d = document.querySelectorAll('#print-root .pr-dip');
+          return printed === 1 && d.length === 1 && /Banda atorgada a/i.test(d[0].innerText); }""")
+        check(r, "l'equip imprimeix els diplomes de qui guanya", str(r))
+        check(not errors, "sense errors amb les propostes, el recompte i els diplomes", "; ".join(errors[:3]))
+        ctx.close()
+
         print("Registre d'errors")
         ctx, page, errors = open_app(browser, base, "pol", MOBILE)
         page.evaluate("setTimeout(() => { funcioQueNoExisteix(); }, 0)")

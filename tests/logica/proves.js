@@ -601,6 +601,17 @@ prova('La Nit de les Bandes: els finalistes, el dia que es revelen i en quin mom
   igual([bandesPhase({ ...p, nominees: {} }, '2026-12-05'), bandesPhase({ ...p, results: {} }, '2026-12-27'), bandesPhase({ ...p, draft: true }, '2026-11-01')], ['nom', 'done', 'draft'], 'amb finalistes, amb palmarès i en esborrany');
 });
 
+prova('Bandes: un diploma per persona i banda, i quanta gent ha votat per cordes', () => {
+  escenari({ members: [{ id: 'a', name: 'Puig, Anna', section: 'S' }, { id: 'b', name: 'Ferrer, Laia', section: 'S' }, { id: 'c', name: 'Mas, Júlia', section: 'C' }, { id: 'd', name: 'Bosch, Marc', section: 'T' }] });
+  const p = { id: 'q', cats: [{ id: 'k1', name: 'Cor' }, { id: 'k2', name: 'Parella', pair: true }], sections: [], out: ['d'] };
+  const w = { k1: ['a', 'b'], k2: ['a+c'] };
+  igual(diplomaList(p, w).map(x => [x.cat.id, x.id, x.with]), [['k1', 'a', []], ['k1', 'b', []], ['k2', 'a', ['c']], ['k2', 'c', ['a']]], 'les de parella, un per a cadascú');
+  igual(diplomaList(p, w, 'a').map(x => x.cat.id), ['k1', 'k2'], 'els d’una sola persona');
+  const s = turnoutSum(p, { S: 5, C: 1, T: 1 });
+  igual([s.n, s.total, s.per.map(x => `${x.sec} ${x.n}/${x.total}`)], [3, 3, ['S 2/2', 'C 1/1']], 'mai més dels que hi ha a la corda (ni de qui no hi participa)');
+  igual(turnoutSum(p, null), null, 'sense recompte, res');
+});
+
 /** Executa totes les proves: { ok, fail, lines }. */
 function runProves() {
   const lines = [];

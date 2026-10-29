@@ -471,7 +471,7 @@ function pollResults(p) {
   return { counts, voters, expected: pollExpected(p).length };
 }
 function boardPolls() {
-  const all = [...S.polls.values()].filter(p => forMe(p) && (!p.draft || canBoard())).sort((a, b) => (a.closed ? 1 : 0) - (b.closed ? 1 : 0) || (b.createdAt || '').localeCompare(a.createdAt || ''));
+  const all = [...S.polls.values()].filter(p => forMe(p) && (!p.draft || canBoard() || (isBandes(p) && p.propOpen))).sort((a, b) => (a.closed ? 1 : 0) - (b.closed ? 1 : 0) || (b.createdAt || '').localeCompare(a.createdAt || ''));
   const card = p => {
     if (isBandes(p)) return bandesCard(p);
     const closed = p.closed || (p.closesAt && p.closesAt < TODAY);

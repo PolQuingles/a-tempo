@@ -956,6 +956,60 @@ expect("AA10 un compte anònim no deixa notes d'error", commit([upd("errors/aa1"
 expect("AA10b ni un compte que no és de l'agrupació", commit([upd("errors/aa2", ERR)], T["orq"]), False)
 expect("AA10c ni sense dir de quina agrupació", commit([upd("errors/aa3", {**ERR, "gid": ""})], T["singer"]), False)
 
+print("AB. Bandes: quanta gent ha votat (per cordes, sense noms)")
+seed(f"cors/{F}/polls/bt1", {"id": "bt1", "kind": "bandes", "title": "Bandes", "closed": False, "cats": [{"id": "k1", "name": "Cor"}]})
+
+
+def voted(pid, mid, sec, *, vote=True, by=True, n=None, by_mid=None):
+    """El lot del primer vot: el vot, turnout/<votació>/by/<persona> i +1 a la corda (amb increment, o amb un valor fix si n)."""
+    w = [upd(f"cors/{F}/pollVotes/{pid}_{mid}", {"pollId": pid, "memberId": mid, "section": sec, "picks": {"k1": ["m3"]}, "n": 1, "choices": [], "at": now})] if vote else []
+    if by:
+        w.append(upd(f"cors/{F}/turnout/{pid}/by/{by_mid or mid}", {"at": now}))
+    if n is None:
+        w.append({"update": {"name": f"{ROOT}/cors/{F}/turnout/{pid}", "fields": {}}, "updateMask": {"fieldPaths": []},
+                  "updateTransforms": [{"fieldPath": sec, "increment": {"integerValue": "1"}}]})
+    else:
+        w.append(upd(f"cors/{F}/turnout/{pid}", {sec: n}, [sec]))
+    return w
+
+
+expect("AB1 la cantaire vota i suma 1 a la seva corda", commit(voted("bt1", "m1", "S"), T["singer"]), True)
+expect("AB2 tothom de l'agrupació veu el recompte", get(f"cors/{F}/turnout/bt1", T["arx"]), True)
+expect("AB2b també qui no és a la plantilla", get(f"cors/{F}/turnout/bt1", T["dir"]), True)
+expect("AB3 la mateixa persona no compta dos cops", commit(voted("bt1", "m1", "S"), T["singer"]), False)
+expect("AB3b però pot canviar el vot", commit([upd(f"cors/{F}/pollVotes/bt1_m1", {"pollId": "bt1", "memberId": "m1", "section": "S", "picks": {"k1": ["m4"]}, "n": 1, "choices": [], "at": now})], T["singer"]), True)
+expect("AB4 sense votar no compta", commit(voted("bt1", "m3", "B", vote=False), T["pau"]), False)
+expect("AB5 ningú no compta per un altre", commit(voted("bt1", "m4", "T", by_mid="m1"), T["pol"]), False)
+expect("AB6 ni suma a una altra corda", commit(voted("bt1", "m3", "S"), T["pau"]), False)
+expect("AB7 ni més d'un", commit(voted("bt1", "m3", "B", n=2), T["pau"]), False)
+expect("AB8 qui no és a la plantilla no compta", commit(voted("bt1", "m4", "T"), T["dir"]), False)
+expect("AB9 un cap de corda compta a la seva", commit(voted("bt1", "m3", "B"), T["pau"]), True)
+expect("AB10 cadascú veu la seva constància", get(f"cors/{F}/turnout/bt1/by/m1", T["singer"]), True)
+expect("AB10b però ningú més, ni l'equip", get(f"cors/{F}/turnout/bt1/by/m1", T["pau"]), False)
+expect("AB10c ni en pot fer la llista", lst(f"cors/{F}/turnout/bt1/by", T["pol"]), False)
+code, body = req("GET", f"{BASE}/cors/{F}/turnout/bt1", tok=OWNER)
+got = {k: int(v.get("integerValue", 0)) for k, v in (body.get("fields") or {}).items()} if code == 200 else {}
+expect(f"AB11 el recompte és S 1 · B 1 ({got})", 200 if got == {"S": 1, "B": 1} else 403, True)
+
+print("AC. Bandes: les propostes de categories, abans de votar")
+seed(f"cors/{F}/polls/bt2", {"id": "bt2", "kind": "bandes", "title": "Bandes noves", "draft": True, "propOpen": True})
+seed(f"cors/{F}/polls/bt3", {"id": "bt3", "kind": "bandes", "title": "Bandes tancades", "draft": True, "propOpen": False})
+CP = {"id": "cp1", "pollId": "bt2", "name": "Rei del karaoke", "desc": "Qui no deixa el micro", "pair": False, "by": "m1", "at": now, "likes": []}
+expect("AC1 la cantaire proposa una categoria", commit([upd(f"cors/{F}/catProps/cp1", CP)], T["singer"]), True)
+expect("AC2 tothom les veu", get(f"cors/{F}/catProps/cp1", T["pau"]), True)
+expect("AC3 no a nom d'un altre", commit([upd(f"cors/{F}/catProps/cp2", {**CP, "id": "cp2", "by": "m3"})], T["singer"]), False)
+expect("AC4 ni si no se'n recullen", commit([upd(f"cors/{F}/catProps/cp3", {**CP, "id": "cp3", "pollId": "bt3"})], T["singer"]), False)
+expect("AC5 ni amb «m'agrada» ja posats", commit([upd(f"cors/{F}/catProps/cp4", {**CP, "id": "cp4", "likes": ["m3"]})], T["singer"]), False)
+expect("AC5b ni sense nom", commit([upd(f"cors/{F}/catProps/cp5", {**CP, "id": "cp5", "name": ""})], T["singer"]), False)
+expect("AC6 un altre hi diu «m'agrada»", commit([upd(f"cors/{F}/catProps/cp1", {"likes": ["m3"]}, ["likes"])], T["pau"]), True)
+expect("AC7 però no a nom d'un altre", commit([upd(f"cors/{F}/catProps/cp1", {"likes": ["m3", "m4"]}, ["likes"])], T["pau"]), False)
+expect("AC7b ni treu el d'un altre", commit([upd(f"cors/{F}/catProps/cp1", {"likes": []}, ["likes"])], T["singer"]), False)
+expect("AC8 la cantaire no la fa entrar a les categories", commit([upd(f"cors/{F}/catProps/cp1", {"taken": True}, ["taken"])], T["singer"]), False)
+expect("AC9 qui no l'ha feta no la treu", commit([dele(f"cors/{F}/catProps/cp1")], T["pau"]), False)
+expect("AC10 qui porta el tauler la fa entrar", commit([upd(f"cors/{F}/catProps/cp1", {"taken": True}, ["taken"])], T["sec"]), True)
+expect("AC11 i llavors qui l'ha feta ja no la treu", commit([dele(f"cors/{F}/catProps/cp1")], T["singer"]), False)
+expect("AC12 qui l'ha feta en treu una que no ha entrat", commit([upd(f"cors/{F}/catProps/cp6", {**CP, "id": "cp6", "name": "Una altra"})], T["singer"]) == 200 and commit([dele(f"cors/{F}/catProps/cp6")], T["singer"]), True)
+
 print()
 print(f"{PASSES} correctes · {len(FAILS)} errors")
 sys.exit(1 if FAILS else 0)

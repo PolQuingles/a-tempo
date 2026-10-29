@@ -1107,6 +1107,35 @@ button.mday:hover{background:var(--surface-2)}
 .bn-home-t b{font-family:var(--f-display);font-weight:600;font-size:calc(22px*var(--ts));line-height:1.1;color:#F2D58A}
 .bn-home svg{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-width:2}
 .bn-home:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.bn-vote .bn-turn{grid-column:1 / -1}
+.bn-turn{display:grid;gap:6px}
+.bn-turn p{margin:0;font-size:calc(14px*var(--ts));color:var(--ink-2)}
+.bn-turn p b{font-family:var(--f-display);font-size:calc(20px*var(--ts));font-weight:600;color:var(--ink)}
+.bn-turn-s{display:flex;flex-wrap:wrap;gap:4px 14px}
+.bn-turn-s>span{font-size:calc(13px*var(--ts));color:var(--muted)}
+.bn-turn-s>span b{font-family:var(--f-display);font-style:italic;font-weight:600;color:var(--accent)}
+.bd-mine{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.bn-prop-f{display:grid;gap:10px}
+.bn-prop-l{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.bn-prop{display:grid;gap:6px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface)}
+.bn-prop>div:first-child{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:calc(15px*var(--ts))}
+.bn-prop>div:first-child .tag{padding:1px 6px;border-radius:6px}
+.bn-prop p{margin:0;font-size:calc(14px*var(--ts));color:var(--ink-2)}
+.bn-like[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent)}
+/* Els diplomes: un per full, centrat, amb un marc i la banda en diagonal a la cantonada (en SVG, que s'imprimeix sempre). */
+#print-root .pr-doc:has(.pr-dip)>.pr-h,#print-root .pr-doc:has(.pr-dip)>.pr-f{display:none}
+.pr-dip{position:relative;box-sizing:border-box;height:265mm;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24mm 18mm;border:3px double #8a7d63;overflow:hidden;text-align:center;color:#111;break-after:page;page-break-after:always}
+.pr-dip:last-child{break-after:auto;page-break-after:auto}
+.pr-dip-sash{position:absolute;top:0;left:0;width:62mm;height:62mm}
+.pr-dip-logo{width:22mm;height:22mm;object-fit:contain;margin-bottom:6mm}
+.pr-dip-k{margin:0;font-size:11pt;letter-spacing:.2em;text-transform:uppercase;color:#555}
+.pr-dip-e{margin:3mm 0 14mm;font-family:var(--f-display);font-style:italic;font-size:16pt;color:#333}
+.pr-dip-t{margin:0 0 6mm;font-family:var(--f-display);font-weight:600;font-size:40pt;line-height:1.05;text-wrap:balance}
+.pr-dip-d{max-width:130mm;margin:0 0 14mm;font-size:12pt;line-height:1.5;color:#444}
+.pr-dip-a{margin:0 0 3mm;font-size:10.5pt;letter-spacing:.18em;text-transform:uppercase;color:#666}
+.pr-dip-n{margin:0;font-family:var(--f-display);font-style:italic;font-weight:600;font-size:32pt;line-height:1.1}
+.pr-dip-w{margin:2mm 0 0;font-size:13pt;color:#444}
+.pr-dip-f{margin:16mm 0 0;font-size:10.5pt;color:#555}
 .my-att{padding:14px;display:grid;gap:10px}
 .my-att .big{font-family:var(--f-display);font-weight:600;font-size:40px;line-height:1}
 .my-att .big small{font-size:calc(18px*var(--ts));color:var(--muted)}

@@ -244,7 +244,7 @@ async function deleteGroup(el) {
   const at = new Date().toISOString();
   try {
     const refs = [];
-    for (const col of ['members', 'memberPriv', 'wardrobe', 'productions', 'attendance', 'attArchive', 'attMine', 'prodChoice', 'scores', 'kit', 'absences', 'subs', 'rsvp', 'announcements', 'polls', 'pollVotes', 'push', 'classes', 'classReq', 'classPlan', 'classNotes', 'classFiles', 'classIcs', 'students', 'works', 'trips', 'tripSignups', 'profiles', 'messages', 'threads', 'nudges', 'memberNotes', 'memberDocs', 'memberFiles', 'config']) {
+    for (const col of ['members', 'memberPriv', 'wardrobe', 'productions', 'attendance', 'attArchive', 'attMine', 'prodChoice', 'scores', 'kit', 'absences', 'subs', 'rsvp', 'announcements', 'polls', 'pollVotes', 'catProps', 'turnout', 'push', 'classes', 'classReq', 'classPlan', 'classNotes', 'classFiles', 'classIcs', 'students', 'works', 'trips', 'tripSignups', 'profiles', 'messages', 'threads', 'nudges', 'memberNotes', 'memberDocs', 'memberFiles', 'config']) {
       say('Preparant…');
       const snap = await db.collection(col).get();
       for (const d of snap.docs) if (!(col === 'config' && d.id === 'main')) refs.push(d.ref);
