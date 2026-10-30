@@ -359,9 +359,6 @@ function sheetBandes(id) {
       <label class="field"><span>On (opcional)</span><input class="inp" id="bd-gplace" maxlength="80" value="${esc(p.galaPlace || '')}" placeholder="p. ex. Restaurant Can Culleretes, Barcelona"><small>Surt amb el botó «Com s’hi arriba» (obre el mapa).</small></label>
       <label class="field"><span>Etiqueta (opcional)</span><input class="inp" id="bd-gdress" maxlength="80" value="${esc(p.galaDress || '')}" placeholder="p. ex. Vestit de gala: és la nit de l’any"></label>
       <label class="field"><span>El programa (opcional), un moment per línia</span><textarea class="inp" id="bd-gprog" style="min-height:110px" placeholder="21:00 Arribada i photocall&#10;21:30 Sopar&#10;23:00 Entrega de les bandes&#10;00:30 Festa">${esc(programText(p))}</textarea></label>
-      <label class="field"><span>Bon a saber (opcional)</span><textarea class="inp" id="bd-ginfo" maxlength="1500" style="min-height:80px" placeholder="El preu del sopar, com es paga, què cal portar…">${esc(p.galaInfo || '')}</textarea><small>Amb el format dels anuncis (**negreta**, llistes amb «-», enllaços).</small></label>
-      <label class="field"><span>Inscripció (opcional)</span><select class="inp" id="bd-trip"><option value="">Sense inscripció</option>${tripsSorted().filter(t => t.id === p.tripId || (t.to || t.from || '') >= TODAY).map(t => `<option value="${esc(t.id)}" ${t.id === p.tripId ? 'selected' : ''}>${esc(t.title)} · ${esc(ddmm(t.from))}</option>`).join('')}</select>
-        <small>Si hi ha sopar amb inscripció, fes-ne una sortida al Tauler (amb el preu i les preguntes, p. ex. el menú) i tria-la aquí: a la pàgina de la Nit hi haurà el botó per apuntar-s’hi.</small></label>
       <div class="field"><span>Finalistes per categoria</span>${choose('bd-fin', +p.finalists || BANDES_FINAL, [3, 5])}</div>
       ${ex && !ex.draft ? `<div class="toggle-row"><span><b>Tancada</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Ja no s’hi pot votar</span></span><label class="switch"><input type="checkbox" id="bd-closed" ${p.closed ? 'checked' : ''}><span></span></label></div>` : ''}
     </div>`,
@@ -378,7 +375,6 @@ function sheetBandes(id) {
           selfOk: el.querySelector('#bd-self').checked, closesAt: el.querySelector('#bd-close').value,
           galaName: el.querySelector('#bd-gname').value.trim() || 'La Nit de les Bandes', galaAt: el.querySelector('#bd-gala').value, galaPlace: el.querySelector('#bd-gplace').value.trim(), finalists: val('#bd-fin'),
           galaTime: el.querySelector('#bd-gtime').value, galaDress: el.querySelector('#bd-gdress').value.trim(), program: parseProgram(el.querySelector('#bd-gprog').value),
-          galaInfo: el.querySelector('#bd-ginfo').value.trim(), tripId: el.querySelector('#bd-trip').value,
           closed: el.querySelector('#bd-closed')?.checked ?? !!p.closed, author: ex?.author || authorName(), createdAt: ex?.createdAt || new Date().toISOString() };
       };
       const preview = () => {
