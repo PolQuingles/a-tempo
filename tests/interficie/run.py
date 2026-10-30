@@ -3,12 +3,13 @@
 Per a cada perfil (administració, cap de corda, cantaire, direcció sense fitxa, professor de cant, gerència) i mida
 (mòbil petit, mòbil, ordinador) recorre totes les pantalles i comprova que no hi ha errors ni res que surti de la
 pantalla. També comprova el botó «enrere», els enllaços directes a una pantalla, la versió d'ordinador, la vista prèvia
-de cada rol, les converses i els recordatoris, l'arxiu de l'assistència, el registre d'errors i que l'app s'obre sense xarxa.
+de cada rol, les converses i els recordatoris, l'arxiu de l'assistència, el registre d'errors, que passada la mitjanit
+l'app continua al dia de les dades i que l'app s'obre sense xarxa.
 
     pip install playwright && python -m playwright install chromium
     python3 tests/interficie/run.py
 """
-import functools, http.server, json, os, sys, tempfile, threading
+import datetime, functools, http.server, json, os, sys, tempfile, threading, time
 
 from playwright.sync_api import sync_playwright
 
@@ -79,6 +80,19 @@ def check(cond, name, detail=""):
         print(f"  ✗ {name}{': ' + detail if detail else ''}")
 
 
+# Cap pàgina no ha d'estar oberta just quan arriba la mitjanit: per continuar al dia de les dades, el seu rellotge hauria
+# de tornar un dia enrere (vegeu fake-firebase.js). Si falta poc, abans d'obrir-ne una de nova s'espera que passi.
+MIDNIGHT_WAIT = 120
+
+
+def wait_past_midnight():
+    now = datetime.datetime.now()
+    left = (datetime.datetime.combine(now.date() + datetime.timedelta(days=1), datetime.time()) - now).total_seconds()
+    if left < MIDNIGHT_WAIT:
+        print(f"  (falten {left:.0f} s per a la mitjanit: s'espera que passi)")
+        time.sleep(left + 1)
+
+
 class Quiet(http.server.SimpleHTTPRequestHandler):
     def log_message(self, *args):
         pass
@@ -92,6 +106,7 @@ def serve(directory):
 
 def open_app(browser, base, user, opts, route=""):
     ctx = browser.new_context(**opts)
+    wait_past_midnight()
     page = ctx.new_page()
     errors = []
     page.on("pageerror", lambda e: errors.append(f"error: {e}"))
@@ -2253,6 +2268,33 @@ def main():
         check(len(notes) == 1 and "funcioQueNoExisteix" in notes[0]["msg"], "un error de l'app deixa una nota", str(notes)[:200])
         check(all(set(n) <= {"kind", "msg", "where", "at", "app", "gid", "route", "ua", "online"} for n in notes), "la nota no porta res més del que permeten les regles")
         ctx.close()
+
+        print("Passada la mitjanit: l'app continua al dia de les dades")
+        # Com quan les proves comencen abans de les 12 de la nit i acaben després: dades d'ahir, i el rellotge d'avui.
+        srv2 = serve(build(os.path.join(tempfile.mkdtemp(), "site"), (datetime.date.today() - datetime.timedelta(days=1)).isoformat()))
+        ctx, page, errors = open_app(browser, f"http://127.0.0.1:{srv2.server_address[1]}", "pol", MOBILE)
+        r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          const real = new Date(performance.timeOrigin + performance.now()), t = new Date(), mins = x => x.getHours() * 60 + x.getMinutes();
+          out.day = TODAY === SEED_DAY && isoDate(t) === SEED_DAY && isoDate(real) > SEED_DAY && allSessions().some(x => x.date === TODAY);
+          out.hour = Math.abs(mins(t) - mins(real)) <= 1;
+          const a = Date.now(); await s(200);
+          out.api = Math.abs(a - t.getTime()) < 1000 && Date.now() - a >= 150 && new Date(2026, 0, 2, 3, 4).getHours() === 3 && new Date(0).getTime() === 0
+            && new Date('2026-01-02T03:04:05Z').getTime() === Date.UTC(2026, 0, 2, 3, 4, 5) && Date.parse('2026-01-02T03:04:05Z') === Date.UTC(2026, 0, 2, 3, 4, 5)
+            && t instanceof Date && t.constructor === Date && typeof Date() === 'string';
+          const ara = new Date().toISOString();
+          out.past = (S.me.lastSeen || '') <= ara && [...S.announcements.values()].every(x => (x.createdAt || '') <= ara) && unreadAnnouncements().some(x => x.id === 'n1');
+          ui.board = 'anuncis'; applyRoute('tauler/anuncis'); render(); await s(400);
+          out.read = !unreadAnnouncements().length;
+          return out; }""")
+        check(r["day"], "amb dades d'ahir, «avui» és el dia de les dades (i hi ha la sessió d'aquell dia)", str(r))
+        check(r["hour"], "a la mateixa hora del rellotge", str(r))
+        check(r["api"], "Date.now() avança, i new Date(…) amb arguments, Date.UTC i Date.parse fan el de sempre", str(r))
+        check(r["past"], "el que porten les dades (anuncis, última entrada) és d'abans d'ara", str(r))
+        check(r["read"], "i en obrir els anuncis queden llegits", str(r))
+        res = page.evaluate(SWEEP)
+        check(res["vistes"] >= 8 and not errors, f"totes les pantalles s'obren sense errors ({res['vistes']})", "; ".join(errors[:3]))
+        ctx.close()
+        srv2.shutdown()
 
         print("Sense cobertura")
         ctx, page, errors = open_app(browser, base, "pol", MOBILE)
