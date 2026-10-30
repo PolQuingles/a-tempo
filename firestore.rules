@@ -183,7 +183,7 @@ service cloud.firestore {
     // tools/stamp.py hi escriu l'empremta d'aquest fitxer. La vigilància comprova que les regles publicades són les del
     // repositori demanant reglesVersio/<empremta>: si les publicades són unes altres, la lectura es denega.
     match /reglesVersio/{v} {
-      allow get: if v == '981ed5a7cde7';
+      allow get: if v == 'bd070e7cb7ca';
     }
 
     match /plataforma/equip {
@@ -429,6 +429,19 @@ service cloud.firestore {
             && existsAfter(/databases/$(database)/documents/cors/$(c)/turnout/$(pid));
           allow delete: if boardPost(c);
         }
+      }
+      // Els resultats muts d'unes bandes, quan es tanca la votació: tally/<votació> = { cats: { <categoria>: { n: [vots, de més a
+      // menys], b: paperetes } }, win, sig, at }, sense cap nom, que veu tothom. Hi posa els números qui porta el tauler (que
+      // llegeix tots els vots). A tallyMe/<votació>_<persona> = { pollId, memberId, cats }, en quantes categories ha rebut vots
+      // cadascú: només el llegeix ella (i qui el posa); qui no n'ha rebut cap no en té.
+      match /tally/{pid} {
+        allow read: if isStaff(c) || hasRole(c, ['backup']) || isService();
+        allow write: if boardPost(c);
+      }
+      match /tallyMe/{id} {
+        allow get: if hasSpace(c) && id.split('_').size() == 2 && mine(c, id.split('_')[1]);
+        allow read: if boardPost(c) || hasRole(c, ['backup']) || isService();
+        allow write: if boardPost(c);
       }
       // Les propostes de categories d'unes bandes (catProps/<id>), abans de votar: les fa qualsevol de la plantilla, a nom seu, i
       // les veu tothom (l'app no diu de qui són); cadascú hi suma o hi treu el seu «m'agrada», i pot treure les seves. Les porta

@@ -1053,6 +1053,25 @@ expect("AD9b ni toca la plantilla", commit([upd(f"cors/{F}/members/m1", {"name":
 expect("AD9c ni veu els comptes", lst(f"cors/{F}/staff", T["fest"]), False)
 expect("AD9d ni les respostes a les convocatòries de tothom", lst(f"cors/{F}/rsvp", T["fest"]), False)
 
+# Els resultats muts de les bandes: el resum sense noms (tally) el veu tothom i el posa qui porta el tauler; la fitxa de cadascú
+# (tallyMe/<votació>_<persona>), només la veu ella.
+TA = {"cats": {"k1": {"n": [3, 1], "b": 3}}, "win": {}, "sig": "x", "at": now}
+expect("AE1 la secretaria hi posa el resum mut", commit([upd(f"cors/{F}/tally/bt1", TA)], T["sec"]), True)
+expect("AE1b la comissió de festes també", commit([upd(f"cors/{F}/tally/bt1", TA)], T["fest"]), True)
+expect("AE1c un cantaire no", commit([upd(f"cors/{F}/tally/bt1", TA)], T["singer"]), False)
+expect("AE1d ni un cap de corda", commit([upd(f"cors/{F}/tally/bt1", TA)], T["pau"]), False)
+expect("AE2 tothom veu el resum", get(f"cors/{F}/tally/bt1", T["singer"]), True)
+expect("AE3 qui porta el tauler hi posa les fitxes", commit([upd(f"cors/{F}/tallyMe/bt1_m1", {"pollId": "bt1", "memberId": "m1", "cats": 2}),
+                                                     upd(f"cors/{F}/tallyMe/bt1_m2", {"pollId": "bt1", "memberId": "m2", "cats": 5})], T["sec"]), True)
+expect("AE4 cadascú veu la seva", get(f"cors/{F}/tallyMe/bt1_m1", T["singer"]), True)
+expect("AE4b i, si no en té, sap que no n'hi ha", get(f"cors/{F}/tallyMe/bt9_m1", T["singer"]), "404")
+expect("AE4c però no la d'una altra persona", get(f"cors/{F}/tallyMe/bt1_m2", T["singer"]), False)
+expect("AE4d ni en fa la llista", lst(f"cors/{F}/tallyMe", T["singer"]), False)
+expect("AE4e ni un cap de corda", get(f"cors/{F}/tallyMe/bt1_m1", T["pau"]), False)
+expect("AE4f ni amb un identificador enganyós", get(f"cors/{F}/tallyMe/bt1_m2_m1", T["singer"]), False)
+expect("AE5 ningú no s'escriu la seva", commit([upd(f"cors/{F}/tallyMe/bt1_m1", {"pollId": "bt1", "memberId": "m1", "cats": 26})], T["singer"]), False)
+expect("AE6 qui porta el tauler n'esborra (qui ja no té vots)", commit([dele(f"cors/{F}/tallyMe/bt1_m2")], T["fest"]), True)
+
 print()
 print(f"{PASSES} correctes · {len(FAILS)} errors")
 sys.exit(1 if FAILS else 0)
