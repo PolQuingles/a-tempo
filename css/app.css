@@ -1167,6 +1167,22 @@ button.mday:hover{background:var(--surface-2)}
 .bn-nom.opening .bn-fin li{animation:gala-in .55s cubic-bezier(.2,.8,.2,1) both;animation-delay:var(--d,0ms)}
 .bn-me{margin:0;padding:12px 14px;border-radius:var(--r-md);border:1px solid var(--gold-line);background:var(--gold-soft);font-size:calc(14.5px*var(--ts))}
 .bn-me b{font-family:var(--f-display);font-style:italic;font-weight:600;font-size:calc(17px*var(--ts));color:var(--gold)}
+.bn-got{margin:0;padding:12px 14px;border-radius:var(--r-md);border:1px solid var(--line);background:var(--surface);font-size:calc(14.5px*var(--ts))}
+.bn-got b{font-family:var(--f-display);font-style:italic;font-weight:600;font-size:calc(17px*var(--ts));color:var(--gold);font-variant-numeric:tabular-nums}
+.bn-got small{display:block;margin-top:2px;color:var(--muted);font-size:calc(12.5px*var(--ts))}
+.bn-mute-i{margin:0 0 12px}
+.bn-mute-l{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.bn-mu{display:grid;justify-items:center;align-content:start;gap:4px;padding:12px 10px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);text-align:center}
+.bn-mu h3{margin:0;font-size:calc(13px*var(--ts));font-weight:700;line-height:1.25;text-wrap:balance}
+.bn-mu svg{display:block;width:96px;height:96px;margin:4px 0}
+.bn-mu circle{fill:none;stroke-width:16}
+.bn-mu circle.g1{stroke:var(--bd-g1)}.bn-mu circle.g2{stroke:var(--bd-g2)}.bn-mu circle.g3{stroke:var(--bd-g3)}.bn-mu circle.r{stroke:var(--bd-r)}.bn-mu circle.w{stroke:var(--gold)}
+.bn-mu text{text-anchor:middle;fill:var(--ink);font-family:var(--f-display)}
+.bn-mu .c1{font-size:22px;font-weight:600}
+.bn-mu .c2{fill:var(--muted);font-family:var(--f-ui);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase}
+.bn-mu p{margin:0;font-size:calc(12.5px*var(--ts));color:var(--muted);font-variant-numeric:tabular-nums}
+.bn-mu .bn-mu-w{color:var(--ink)}
+.bn-mu .bn-mu-w b{color:var(--gold)}
 .bn-next-l{list-style:none;margin:8px 0 0;padding:0}
 .bn-next-l li{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px solid var(--line);font-size:calc(14px*var(--ts))}
 .bn-next-l li:first-child{border-top:0}

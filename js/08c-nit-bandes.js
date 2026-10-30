@@ -274,7 +274,9 @@ function viewBandes() {
     ${ph === 'done' ? bandesPalmPage(p) : ''}
     ${['nom', 'gala', 'after'].includes(ph) || (ph === 'done' && !p.results) ? bandesNomBlock(p) : ''}
     ${ph === 'closed' ? `<section class="bn-card"><p style="margin:0">La votació s’ha tancat. Aviat es revelaran els finalistes de cada categoria${p.galaAt ? `, un dia rere l’altre fins a la Nit` : ''}.</p></section>` : ''}
+    ${tallyOn(p) ? bandesMineBlock(p) : ''}
     ${['closed', 'nom', 'gala', 'after'].includes(ph) ? bandesVoteBlock(p) : ''}
+    ${tallyOn(p) ? bandesMuteBlock(p) : ''}
     ${bandesCatsBlock(p, ph === 'prop')}
     ${bandesTeamBlock(p)}
     ${older.length ? `<div class="section-title"><h2 class="h2">Edicions anteriors</h2></div>${older.map(q => `<details class="np-group"><summary><span>${esc(q.title)}</span>${ICON.chev}</summary><ul class="bd-palm-l">${(q.cats || []).filter(c => q.results[c.id]?.length).map(c => `<li><span class="bd-cat">${esc(c.name)}</span><span class="bd-win">${q.results[c.id].map(k => esc(keyName(k))).join('<br>')}</span></li>`).join('')}</ul></details>`).join('')}` : ''}
@@ -381,6 +383,99 @@ function sendFirstVote(key, rec) {
   b.set(db.doc(`turnout/${rec.pollId}/by/${rec.memberId}`), { at: rec.at });
   b.set(db.doc(`turnout/${rec.pollId}`), { [rec.section]: firebase.firestore.FieldValue.increment(1) }, { merge: true });
   b.commit().catch(() => persist('pollVotes', key, rec, 10));
+}
+
+/* ---------- Els resultats muts, quan es tanca la votació ---------- */
+// tally/<votació> = { cats: { <categoria>: { n: [vots de cada persona o parella, de més a menys], b: paperetes } }, win: { <categoria>:
+// [vots de cada guanyador, en l'ordre de results] }, sig, at }: com s'han repartit els vots de cada categoria, sense cap nom, que
+// veu tothom. tallyMe/<votació>_<persona> = { pollId, memberId, cats }: en quantes categories ha rebut vots, que només veu ella (qui
+// no n'ha rebut cap no en té). Els hi posa qui porta el tauler, que té tots els vots, quan no hi coincideixen (sig); els vots dels
+// guanyadors, només quan hi ha el palmarès.
+const BN_TALLY = { pid: null, data: null, me: null, off: null, offMe: null, fixAt: 0, seenAt: 0 };
+const tallyOn = p => !!p && !['draft', 'prop', 'vote'].includes(bandesPhase(p));
+const strHash = s => { let h = 5381; for (let i = 0; i < s.length; i++) h = (Math.imul(h, 33) ^ s.charCodeAt(i)) >>> 0; return h.toString(36); };
+function tallyPayload(p, t) {
+  const cats = {}, win = {}, me = {};
+  for (const x of t.cats) {
+    if (x.rows.length) cats[x.cat.id] = { n: x.rows.map(r => r.n), b: x.ballots };
+    const res = p.results?.[x.cat.id];
+    if (res?.length) win[x.cat.id] = res.map(k => x.rows.find(r => r.key === k)?.n || 0);
+  }
+  for (const e of t.people) if (e.nominations) me[e.id] = e.nominations;
+  return { cats, win, me };
+}
+function tallyFor(p) {
+  if (!tallyOn(p) || PREVIEW || typeof db === 'undefined' || !db) return null;
+  if (BN_TALLY.pid !== p.id) {
+    BN_TALLY.off?.(); BN_TALLY.offMe?.();
+    Object.assign(BN_TALLY, { pid: p.id, data: null, me: null, offMe: null, fixAt: 0, seenAt: 0 });
+    BN_TALLY.off = db.doc(`tally/${p.id}`).onSnapshot(d => { BN_TALLY.data = d.exists ? d.data() : {}; scheduleRender(); }, () => { BN_TALLY.data = null; });
+    if (myId()) BN_TALLY.offMe = db.doc(`tallyMe/${p.id}_${myId()}`).onSnapshot(d => { BN_TALLY.me = d.exists ? d.data() : null; scheduleRender(); }, () => { BN_TALLY.me = null; });
+  }
+  fixTally(p);
+  return BN_TALLY.data;
+}
+/** Qui porta el tauler hi posa els números si no hi coincideixen: com a molt un cop per minut, i només si ja té tots els vots
+ *  (tants com diu el recompte de participació). Les fitxes de cadascú van primer i el resum, al final (amb la signatura). */
+function fixTally(p) {
+  if (!canBoard() || !readsBoard() || !BN_TALLY.data || Date.now() - BN_TALLY.seenAt < 5e3 || Date.now() - BN_TALLY.fixAt < 60e3) return;
+  const s = turnoutSum(p, turnoutFor(p));
+  if (!s) return;
+  BN_TALLY.seenAt = Date.now();
+  const people = bandesPeople(p), t = bandesTally(p, bandesVotes(p), people);
+  if (!t.voters || t.voters < s.n) return;
+  const pay = tallyPayload(p, t), sig = strHash(JSON.stringify(pay));
+  if (BN_TALLY.data.sig === sig) return;
+  BN_TALLY.fixAt = Date.now();
+  const ops = people.map(m => [db.doc(`tallyMe/${p.id}_${m.id}`), pay.me[m.id] ? { pollId: p.id, memberId: m.id, cats: pay.me[m.id] } : null]);
+  ops.push([db.doc(`tally/${p.id}`), { cats: pay.cats, win: pay.win, sig, at: new Date().toISOString() }]);
+  (async () => {
+    for (let i = 0; i < ops.length; i += 400) {
+      const b = fs.batch();
+      for (const [ref, data] of ops.slice(i, i + 400)) data ? b.set(ref, data) : b.delete(ref);
+      await b.commit();
+    }
+  })().catch(() => {});
+}
+/** L'anell d'una categoria, sense noms: un tros per persona (o parella), de més a menys vots (les dotze primeres; la resta,
+ *  juntes). Amb el palmarès, els trossos dels guanyadors van en daurat. */
+function tallyDonut(n, win) {
+  const total = n.reduce((a, b) => a + b, 0);
+  if (!total) return '';
+  const gold = new Set(), left = [...(win || [])];
+  n.forEach((v, i) => { const j = left.indexOf(v); if (j >= 0) { gold.add(i); left.splice(j, 1); } });
+  const segs = n.slice(0, 12).map((v, i) => ({ v, cls: gold.has(i) ? 'w' : `g${i % 3 + 1}` }));
+  if (n.length > 12) segs.push({ v: n.slice(12).reduce((a, b) => a + b, 0), cls: 'r' });
+  const R = 42, C = 2 * Math.PI * R, gap = segs.length > 1 ? 1.6 : 0;
+  let at = 0;
+  return `<svg viewBox="0 0 120 120" aria-hidden="true"><g transform="rotate(-90 60 60)">${segs.map(s => {
+    const len = Math.max(0, s.v / total * C - gap), arc = `<circle class="${s.cls}" r="${R}" cx="60" cy="60" stroke-dasharray="${len.toFixed(2)} ${(C - len).toFixed(2)}" stroke-dashoffset="${(-at).toFixed(2)}"/>`;
+    at += s.v / total * C;
+    return arc;
+  }).join('')}</g><text x="60" y="60" class="c1">${total}</text><text x="60" y="75" class="c2">${total === 1 ? 'vot' : 'vots'}</text></svg>`;
+}
+function bandesMuteBlock(p) {
+  const d = tallyFor(p), cats = (p.cats || []).filter(c => d?.cats?.[c.id]?.n?.length);
+  if (!cats.length) return '';
+  const res = p.results || {};
+  const item = c => {
+    const x = d.cats[c.id], total = x.n.reduce((a, b) => a + b, 0), who = c.pair ? ['parella', 'parelles'] : ['persona', 'persones'];
+    const win = res[c.id]?.length && d.win?.[c.id]?.length === res[c.id].length ? res[c.id].map((k, i) => ({ k, v: d.win[c.id][i] })) : null;
+    const line = win ? win.map(w => `<b>${esc(keyName(w.k))}</b>, amb el ${pct(w.v / total)}`).join(' · ') : x.n.length === 1 ? `Tots els vots, per a la mateixa ${who[0]}` : `El més votat en té el ${pct(x.n[0] / total)}`;
+    const label = `${c.name}: ${total} ${total === 1 ? 'vot' : 'vots'} entre ${x.n.length} ${who[x.n.length === 1 ? 0 : 1]}. ${win ? win.map(w => `${keyName(w.k)}, ${pct(w.v / total)}`).join('; ') : `El més votat, ${pct(x.n[0] / total)}`}.`;
+    return `<li class="bn-mu" role="img" aria-label="${esc(label)}"><h3>${esc(c.name)}</h3>${tallyDonut(x.n, win && d.win[c.id])}
+      <p>${x.b} ${x.b === 1 ? 'papereta' : 'paperetes'} · ${x.n.length} ${who[x.n.length === 1 ? 0 : 1]}</p><p class="bn-mu-w">${line}</p></li>`;
+  };
+  return `<details class="np-group bn-mute"><summary><span>Com s’ha votat (${cats.length} ${cats.length === 1 ? 'categoria' : 'categories'})</span>${ICON.chev}</summary>
+    <p class="m bn-mute-i">Sense noms: cada tros és una persona${cats.some(c => c.pair) ? ' (o una parella)' : ''}, i com més gran, més vots.${p.results ? ' Els guanyadors van en daurat.' : ' Qui ha guanyat es descobreix a la Nit.'}</p>
+    <ul class="bn-mute-l">${cats.map(item).join('')}</ul></details>`;
+}
+/** A qui ha rebut algun vot, i només a ella: en quantes categories. */
+function bandesMineBlock(p) {
+  tallyFor(p);
+  const m = BN_TALLY.pid === p.id ? BN_TALLY.me : null, n = (p.cats || []).length;
+  if (!m?.cats) return '';
+  return `<p class="bn-got">Has rebut vots en <b>${m.cats === 1 ? 'una' : m.cats}</b> de les ${n} categories. <small>Només ho veus tu.</small></p>`;
 }
 
 /* ---------- Les propostes de categories, abans de votar ---------- */

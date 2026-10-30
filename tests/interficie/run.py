@@ -2055,6 +2055,12 @@ def main():
           out.page = /finalistes/i.test(pg) && /avui/i.test(pg) && pg.includes('Pau Riera') && pg.includes('Encara per revelar (2)') && !!document.querySelector('.bn-team');
           render(); await s(200);
           out.stays = !document.querySelector('.bn-nom.sealed') && (document.querySelector('.bn-page')?.innerText || '').includes('Pau Riera');
+          // Els resultats muts: qui porta el tauler hi posa els números (sense noms) i la fitxa de cadascú.
+          for (let k = 0; k < 20 && !document.querySelector('.bn-got'); k++) await s(150);
+          const td = (await F.doc(`cors/${GID}/tally/bn1`).get()).data() || {};
+          out.tally = JSON.stringify(td.cats?.k1) === '{"n":[2,2,1],"b":3}' && !/[0-9a-z]{8,}/i.test(JSON.stringify(td.cats)) && !!td.sig;
+          out.mine = /Has rebut vots en 2 de les 3 categories/.test(document.querySelector('.bn-got')?.innerText || '');
+          out.priv = !(await F.doc(`cors/${GID}/tallyMe/bn1_${id('Anna Puig')}`).get()).exists && (await F.doc(`cors/${GID}/tallyMe/bn1_${id('Laia Ferrer')}`).get()).data()?.cats === 3;
           // La invitació sencera: l'hora (compte enrere per hores), l'etiqueta, el programa, la inscripció al sopar i el calendari.
           const t = { id: 'tn1', title: 'Sopar de la Nit', from: q.galaAt, to: q.galaAt, deadline: addDays(TODAY, 1), sections: [], questions: [] };
           S.trips.set(t.id, t); persist('trips', t.id, t, 10);
@@ -2085,6 +2091,8 @@ def main():
                          ("plan", "en publicar-los, diu com es revelaran"), ("noms", "els finalistes es desen per ordre alfabètic, i es revelen un cada dia fins a la Nit"),
                          ("route", "la Nit té la seva pàgina (#/bandes)"), ("sealed", "els finalistes d'avui arriben dins d'un sobre tancat"),
                          ("page", "en obrir el sobre, la pàgina ensenya els finalistes d'avui i diu quants en falten"), ("stays", "i el sobre queda obert"),
+                         ("tally", "en tancar-se la votació, qui porta el tauler hi posa els resultats muts (només números)"),
+                         ("mine", "qui ha rebut vots veu en quantes categories"), ("priv", "i qui no n'ha rebut cap no té fitxa"),
                          ("invite", "la invitació té el compte enrere per hores, l'etiqueta i «afegeix-la al calendari»"),
                          ("prog", "el programa, la informació pràctica i la inscripció al sopar"), ("ics", "el calendari porta l'hora, el nom i l'etiqueta"),
                          ("menu", "la Nit surt al menú del compte"), ("pies", "els resultats tenen l'anell de cada categoria, l'índex i qui ha rebut més vots"),
@@ -2095,9 +2103,13 @@ def main():
         r = page.evaluate("""async () => { const s = ms => new Promise(r => setTimeout(r, ms));
           ui.tab = 'bandes'; render(); await s(300);
           const pg = document.querySelector('.bn-page')?.innerText || '';
-          return { shown: pg.includes('Pau Riera'), hidden: !pg.includes('Clara Vila'), team: !document.querySelector('.bn-team'), voted: /Has votat 3 de 3/.test(pg) }; }""")
+          const mu = document.querySelector('.bn-mute'), mt = mu?.textContent || '';
+          return { shown: pg.includes('Pau Riera'), hidden: !pg.includes('Clara Vila'), team: !document.querySelector('.bn-team'), voted: /Has votat 3 de 3/.test(pg),
+            mute: !!mu && !mu.open && mu.querySelectorAll('.bn-mu svg').length === 3 && /El més votat en té el 40%/.test(mt)
+              && !['Laia', 'Marc', 'Pau', 'Clara'].some(n => mt.includes(n)), nogot: !document.querySelector('.bn-got') }; }""")
         for k, label in [("shown", "el cantaire veu els finalistes ja revelats"), ("hidden", "però no els dels dies que vénen"),
-                         ("team", "i no hi té les eines de l'equip"), ("voted", "i hi veu el seu vot")]:
+                         ("team", "i no hi té les eines de l'equip"), ("voted", "i hi veu el seu vot"),
+                         ("mute", "i com s'ha votat cada categoria, plegat i sense cap nom"), ("nogot", "qui no ha rebut vots no veu cap fitxa")]:
             check(r.get(k), label, str(r))
         check(not errors, "sense errors a la Nit de les Bandes", "; ".join(errors[:3]))
         ctx.close()
