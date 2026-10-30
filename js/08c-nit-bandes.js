@@ -227,10 +227,10 @@ function bandesPalmPage(p) {
       return `<li><span class="bn-cat">${esc(c.name)}</span>${res[c.id].map(k => `<span class="bn-win-r">${bnWho(k).replace('class="bn-nm"', 'class="bn-nm bn-winner"')}</span>`).join('')}${fin.length ? `<small>Finalistes: ${esc(fin.map(keyName).join(', '))}</small>` : ''}</li>`;
     }).join('')}</ol>`;
 }
-function bandesCatsBlock(p, open, already) {
+function bandesCatsBlock(p, already) {
   const cats = p.cats || [];
   if (!cats.length) return '';
-  return `<details class="np-group bn-cats"${open ? ' open' : ''}><summary><span>${already ? `Les ${cats.length} categories que ja hi ha` : `Les ${cats.length} categories`}</span>${ICON.chev}</summary>
+  return `<details class="np-group bn-cats"><summary><span>${already ? `Les ${cats.length} categories que ja hi ha` : `Les ${cats.length} categories`}</span>${ICON.chev}</summary>
     <ul class="bn-cat-l">${cats.map(c => `<li><div><b>${esc(c.name)}</b>${c.pair ? '<span class="tag">Parella</span>' : c.sec ? `<span class="tag">${esc(SEC[c.sec]?.name || c.sec)}</span>` : ''}</div>${c.desc ? `<small>${esc(c.desc)}</small>` : ''}</li>`).join('')}</ul></details>`;
 }
 function bandesTeamBlock(p) {
@@ -275,7 +275,7 @@ function viewBandes() {
     ${['nom', 'gala', 'after'].includes(ph) || (ph === 'done' && !p.results) ? bandesNomBlock(p) : ''}
     ${ph === 'closed' ? `<section class="bn-card"><p style="margin:0">La votació s’ha tancat. Aviat es revelaran els finalistes de cada categoria${p.galaAt ? `, un dia rere l’altre fins a la Nit` : ''}.</p></section>` : ''}
     ${['closed', 'nom', 'gala', 'after'].includes(ph) ? bandesVoteBlock(p) : ''}
-    ${bandesCatsBlock(p, ['draft', 'vote'].includes(ph), ph === 'prop')}
+    ${bandesCatsBlock(p, ph === 'prop')}
     ${bandesTeamBlock(p)}
     ${older.length ? `<div class="section-title"><h2 class="h2">Edicions anteriors</h2></div>${older.map(q => `<details class="np-group"><summary><span>${esc(q.title)}</span>${ICON.chev}</summary><ul class="bd-palm-l">${(q.cats || []).filter(c => q.results[c.id]?.length).map(c => `<li><span class="bd-cat">${esc(c.name)}</span><span class="bd-win">${q.results[c.id].map(k => esc(keyName(k))).join('<br>')}</span></li>`).join('')}</ul></details>`).join('')}` : ''}
   </div>`;
