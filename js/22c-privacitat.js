@@ -18,7 +18,7 @@ function privacyHtml() {
       <li>El que hi escriguis tu: respostes a convocatòries i enquestes, inscripcions a sortides i missatges.</li></ul>
     <h3>Qui les veu</h3>
     <ul><li><b>Tu</b> veus totes les teves dades.</li>
-      <li>${priv ? `<b>La resta de ${esc(V.members)}</b> no veuen la teva assistència ni els teus avisos; només el teu nom, la ${esc(V.section)} i si estàs de baixa (sense el motiu).` : `<b>La resta de ${esc(V.members)}</b> poden veure les llistes d’assistència de tothom (l’administració ho pot canviar a Ajustos › Llistes privades).`}</li>
+      <li>${priv ? `<b>La resta de ${esc(V.members)}</b> no veuen la teva assistència ni els teus avisos; només el teu nom, la ${esc(V.section)} i si estàs de baixa (sense el motiu).` : `<b>La resta de ${esc(V.members)}</b> poden veure l’assistència de tothom: les llistes, les estadístiques i el risc de no arribar a la norma (l’administració ho pot canviar a Ajustos › Llistes privades). Els teus avisos d’absència i el seu motiu, no.`}</li>
       <li>El teu <b>${esc(V.leader)}</b> veu l’assistència i els avisos de la teva ${esc(V.section)}; la <b>direcció</b>, la <b>gerència</b> i l’<b>administració</b>, els de tothom.</li>
       <li>El telèfon, la talla i el contacte d’emergència els veuen qui porta les persones: la <b>secretaria</b>, la <b>gerència</b>, la <b>direcció</b> i l’<b>administració</b>. Els documents signats i la quota, també.</li>
       <li>Les <b>al·lèrgies i intoleràncies</b> només les veus tu, la <b>secretaria</b> i la <b>gerència</b>, per organitzar els àpats de les sortides i els concerts.</li>

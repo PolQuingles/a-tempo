@@ -775,6 +775,13 @@ expect("W3d un cap de corda no les veu totes", lst(f"cors/{F}/memberPriv", T["pa
 expect("W3d2 ni la d'una persona de la seva corda", get(f"cors/{F}/memberPriv/m2", T["leader"]), False)
 expect("W3d3 qui porta les persones, sí", lst(f"cors/{F}/memberPriv", T["sec"]), True)
 expect("W3e i els avisos (compte de servei)", lst(f"cors/{F}/memberPriv", T["service"]), True)
+# Si després s'obren les llistes, les fitxes continuen sent privades (fitxesPriv): l'assistència sí que la veu tothom.
+seed(f"cors/{F}/config/main", {"name": "Cor Jove", "alertFNJ": 3, "minAttendance": 80, "attPrivate": False, "fitxesPriv": True})
+expect("W4 amb les llistes obertes, la cantaire veu les llistes de tothom", get(f"cors/{F}/attendance/s1_T", T["singer"]), True)
+expect("W4b però no la part privada de les fitxes dels altres", get(f"cors/{F}/memberPriv/m2", T["singer"]), False)
+expect("W4c ni totes", lst(f"cors/{F}/memberPriv", T["singer"]), False)
+expect("W4d i la seva, sí", get(f"cors/{F}/memberPriv/m1", T["singer"]), True)
+seed(f"cors/{F}/config/main", {"name": "Cor Jove", "alertFNJ": 3, "minAttendance": 80, "attPrivate": True})
 seed(f"cors/{F}/config/main", {"name": "Cor Jove", "alertFNJ": 3, "minAttendance": 80})
 
 print("X. Missatges a qui fa una producció")
@@ -871,6 +878,7 @@ expect("AA1c però avisa els mòbils que tornin a baixar una col·lecció", comm
 expect("AA1d la secretaria hi desa els documents", commit([upd(f"cors/{F}/config/main", {"documents": []}, ["documents"])], T["sec"]), True)
 expect("AA1e i els rols de l'equip", commit([upd(f"cors/{F}/config/main", {"teamRoles": ["secretaria"]}, ["teamRoles"])], T["sec"]), True)
 expect("AA1f però no les llistes privades", commit([upd(f"cors/{F}/config/main", {"attPrivate": True}, ["attPrivate"])], T["sec"]), False)
+expect("AA1f2 ni les fitxes privades", commit([upd(f"cors/{F}/config/main", {"fitxesPriv": False}, ["fitxesPriv"])], T["sec"]), False)
 expect("AA1g la gerència canvia la norma", commit([upd(f"cors/{F}/config/main", {"minAttendance": 80}, ["minAttendance"])], T["ger"]), True)
 expect("AA1h la direcció també", commit([upd(f"cors/{F}/config/main", {"minAttendance": 80}, ["minAttendance"])], T["dir"]), True)
 expect("AA1i el professorat no", commit([upd(f"cors/{F}/config/main", {"minAttendance": 70}, ["minAttendance"])], T["prof"]), False)

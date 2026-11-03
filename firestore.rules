@@ -150,6 +150,8 @@ service cloud.firestore {
     }
     // Llistes d'assistència privades (Ajustos): qui no les passa només veu la seva còpia, a attMine/<membre>.
     function attPrivate(c) { return get(/databases/$(database)/documents/cors/$(c)/config/main).data.get('attPrivate', false) == true; }
+    // Les fitxes privades (memberPriv): amb les llistes privades o, si després s'han obert, amb fitxesPriv.
+    function fitxesPriv(c) { let cfg = get(/databases/$(database)/documents/cors/$(c)/config/main).data; return cfg.get('attPrivate', false) == true || cfg.get('fitxesPriv', false) == true; }
     // Una conversa privada: la persona de la plantilla i qui té el rol (els caps de corda, només de la seva corda) o el correu a qui ha escrit.
     function inThread(c, d) {
       return (hasSpace(c) && mine(c, d.memberId))
@@ -190,7 +192,7 @@ service cloud.firestore {
     // tools/stamp.py hi escriu l'empremta d'aquest fitxer. La vigilància comprova que les regles publicades són les del
     // repositori demanant reglesVersio/<empremta>: si les publicades són unes altres, la lectura es denega.
     match /reglesVersio/{v} {
-      allow get: if v == 'b0272fff3777';
+      allow get: if v == '606745e8c24b';
     }
 
     match /plataforma/equip {
@@ -681,10 +683,10 @@ service cloud.firestore {
         allow delete: if wardStaff(c) || (hasSpace(c) && mine(c, resource.data.memberId) && resource.data.status == 'demanat');
       }
       // Amb les llistes privades, el que la resta de la plantilla no ha de veure de cada fitxa (telèfon, notes, baixes i
-      // altes amb els motius) va aquí. La llegeixen qui porta les persones i la persona; si les llistes no són privades,
-      // tothom (com la fitxa mateixa). Les dates de les baixes, sense el motiu, són a la fitxa (away).
+      // altes amb els motius) va aquí. La llegeixen qui porta les persones i la persona; si les fitxes no són privades
+      // (fitxesPriv), tothom (com la fitxa mateixa). Les dates de les baixes, sense el motiu, són a la fitxa (away).
       match /memberPriv/{mid} {
-        allow read: if peopleEdit(c) || (hasSpace(c) && mine(c, mid)) || (isStaff(c) && !attPrivate(c)) || hasRole(c, ['backup']) || isService();
+        allow read: if peopleEdit(c) || (hasSpace(c) && mine(c, mid)) || (isStaff(c) && !fitxesPriv(c)) || hasRole(c, ['backup']) || isService();
         allow create, update, delete: if peopleEdit(c);
       }
       match /memberFiles/{id} {

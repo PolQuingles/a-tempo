@@ -7,7 +7,9 @@
 // privades, el que la resta no ha de veure (el telèfon, les notes, les baixes i les altes amb el motiu) va a
 // memberPriv/<membre>, que només llegeixen l'equip i la persona. Aquí es tornen a ajuntar.
 const MEMBER_PRIV = ['phone', 'notes', 'leaves', 'history'];
-const privMembers = () => !!S.config.attPrivate;
+// Les fitxes continuen sent privades encara que després s'obrin les llistes (fitxesPriv): el telèfon, les notes i els motius
+// de les baixes no es tornen a fer públics.
+const privMembers = () => !!(S.config.attPrivate || S.config.fitxesPriv);
 function splitMember(m) {
   const pub = { ...m }, priv = { memberId: m.id };
   for (const k of MEMBER_PRIV) {

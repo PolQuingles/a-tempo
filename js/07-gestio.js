@@ -351,7 +351,7 @@ function manageConfig() {
   <div class="panel cfg-p"${cfgOpen('cantaires') ? '' : ' hidden'}>
     <div class="toggle-row setting"><span><b>Llistes d’assistència privades</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">${attPrivate()
       ? `Cada ${esc(V.member)} només veu la seva assistència. Les llistes, les estadístiques i el risc de tothom només els veu l’equip.`
-      : `Ara tothom pot veure les llistes i les estadístiques de tothom. Activa-ho perquè cadascú només vegi la seva.`}</span></span>
+      : `Ara tothom pot veure les llistes, les estadístiques i el risc de tothom, només per llegir. Activa-ho perquè cadascú només vegi la seva.`}</span></span>
       <label class="switch"><input type="checkbox" id="cfg-private" ${attPrivate() ? 'checked' : ''} data-bind="cfg-private"><span></span></label></div>
     <div class="toggle-row setting"><span><b>Cadascú tria les produccions que fa</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">${choicesOn()
       ? `Cada ${esc(V.member)} diu a «La meva fitxa» quines produccions de la temporada farà. On diu que no, no hi està convocat i no li compta l’assistència.`
