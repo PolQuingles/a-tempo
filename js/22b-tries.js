@@ -82,9 +82,9 @@ async function rebuildMirrors(say) {
 /** L'interruptor d'Ajustos. En activar-lo, primer es fan les còpies de tothom, perquè ningú es quedi sense la seva. */
 async function setAttPrivate(on) {
   if (!on) {
-    if (!await confirmSheet('Llistes obertes a tothom?', `Tots els ${esc(V.members)} podran tornar a veure les llistes d’assistència i les estadístiques de tothom.`, 'Obre-les', false)) { render(); return; }
-    try { await moveMemberPriv(false); } catch { toast('No s’ha pogut fer. Comprova la connexió i torna-ho a provar.'); render(); return; }
-    saveConfig({ attPrivate: false }); toast('Les llistes tornen a ser visibles per a tothom'); render(); return;
+    if (!await confirmSheet('Llistes obertes a tothom?', `Tots els ${esc(V.members)} podran veure les llistes d’assistència, les estadístiques i el risc de tothom (només per llegir). El telèfon, les notes i els motius de les baixes de cada fitxa, i els avisos d’absència, continuaran sent només de l’equip.`, 'Obre-les', false)) { render(); return; }
+    // Les fitxes no es tornen a ajuntar: la part privada (memberPriv) continua sent privada (fitxesPriv, vegeu 02c).
+    saveConfig({ attPrivate: false, fitxesPriv: true }); toast('Les llistes ja són visibles per a tothom'); render(); return;
   }
   if (!await confirmSheet('Llistes privades?', `Cada ${esc(V.member)} només veurà la seva assistència. Les llistes, les estadístiques i el risc de tothom, i el telèfon, les notes i els motius de les baixes de cada fitxa, només els veurà l’equip (administració, direcció, gerència, secretaria i ${esc(V.leaders)}).`, 'Fes-les privades', false)) { render(); return; }
   if (PREVIEW) { previewBlocked(); return; }

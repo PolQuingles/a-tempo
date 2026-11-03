@@ -25,7 +25,7 @@ function viewStats(inBoard) {
   const sub = scope.kind === 'range' ? `<p class="muted mono" style="margin:4px 0 0;font-size:calc(13px*var(--ts))">${ddmm(scope.from)}/${scope.from.slice(0, 4)} – ${ddmm(scope.to)}/${scope.to.slice(0, 4)}</p>` : '';
   const tone = scope.kind === 'prod' ? ` prod-tone tinted" style="--ph:${prodHue(S.productions.get(scope.id))}` : '';
   const head = `<div class="page-head${inBoard ? ' in-board' : ''}${tone}"><div><div class="eyebrow">${scope.kind === 'prod' ? '<i class="pdot"></i>Producció' : 'Estadístiques'}</div>${title(esc(scope.name))}${sub}</div>
-    <button class="btn btn-sm" data-act="export-csv">Exporta CSV</button></div>`;
+    ${S.role === 'edit' ? '<button class="btn btn-sm" data-act="export-csv">Exporta CSV</button>' : ''}</div>`;
   // Dins d'Assistència: una sola fila de filtres (període, producció i secció) sobre el títol.
   const selProd = `<label class="sel"><span class="sr">Producció</span><select data-pick="stats-prod">${prods.map(p => `<option value="${p.id}" ${p.id === scope.id ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select></label>`;
   const selSec = `<label class="sel"><span class="sr">${esc(V.Section)}</span><select data-pick="stats-sec"><option value="">${esc(capz(V.tot))}</option>${SECTIONS.map(x => `<option value="${x.id}" ${ui.statsSec === x.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>`;
@@ -247,9 +247,9 @@ function riskView() {
     <p class="muted" style="font-size:calc(13px*var(--ts));margin:10px 2px 0">Produccions en curs i properes ${helpBtn('risc')}</p>
     ${helpText('risc', `Compten els assajos (no ${V.sh.els} ni les sessions «Altres») i no compten les baixes.`)}
     ${blocks}
-    <div class="panel" style="padding:14px;margin-top:14px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+    ${S.role === 'edit' ? `<div class="panel" style="padding:14px;margin-top:14px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
       <span style="font-size:calc(13.5px*var(--ts))">Passa-ho a direcció o guarda-ho.</span>
-      <button class="btn btn-sm" data-act="risk-copy">Copia el resum</button></div>`;
+      <button class="btn btn-sm" data-act="risk-copy">Copia el resum</button></div>` : ''}`;
 }
 
 /* ---------- Llista de concert ---------- */
@@ -449,26 +449,28 @@ function sheetMyAttendance() {
   if (!me) return;
   openSheet({ title: 'La meva assistència', body: myAttSeason(me) });
 }
-/** La temporada d'una persona: el percentatge, el retard i com va cada producció. Les que encara s'assagen, a la vista (menys
- *  `skip`, la que ja surt a dalt, a la targeta grossa); les acabades, plegades a sota, perquè no ocupin la pantalla. */
-function myAttSeason(me, skip) {
+/** Les produccions d'una persona i, plegada a sota, la temporada sencera (el percentatge i el retard). Les que encara s'assagen,
+ *  a la vista (menys `skip`, la que ja surt a dalt, a la targeta grossa); les acabades, plegades, perquè no ocupin la pantalla.
+ *  Cada una diu les hores d'assaig fetes de les que s'han comptat (la norma va per temps, no per assajos). */
+function myAttSeason(me, skip, head = '') {
   const { season } = seasonCfg();
   const sr = computeStats({ kind: 'range', from: season.from, to: season.to, name: season.name }, me.section).rows.find(x => x.m.id === me.id);
   const sc = sr ? sr.P + sr.R + sr.FJ + sr.FNJ : 0;
   const rows = productionsSorted().map(p => myProdSummary(me, p.id)).filter(x => x && x.counted);
   const done = x => !allSessions(x.prod.id).some(s => s.date >= TODAY);
   const now = rows.filter(x => !done(x) && x.prod.id !== skip), past = rows.filter(done).reverse();
-  const list = xs => `<ul class="mini-list" style="max-height:none">${xs.map(({ prod, r, rs, counted }) => `<li style="display:grid;gap:4px;padding:10px 12px">
+  const list = xs => `<ul class="mini-list" style="max-height:none">${xs.map(({ prod, r, rs }) => `<li style="display:grid;gap:4px;padding:10px 12px">
         <span style="display:flex;justify-content:space-between;gap:8px"><b>${esc(prod.name)}</b><span class="mono">${pct(rate(r))}</span></span>
-        <span class="m">${r.P + r.R} de ${counted} · ${r.FJ} just. · ${r.FNJ} no just.</span><span>${ruleSentence(rs)}</span></li>`).join('')}</ul>`;
-  return `<div class="kpis" style="grid-template-columns:repeat(2,1fr)">
-        <div class="kpi"><div class="kpi-v">${sc ? kpiPct(rate(sr)) : '—'}</div><div class="kpi-l">${esc(season.name)}</div></div>
-        <div class="kpi"><div class="kpi-v">${sr ? sr.min : 0}<small>min</small></div><div class="kpi-l">Retard acumulat</div></div>
-      </div>
-      ${now.length ? `<div style="margin-top:14px">${list(now)}</div>` : ''}
+        <span class="m">${[`${minsText(r.mDone)} de ${minsText(r.mAll)} d’assaig`, r.FJ ? `${r.FJ} just.` : '', r.FNJ ? `${r.FNJ} no just.` : ''].filter(Boolean).join(' · ')}</span><span>${ruleSentence(rs)}</span></li>`).join('')}</ul>`;
+  return `${now.length || past.length ? head : ''}${now.length ? list(now) : ''}
       ${past.length ? `<details class="np-group my-past"><summary><span>Produccions acabades (${past.length})</span>${ICON.chev}</summary>${list(past)}</details>` : ''}
       ${rows.length ? '' : '<p class="muted">Encara no hi ha llistes passades.</p>'}
-      <p class="muted" style="font-size:calc(13px*var(--ts))">Només tu i l’equip ${V.del} veieu aquestes dades. Si hi ha algun error, parla amb el teu ${V.leader}.</p>`;
+      <details class="np-group my-season"><summary><span>Tota la temporada${sc ? ` · ${pct(rate(sr))}` : ''}</span>${ICON.chev}</summary>
+        <div class="kpis" style="grid-template-columns:repeat(2,1fr)">
+          <div class="kpi"><div class="kpi-v">${sc ? kpiPct(rate(sr)) : '—'}</div><div class="kpi-l">${esc(season.name)}${sc ? ` · ${esc(minsText(sr.mDone))} de ${esc(minsText(sr.mAll))}` : ''}</div></div>
+          <div class="kpi"><div class="kpi-v">${sr ? sr.min : 0}<small>min</small></div><div class="kpi-l">Retard acumulat</div></div>
+        </div></details>
+      <p class="muted" style="font-size:calc(13px*var(--ts))">${attPrivate() ? `Només tu i l’equip ${V.del} veieu aquestes dades.` : `Tothom ${V.del} pot veure l’assistència de tothom; els teus avisos d’absència, només l’equip.`} Si hi ha algun error, parla amb el teu ${V.leader}.</p>`;
 }
 /** Assistència, amb el rol de cantaire: només la teva. Avisar d'una absència o d'un retard, els avisos que has fet, com vas a
  *  la producció d'ara i a tota la temporada; i, si avui passes llista d'una corda (en funcions), el botó per fer-ho. */
@@ -485,6 +487,5 @@ function viewMyAtt() {
   return `${head}${subCard}
     ${myNoticesBlock(me, false)}
     ${att}
-    <div class="section-title"><h2 class="h2">Tota la temporada</h2></div>
-    ${myAttSeason(me, myProductionId(me))}`;
+    ${myAttSeason(me, myProductionId(me), '<div class="section-title"><h2 class="h2">Les altres produccions</h2></div>')}`;
 }

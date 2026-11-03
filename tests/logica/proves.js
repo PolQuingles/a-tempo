@@ -224,8 +224,16 @@ prova('rols sumats: cadascú té les pestanyes i els permisos de tots els seus r
     S.memberId = extra.memberId || null; S.role = roleLevel(S.me);
     return { tabs: tabsForRole().join(','), more: moreTabs().join(','), gestio: gestioOn() ? gestioTabs().join(',') : '', areas: attAreas().join(',') };
   };
-  igual(as(['singer'], { memberId: 'a' }), { tabs: 'avisos,llista,calendari,tauler', more: '', gestio: '', areas: 'me' }, 'cantaire');
-  igual(as(['leader', 'singer'], { section: 'T', memberId: 't' }), { tabs: 'avisos,llista,calendari,tauler', more: '', gestio: '', areas: 'me,sec' }, 'cap de corda que canta');
+  igual(as(['singer'], { memberId: 'a' }), { tabs: 'avisos,llista,calendari,tauler', more: '', gestio: '', areas: 'me,all' }, 'cantaire: la seva i, per llegir, tot el cor');
+  igual([attArea(), attTabKeys().join()], ['me', ''], 'i comença per la seva');
+  applyRoute('assistencia');
+  igual(attArea(), 'me', 'també amb l’enllaç a Assistència (no la porta a tot el cor)');
+  ui.attArea = 'all';
+  igual(attTabKeys().join(), 'llista,stats,risk', 'de tot el cor, la llista, les estadístiques i el risc (les absències no)');
+  ui.attArea = null; S.config.attPrivate = true;
+  igual(as(['singer'], { memberId: 'a' }).areas, 'me', 'amb les llistes privades, només la seva');
+  delete S.config.attPrivate;
+  igual(as(['leader', 'singer'], { section: 'T', memberId: 't' }), { tabs: 'avisos,llista,calendari,tauler', more: '', gestio: '', areas: 'me,sec,all' }, 'cap de corda que canta');
   igual(as(['leader'], { section: 'T' }), { tabs: 'avisos,llista', more: '', gestio: '', areas: 'sec' }, 'cap de corda que no canta');
   igual(as(['archive', 'singer'], { section: 'S', memberId: 'a' }).tabs, 'avisos,llista,calendari,tauler', 'arxiver que canta: l’arxiu és al Tauler');
   igual(as(['director']), { tabs: 'avisos,llista,calendari,tauler,gestio', more: '', gestio: 'personal,produccions,config', areas: 'all' }, 'direcció, amb tota la Gestió');
@@ -247,7 +255,7 @@ prova('rols sumats: cadascú té les pestanyes i els permisos de tots els seus r
   as(['secretaria']);
   igual([canBoard(), canProd(), absencesOn()], [true, false, false], 'la secretaria porta el tauler');
   // La comissió de festes: cantaires que porten el tauler (menys el repertori) i escriuen a tothom, sense editar res més.
-  igual(as(['festes', 'singer'], { memberId: 'a' }), { tabs: 'avisos,llista,calendari,tauler', more: '', gestio: '', areas: 'me' }, 'comissió de festes: les pestanyes d’un cantaire');
+  igual(as(['festes', 'singer'], { memberId: 'a' }), { tabs: 'avisos,llista,calendari,tauler', more: '', gestio: '', areas: 'me,all' }, 'comissió de festes: les pestanyes d’un cantaire');
   const mail = S.email; S.email = 'x@x.cat';
   igual([S.role, canEdit(), canBoard(), readsBoard(), canRepertoire(), canScores('S'), canProd(), canPeople(), canWriteAll(), canWriteTo()], ['read', false, true, true, false, false, false, false, true, false],
     'la comissió de festes porta el tauler i en llegeix els vots, escriu a tothom (no en privat) i no toca el repertori ni res més');

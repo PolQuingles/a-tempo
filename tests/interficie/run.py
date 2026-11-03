@@ -827,7 +827,7 @@ def main():
         r.update(page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
           const tabs = () => [...document.querySelectorAll('.tabs-in .tab:not(.tab-extra)')].map(b => b.dataset.tab).join(',');
           out.leaderTabs = /^avisos,llista,calendari,tauler/.test(tabs()) && !roleTabs().includes('gestio');
-          out.leaderAreas = attAreas().join() === 'me,sec';
+          out.leaderAreas = attAreas().join() === (attPrivate() ? 'me,sec' : 'me,sec,all');
           ui.tab = 'tauler'; ui.board = 'anuncis'; render(); await s(300);
           out.noBoardEdit = !document.querySelector('[data-act="ann-new"], [data-act="ann-edit"]');
           ui.tab = 'calendari'; render(); await s(300);
@@ -1445,11 +1445,13 @@ def main():
           const p = setAttPrivate(false); await s(400); document.querySelector('#cf-yes').click(); await p; await s(1500);
           const f = JSON.parse(localStorage.getItem('fake:db'));
           const pub = f[Object.keys(f).find(k => k.endsWith('/members/mT2'))];
-          out.back = pub.notes === 'Ara de dia' && pub.leaves?.length === 1 && !Object.keys(f).some(k => k.endsWith('/memberPriv/mT2'));
+          const pv = f[Object.keys(f).find(k => k.endsWith('/memberPriv/mT2'))];
+          out.back = !('notes' in pub) && !('leaves' in pub) && pv?.notes === 'Ara de dia' && S.config.attPrivate === false && S.config.fitxesPriv === true
+            && S.members.get('mT2').notes === 'Ara de dia';
           return out; }"""))
         for k, label in [("split", "amb les llistes privades, el telèfon, les notes i les baixes van a part"), ("merged", "l'equip ho continua veient tot junt"),
                          ("edit", "i en desar una fitxa, la part privada continua a part"), ("hidden", "una cantaire no veu les dades privades de ningú més"),
-                         ("own", "però sí les seves"), ("reload", "en tornar a entrar, l'equip ho torna a tenir tot"), ("back", "i en desfer-les, tot torna a la fitxa")]:
+                         ("own", "però sí les seves"), ("reload", "en tornar a entrar, l'equip ho torna a tenir tot"), ("back", "i en obrir les llistes, el telèfon, les notes i les baixes continuen a part")]:
             check(r.get(k), label, str(r))
         check(not errors, "sense errors amb les fitxes privades", "; ".join(errors[:3]))
         ctx.close()
@@ -1779,9 +1781,44 @@ def main():
           stopPreview(); out.back = ui.tab === 'gestio' && isAdmin(); return out; }""")
         check(r["teach"] and not r["edit"] and "classes" in r["tabs"] and "alumnes" in r["cl"], "com el professor de cant: porta les classes (amb els seus alumnes) i no edita res més", str(r))
         check(not r["singerEdit"] and r["me"] and not r["gestio"], "com un cantaire: veu el seu espai i no Gestió", str(r))
-        check(r["leadTabs"].startswith("avisos,llista,calendari,tauler") and r["leadAreas"] == "me,sec", "com el cap de corda que també canta: les pestanyes dels dos rols", str(r))
+        check(r["leadTabs"].startswith("avisos,llista,calendari,tauler") and r["leadAreas"] in ("me,sec", "me,sec,all"), "com el cap de corda que també canta: les pestanyes dels dos rols (i tot el cor per llegir, si les llistes són obertes)", str(r))
         check(r["back"], "i se'n torna a Gestió", str(r))
         check(not errors, "sense errors a la vista prèvia", "; ".join(errors[:3]))
+        ctx.close()
+
+        print("Assistència per a tothom: tot el cor per llegir, i les produccions primer")
+        ctx, page, errors = open_app(browser, base, "singer", MOBILE)
+        r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          const subs = q => [...document.querySelectorAll(q)].map(b => b.dataset.k).join(',');
+          document.querySelector('.tab[data-tab="llista"]').click(); await s(300);
+          out.areas = subs('[data-act="att-area"]') === 'me,all' && attArea() === 'me';
+          const jo = document.querySelector('#view')?.innerText || '';
+          const season = document.querySelector('#view details.my-season');
+          out.season = !!season && !season.open && !/Tota la temporada/.test([...document.querySelectorAll('#view h2')].map(h => h.textContent).join('|'));
+          // Les produccions (també l'actual, com a «Totes les produccions» d'Inici): hores d'assaig, no assajos.
+          const box = document.createElement('div'); box.innerHTML = myAttSeason(S.members.get(myMemberId()));
+          const lines = [...box.querySelectorAll('.mini-list .m')].map(x => x.textContent);
+          out.hours = lines.length > 0 && lines.every(t => /d’assaig/.test(t) && !/ de \d+ ·/.test(t));
+          document.querySelector('[data-act="att-area"][data-k="all"]').click(); await s(300);
+          out.tabs = subs('.att-tabs .subtab') === 'llista,stats,risk' && !!document.querySelector('.quads');
+          document.querySelector('.quads .quad').click(); await s(300);
+          out.readOnly = !document.querySelector('[data-act="mark-rest"], [data-act="summary"]') && !canMark(sessionById(ui.sessionId), ui.rollSec);
+          ui.rollSec = null; ui.att = 'stats'; render(); await s(300);
+          out.stats = !!document.querySelector('#view [data-act="member-stats"]') && !document.querySelector('#view [data-act="export-csv"]');
+          ui.att = 'risk'; render(); await s(300);
+          out.risk = /Norma del/.test(document.querySelector('#view')?.textContent || '') && !document.querySelector('#view [data-act="risk-copy"], #view [data-act="risk-write"]');
+          // Amb les llistes privades, només la seva.
+          S.config = { ...S.config, attPrivate: true }; ui.attArea = 'all'; render(); await s(200);
+          out.private = attAreas().join() === 'me' && !document.querySelector('[data-act="att-area"]');
+          S.config = { ...S.config, attPrivate: false }; render();
+          out.overflow = document.documentElement.scrollWidth <= innerWidth;
+          return out; }""")
+        for k, label in [("areas", "un cantaire hi té «Jo» i «Tot el cor», i comença per la seva"), ("season", "a «Jo», tota la temporada queda plegada (les produccions, a la vista)"),
+                         ("hours", "cada producció diu les hores d'assaig, no els assajos"), ("tabs", "a tot el cor hi ha la llista, les estadístiques i el risc (sense les absències)"),
+                         ("readOnly", "i la llista només es pot llegir"), ("stats", "les estadístiques, sense exportar-les"), ("risk", "i el risc, sense copiar-lo ni escriure a ningú"),
+                         ("private", "amb les llistes privades, només la seva"), ("overflow", "res no surt de la pantalla")]:
+            check(r.get(k), label, str(r))
+        check(not errors, "sense errors a l'assistència de tothom", "; ".join(errors[:3]))
         ctx.close()
 
         print("Converses privades i recordatoris per l'app")

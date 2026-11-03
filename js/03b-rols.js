@@ -53,9 +53,15 @@ const gestioTabs = () => PROD_ROLES.some(iHave) ? ['personal', 'produccions', 'c
 /* ---------- Assistència: la meva, la de la corda i la de tot el cor ---------- */
 /** La corda que porta com a cap de corda (si en porta cap). */
 const leadSec = () => { const me = ME(); return canEdit() && hasRole(me, 'leader') && SEC_MAP[me?.section] ? me.section : null; };
-// El que es mira de tot el cor, per rol: l'administració hi passa llista; la direcció hi respon les absències.
+// El que es mira de tot el cor, per rol: l'administració hi passa llista; la direcció hi respon les absències. Si les llistes no
+// són privades, tothom qui té fitxa hi veu la llista, les estadístiques i el risc, només per llegir (les absències, amb el motiu,
+// continuen sent de l'equip).
 const ATT_ALL = { admin: ['llista', 'stats', 'risk', 'abs'], director: ['stats', 'risk', 'abs'], gerencia: ['stats', 'risk'] };
-const attAllKeys = () => S.role !== 'edit' ? [] : ['llista', 'stats', 'risk', 'abs'].filter(k => Object.keys(ATT_ALL).some(r => iHave(r) && ATT_ALL[r].includes(k)));
+const ATT_OPEN = ['llista', 'stats', 'risk'];
+const attAllKeys = () => ['llista', 'stats', 'risk', 'abs'].filter(k => (S.role === 'edit' && Object.keys(ATT_ALL).some(r => iHave(r) && ATT_ALL[r].includes(k)))
+  || (!!myId() && !attPrivate() && ATT_OPEN.includes(k)));
+/** Si mira tot el cor per feina (l'administració, la direcció i la gerència), i no només per llegir-lo. */
+const attWork = () => S.role === 'edit' && Object.keys(ATT_ALL).some(iHave);
 /** Des d'on es pot mirar l'assistència: la pròpia («me»), la de la corda que porta («sec») i la de tot el cor («all»). */
 function attAreas() {
   const out = [];
@@ -68,7 +74,8 @@ function attAreas() {
 function attArea() {
   const as = attAreas();
   if (as.includes(ui.attArea)) return ui.attArea;
-  return as.includes('sec') ? 'sec' : as.includes('all') ? 'all' : as[0] || 'me';
+  // Qui només hi veu tot el cor per llegir-lo (les llistes obertes) comença per la seva.
+  return as.includes('sec') ? 'sec' : as.includes('all') && attWork() ? 'all' : as[0] || 'me';
 }
 /** Les parts d'Assistència de cada àmbit (passar llista, estadístiques, risc i absències): les de la corda, les de tot el cor
  *  que tenen els seus rols i, la pròpia, cap. */

@@ -119,7 +119,7 @@ function viewRollOverview(cur, list, pendingBySec) {
   const { c, expected, out } = dayStats(cur);
   const present = c.P + c.R;
   const marked = expected - c.none;
-  const day = `<div class="section-title"><h2 class="h2">Resum del dia</h2><button class="btn btn-sm" data-act="summary" data-scope="all">Resum per enviar</button></div>
+  const day = `<div class="section-title"><h2 class="h2">Resum del dia</h2>${S.role === 'edit' ? '<button class="btn btn-sm" data-act="summary" data-scope="all">Resum per enviar</button>' : ''}</div>
     <div class="panel day-panel">
       <div class="day-main"><span class="day-big">${present}<small>/${expected}</small></span><span class="lbl">${marked ? 'assisteixen' : 'encara no s’ha passat llista'}${c.R ? ` · ${c.R} amb retard` : ''}</span></div>
       ${stackBar({ ...c, NP: 0 })}
@@ -250,7 +250,7 @@ function tallyInner(c, pendingInRoll) {
     <div class="tally-foot">
       <span class="progress-txt">${c.min ? `Retard acumulat <b>${c.min}′</b>` : (c.R ? 'Retards sense minuts' : 'Sense retards')}${c.left ? ` · ${c.left === 1 ? 'n’ha marxat 1' : `n’han marxat ${c.left}`} abans (<b>${c.leftMin}′</b>)` : ''}</span>
       <span style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-sm" data-act="summary">Resum</button>
+        ${S.role === 'edit' ? '<button class="btn btn-sm" data-act="summary">Resum</button>' : ''}
         ${canMark(sessionById(ui.sessionId), ui.rollSec || ui.section) ? `<button class="btn btn-sm btn-primary" data-act="mark-rest" ${pendingInRoll ? '' : 'disabled'}>Resta com a presents</button>` : ''}
       </span>
     </div>`;

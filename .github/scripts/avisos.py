@@ -161,7 +161,7 @@ class Group:
             self._members = r.list(f"{self.base}/members")
             # Amb les llistes privades, les baixes (i el telèfon i les notes) de cada fitxa són a part: vegeu MEMBER_PRIV
             # a js/02-dades.js. Aquí es tornen a ajuntar, com fa l'app.
-            if self.config.get("attPrivate"):
+            if self.config.get("attPrivate") or self.config.get("fitxesPriv"):
                 for mid, p in r.list(f"{self.base}/memberPriv").items():
                     if mid in self._members:
                         base = {k: v for k, v in self._members[mid].items() if k not in MEMBER_PRIV}

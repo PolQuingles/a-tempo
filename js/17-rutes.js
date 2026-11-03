@@ -58,7 +58,7 @@ function applyRoute(route) {
     const as = attAreas();
     if (sub === 'meva') { if (as.includes('me')) ui.attArea = 'me'; ui.att = 'llista'; ui.rollSec = null; return true; }
     if (sub && SEC_MAP[sub]) ui.attArea = sub === leadSec() ? 'sec' : as.includes('all') ? 'all' : ui.attArea;
-    else if (attArea() === 'me' && as.length > 1) ui.attArea = as.includes('sec') ? 'sec' : 'all';
+    else if (attArea() === 'me' && (as.includes('sec') || (as.includes('all') && attWork()))) ui.attArea = as.includes('sec') ? 'sec' : 'all';
     // Les estadístiques, el risc o les absències: des d'on es miren (el risc només és de tot el cor).
     const part = { estadistiques: 'stats', risc: 'risk', absencies: 'abs' }[sub];
     if (part && !areaKeys(attArea()).includes(part)) ui.attArea = ['all', 'sec'].find(x => as.includes(x) && areaKeys(x).includes(part)) || ui.attArea;
