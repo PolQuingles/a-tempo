@@ -640,26 +640,29 @@ prova('Bandes: un diploma per persona i banda, i quanta gent ha votat per cordes
   igual(turnoutSum(p, null), null, 'sense recompte, res');
 });
 
-prova('Bandes: els resultats muts (sense noms) i en quantes categories ha rebut vots cadascú', () => {
-  escenari({ members: [{ id: 'a', name: 'Puig, Anna', section: 'S' }, { id: 'b', name: 'Ferrer, Laia', section: 'S' }, { id: 'c', name: 'Mas, Júlia', section: 'C' }, { id: 'd', name: 'Bosch, Marc', section: 'T' }] });
-  const p = { id: 'q', cats: [{ id: 'k1', name: 'Riure' }, { id: 'k2', name: 'Parella', pair: true }, { id: 'k3', name: 'Ningú' }], sections: [], picks: 2 };
+prova('Bandes: l’app compta igual que el servidor (el mateix cas que tests/logica/test_bandes.py)', () => {
+  escenari({ members: [{ id: 'a', name: 'Puig, Anna', section: 'S' }, { id: 'b', name: 'Ferrer, Laia', section: 'S' }, { id: 'c', name: 'Mas, Júlia', section: 'C' }, { id: 'd', name: 'Bosch, Marc', section: 'T' }, { id: 'e', name: 'Font, Pere', section: 'T', active: false }] });
+  const p = { id: 'q', cats: [{ id: 'k1', name: 'Riure' }, { id: 'k2', name: 'Parella', pair: true }, { id: 'k3', name: 'Ningú' }, { id: 'k4', name: 'Sopranos', sec: 'S' }], sections: [], picks: 2, out: ['d'] };
   const votes = [
-    { pollId: 'q', memberId: 'a', picks: { k1: ['b', 'c'], k2: ['b', 'c'] } },
-    { pollId: 'q', memberId: 'b', picks: { k1: ['c'], k2: ['c', 'd'] } },
-    { pollId: 'q', memberId: 'd', picks: { k1: ['c', 'a'] } },
+    { pollId: 'q', memberId: 'a', picks: { k1: ['b', 'c', 'c'], k2: ['b', 'c'], k4: ['c', 'b'] } },
+    { pollId: 'q', memberId: 'b', picks: { k1: ['b', 'c', 'a'], k2: ['c'] } },
+    { pollId: 'q', memberId: 'c', picks: { k1: ['a', 'x'], k2: ['c', 'b'] } },
+    { pollId: 'q', memberId: 'd', picks: { k1: ['a'] } },
+    { pollId: 'z', memberId: 'a', picks: { k1: ['b'] } },
   ];
   const t = bandesTally(p, votes, bandesPeople(p));
-  let x = tallyPayload(p, t);
-  igual(x.cats, { k1: { n: [3, 1, 1], b: 3 }, k2: { n: [1, 1], b: 2 } }, 'per categoria, només els números (de més a menys) i les paperetes');
-  igual(JSON.stringify(x.cats).match(/"[a-d](\+[a-d])?"(?!:)/), null, 'cap nom ni identificador al resum que veu tothom');
-  igual(x.win, {}, 'sense palmarès, no diu els vots de ningú');
-  igual(x.me, { c: 2, a: 1, b: 2, d: 1 }, 'les parelles compten per a totes dues persones; qui no ha rebut cap vot no hi surt');
-  x = tallyPayload({ ...p, results: { k1: ['c'], k2: ['b+c'] } }, t);
-  igual(x.win, { k1: [3], k2: [1] }, 'amb el palmarès, els vots de cada guanyador');
+  igual(Object.fromEntries(t.cats.filter(x => x.rows.length).map(x => [x.cat.id, { n: x.rows.map(r => r.n), b: x.ballots }])),
+    { k1: { n: [2, 2, 1], b: 3 }, k2: { n: [1], b: 1 }, k4: { n: [1], b: 1 } }, 'els mateixos números per categoria');
+  igual(Object.fromEntries(t.people.map(e => [e.id, e.nominations]).sort()), { a: 1, b: 3, c: 2 }, 'i les mateixes categories per persona');
+});
+
+prova('Bandes: l’anell dels resultats muts (sense noms) i quan es veu', () => {
+  const p = { id: 'q', cats: [{ id: 'k1', name: 'Riure' }], sections: [] };
   const svg = tallyDonut([3, 1, 1], [3]);
   igual([(svg.match(/class="w"/g) || []).length, (svg.match(/<circle/g) || []).length, />5</.test(svg)], [1, 3, true], 'un tros per persona, el guanyador en daurat, i el total al mig');
   igual((tallyDonut(Array(15).fill(1)).match(/<circle/g) || []).length, 13, 'de la tretzena endavant, totes juntes');
   igual(tallyOn({ ...p, closesAt: '2000-01-01' }) && !tallyOn({ ...p, closesAt: '2999-01-01' }), true, 'només quan s’ha tancat la votació');
+  igual(bandesVotes({ id: 'q', ballotsGone: '2027-01-27' }), [], 'amb les paperetes esborrades, no en compta cap (encara que el mòbil en tingui)');
 });
 
 /** Executa totes les proves: { ok, fail, lines }. */

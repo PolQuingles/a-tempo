@@ -26,6 +26,7 @@ from zoneinfo import ZoneInfo
 from pywebpush import WebPushException, webpush
 
 sys.path.insert(0, os.path.dirname(__file__))
+import bandes
 import dades
 import norma
 
@@ -483,6 +484,44 @@ class Group:
                 self.deliver(f"rsvp:{sid}:{stage}:{did}", d, f"{s.get('type', 'Assaig')} del {when}: encara no has dit si hi seràs.", f"rsvp-{sid}",
                              {"sid": sid, "actions": [{"action": "rsvp-yes", "title": "Hi seré"}, {"action": "rsvp-no", "title": "No hi podré anar"}]})
 
+    # ---------- 2c. Bandes: els resultats muts i, un mes després de la Nit, l'esborrat de les paperetes ----------
+    def bandes_data(self):
+        """De les bandes ja tancades, el que veu tothom sense noms (tally) i en quantes categories ha rebut vots cadascú (tallyMe):
+        es tornen a comptar un cop al dia, i de seguida si hi ha un palmarès nou. Un mes després de la Nit, amb el palmarès,
+        s'esborren les paperetes i la constància de qui ha votat, i la votació en guarda la data (ballotsGone). Vegeu bandes.py."""
+        today = TODAY.isoformat()
+        for pid, p in r.query(self.base, "polls", [("kind", "==", "bandes")]).items():
+            if p.get("ballotsGone") or not bandes.phase_closed(p, TODAY):
+                continue
+            old = r.get(f"{self.base}/tally/{pid}") or {}
+            res, due = p.get("resultsAt") or "", bandes.gone_due(p, TODAY)
+            fresh = bool(old.get("sig")) and old.get("res") == res
+            ops, votes = [], None
+            if not (fresh and (due or old.get("day") == today)):
+                votes = r.query(self.base, "pollVotes", [("pollId", "==", pid)])
+                sec_of = bandes.people(p, self.active())
+                pay = bandes.tally(pid, p, votes, sec_of)
+                sg = bandes.sig(pay)
+                if sg != old.get("sig"):
+                    ops += [("set", f"{self.base}/tallyMe/{pid}_{mid}", {"pollId": pid, "memberId": mid, "cats": pay["me"][mid]}) if pay["me"].get(mid)
+                            else ("delete", f"{self.base}/tallyMe/{pid}_{mid}") for mid in sorted(sec_of)]
+                ops.append(("set", f"{self.base}/tally/{pid}", {"cats": pay["cats"], "win": pay["win"], "sig": sg, "res": res, "day": today,
+                                                                "at": UTC_NOW.isoformat().replace("+00:00", "Z")}))
+            if due:
+                if votes is None:
+                    votes = r.query(self.base, "pollVotes", [("pollId", "==", pid)])
+                ops += [("delete", f"{self.base}/pollVotes/{k}") for k in sorted(votes)]
+                ops += [("delete", f"{self.base}/turnout/{pid}/by/{k}") for k in sorted(r.list(f"{self.base}/turnout/{pid}/by"))]
+                ops.append(("patch", f"{self.base}/polls/{pid}", {"ballotsGone": today}))
+            if not ops:
+                continue
+            try:
+                r.commit(ops)
+            except dades.Forbidden:
+                print(f"  bandes {pid}: el compte no hi pot escriure (cal el compte de servei)")
+                return
+            print(f"  bandes {pid}: resultats muts al dia" + (f"; {len(votes)} paperetes esborrades" if due else ""))
+
     # ---------- 3. Enquestes que es tanquen demà ----------
     def polls(self):
         tomorrow = (TODAY + datetime.timedelta(days=1)).isoformat()
@@ -876,6 +915,7 @@ class Group:
         self.new_polls()
         if not self.first_run:
             self.bandes()
+        self.bandes_data()
         self.trips()
         if not self.first_run and EVENING and not QUIET:
             self.convocations()

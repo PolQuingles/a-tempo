@@ -2055,12 +2055,13 @@ def main():
           out.page = /finalistes/i.test(pg) && /avui/i.test(pg) && pg.includes('Pau Riera') && pg.includes('Encara per revelar (2)') && !!document.querySelector('.bn-team');
           render(); await s(200);
           out.stays = !document.querySelector('.bn-nom.sealed') && (document.querySelector('.bn-page')?.innerText || '').includes('Pau Riera');
-          // Els resultats muts: qui porta el tauler hi posa els números (sense noms) i la fitxa de cadascú.
+          // Els resultats muts: els escriu el servei (avisos.py); aquí es posen a mà, com ho faria. L'app no en calcula res.
+          out.tally = !(await F.doc(`cors/${GID}/tally/bn1`).get()).exists;
+          await F.doc(`cors/${GID}/tally/bn1`).set({ cats: { k1: { n: [2, 2, 1], b: 3 }, k2: { n: [1, 1], b: 2 }, k3: { n: [2], b: 2 } }, win: {}, sig: 'x', res: '', day: TODAY, at: now });
+          await F.doc(`cors/${GID}/tallyMe/bn1_${id('Marc Bosch')}`).set({ pollId: 'bn1', memberId: id('Marc Bosch'), cats: 2 });
           for (let k = 0; k < 20 && !document.querySelector('.bn-got'); k++) await s(150);
-          const td = (await F.doc(`cors/${GID}/tally/bn1`).get()).data() || {};
-          out.tally = JSON.stringify(td.cats?.k1) === '{"n":[2,2,1],"b":3}' && !/[0-9a-z]{8,}/i.test(JSON.stringify(td.cats)) && !!td.sig;
           out.mine = /Has rebut vots en 2 de les 3 categories/.test(document.querySelector('.bn-got')?.innerText || '');
-          out.priv = !(await F.doc(`cors/${GID}/tallyMe/bn1_${id('Anna Puig')}`).get()).exists && (await F.doc(`cors/${GID}/tallyMe/bn1_${id('Laia Ferrer')}`).get()).data()?.cats === 3;
+          out.priv = document.querySelectorAll('.bn-mute .bn-mu').length === 3;
           // La invitació sencera: l'hora (compte enrere per hores), l'etiqueta, el programa, la inscripció al sopar i el calendari.
           const t = { id: 'tn1', title: 'Sopar de la Nit', from: q.galaAt, to: q.galaAt, deadline: addDays(TODAY, 1), sections: [], questions: [] };
           S.trips.set(t.id, t); persist('trips', t.id, t, 10);
@@ -2091,8 +2092,8 @@ def main():
                          ("plan", "en publicar-los, diu com es revelaran"), ("noms", "els finalistes es desen per ordre alfabètic, i es revelen un cada dia fins a la Nit"),
                          ("route", "la Nit té la seva pàgina (#/bandes)"), ("sealed", "els finalistes d'avui arriben dins d'un sobre tancat"),
                          ("page", "en obrir el sobre, la pàgina ensenya els finalistes d'avui i diu quants en falten"), ("stays", "i el sobre queda obert"),
-                         ("tally", "en tancar-se la votació, qui porta el tauler hi posa els resultats muts (només números)"),
-                         ("mine", "qui ha rebut vots veu en quantes categories"), ("priv", "i qui no n'ha rebut cap no té fitxa"),
+                         ("tally", "l'app de l'equip no escriu els resultats muts (ho fa el servei)"),
+                         ("mine", "qui ha rebut vots veu en quantes categories"), ("priv", "i l'equip també veu com s'ha votat, sense noms"),
                          ("invite", "la invitació té el compte enrere per hores, l'etiqueta i «afegeix-la al calendari»"),
                          ("prog", "el programa, la informació pràctica i la inscripció al sopar"), ("ics", "el calendari porta l'hora, el nom i l'etiqueta"),
                          ("menu", "la Nit surt al menú del compte"), ("pies", "els resultats tenen l'anell de cada categoria, l'índex i qui ha rebut més vots"),

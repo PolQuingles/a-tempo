@@ -1,7 +1,7 @@
 """Lectura de Firestore per a les tasques automàtiques (calendari, còpies i avisos).
 
 Entra amb el compte de servei (secret SERVICE_REFRESH_TOKEN), que pot llegir totes les agrupacions
-però no escriure-hi res. Si les regles encara no el coneixen, fa servir el lector antic de la primera
+i només hi escriu els resultats muts de les bandes i, un mes després de la Nit, n'esborra les paperetes (vegeu bandes.py). Si les regles encara no el coneixen, fa servir el lector antic de la primera
 agrupació i només treballa amb aquella.
 
 Per provar-ho contra l'emulador: FS_BASE (adreça dels documents) i FS_TOKEN (token ja fet).
@@ -91,6 +91,10 @@ def dec(v):
 
 
 def enc(v):
+    if v is None:
+        return {"nullValue": None}
+    if isinstance(v, dict):
+        return {"mapValue": {"fields": {k: enc(x) for k, x in v.items()}}}
     if isinstance(v, bool):
         return {"booleanValue": v}
     if isinstance(v, int):
@@ -143,6 +147,24 @@ class Reader:
                 out[doc["name"].rsplit("/", 1)[1]] = dec({"mapValue": doc})
         self.reads += max(1, len(out))
         return out
+
+    def commit(self, ops):
+        """Escriu en lots de 400: ops = [("set", camí, dades) | ("delete", camí) | ("patch", camí, camps)]. Un «patch» només canvia
+        aquells camps (el document ha d'existir) i hi posa syncAt, l'hora del servidor, perquè els mòbils el tornin a baixar.
+        El compte de servei només pot escriure el que li deixen les regles (els resultats muts i l'esborrat de les paperetes)."""
+        writes = []
+        for op in ops:
+            name = f"{ROOT}/{op[1]}"
+            if op[0] == "delete":
+                writes.append({"delete": name})
+            elif op[0] == "set":
+                writes.append({"update": {"name": name, "fields": enc(op[2])["mapValue"]["fields"]}})
+            else:
+                writes.append({"update": {"name": name, "fields": enc(op[2])["mapValue"]["fields"]}, "updateMask": {"fieldPaths": list(op[2])},
+                               "updateTransforms": [{"fieldPath": "syncAt", "setToServerValue": "REQUEST_TIME"}], "currentDocument": {"exists": True}})
+        for i in range(0, len(writes), 400):
+            call(f"{BASE}:commit", {"writes": writes[i:i + 400]}, token=self.token)
+        self.writes = getattr(self, "writes", 0) + len(writes)
 
     def batch_get(self, paths):
         """{path: document o None} d'uns quants documents d'un sol cop."""
