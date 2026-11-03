@@ -1053,16 +1053,16 @@ expect("AD9b ni toca la plantilla", commit([upd(f"cors/{F}/members/m1", {"name":
 expect("AD9c ni veu els comptes", lst(f"cors/{F}/staff", T["fest"]), False)
 expect("AD9d ni les respostes a les convocatòries de tothom", lst(f"cors/{F}/rsvp", T["fest"]), False)
 
-# Els resultats muts de les bandes: el resum sense noms (tally) el veu tothom i el posa qui porta el tauler; la fitxa de cadascú
-# (tallyMe/<votació>_<persona>), només la veu ella.
+# Els resultats muts de les bandes: el resum sense noms (tally) el veu tothom i el posa el compte de servei (avisos.py); la fitxa
+# de cadascú (tallyMe/<votació>_<persona>), només la veu ella.
 TA = {"cats": {"k1": {"n": [3, 1], "b": 3}}, "win": {}, "sig": "x", "at": now}
-expect("AE1 la secretaria hi posa el resum mut", commit([upd(f"cors/{F}/tally/bt1", TA)], T["sec"]), True)
-expect("AE1b la comissió de festes també", commit([upd(f"cors/{F}/tally/bt1", TA)], T["fest"]), True)
-expect("AE1c un cantaire no", commit([upd(f"cors/{F}/tally/bt1", TA)], T["singer"]), False)
+expect("AE1 el compte de servei hi posa el resum mut", commit([upd(f"cors/{F}/tally/bt1", TA)], T["service"]), True)
+expect("AE1b la secretaria ja no (el calcula el servei)", commit([upd(f"cors/{F}/tally/bt1", TA)], T["sec"]), False)
+expect("AE1c ni un cantaire", commit([upd(f"cors/{F}/tally/bt1", TA)], T["singer"]), False)
 expect("AE1d ni un cap de corda", commit([upd(f"cors/{F}/tally/bt1", TA)], T["pau"]), False)
 expect("AE2 tothom veu el resum", get(f"cors/{F}/tally/bt1", T["singer"]), True)
-expect("AE3 qui porta el tauler hi posa les fitxes", commit([upd(f"cors/{F}/tallyMe/bt1_m1", {"pollId": "bt1", "memberId": "m1", "cats": 2}),
-                                                     upd(f"cors/{F}/tallyMe/bt1_m2", {"pollId": "bt1", "memberId": "m2", "cats": 5})], T["sec"]), True)
+expect("AE3 el servei hi posa les fitxes", commit([upd(f"cors/{F}/tallyMe/bt1_m1", {"pollId": "bt1", "memberId": "m1", "cats": 2}),
+                                                upd(f"cors/{F}/tallyMe/bt1_m2", {"pollId": "bt1", "memberId": "m2", "cats": 5})], T["service"]), True)
 expect("AE4 cadascú veu la seva", get(f"cors/{F}/tallyMe/bt1_m1", T["singer"]), True)
 expect("AE4b i, si no en té, sap que no n'hi ha", get(f"cors/{F}/tallyMe/bt9_m1", T["singer"]), "404")
 expect("AE4c però no la d'una altra persona", get(f"cors/{F}/tallyMe/bt1_m2", T["singer"]), False)
@@ -1070,7 +1070,28 @@ expect("AE4d ni en fa la llista", lst(f"cors/{F}/tallyMe", T["singer"]), False)
 expect("AE4e ni un cap de corda", get(f"cors/{F}/tallyMe/bt1_m1", T["pau"]), False)
 expect("AE4f ni amb un identificador enganyós", get(f"cors/{F}/tallyMe/bt1_m2_m1", T["singer"]), False)
 expect("AE5 ningú no s'escriu la seva", commit([upd(f"cors/{F}/tallyMe/bt1_m1", {"pollId": "bt1", "memberId": "m1", "cats": 26})], T["singer"]), False)
-expect("AE6 qui porta el tauler n'esborra (qui ja no té vots)", commit([dele(f"cors/{F}/tallyMe/bt1_m2")], T["fest"]), True)
+expect("AE6 el servei n'esborra (qui ja no té vots)", commit([dele(f"cors/{F}/tallyMe/bt1_m2")], T["service"]), True)
+expect("AE6b i l'equip, en esborrar l'agrupació", commit([dele(f"cors/{F}/tally/bt1")], T["sec"]), True)
+
+# Un mes després de la Nit (amb el palmarès), el servei esborra les paperetes de les bandes i la constància de qui ha votat.
+seed(f"cors/{F}/polls/bg1", {"id": "bg1", "kind": "bandes", "title": "L'any passat", "closed": True, "galaAt": "2025-12-26", "results": {"k1": ["m3"]}})
+seed(f"cors/{F}/polls/bg2", {"id": "bg2", "kind": "bandes", "title": "Fa poc", "closed": True, "galaAt": "2099-12-26", "results": {"k1": ["m3"]}})
+seed(f"cors/{F}/polls/bg3", {"id": "bg3", "kind": "bandes", "title": "Sense palmarès", "closed": True, "galaAt": "2025-12-26"})
+seed(f"cors/{F}/polls/bg4", {"id": "bg4", "kind": "cita", "title": "Una enquesta", "closed": True, "galaAt": "2025-12-26", "results": {"k1": ["m3"]}})
+for pid in ("bg1", "bg2", "bg3", "bg4"):
+    seed(f"cors/{F}/pollVotes/{pid}_m1", {"pollId": pid, "memberId": "m1", "picks": {"k1": ["m3"]}})
+seed(f"cors/{F}/turnout/bg1/by/m1", {"at": now})
+seed(f"cors/{F}/turnout/bg2/by/m1", {"at": now})
+expect("AF1 el servei esborra les paperetes de fa més d'un mes", commit([dele(f"cors/{F}/pollVotes/bg1_m1")], T["service"]), True)
+expect("AF1b i la constància de qui ha votat", commit([dele(f"cors/{F}/turnout/bg1/by/m1")], T["service"]), True)
+expect("AF1c i hi deixa la data", commit([upd(f"cors/{F}/polls/bg1", {"ballotsGone": "2026-01-27"}, ["ballotsGone"])], T["service"]), True)
+expect("AF2 però no les d'una Nit de fa poc", commit([dele(f"cors/{F}/pollVotes/bg2_m1")], T["service"]), False)
+expect("AF2b ni la seva constància", commit([dele(f"cors/{F}/turnout/bg2/by/m1")], T["service"]), False)
+expect("AF2c ni sense palmarès", commit([dele(f"cors/{F}/pollVotes/bg3_m1")], T["service"]), False)
+expect("AF2d ni les d'una enquesta", commit([dele(f"cors/{F}/pollVotes/bg4_m1")], T["service"]), False)
+expect("AF3 ni toca res més de la votació", commit([upd(f"cors/{F}/polls/bg1", {"results": {}}, ["results"])], T["service"]), False)
+expect("AF3b ni hi escriu cap vot", commit([upd(f"cors/{F}/pollVotes/bg1_m1", {"pollId": "bg1", "memberId": "m1", "picks": {}})], T["service"]), False)
+expect("AF3c ni esborra res més", commit([dele(f"cors/{F}/members/m1")], T["service"]), False)
 
 print()
 print(f"{PASSES} correctes · {len(FAILS)} errors")

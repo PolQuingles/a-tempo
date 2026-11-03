@@ -297,46 +297,6 @@ function bandesHomeCard() {
   return `<button class="bn-home" data-act="bandes-open"><span class="bn-home-t"><small>${esc(galaName(p))}${p.galaAt ? ` · ${esc(ddmm(p.galaAt))}` : ''}</small><b>${esc(big)}</b><small>${esc(line)}</small></span>${ICON.go}</button>`;
 }
 
-/* ---------- Publicar els finalistes (qui porta el tauler) ---------- */
-function bandesNominate(pid) {
-  const p = S.polls.get(pid);
-  if (!p || p.draft) return;
-  const k = +p.finalists || BANDES_FINAL;
-  const t = bandesTally(p, bandesVotes(p), bandesPeople(p));
-  const fin = Object.fromEntries(t.cats.map(x => [x.cat.id, bandesFinalists(x.rows, k).sort(byKeyName)]));
-  const after = p.closesAt ? addDays(p.closesAt, 1) : TODAY;
-  const from0 = p.nomFrom || (after > TODAY ? after : TODAY);
-  const stillOpen = !pollClosed(p);
-  openSheet({
-    title: 'Publicar els finalistes?',
-    body: `<p style="margin-top:0">Es publiquen els ${k} més votats de cada categoria, per ordre alfabètic i sense els vots${stillOpen ? '. <b>La votació es tanca:</b> ja no s’hi podrà votar' : ''}. Qui guanya no es veu fins que publiquis el palmarès.</p>
-      <div class="field"><span>Com es revelen</span><div class="pickers" id="bn-every"><button type="button" class="pick" data-v="day" aria-pressed="${p.nomEvery !== 'all' && !!p.galaAt}">Una categoria cada dia fins a la Nit</button><button type="button" class="pick" data-v="all" aria-pressed="${p.nomEvery === 'all' || !p.galaAt}">Totes alhora</button></div></div>
-      <label class="field"><span>A partir del</span><input class="inp" type="date" id="bn-from" value="${esc(from0)}"></label>
-      <p class="m" id="bn-plan" style="margin:0"></p>
-      <details class="np-group"><summary><span>Quants finalistes hi ha a cada categoria</span>${ICON.chev}</summary>
-        <ul class="mini-list" style="max-height:none">${t.cats.map(x => `<li><span>${esc(x.cat.name)}</span><span class="mono">${fin[x.cat.id].length}${fin[x.cat.id].length > k ? ' · empat' : ''}</span></li>`).join('')}</ul></details>`,
-    foot: '<span class="spacer"></span><button class="btn" data-act="sheet-close">Encara no</button><button class="btn btn-primary" id="bn-ok">Publica’ls</button>',
-    onMount: el => {
-      const every = () => el.querySelector('#bn-every .pick[aria-pressed="true"]')?.dataset.v || 'all';
-      const plan = () => {
-        const q = { ...p, nomFrom: el.querySelector('#bn-from').value || from0, nomEvery: every() };
-        const when = nomSchedule(q);
-        el.querySelector('#bn-plan').textContent = !p.galaAt && every() === 'day' ? 'Per repartir-les fins a la Nit, posa’n el dia a «Edita». Si no, surten totes alhora.'
-          : every() === 'all' ? `Surten totes el ${ddmm(when[0])}.` : `Una cada dia, ${nomRange(q)}: la primera, ${catQ((p.cats || [])[0])}; l’última, ${catQ((p.cats || []).slice(-1)[0])}, ${when[when.length - 1] === p.galaAt ? 'el dia de la Nit' : ddmm(when[when.length - 1])}. Cada matí arriba un avís al mòbil.`;
-      };
-      el.querySelectorAll('#bn-every .pick').forEach(b => b.onclick = () => { el.querySelectorAll('#bn-every .pick').forEach(x => x.setAttribute('aria-pressed', x === b)); plan(); });
-      el.querySelector('#bn-from').oninput = plan;
-      plan();
-      el.querySelector('#bn-ok').onclick = () => {
-        const now = new Date().toISOString();
-        const rec = { ...clone(S.polls.get(pid)), closed: true, nominees: fin, nomFrom: el.querySelector('#bn-from').value || from0, nomEvery: p.galaAt ? every() : 'all', nomAt: now };
-        S.polls.set(pid, rec); persist('polls', pid, rec, 10);
-        closeSheet(); toast('Finalistes publicats'); render();
-      };
-    },
-  });
-}
-
 /* ---------- Quanta gent ha votat, per a tothom ---------- */
 // turnout/<votació> = { S: 12, C: 9… }: cada persona hi suma 1 a la seva corda el primer cop que vota, en el mateix lot que el vot
 // i amb turnout/<votació>/by/<persona> (que només llegeix ella), perquè no compti dos cops (vegeu les regles). No diu qui ha
@@ -354,7 +314,7 @@ function turnoutFor(p) {
 /** Qui porta el tauler (que té tots els vots) hi posa el recompte de veritat si no hi coincideix: els vots fets abans que hi
  *  hagués recompte, o els de qui ja no hi participa. Com a molt un cop per minut. */
 function fixTurnout(p) {
-  if (!canBoard() || !readsBoard() || !BN_TURN.data || Date.now() - (BN_TURN.fixAt || 0) < 60e3) return;
+  if (p.ballotsGone || !canBoard() || !readsBoard() || !BN_TURN.data || Date.now() - (BN_TURN.fixAt || 0) < 60e3) return;
   const secOf = new Map(bandesPeople(p).map(m => [m.id, m.section])), real = {};
   for (const v of bandesVotes(p)) { const sec = secOf.get(v.memberId); if (sec) real[sec] = (real[sec] || 0) + 1; }
   const keys = new Set([...Object.keys(real), ...Object.keys(BN_TURN.data)]);
@@ -387,55 +347,21 @@ function sendFirstVote(key, rec) {
 
 /* ---------- Els resultats muts, quan es tanca la votació ---------- */
 // tally/<votació> = { cats: { <categoria>: { n: [vots de cada persona o parella, de més a menys], b: paperetes } }, win: { <categoria>:
-// [vots de cada guanyador, en l'ordre de results] }, sig, at }: com s'han repartit els vots de cada categoria, sense cap nom, que
-// veu tothom. tallyMe/<votació>_<persona> = { pollId, memberId, cats }: en quantes categories ha rebut vots, que només veu ella (qui
-// no n'ha rebut cap no en té). Els hi posa qui porta el tauler, que té tots els vots, quan no hi coincideixen (sig); els vots dels
-// guanyadors, només quan hi ha el palmarès.
-const BN_TALLY = { pid: null, data: null, me: null, off: null, offMe: null, fixAt: 0, seenAt: 0 };
+// [vots de cada guanyador, en l'ordre de results] }, sig, res, day, at }: com s'han repartit els vots de cada categoria, sense cap
+// nom, que veu tothom. tallyMe/<votació>_<persona> = { pollId, memberId, cats }: en quantes categories ha rebut vots, que només veu
+// ella (qui no n'ha rebut cap no en té). Els escriu el compte de servei (avisos.py, amb .github/scripts/bandes.py) cada mitja
+// hora si hi ha res de nou: l'app només els llegeix.
+const BN_TALLY = { pid: null, data: null, me: null, off: null, offMe: null };
 const tallyOn = p => !!p && !['draft', 'prop', 'vote'].includes(bandesPhase(p));
-const strHash = s => { let h = 5381; for (let i = 0; i < s.length; i++) h = (Math.imul(h, 33) ^ s.charCodeAt(i)) >>> 0; return h.toString(36); };
-function tallyPayload(p, t) {
-  const cats = {}, win = {}, me = {};
-  for (const x of t.cats) {
-    if (x.rows.length) cats[x.cat.id] = { n: x.rows.map(r => r.n), b: x.ballots };
-    const res = p.results?.[x.cat.id];
-    if (res?.length) win[x.cat.id] = res.map(k => x.rows.find(r => r.key === k)?.n || 0);
-  }
-  for (const e of t.people) if (e.nominations) me[e.id] = e.nominations;
-  return { cats, win, me };
-}
 function tallyFor(p) {
   if (!tallyOn(p) || PREVIEW || typeof db === 'undefined' || !db) return null;
   if (BN_TALLY.pid !== p.id) {
     BN_TALLY.off?.(); BN_TALLY.offMe?.();
-    Object.assign(BN_TALLY, { pid: p.id, data: null, me: null, offMe: null, fixAt: 0, seenAt: 0 });
+    Object.assign(BN_TALLY, { pid: p.id, data: null, me: null, offMe: null });
     BN_TALLY.off = db.doc(`tally/${p.id}`).onSnapshot(d => { BN_TALLY.data = d.exists ? d.data() : {}; scheduleRender(); }, () => { BN_TALLY.data = null; });
     if (myId()) BN_TALLY.offMe = db.doc(`tallyMe/${p.id}_${myId()}`).onSnapshot(d => { BN_TALLY.me = d.exists ? d.data() : null; scheduleRender(); }, () => { BN_TALLY.me = null; });
   }
-  fixTally(p);
   return BN_TALLY.data;
-}
-/** Qui porta el tauler hi posa els números si no hi coincideixen: com a molt un cop per minut, i només si ja té tots els vots
- *  (tants com diu el recompte de participació). Les fitxes de cadascú van primer i el resum, al final (amb la signatura). */
-function fixTally(p) {
-  if (!canBoard() || !readsBoard() || !BN_TALLY.data || Date.now() - BN_TALLY.seenAt < 5e3 || Date.now() - BN_TALLY.fixAt < 60e3) return;
-  const s = turnoutSum(p, turnoutFor(p));
-  if (!s) return;
-  BN_TALLY.seenAt = Date.now();
-  const people = bandesPeople(p), t = bandesTally(p, bandesVotes(p), people);
-  if (!t.voters || t.voters < s.n) return;
-  const pay = tallyPayload(p, t), sig = strHash(JSON.stringify(pay));
-  if (BN_TALLY.data.sig === sig) return;
-  BN_TALLY.fixAt = Date.now();
-  const ops = people.map(m => [db.doc(`tallyMe/${p.id}_${m.id}`), pay.me[m.id] ? { pollId: p.id, memberId: m.id, cats: pay.me[m.id] } : null]);
-  ops.push([db.doc(`tally/${p.id}`), { cats: pay.cats, win: pay.win, sig, at: new Date().toISOString() }]);
-  (async () => {
-    for (let i = 0; i < ops.length; i += 400) {
-      const b = fs.batch();
-      for (const [ref, data] of ops.slice(i, i + 400)) data ? b.set(ref, data) : b.delete(ref);
-      await b.commit();
-    }
-  })().catch(() => {});
 }
 /** L'anell d'una categoria, sense noms: un tros per persona (o parella), de més a menys vots (les dotze primeres; la resta,
  *  juntes). Amb el palmarès, els trossos dels guanyadors van en daurat. */
@@ -588,34 +514,4 @@ function bandesPropsClose(pid) {
   const rec = { ...clone(p), propOpen: false };
   S.polls.set(pid, rec); persist('polls', pid, rec, 10);
   toast('Propostes tancades'); render();
-}
-
-/* ---------- Els diplomes ---------- */
-/** Un diploma per persona i banda (a les de parella, un per a cadascú, amb el nom de l'altra). winners: { categoria: [claus] }. */
-function diplomaList(p, winners, only) {
-  const out = [];
-  for (const c of p.cats || []) for (const k of winners[c.id] || []) {
-    const ids = keyIds(k);
-    for (const id of ids) if (!only || id === only) out.push({ cat: c, id, with: ids.filter(x => x !== id) });
-  }
-  return out;
-}
-function printDiplomas(p, winners, only) {
-  const list = diplomaList(p, winners, only);
-  if (!list.length) { toast('Encara no hi ha cap banda per imprimir'); return; }
-  const accent = /^#[0-9a-f]{6}$/i.test(S.config.brand?.accent || '') ? S.config.brand.accent : '#5A3577';
-  const logo = S.config.brand?.logo || '', year = (p.galaAt || p.closesAt || TODAY).slice(0, 4);
-  const when = fmtD(p.galaAt || TODAY, { day: 'numeric', month: 'long', year: 'numeric' });
-  printDoc(`Diplomes · ${p.title}`, list.map(x => `<section class="pr-dip">
-      <svg class="pr-dip-sash" viewBox="0 0 100 100" aria-hidden="true"><path d="M0 58 58 0h18L0 76z" fill="${accent}"/></svg>
-      ${logo ? `<img class="pr-dip-logo" src="${esc(logo)}" alt="">` : ''}
-      <p class="pr-dip-k">${esc(S.config.name || '')}</p>
-      <p class="pr-dip-e">${esc(galaName(p))} · ${year}</p>
-      <h1 class="pr-dip-t">${esc(x.cat.name)}</h1>
-      ${x.cat.desc ? `<p class="pr-dip-d">${esc(x.cat.desc)}</p>` : ''}
-      <p class="pr-dip-a">Banda atorgada a</p>
-      <p class="pr-dip-n">${esc(bdName(x.id))}</p>
-      ${x.with.length ? `<p class="pr-dip-w">amb ${esc(x.with.map(bdName).join(' i '))}</p>` : ''}
-      <p class="pr-dip-f">Per votació de ${esc(V.tot)} · ${esc(p.galaPlace ? `${p.galaPlace}, ` : '')}${esc(when)}</p>
-    </section>`).join(''));
 }

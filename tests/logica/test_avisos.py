@@ -42,7 +42,26 @@ DB[f"cors/{G}/polls/b5"] = {"id": "b5", "kind": "bandes", "title": "Demà", "clo
                             "galaAt": (_today + datetime.timedelta(days=1)).isoformat(), "galaDress": "Vestit de gala"}
 DB[f"cors/{G}/polls/b6"] = {"id": "b6", "kind": "bandes", "title": "Avui", "closed": True, "sections": [], "createdAt": "2026-01-01T00:00:00Z",
                             "galaAt": _today.isoformat(), "galaTime": "21:00", "galaPlace": "Can Culleretes", "galaName": "La Gala dels Premis"}
+# Unes bandes amb el palmarès i la Nit de fa més d'un mes: els resultats muts es desen i les paperetes s'esborren.
+DB[f"cors/{G}/polls/b7"] = {"id": "b7", "kind": "bandes", "title": "L'any passat", "closed": True, "sections": [], "createdAt": "2026-01-01T00:00:00Z",
+                            "cats": [{"id": "k1", "name": "Riure"}, {"id": "k2", "name": "Parella", "pair": True}], "results": {"k1": ["m1"]}, "resultsAt": "2026-01-01T00:00:00Z",
+                            "galaAt": (_today - datetime.timedelta(days=40)).isoformat()}
+DB[f"cors/{G}/pollVotes/b7_m2"] = {"pollId": "b7", "memberId": "m2", "section": "T", "picks": {"k1": ["m1", "m3"], "k2": ["m1", "m3"]}}
+DB[f"cors/{G}/pollVotes/b7_m3"] = {"pollId": "b7", "memberId": "m3", "section": "S", "picks": {"k1": ["m1"]}}
+DB[f"cors/{G}/turnout/b7/by/m2"] = {"at": "2025-12-01"}
+DB[f"cors/{G}/turnout/b7/by/m3"] = {"at": "2025-12-01"}
+WRITES = []
 class Reader:
+    def commit(self, ops):
+        WRITES.extend(ops)
+        for op in ops:
+            if op[0] == "delete":
+                DB.pop(op[1], None)
+            elif op[0] == "set":
+                DB[op[1]] = json.loads(json.dumps(op[2]))
+            else:
+                assert op[1] in DB, op
+                DB[op[1]].update(op[2])
     reads = 0
     full = True
     def get(self, path):
@@ -99,6 +118,16 @@ ok = sorted(SENT) == sorted([("https://push.example/e2", "Lluc: Tenors: assaig p
                             + [(f"https://push.example/e{i}", "Demà és la Nit de les Bandes! Etiqueta: vestit de gala.") for i in (1, 2, 3)]
                             + [(f"https://push.example/e{i}", "Avui és la Gala dels Premis! A les 21:00, Can Culleretes.") for i in (1, 2, 3)])
 ok = ok and "b2" not in st["polls_new"] and "b3" in st["polls_new"]
+# Les bandes de l'any passat: els resultats muts, sense noms; la fitxa de qui ha rebut vots; i les paperetes, esborrades.
+t7 = DB.get(f"cors/{G}/tally/b7") or {}
+bandes_ok = (t7.get("cats") == {"k1": {"n": [2, 1], "b": 2}, "k2": {"n": [1], "b": 1}} and t7.get("win") == {"k1": [2]} and "m1" not in json.dumps(t7)
+             and DB.get(f"cors/{G}/tallyMe/b7_m1", {}).get("cats") == 2 and DB.get(f"cors/{G}/tallyMe/b7_m3", {}).get("cats") == 2
+             and f"cors/{G}/tallyMe/b7_m2" not in DB
+             and not any(k.startswith(f"cors/{G}/pollVotes/b7_") or k.startswith(f"cors/{G}/turnout/b7/by/") for k in DB)
+             and DB[f"cors/{G}/polls/b7"].get("ballotsGone") == _today.isoformat()
+             and not any(op[1].startswith(f"cors/{G}/pollVotes/") and "/b7_" not in op[1] for op in WRITES if op[0] == "delete"))
+print("BANDES:", "bé" if bandes_ok else ("malament", t7, [op[:2] for op in WRITES]))
+ok = ok and bandes_ok
 # De nit no s'envia res (i les passades curtes s'acaben): aleshores la prova només comprova que no s'ha enviat res.
 import zoneinfo
 night = not (8 <= datetime.datetime.now(zoneinfo.ZoneInfo("Europe/Madrid")).hour < 22)

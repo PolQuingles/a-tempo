@@ -78,6 +78,8 @@ jobs:
         run: python3 tests/logica/test_norma.py
       - name: Avisos al mòbil entre passades (dades inventades, sense enviar res)
         run: python3 tests/logica/test_avisos.py
+      - name: Els resultats muts de les bandes (servidor)
+        run: python3 tests/logica/test_bandes.py
   estructura:
     name: Empremtes i scripts
     runs-on: ubuntu-24.04
