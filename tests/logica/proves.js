@@ -226,6 +226,8 @@ prova('rols sumats: cadascú té les pestanyes i els permisos de tots els seus r
   };
   igual(as(['singer'], { memberId: 'a' }), { tabs: 'avisos,llista,calendari,tauler', more: '', gestio: '', areas: 'me,all' }, 'cantaire: la seva i, per llegir, tot el cor');
   igual([attArea(), attTabKeys().join()], ['me', ''], 'i comença per la seva');
+  applyRoute('assistencia');
+  igual(attArea(), 'me', 'també amb l’enllaç a Assistència (no la porta a tot el cor)');
   ui.attArea = 'all';
   igual(attTabKeys().join(), 'llista,stats,risk', 'de tot el cor, la llista, les estadístiques i el risc (les absències no)');
   ui.attArea = null; S.config.attPrivate = true;

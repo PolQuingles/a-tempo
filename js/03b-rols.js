@@ -60,6 +60,8 @@ const ATT_ALL = { admin: ['llista', 'stats', 'risk', 'abs'], director: ['stats',
 const ATT_OPEN = ['llista', 'stats', 'risk'];
 const attAllKeys = () => ['llista', 'stats', 'risk', 'abs'].filter(k => (S.role === 'edit' && Object.keys(ATT_ALL).some(r => iHave(r) && ATT_ALL[r].includes(k)))
   || (!!myId() && !attPrivate() && ATT_OPEN.includes(k)));
+/** Si mira tot el cor per feina (l'administració, la direcció i la gerència), i no només per llegir-lo. */
+const attWork = () => S.role === 'edit' && Object.keys(ATT_ALL).some(iHave);
 /** Des d'on es pot mirar l'assistència: la pròpia («me»), la de la corda que porta («sec») i la de tot el cor («all»). */
 function attAreas() {
   const out = [];
@@ -73,8 +75,7 @@ function attArea() {
   const as = attAreas();
   if (as.includes(ui.attArea)) return ui.attArea;
   // Qui només hi veu tot el cor per llegir-lo (les llistes obertes) comença per la seva.
-  const work = S.role === 'edit' && Object.keys(ATT_ALL).some(iHave);
-  return as.includes('sec') ? 'sec' : as.includes('all') && work ? 'all' : as[0] || 'me';
+  return as.includes('sec') ? 'sec' : as.includes('all') && attWork() ? 'all' : as[0] || 'me';
 }
 /** Les parts d'Assistència de cada àmbit (passar llista, estadístiques, risc i absències): les de la corda, les de tot el cor
  *  que tenen els seus rols i, la pròpia, cap. */

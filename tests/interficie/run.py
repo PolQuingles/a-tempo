@@ -827,7 +827,7 @@ def main():
         r.update(page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
           const tabs = () => [...document.querySelectorAll('.tabs-in .tab:not(.tab-extra)')].map(b => b.dataset.tab).join(',');
           out.leaderTabs = /^avisos,llista,calendari,tauler/.test(tabs()) && !roleTabs().includes('gestio');
-          out.leaderAreas = attAreas().join() === 'me,sec,all' && attArea() === 'sec';
+          out.leaderAreas = attAreas().join() === (attPrivate() ? 'me,sec' : 'me,sec,all') && attArea() === 'sec';
           ui.tab = 'tauler'; ui.board = 'anuncis'; render(); await s(300);
           out.noBoardEdit = !document.querySelector('[data-act="ann-new"], [data-act="ann-edit"]');
           ui.tab = 'calendari'; render(); await s(300);
@@ -1781,7 +1781,7 @@ def main():
           stopPreview(); out.back = ui.tab === 'gestio' && isAdmin(); return out; }""")
         check(r["teach"] and not r["edit"] and "classes" in r["tabs"] and "alumnes" in r["cl"], "com el professor de cant: porta les classes (amb els seus alumnes) i no edita res més", str(r))
         check(not r["singerEdit"] and r["me"] and not r["gestio"], "com un cantaire: veu el seu espai i no Gestió", str(r))
-        check(r["leadTabs"].startswith("avisos,llista,calendari,tauler") and r["leadAreas"] == "me,sec,all", "com el cap de corda que també canta: les pestanyes dels dos rols (i tot el cor, per llegir)", str(r))
+        check(r["leadTabs"].startswith("avisos,llista,calendari,tauler") and r["leadAreas"] in ("me,sec", "me,sec,all"), "com el cap de corda que també canta: les pestanyes dels dos rols (i tot el cor per llegir, si les llistes són obertes)", str(r))
         check(r["back"], "i se'n torna a Gestió", str(r))
         check(not errors, "sense errors a la vista prèvia", "; ".join(errors[:3]))
         ctx.close()
