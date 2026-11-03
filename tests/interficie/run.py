@@ -827,7 +827,7 @@ def main():
         r.update(page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
           const tabs = () => [...document.querySelectorAll('.tabs-in .tab:not(.tab-extra)')].map(b => b.dataset.tab).join(',');
           out.leaderTabs = /^avisos,llista,calendari,tauler/.test(tabs()) && !roleTabs().includes('gestio');
-          out.leaderAreas = attAreas().join() === (attPrivate() ? 'me,sec' : 'me,sec,all') && attArea() === 'sec';
+          out.leaderAreas = attAreas().join() === (attPrivate() ? 'me,sec' : 'me,sec,all');
           ui.tab = 'tauler'; ui.board = 'anuncis'; render(); await s(300);
           out.noBoardEdit = !document.querySelector('[data-act="ann-new"], [data-act="ann-edit"]');
           ui.tab = 'calendari'; render(); await s(300);
