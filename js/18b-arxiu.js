@@ -142,12 +142,12 @@ function sheetScoreWork(pid, wid, sec0) {
     el.querySelector('#sw-sum').innerHTML = `${sumPill(x, false)}
       <span class="muted">${x.given} de ${x.n} repartides · ${x.returned} ${x.returned === 1 ? 'retornada' : 'retornades'}</span>`;
     el.querySelector('#sw-bulk').hidden = !can || !ms.length;
-    // Una taula: qui és i els tres passos. Les caselles es pinten fins al pas on és cadascú, del color d'aquell pas: taronja
+    // Una taula: qui és (el número de la corda i el nom; el divisi no compta per a l'arxiu) i els tres passos. Les caselles es pinten fins al pas on és cadascú, del color d'aquell pas: taronja
     // (a repartir), blau (repartida) o verd (retornada).
     el.querySelector('#sw-list').innerHTML = ms.length ? `<table class="sw-table"><thead><tr><th scope="col"><span class="sr">${esc(V.Member)}</span></th>${SCORE_STATES.map(([, l]) => `<th scope="col">${l}</th>`).join('')}</tr></thead>
       <tbody>${rows.map(({ m, out }) => {
         const s = scoreOf(pid, wid, m), at = SCORE_STEPS.indexOf(s), note = outNote(out, s);
-        return `<tr class="sw-row${note ? ' sw-out' : ''}" data-mid="${esc(m.id)}"><th scope="row" class="sw-n">${codeTag(m, pid)}${esc(m.name)}${m.part ? ` <span class="part">${esc(partTag(m))}</span>` : ''}${guestOf(pid, m.id) ? ' <span class="tag">Reforç</span>' : ''}${note ? `<small class="sc-out">${esc(note)}</small>` : ''}</th>
+        return `<tr class="sw-row${note ? ' sw-out' : ''}" data-mid="${esc(m.id)}"><th scope="row" class="sw-n">${codeTag(m, pid)}${esc(m.name)}${guestOf(pid, m.id) ? ' <span class="tag">Reforç</span>' : ''}${note ? `<small class="sc-out">${esc(note)}</small>` : ''}</th>
           ${SCORE_STATES.map(([k, l], i) => `<td class="sw-c"><button type="button" data-k="${k}" class="${i <= at ? `on st-${SCORE_CLS[s]}` : ''}" aria-pressed="${i === at}" aria-label="${esc(`${m.name}: ${l}`)}" ${can ? '' : 'disabled'}></button></td>`).join('')}</tr>`;
       }).join('')}</tbody></table>` : `<p class="muted" style="padding:12px;margin:0">Ningú d’aquesta ${esc(V.section)} fa la producció.</p>`;
     el.querySelectorAll('.sw-row').forEach(r => r.querySelectorAll('button[data-k]').forEach(b => b.onclick = () => {
