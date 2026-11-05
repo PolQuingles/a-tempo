@@ -1,9 +1,11 @@
-"""Dades inventades per a la base de dades falsa de les proves (seed.js)."""
+"""Dades inventades per a la base de dades falsa de les proves (seed.js): python3 seed.py [carpeta] [AAAA-MM-DD]."""
 import datetime, json, os, sys
 F = "nSN9kYDkzPik239jnsMsCSYW"
-today = datetime.date.today()
+# Les dates es compten des d'avui (o del dia que es doni). Aquest dia va a seed.js com a SEED_DAY, i l'hora en què s'han
+# fet les dades com a SEED_NOW: si les proves passen la mitjanit, l'app de proves continua en aquell dia (fake-firebase.js).
+today = datetime.date.fromisoformat(sys.argv[2]) if len(sys.argv) > 2 else datetime.date.today()
 d = lambda n: (today + datetime.timedelta(days=n)).isoformat()
-now = datetime.datetime.utcnow().isoformat() + "Z"
+now = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 DB = {}
 def put(p, v): DB[p] = v
 put(f"agrupacions/{F}", {"name": "Cor Jove de proves", "kind": "cor", "status": "active"})
@@ -70,5 +72,7 @@ for k, wd in [(1, 0), (3, 0), (8, 0)]:
         "slots": [{"id": f"{cid}a", "time": "17:00", "mins": 40, "memberId": mid["Anna Puig"]}, {"id": f"{cid}b", "time": "17:40", "mins": 40, "memberId": mid["Marc Bosch"]}, {"id": f"{cid}c", "time": "18:20", "mins": 40, "memberId": ""}]})
     put(f"cors/{F}/classes/x{k}", {"id": f"x{k}", "date": d(k + 1), "place": "", "note": "", "teacher": "pfneus", "teacherName": "Neus Serra",
         "slots": [{"id": f"x{k}a", "time": "16:20", "mins": 40, "memberId": mid["Laia Ferrer"]}, {"id": f"x{k}b", "time": "17:00", "mins": 40, "memberId": mid["Júlia Mas"]}]})
-open(os.path.join(sys.argv[1] if len(sys.argv) > 1 else os.path.dirname(__file__), "seed.js"), "w").write("window.FAKE_SEED = " + json.dumps(DB, ensure_ascii=False) + ";\n")
+open(os.path.join(sys.argv[1] if len(sys.argv) > 1 else os.path.dirname(__file__), "seed.js"), "w").write(
+    f"window.SEED_DAY = {json.dumps(today.isoformat())};\nwindow.SEED_NOW = {json.dumps(now)};\n"
+    f"window.FAKE_SEED = {json.dumps(DB, ensure_ascii=False)};\n")
 print(len(DB), "documents")
