@@ -245,7 +245,7 @@ function sheetSession(sid, presetProd, presetDate) {
           <small>P. ex. «Carregar i descarregar el material» · 4 persones. Qui confirma s’hi pot apuntar.</small></div>
       </div>
       <div class="field"><span>També compta per a</span><div class="pickers" id="se-also">${prods.map(p => `<button type="button" class="pick" data-also="${p.id}" aria-pressed="${(cur.alsoIn || []).includes(p.id)}">${esc(p.name)}</button>`).join('')}</div>
-        <small>Per a assajos compartits entre produccions: comptaran a les estadístiques i a la norma de totes les marcades.</small></div>
+        <small>Per a assajos compartits entre produccions: comptaran a les estadístiques i a la norma de totes les marcades, amb els minuts repartits a parts iguals (un assaig de 2 h de dues produccions, 1 h a cada una; a tota la temporada, les 2 h).</small></div>
       <label class="field"><span>Nota</span><input class="inp" id="se-note" type="text" maxlength="80" value="${esc(cur.note || '')}" placeholder="p. ex. Portar partitures del Gloria"></label>
       <details class="fitxa-edit" id="se-fitxa" ${isShow(cur) || hasInfo(cur) ? 'open' : ''}>
         <summary><span><b>Fitxa ${V.sh.del}</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Convocatòria, vestuari, punt de trobada… La veuen tots els convocats.</span></span>${ICON.chev}</summary>
