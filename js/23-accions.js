@@ -203,6 +203,7 @@ const actions = {
   'bandes-publish': el => bandesPublish(el.dataset.id),
   'bandes-results': el => sheetBandesResults(el.dataset.id),
   'bandes-vote': el => sheetBallot(el.dataset.id),
+  'bandes-mine': el => sheetMyBallot(el.dataset.id),
   'bandes-nominate': el => bandesNominate(el.dataset.id),
   'bandes-gala': el => bandesGala(el.dataset.id),
   'bandes-envelope': el => bandesEnvelope(el),

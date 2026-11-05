@@ -1971,6 +1971,17 @@ def main():
           el.querySelector('#bd-save').click(); await s(400); flushAll(); await s(300);
           const p = [...S.polls.values()].find(isBandes);
           out.draft = !!p && p.draft === true && p.cats.length === 3 && p.cats[1].sec === 'S' && p.cats[2].pair && !openPolls().some(x => x.id === p.id);
+          // Quan es revelen els finalistes: després de tancar la votació, i es pot triar el dia i si surten tots alhora.
+          sheetBandes(p.id); await s(300);
+          const ed = document.querySelector('.sheet');
+          ed.querySelector('#bd-nom').value = addDays(TODAY, 2); ed.querySelector('#bd-nom').dispatchEvent(new Event('input', { bubbles: true }));
+          ed.querySelector('#bd-save').click(); await s(200);
+          out.nomEarly = /després de tancar/.test(document.querySelector('.toast')?.innerText || '') && !S.polls.get(p.id).nomFrom;
+          ed.querySelector('#bd-nom').value = addDays(TODAY, 7); ed.querySelector('#bd-nom').dispatchEvent(new Event('input', { bubbles: true }));
+          ed.querySelector('#bd-every [data-v="all"]').click(); await s(300);
+          out.nomHint = /totes alhora/.test(ed.querySelector('#bd-nom-s').textContent) && ed.querySelector('#bd-nom-s').textContent.includes(ddmm(addDays(TODAY, 7)));
+          ed.querySelector('#bd-save').click(); await s(300); flushAll(); await s(300);
+          out.nomSaved = S.polls.get(p.id).nomFrom === addDays(TODAY, 7) && S.polls.get(p.id).nomEvery === 'all';
           document.querySelector(`[data-act="bandes-publish"][data-id="${p.id}"]`).click(); await s(300);
           document.querySelector('#bp-ok').click(); await s(400); flushAll(); await s(400);
           const q = S.polls.get(p.id), a = S.announcements.get(q.annId);
@@ -1978,6 +1989,8 @@ def main():
           return out; }""")
         for k, label in [("prev", "l'editor de bandes llegeix les categories (les d'una corda i les de parella) i les ensenya"),
                          ("draft", "les bandes es desen com a esborrany, que encara no es pot votar"),
+                         ("nomEarly", "els finalistes no es poden revelar abans de tancar la votació"),
+                         ("nomHint", "l'editor diu quan es revelaran els finalistes"), ("nomSaved", "i es desa el dia i com es revelen"),
                          ("pub", "en publicar-les surt un anunci fixat amb totes les categories i el botó per votar")]:
             check(r.get(k), label, str(r))
         switch_user(page, base, "singer")
@@ -2004,11 +2017,16 @@ def main():
           const v = (await firebase.firestore().doc(`cors/${GID}/pollVotes/${p.id}_${myId()}`).get()).data();
           out.sent = !!v && v.n === 3 && v.picks[p.cats[2].id].length === 2;
           out.todoGone = !document.querySelector('.h-todo [data-act="bandes-vote"]');
+          sheetBallot(p.id); await s(300);
+          out.hub = document.querySelector('.sheet-b .eyebrow')?.textContent === 'El teu vot' && !document.querySelector('.sheet [data-bb="send"]')
+            && /Canvia/.test(document.querySelector('.sheet .bb-rev')?.innerText || '');
+          closeSheet(); await s(400);
           return out; }""")
         for k, label in [("todo", "a Inici, el cantaire hi té «Vota»"), ("intro", "la papereta explica que el vot és secret"),
                          ("noSelf", "a la papereta hi surt tothom menys un mateix"), ("secOnly", "a la banda d'una corda només hi surt aquella corda"),
                          ("pairNeedsTwo", "una parella necessita dues persones"), ("review", "abans d'enviar-lo es revisa el vot"),
-                         ("sent", "el vot s'envia amb el que s'ha triat a cada categoria"), ("todoGone", "i ja no surt a «Per fer»")]:
+                         ("sent", "el vot s'envia amb el que s'ha triat a cada categoria"), ("todoGone", "i ja no surt a «Per fer»"),
+                         ("hub", "«Canvia el vot» obre «El teu vot», amb cada categoria per canviar-la i sense botó d'enviar")]:
             check(r.get(k), label, str(r))
         switch_user(page, base, "pol")
         r = page.evaluate("""async () => { const s = ms => new Promise(r => setTimeout(r, ms)), out = {};
@@ -2200,16 +2218,51 @@ def main():
           out.zero = /0 de 16 ja han votat/.test(document.querySelector('.bn-turn')?.innerText || '');
           sheetBallot('bp1'); await s(300);
           document.querySelector('.sheet [data-bb="next"]').click(); await s(150);
-          document.querySelector('.bb-p').click(); await s(100);
-          document.querySelector('.sheet [data-bb="go"]').click(); await s(200);
-          document.querySelector('.sheet [data-bb="send"]').click(); await s(800); flushAll(); await s(600);
+          out.noSendYet = !document.querySelector('.sheet [data-bb="send"]');
+          document.querySelectorAll('.bb-p')[0].click(); await s(100);
+          out.segs = document.querySelectorAll('.bb-prog span').length === 3 && document.querySelector('.bb-prog span.cur.on') !== null;
+          document.querySelector('.sheet .bb-top [data-bb="send"]').click(); await s(800); flushAll(); await s(600);
+          out.partial = /Vot enviat \\(1 de 3\\)/.test(document.querySelector('.toast')?.innerText || '');
           const tn = (await firebase.firestore().doc(`cors/${GID}/turnout/bp1`).get()).data() || {};
           render(); await s(300);
           out.one = tn.S === 1 && /1 de 16 ja han votat/.test(document.querySelector('.bn-turn')?.innerText || '');
-          sheetBallot('bp1'); await s(300); document.querySelector('.sheet [data-bb="send"]').click(); await s(800); flushAll(); await s(400);
+          // Canviar-lo: s'obre «El teu vot», amb les en blanc primer; «Fet» hi torna i cada canvi es desa sol.
+          sheetBallot('bp1'); await s(300);
+          const rows = () => [...document.querySelectorAll('.sheet .bb-rev [data-bb="go"]')].map(b => b.innerText.split('\\n')[0]);
+          out.blankFirst = /En blanc \\(2\\)/.test(document.querySelector('.bb-g')?.textContent || '') && rows().join('|') === 'Parella|Rei del karaoke|Cor';
+          document.querySelectorAll('.sheet .bb-rev [data-bb="go"]')[1].click(); await s(200);
+          document.querySelector('.bb-p').click(); await s(100);
+          out.saved = /Desat/.test(document.querySelector('.bb-saved')?.innerText || '');
+          document.querySelector('.sheet [data-bb="done"]').click(); await s(200);
+          out.back = document.querySelector('.sheet-b .eyebrow')?.textContent === 'El teu vot' && rows().join('|') === 'Parella|Cor|Rei del karaoke';
+          // Amb la categoria plena, la nova persona substitueix l'última (i es pot desfer).
+          document.querySelectorAll('.sheet .bb-rev [data-bb="go"]')[rows().indexOf('Cor')].click(); await s(200);
+          const ps = () => document.querySelectorAll('.bb-p'), on = () => [...document.querySelectorAll('.bb-p[aria-pressed="true"] .bb-n')].map(x => x.textContent);
+          ps()[1].click(); await s(100);
+          const two = on(), third = ps()[2].querySelector('.bb-n').textContent;
+          ps()[2].click(); await s(150);
+          out.swap = on().length === 2 && on().includes(third) && on().includes(two[0]) && !on().includes(two[1]) && /en lloc de/.test(document.querySelector('.toast')?.innerText || '');
+          document.querySelector('#toast-act').click(); await s(150);
+          out.undo = on().join('|') === two.join('|');
+          document.querySelector('.sheet [data-act="sheet-close"]').click(); await s(200); flushAll(); await s(600);
+          out.closedToast = /Vot desat/.test(document.querySelector('.toast')?.innerText || '');
+          const v = (await firebase.firestore().doc(`cors/${GID}/pollVotes/bp1_${myId()}`).get()).data();
+          out.auto = !!v && v.n === 2 && v.picks.k1.length === 2;
           out.once = ((await firebase.firestore().doc(`cors/${GID}/turnout/bp1`).get()).data() || {}).S === 1;
+          // Ja tancada: cadascú pot mirar el seu vot.
+          S.polls.set('bp1', { ...S.polls.get('bp1'), closed: true }); ui.tab = 'bandes'; render(); await s(300);
+          document.querySelector('.bn-vote [data-act="bandes-mine"]')?.click(); await s(300);
+          const mine = document.querySelector('.sheet')?.innerText || '';
+          out.mine = /El teu vot/.test(mine) && /has votat 2 de 3/.test(mine) && /En blanc/.test(mine) && !document.querySelector('.sheet [data-bb]');
+          closeSheet(); await s(400);
           return out; }""")
-        for k, label in [("zero", "tothom veu quanta gent ha votat"), ("one", "en votar, hi suma (a la seva corda)"), ("once", "i canviar el vot no hi torna a sumar")]:
+        for k, label in [("zero", "tothom veu quanta gent ha votat"), ("noSendYet", "abans de triar ningú, no hi ha res per enviar"),
+                         ("segs", "la barra de dalt té un tros per categoria, ple si ja s'ha votat"),
+                         ("partial", "«Envia el que tinc» envia el vot a mitges"), ("one", "en votar, hi suma (a la seva corda)"),
+                         ("blankFirst", "«El teu vot» posa primer les categories en blanc"), ("saved", "un cop enviat, cada canvi es desa sol"),
+                         ("back", "i «Fet» torna a «El teu vot»"), ("swap", "amb la categoria plena, la nova persona substitueix l'última"),
+                         ("undo", "i es pot desfer"), ("closedToast", "en tancar, diu que el vot s'ha desat"), ("auto", "i el vot desat és el nou"),
+                         ("once", "i canviar el vot no hi torna a sumar"), ("mine", "ja tancada, cadascú pot mirar el seu vot (només per mirar)")]:
             check(r.get(k), label, str(r))
         switch_user(page, base, "pol")
         r = page.evaluate("""async () => { const s = ms => new Promise(r => setTimeout(r, ms));
@@ -2217,7 +2270,8 @@ def main():
           BD_PEEK.add('bp1'); sheetBandesResults('bp1'); await s(400);
           document.querySelector('#br-dip').click(); await s(300);
           const d = document.querySelectorAll('#print-root .pr-dip');
-          return printed === 1 && d.length === 1 && /Banda atorgada a/i.test(d[0].innerText); }""")
+          // L'únic vot (el de la cantaire, canviat a dalt): «Cor», dues persones, i «Rei del karaoke», una; la parella, en blanc.
+          return printed === 1 && d.length === 3 && [...d].every(x => /Banda atorgada a/i.test(x.innerText)); }""")
         check(r, "l'equip imprimeix els diplomes de qui guanya", str(r))
         check(not errors, "sense errors amb les propostes, el recompte i els diplomes", "; ".join(errors[:3]))
         ctx.close()

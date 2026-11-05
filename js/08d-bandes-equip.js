@@ -30,18 +30,20 @@ function sheetBandes(id) {
       <label class="field"><span>Es pot votar fins al (inclòs)</span><input class="inp" id="bd-close" type="date" value="${esc(p.closesAt || '')}"><small>La vespra, l’app ho recorda a qui encara no ha votat.</small></label>
       <div class="eyebrow" style="margin-top:6px">La Nit: l’entrega de les bandes</div>
       <label class="field"><span>Com es diu</span><input class="inp" id="bd-gname" maxlength="60" value="${esc(galaName(p))}"></label>
-      <label class="field"><span>Quin dia és</span><input class="inp" id="bd-gala" type="date" value="${esc(p.galaAt || '')}"><small>Surt a Inici amb el compte enrere. Els finalistes es revelen un dia rere l’altre, de l’endemà de tancar la votació fins a la Nit.</small></label>
+      <label class="field"><span>Quin dia és</span><input class="inp" id="bd-gala" type="date" value="${esc(p.galaAt || '')}"><small>Surt a Inici amb el compte enrere.</small></label>
       <label class="field"><span>A quina hora (opcional)</span><input class="inp" id="bd-gtime" type="time" value="${esc(p.galaTime || '')}"><small>Amb l’hora, el compte enrere va per hores i minuts.</small></label>
       <label class="field"><span>On (opcional)</span><input class="inp" id="bd-gplace" maxlength="80" value="${esc(p.galaPlace || '')}" placeholder="p. ex. Restaurant Can Culleretes, Barcelona"><small>Surt amb el botó «Com s’hi arriba» (obre el mapa).</small></label>
       <label class="field"><span>Etiqueta (opcional)</span><input class="inp" id="bd-gdress" maxlength="80" value="${esc(p.galaDress || '')}" placeholder="p. ex. Vestit de gala: és la nit de l’any"></label>
       <label class="field"><span>El programa (opcional), un moment per línia</span><textarea class="inp" id="bd-gprog" style="min-height:110px" placeholder="21:00 Arribada i photocall&#10;21:30 Sopar&#10;23:00 Entrega de les bandes&#10;00:30 Festa">${esc(programText(p))}</textarea></label>
       <div class="field"><span>Finalistes per categoria</span>${choose('bd-fin', +p.finalists || BANDES_FINAL, [3, 5])}</div>
+      <div class="field"><span>Com es revelen els finalistes</span><div class="pickers" id="bd-every"><button type="button" class="pick" data-v="day" aria-pressed="${p.nomEvery !== 'all'}">Una categoria cada dia fins a la Nit</button><button type="button" class="pick" data-v="all" aria-pressed="${p.nomEvery === 'all'}">Totes alhora</button></div></div>
+      <label class="field"><span>Es revelen a partir del (opcional)</span><input class="inp" id="bd-nom" type="date" value="${esc(p.nomFrom || '')}"><small id="bd-nom-s"></small></label>
       ${ex && !ex.draft ? `<div class="toggle-row"><span><b>Tancada</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Ja no s’hi pot votar</span></span><label class="switch"><input type="checkbox" id="bd-closed" ${p.closed ? 'checked' : ''}><span></span></label></div>` : ''}
     </div>`,
     foot: `${ex ? '<button class="btn btn-danger-ghost" id="bd-del">Esborra</button>' : ''}<span class="spacer"></span>${p.draft ? '<button class="btn" id="bd-save">Desa l’esborrany</button><button class="btn btn-primary" id="bd-pub">Publica…</button>' : '<button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="bd-save">Desa</button>'}`,
     onMount: el => {
       bindToggles(el, '#bd-secs');
-      for (const k of ['#bd-picks', '#bd-win', '#bd-fin']) el.querySelectorAll(`${k} .pick`).forEach(b => b.onclick = () => el.querySelectorAll(`${k} .pick`).forEach(x => x.setAttribute('aria-pressed', x === b)));
+      for (const k of ['#bd-picks', '#bd-win', '#bd-fin', '#bd-every']) el.querySelectorAll(`${k} .pick`).forEach(b => b.onclick = () => el.querySelectorAll(`${k} .pick`).forEach(x => x.setAttribute('aria-pressed', x === b)));
       const val = k => +el.querySelector(`${k} .pick[aria-pressed="true"]`)?.dataset.v || 2;
       const read = () => {
         const win = val('#bd-win');
@@ -50,6 +52,7 @@ function sheetBandes(id) {
           sections: readSections(el, '#bd-secs'), out: $$('.bd-out input:not(:checked)', el).map(i => i.dataset.mid),
           selfOk: el.querySelector('#bd-self').checked, closesAt: el.querySelector('#bd-close').value,
           galaName: el.querySelector('#bd-gname').value.trim() || 'La Nit de les Bandes', galaAt: el.querySelector('#bd-gala').value, galaPlace: el.querySelector('#bd-gplace').value.trim(), finalists: val('#bd-fin'),
+          nomFrom: el.querySelector('#bd-nom').value, nomEvery: el.querySelector('#bd-every .pick[aria-pressed="true"]')?.dataset.v === 'all' ? 'all' : 'day',
           galaTime: el.querySelector('#bd-gtime').value, galaDress: el.querySelector('#bd-gdress').value.trim(), program: parseProgram(el.querySelector('#bd-gprog').value),
           closed: el.querySelector('#bd-closed')?.checked ?? !!p.closed, author: ex?.author || authorName(), createdAt: ex?.createdAt || new Date().toISOString() };
       };
@@ -60,6 +63,9 @@ function sheetBandes(id) {
           : '<p class="m" style="margin:0">Encara no hi ha cap categoria.</p>';
         const n = bandesPeople(r).length, outN = r.out.filter(x => pollExpected(r).some(m => m.id === x)).length;
         el.querySelector('#bd-out-h').textContent = `Hi participen ${n} ${n === 1 ? 'persona' : 'persones'}${outN ? ` (${outN} fora)` : ''}`;
+        // Quan sortiran els finalistes: el dia triat o, si no n'hi ha, l'endemà de tancar la votació.
+        const range = cs.length ? nomRange(r) : '';
+        el.querySelector('#bd-nom-s').textContent = `${r.nomFrom ? '' : 'Si no hi poses res, l’endemà de tancar la votació. '}${range ? `Es revelaran ${range}${r.nomEvery === 'all' || !r.galaAt ? ', totes alhora' : ', una categoria cada dia'}.` : ''}${r.nominees ? ' Ja s’han publicat: si ho canvies, canvia quan es veu cada categoria.' : ''}`;
       };
       let t = null;
       el.addEventListener('input', () => { clearTimeout(t); t = setTimeout(preview, 200); });
@@ -70,6 +76,9 @@ function sheetBandes(id) {
         if (!r.cats.length) { toast('Escriu almenys una categoria'); return false; }
         if (bandesPeople(r).length < 2) { toast('Hi ha de participar almenys dues persones'); return false; }
         if (r.galaAt && r.closesAt && r.galaAt <= r.closesAt) { toast('La Nit ha de ser després de tancar la votació'); return false; }
+        if (r.nominees && !r.nomFrom) { toast('Els finalistes ja s’han publicat: posa el dia que es comencen a revelar'); return false; }
+        if (r.nomFrom && r.closesAt && !r.closed && r.nomFrom <= r.closesAt) { toast('Els finalistes s’han de revelar després de tancar la votació'); return false; }
+        if (r.nomFrom && r.galaAt && r.nomFrom > r.galaAt) { toast('Els finalistes s’han de revelar abans de la Nit (o el mateix dia)'); return false; }
         return true;
       };
       el.querySelector('#bd-save').onclick = () => {
