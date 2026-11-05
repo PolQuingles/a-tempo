@@ -2020,7 +2020,7 @@ def main():
           sheetBallot(p.id); await s(300);
           out.hub = document.querySelector('.sheet-b .eyebrow')?.textContent === 'El teu vot' && !document.querySelector('.sheet [data-bb="send"]')
             && /Canvia/.test(document.querySelector('.sheet .bb-rev')?.innerText || '');
-          closeSheet();
+          closeSheet(); await s(400);
           return out; }""")
         for k, label in [("todo", "a Inici, el cantaire hi té «Vota»"), ("intro", "la papereta explica que el vot és secret"),
                          ("noSelf", "a la papereta hi surt tothom menys un mateix"), ("secOnly", "a la banda d'una corda només hi surt aquella corda"),
@@ -2254,7 +2254,7 @@ def main():
           document.querySelector('.bn-vote [data-act="bandes-mine"]')?.click(); await s(300);
           const mine = document.querySelector('.sheet')?.innerText || '';
           out.mine = /El teu vot/.test(mine) && /has votat 2 de 3/.test(mine) && /En blanc/.test(mine) && !document.querySelector('.sheet [data-bb]');
-          closeSheet();
+          closeSheet(); await s(400);
           return out; }""")
         for k, label in [("zero", "tothom veu quanta gent ha votat"), ("noSendYet", "abans de triar ningú, no hi ha res per enviar"),
                          ("segs", "la barra de dalt té un tros per categoria, ple si ja s'ha votat"),
