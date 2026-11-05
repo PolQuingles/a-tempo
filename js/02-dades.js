@@ -552,20 +552,28 @@ function sessionMins(s) {
   const a = clockMins(s.time), b = clockMins(s.end);
   return a != null && b != null && b > a ? b - a : 120;
 }
-/** Minuts que compten d'una marca: els que dura la sessió i els que hi ha estat (sense el retard ni el que ha marxat abans).
- *  «No fa» no hi compta. */
-function markMins(s, mk) {
-  if (!mk || mk.s === 'NP') return null;
-  const all = sessionMins(s);
-  if (mk.s !== 'P' && mk.s !== 'R') return { all, done: 0 };
-  return { all, done: all - Math.min(all, (mk.s === 'R' ? +mk.min || 0 : 0) + (+mk.early || 0)) };
+/** Entre quantes produccions es reparteix una sessió, mirant-la des d'una (pid): una sessió compartida (alsoIn) compta a
+ *  parts iguals per a cadascuna (un assaig de 2 h de l'Oratori i de Sant Esteve, 1 h a cada una). Sense producció (tota la
+ *  temporada, una llista), la sessió sencera. */
+function sessionShare(s, pid) {
+  if (!pid) return 1;
+  const ps = new Set(sessionProds(s).filter(id => S.productions.has(id)));
+  return ps.has(pid) ? ps.size : 1;
 }
-/** Suma una marca als comptadors. */
-function countMark(c, s, mk) {
+/** Minuts que compten d'una marca: els que dura la sessió i els que hi ha estat (sense el retard ni el que ha marxat abans),
+ *  per a la producció pid (vegeu sessionShare). «No fa» no hi compta. */
+function markMins(s, mk, pid) {
+  if (!mk || mk.s === 'NP') return null;
+  const all = sessionMins(s), n = sessionShare(s, pid);
+  if (mk.s !== 'P' && mk.s !== 'R') return { all: all / n, done: 0 };
+  return { all: all / n, done: (all - Math.min(all, (mk.s === 'R' ? +mk.min || 0 : 0) + (+mk.early || 0))) / n };
+}
+/** Suma una marca als comptadors (amb els minuts per a la producció pid, si n'hi ha). */
+function countMark(c, s, mk, pid) {
   c[mk.s]++;
   if (mk.s === 'R') c.min += +mk.min || 0;
   if ((mk.s === 'P' || mk.s === 'R') && +mk.early > 0) { c.left++; c.leftMin += +mk.early; }
-  const mm = markMins(s, mk);
+  const mm = markMins(s, mk, pid);
   if (mm) { c.mAll += mm.all; c.mDone += mm.done; }
 }
 // L'assistència es compta en minuts: un retard de 30′ en un assaig de 3 h compta com 2 h 30′ de les 3 h.
@@ -608,7 +616,7 @@ function computeStats(scope, secFilter) {
       rec.hist.push({ s, mk });
       if (!mk) continue;
       any = true;
-      for (const x of [c, tot, rec, bySec[m.section]]) countMark(x, s, mk);
+      for (const x of [c, tot, rec, bySec[m.section]]) countMark(x, s, mk, ctx);
       if (mk.note) rec.notes.push({ s, mk });
     }
     if (any) bySession.push({ s, c });
@@ -621,7 +629,8 @@ function computeStats(scope, secFilter) {
 // RULE_SKIP (concerts, actuacions i «Altres») depèn del tipus d'agrupació: vegeu applyGroupConfig.
 const minAttendance = () => Math.min(100, Math.max(1, +S.config.minAttendance || 80));
 /** status: ok | risk (below now, can still reach it) | out (cannot reach it any more) | null (no data / not in it).
- *  Es compta en minuts, com les estadístiques: att/abs/remaining són assajos, i attM/absM/remM, els minuts. */
+ *  Es compta en minuts, com les estadístiques: att/abs/remaining són assajos, i attM/absM/remM, els minuts (d'una sessió
+ *  compartida, només la part d'aquesta producció: vegeu sessionShare). */
 function ruleStatus(prodId, member) {
   if (!prodId || isExcluded(prodId, member.id)) return null;
   const min = minAttendance() / 100;
@@ -629,8 +638,8 @@ function ruleStatus(prodId, member) {
   for (const s of allSessions(prodId)) {
     if (RULE_SKIP.has(s.type) || !convoked(s, member.section)) continue;
     const marked = s.date <= TODAY && hasData(s, member.section) ? effMark(s, member, prodId) : null;
-    if (!marked) { if (s.date >= TODAY && !onLeave(member, s.date)) { remaining++; remM += sessionMins(s); } continue; }
-    const mm = markMins(s, marked);
+    if (!marked) { if (s.date >= TODAY && !onLeave(member, s.date)) { remaining++; remM += sessionMins(s) / sessionShare(s, prodId); } continue; }
+    const mm = markMins(s, marked, prodId);
     if (!mm) continue;
     if (marked.s === 'P' || marked.s === 'R') att++; else abs++;
     attM += mm.done; absM += mm.all - mm.done;

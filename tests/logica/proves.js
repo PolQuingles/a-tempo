@@ -392,6 +392,28 @@ prova('norma: una sessió compartida compta per a totes dues produccions', () =>
   igual(ruleStatus('q', S.members.get('a')).att + ruleStatus('q', S.members.get('a')).abs, 2, 'Q compta la compartida');
   igual(ruleStatus('p', S.members.get('a')).status, 'out', 'P només en té una');
 });
+prova('una sessió compartida es reparteix: un assaig de 2 h de dues produccions compta 1 h a cada una', () => {
+  escenari({
+    members: [{ id: 'a', name: 'A', section: 'B' }],
+    productions: [
+      { id: 'p', name: 'Oratori', sessions: [{ id: 's1', date: D(-4), type: 'Assaig', time: '19:00', end: '21:00', alsoIn: ['q', 'x'] },
+        { id: 's3', date: D(3), type: 'Assaig', time: '19:00', end: '21:00', alsoIn: ['q'] }] },
+      { id: 'q', name: 'Sant Esteve', sessions: [{ id: 's2', date: D(-2), type: 'Assaig', time: '19:00', end: '22:00' }] }],
+    attendance: { s1_B: { sessionId: 's1', section: 'B', marks: { a: { s: 'R', min: 30 } } }, ...marks('s2', 'B', { a: 'P' }) },
+  });
+  const a = S.members.get('a');
+  igual([sessionShare(sessionById('s1'), 'p'), sessionShare(sessionById('s1'), 'q'), sessionShare(sessionById('s1'), null), sessionShare(sessionById('s2'), 'q')], [2, 2, 1, 1],
+    'entre les produccions que hi ha (no la que ja no existeix), i sencera fora d’una producció');
+  const rp = computeStats({ kind: 'prod', id: 'p' }).rows.find(r => r.m.id === 'a');
+  igual([rp.mAll, rp.mDone], [60, 45], 'l’Oratori: 1 h, i el retard de 30′ també es reparteix');
+  const rq = computeStats({ kind: 'prod', id: 'q' }).rows.find(r => r.m.id === 'a');
+  igual([rq.mAll, rq.mDone], [60 + 180, 45 + 180], 'Sant Esteve: la seva meitat i el seu assaig de 3 h');
+  const rs = computeStats({ kind: 'range', from: D(-30), to: D(30) }).rows.find(r => r.m.id === 'a');
+  igual([rs.mAll, rs.mDone], [120 + 180, 90 + 180], 'tota la temporada: cada assaig, sencer i un sol cop');
+  const n = ruleStatus('p', a);
+  prop(n.cur, 45 / 60, 'la norma, igual');
+  prop(n.best, (45 + 60) / (60 + 60), 'i el que queda, també repartit');
+});
 
 /* ---------- Importador d'horaris ---------- */
 prova('parseTime: les maneres d’escriure una hora', () => {

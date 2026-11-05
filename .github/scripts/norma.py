@@ -10,7 +10,7 @@ Les dades tenen la forma de Firestore:
   · el membre, amb section i leaves (baixes temporals {from, to}).
 
 Es compta en minuts, com a l'app: cada sessió hi pesa pel que dura, i un retard o marxar abans d'hora (early), pels minuts
-que s'hi ha estat.
+que s'hi ha estat. Una sessió compartida per diverses produccions es reparteix a parts iguals entre elles (share).
 """
 import re
 
@@ -120,6 +120,12 @@ def minimum(config):
     return min(100, max(1, v or 80)) / 100
 
 
+def share(productions, s, pid):
+    """Entre quantes produccions es reparteix la sessió, mirant-la des de pid (com sessionShare): les que existeixen."""
+    ps = {p for p in (s.get("prods") or []) if p in productions}
+    return len(ps) if pid in ps else 1
+
+
 def rule_status(productions, sessions, attendance, pid, mid, m, today, min_frac, rule_skip):
     """ok | risk (ara és a sota però encara hi pot arribar) | out (ja no hi pot arribar) | None (sense dades o no la fa)."""
     if mid in (productions[pid].get("excluded") or []):
@@ -134,12 +140,13 @@ def rule_status(productions, sessions, attendance, pid, mid, m, today, min_frac,
         if not marked:
             if s["date"] >= today and not on_leave(m, s["date"]):
                 remaining += 1
-                rem_m += session_mins(s)
+                rem_m += session_mins(s) / share(productions, s, pid)
             continue
         if marked["s"] == "NP":
             continue
-        d = session_mins(s)
-        done_m = d - min(d, (late_mins(marked) if marked["s"] == "R" else 0) + early_mins(marked)) if marked["s"] in ("P", "R") else 0
+        full, n = session_mins(s), share(productions, s, pid)
+        d = full / n
+        done_m = (full - min(full, (late_mins(marked) if marked["s"] == "R" else 0) + early_mins(marked))) / n if marked["s"] in ("P", "R") else 0
         if marked["s"] in ("P", "R"):
             att += 1
         else:
