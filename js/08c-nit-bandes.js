@@ -175,7 +175,7 @@ function bandesVoteBlock(p) {
   const text = mine ? `Has votat ${mine.n || Object.keys(mine.picks || {}).length} de ${n} categories.${open && p.closesAt ? ` Pots canviar el vot fins al ${ddmm(p.closesAt)}.` : ''}`
     : `${draft ? 'Ja l’has començada: el mòbil se’n recorda.' : 'Encara no has votat.'}${p.closesAt ? ` Tens temps fins al ${ddmm(p.closesAt)}.` : ''} El vot és secret.`;
   return `<section class="bn-card bn-vote"><div><h2 class="h2">La teva papereta</h2><p>${esc(text)}</p></div>
-    ${open ? `<button class="btn ${mine ? '' : 'btn-primary'}" data-act="bandes-vote" data-id="${esc(p.id)}">${mine ? 'Canvia el vot' : draft ? 'Continua votant' : 'Vota'}</button>` : ''}
+    ${open ? `<button class="btn ${mine ? '' : 'btn-primary'}" data-act="bandes-vote" data-id="${esc(p.id)}">${mine ? 'Canvia el vot' : draft ? 'Continua votant' : 'Vota'}</button>` : `<button class="btn" data-act="bandes-mine" data-id="${esc(p.id)}">Mira el teu vot</button>`}
     ${turnoutHtml(p)}</section>`;
 }
 const bnWho = k => `<span class="bn-av">${keyIds(k).map(id => avatar(S.members.get(id))).join('')}</span><span class="bn-nm">${esc(keyName(k))}</span>`;
