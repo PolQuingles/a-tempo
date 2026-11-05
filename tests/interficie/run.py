@@ -2270,7 +2270,8 @@ def main():
           BD_PEEK.add('bp1'); sheetBandesResults('bp1'); await s(400);
           document.querySelector('#br-dip').click(); await s(300);
           const d = document.querySelectorAll('#print-root .pr-dip');
-          return printed === 1 && d.length === 1 && /Banda atorgada a/i.test(d[0].innerText); }""")
+          // L'únic vot (el de la cantaire, canviat a dalt): «Cor», dues persones, i «Rei del karaoke», una; la parella, en blanc.
+          return printed === 1 && d.length === 3 && [...d].every(x => /Banda atorgada a/i.test(x.innerText)); }""")
         check(r, "l'equip imprimeix els diplomes de qui guanya", str(r))
         check(not errors, "sense errors amb les propostes, el recompte i els diplomes", "; ".join(errors[:3]))
         ctx.close()
