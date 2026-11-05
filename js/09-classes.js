@@ -133,13 +133,16 @@ function classWeekdays(days) {
   const noms = ds.map(d => DAYS_CA[d]);
   return noms.length === 1 ? noms[0] : `${noms.slice(0, -1).join(', ')} i ${noms[noms.length - 1]}`;
 }
-/** Quantes hores i de quan a quan, per resumir un dia. */
+/** Quantes classes (i hores lliures) i de quan a quan, per resumir un dia: «3 classes i 1 hora lliure · 17:00–19:00». (Abans
+ *  deia «4 hores · 17:00–19:00», que semblava que durés quatre hores.) */
 function classDaySpan(c) {
   const sl = classSlots(c).filter(x => x.time).sort((a, b) => a.time.localeCompare(b.time));
   if (!sl.length) return '';
   const last = sl[sl.length - 1];
   const end = hhmm((parseTime(last.time) ?? 0) + (+last.mins || 30));
-  return `${sl.length} ${sl.length === 1 ? 'hora' : 'hores'} · ${sl[0].time}–${end}`;
+  const n = sl.filter(x => x.memberId || x.name).length, free = sl.length - n;
+  const what = [n ? `${n} ${n === 1 ? 'classe' : 'classes'}` : '', free ? `${free} ${free === 1 ? 'hora lliure' : 'hores lliures'}` : ''].filter(Boolean).join(' i ');
+  return `${what} · ${sl[0].time}–${end}`;
 }
 /** El quadre del professorat: una casella per a cadascú, com les cordes de la llista. */
 function classQuads() {

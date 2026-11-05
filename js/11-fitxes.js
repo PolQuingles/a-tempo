@@ -21,7 +21,18 @@ function openSheet({ title, body, foot = '', onMount = null, wide = false }) {
   const back = root.firstElementChild;
   const prevFocus = document.activeElement;
   back.addEventListener('click', e => { if (e.target === back) closeSheet(); });
-  const onKey = e => { if (e.key === 'Escape') closeSheet(); };
+  // Amb el teclat, la tabulació es queda dins de la finestra (de l'últim botó torna al primer), com a qualsevol diàleg.
+  const onKey = e => {
+    if (e.key === 'Escape') { closeSheet(); return; }
+    if (e.key !== 'Tab') return;
+    const f = [...back.querySelectorAll('button:not([disabled]), [href], input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')]
+      .filter(x => x.getClientRects().length);
+    if (!f.length) return;
+    const a = f[0], z = f[f.length - 1], at = document.activeElement;
+    if (!back.contains(at)) { e.preventDefault(); a.focus(); }
+    else if (e.shiftKey && at === a) { e.preventDefault(); z.focus(); }
+    else if (!e.shiftKey && at === z) { e.preventDefault(); a.focus(); }
+  };
   document.addEventListener('keydown', onKey);
   document.body.style.overflow = 'hidden';
   sheetClose = () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = ''; root.innerHTML = ''; prevFocus?.focus?.({ preventScroll: true }); };

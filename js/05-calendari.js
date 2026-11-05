@@ -124,6 +124,8 @@ function calRow(s, underProd, tone) {
   let marks;
   if (attHidden()) marks = '';   // llistes privades: ni com van les llistes ni el percentatge de la sessió
   else if (!canEdit()) marks = '';   // com van les llistes de cada corda només li diu res a qui en passa
+  // Abans de començar, si hi va tothom, les marques només serien cercles buits: al mòbil, aquest espai és per al lloc i l'hora.
+  else if (!hasBegun(s) && SECTIONS.every(x => convoked(s, x.id))) marks = '';
   else if (SECTIONS.length <= 5) {
     marks = SECTIONS.map(x => {
       if (!convoked(s, x.id)) return `<span class="vm off${x.short.length > 1 ? ' long' : ''}" title="${esc(x.name)}: no convocats">${esc(x.short)}</span>`;

@@ -982,13 +982,27 @@ def main():
           const head = document.querySelector('.page-head');
           out.calHead = !head.querySelector('[data-act="cal-subscribe"], [data-act="cal-past"]') && !!document.querySelector('.cal-past-link');
           out.noMarks = !document.querySelector('.cal-row .vmarks');
+          // Amb el teclat, la tabulació no surt de la finestra oberta.
+          openSheet({ title: 'Prova', body: '<button id="tb1">A</button>', foot: '<button id="tb2">B</button>' }); await s(200);
+          const tab = shift => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: shift, bubbles: true, cancelable: true }));
+          const x = document.querySelector('.sheet [data-act="sheet-close"]');
+          document.getElementById('tb2').focus(); tab(false);
+          const wraps = document.activeElement === x;
+          tab(true);
+          out.tabTrap = wraps && document.activeElement === document.getElementById('tb2');
+          closeSheet(); await s(200);
           return out; }""")
         switch_user(page, base, "pol")
         r.update(page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
           applyRoute('calendari'); render(); await s(300);
           const head = document.querySelector('.page-head');
           out.oneRow = head.getBoundingClientRect().height < 70 && !!head.querySelector('[data-act="session-new"]');
-          out.marks = !!document.querySelector('.cal-row .vmarks');
+          // Les marques de les cordes: a les sessions que ja han començat; a les que vénen, només si no hi va tothom.
+          const future = allSessions().find(x => x.date > TODAY && SECTIONS.every(y => convoked(x, y.id)));
+          out.futureNoMarks = !future || !document.querySelector(`.cal-row .cal-main[data-sid="${future.id}"] .vmarks`);
+          ui.calPast = true; render(); await s(300);
+          out.marks = !!document.querySelector('.cal-row.is-past .vmarks');
+          ui.calPast = false; render(); await s(200);
           applyRoute('inici'); render(); await s(300);
           out.noPlanChip = !document.querySelector('.soon-row .fitxa-chip.empty');
           const nx = allSessions().find(x => x.date >= TODAY && !isShow(x));
@@ -1010,8 +1024,10 @@ def main():
                          ("short", "al mòbil, la capçalera fa servir el nom curt"),
                          ("calHead", "el calendari no té «Subscriu-t'hi» ni «Mostra passades» a dalt: hi ha un enllaç sobre la llista"),
                          ("noMarks", "un cantaire no veu les boletes de les llistes de cada corda"),
+                         ("tabTrap", "amb el teclat, la tabulació es queda dins de la finestra oberta"),
                          ("oneRow", "la capçalera del calendari és d'una sola fila"),
-                         ("marks", "qui passa llista sí que les veu"),
+                         ("marks", "qui passa llista sí que les veu (a les sessions passades)"),
+                         ("futureNoMarks", "però no a les que vénen si hi va tothom: no dirien res i al mòbil hi cal l'espai"),
                          ("noPlanChip", "Properament no té el requadre «Afegeix el pla d'assaig»"),
                          ("planTodo", "el pla del proper assaig és a «Per fer» de la direcció"),
                          ("helpFolded", "les explicacions de Personal queden plegades sota un «?»"),
