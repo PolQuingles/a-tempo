@@ -415,6 +415,16 @@ prova('una sessió compartida es reparteix: un assaig de 2 h de dues produccions
   prop(n.best, (45 + 60) / (60 + 60), 'i el que queda, també repartit');
 });
 
+prova('el resum d’un dia de classes diu quantes classes i quantes hores lliures, no «4 hores» d’un dia de dues', () => {
+  S.classReq = new Map();
+  const c = { id: 'c1', date: D(2), teacher: 'p', slots: [{ id: 'a', time: '17:00', mins: 30, memberId: 'x' }, { id: 'b', time: '17:30', mins: 30, name: 'Una alumna de fora' },
+    { id: 'c', time: '18:00', mins: 30 }, { id: 'd', time: '18:30', mins: 30, memberId: 'y' }] };
+  igual(classDaySpan(c), '3 classes i 1 hora lliure · 17:00–19:00');
+  igual(classDaySpan({ ...c, slots: c.slots.slice(0, 1) }), '1 classe · 17:00–17:30');
+  igual(classDaySpan({ ...c, slots: [c.slots[2]] }), '1 hora lliure · 18:00–18:30');
+  igual(classDaySpan({ ...c, slots: [] }), '');
+});
+
 /* ---------- Importador d'horaris ---------- */
 prova('parseTime: les maneres d’escriure una hora', () => {
   igual(['15:00', "15'00h", '15.00', '1500', '15h', '9', '9:05', ' 16 : 20 '].map(parseTime), [900, 900, 900, 900, 900, 540, 545, 980]);
