@@ -21,13 +21,9 @@ function installCard() {
   if (PREVIEW || !(isiOS() || isAndroid())) return '';
   const hidden = +lsGet(LS_INSTALL) || 0;
   if (Date.now() - hidden < 30 * 864e5) return '';
-  let t, act;
-  if (installed()) {
-    if (!pushSupported() || S.pushOn) return '';
-    t = 'Activa les notificacions'; act = 'data-act="push-setup"';
-  } else {
-    t = 'Descarrega l’app al mòbil'; act = installPrompt ? 'data-act="install-go"' : 'data-act="install-how"';
-  }
+  // Mentre no està instal·lada, l'avís és a «Per fer» (vegeu todoItems).
+  if (!installed() || !pushSupported() || S.pushOn) return '';
+  const t = 'Activa les notificacions', act = 'data-act="push-setup"';
   return `<div class="install-card"><button class="install-go" ${act}><span class="todo-i"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 18.5h3"/></svg></span><span>${t}</span>${ICON.right}</button>
     <button class="icon-btn" data-act="install-hide" aria-label="Ara no">${ICON.close}</button></div>`;
 }
@@ -72,6 +68,7 @@ const TODO_ICONS = {
   bandes: BANDES_ICON,
   score: '<path d="M6 3.5h9l3 3v14H6z"/><path d="M15 3.5v3h3M9 11h6M9 14h6M9 17h4"/>',
   join: '<circle cx="10" cy="8" r="3.5"/><path d="M3.5 19.5a6.5 6.5 0 0113 0M18.5 8v6M15.5 11h6"/>',
+  app: '<rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M12 7.5v7M9 11.5l3 3 3-3"/>',
 };
 const unreadAnnouncements = () => { const seen = lsGet(LS_SEEN) || ''; return visibleAnnouncements().filter(a => (a.createdAt || '') > seen && (!a.until || a.until >= TODAY)); };
 /** Les seccions on em toca passar llista: la dels caps de corda o de secció. */
@@ -143,6 +140,8 @@ function todoItems() {
   for (const { s, short } of shortConcerts()) out.push({ icon: 'voices', t: `${esc(capz(V.sh.show))} del ${esc(shortDate(s.date))}: ${short.map(b => `${b.min - b.yes === 1 ? 'falta' : 'falten'} ${b.min - b.yes} ${esc(b.x.name.toLowerCase())}`).join(' i ')}`, s: `${esc(short.map(b => `${b.x.name}: ${b.yes} de ${b.min}`).join(' · '))}`, btn: 'Mira-ho', act: `data-act="session-info" data-sid="${esc(s.id)}"`, n: 0 });
   const news = unreadAnnouncements();
   if (news.length) out.push({ icon: 'ann', t: `${news.length === 1 ? '1 anunci nou' : `${news.length} anuncis nous`}`, s: esc(news[0].title || ''), btn: 'Llegeix', act: 'data-act="board-news"', n: news.length });
+  // Els cantaires que l'obren des del navegador del mòbil. Entre les primeres files, perquè no quedi amagat sota «Mostra'n més».
+  if (me && !PREVIEW && (isiOS() || isAndroid()) && !installed()) out.splice(Math.min(2, out.length), 0, { icon: 'app', t: 'Descarrega l’app al mòbil', s: 'La tindràs a la pantalla d’inici, com una app més', btn: installPrompt ? 'Descarrega-la' : 'Com fer-ho', act: installPrompt ? 'data-act="install-go"' : 'data-act="install-how"', n: 0 });
   return out;
 }
 /** El que surt a «Per fer»: la convocatòria que ja és a la targeta de la propera sessió no s'hi repeteix. */

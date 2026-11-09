@@ -126,7 +126,7 @@ const actions = {
   'cl-week': el => { const d = new Date((ui.clDay || TODAY) + 'T12:00:00'); d.setDate(d.getDate() + 7 * +el.dataset.dir); ui.clDay = isoDate(d); ui.clMonth = ui.clDay.slice(0, 7); render(); },
   'cl-print-week': el => printClassWeek(el.dataset.k),
   'cl-print-plan': el => printClassPlan(el.dataset.k),
-  'install-hide': () => { lsSet(LS_INSTALL, String(Date.now())); render(); toast('La guia és al menú de les teves inicials'); },
+  'install-hide': () => { lsSet(LS_INSTALL, String(Date.now())); render(); toast('Les pots activar des de les teves inicials'); },
   // Cerca, mida del text i cartells.
   'search': () => sheetSearch(),
   'search-go': el => { closeSheet(); ui.tab = el.dataset.tab; if (el.dataset.board) ui.board = el.dataset.board; if (el.dataset.prod) { ui.calProd = el.dataset.prod; ui.calView = 'list'; } saveUI(); render(); window.scrollTo({ top: 0 }); },
