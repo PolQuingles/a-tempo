@@ -45,7 +45,7 @@ function boardTrips() {
       ${canBoard() ? `<div class="trip-acts"><button class="btn btn-sm" data-act="trip-admin" data-id="${esc(t.id)}">Inscrits, transport i habitacions</button>${tripOpen(t) && c.wait ? `<button class="btn btn-sm" data-act="trip-remind" data-id="${esc(t.id)}">Recorda-ho (${c.wait})</button>` : ''}</div>` : ''}
     </article>`;
   };
-  return `${canBoard() ? `<div class="sec-h end" style="margin-top:6px"><button class="btn btn-sm btn-primary" data-act="trip-new">${ICON.plus}Sortida</button></div>` : ''}
+  return `${canBoard() ? `<div class="sec-h end u-mt-6"><button class="btn btn-sm btn-primary" data-act="trip-new">${ICON.plus}Sortida</button></div>` : ''}
     ${next.length ? `<div class="panel">${next.map(card).join('')}</div>` : `<div class="empty"><p>No hi ha cap sortida prevista.</p></div>`}
     ${past.length ? `<details class="np-group"><summary><span>Fetes (${past.length})</span>${ICON.chev}</summary><div class="panel">${past.map(card).join('')}</div></details>` : ''}`;
 }
@@ -74,12 +74,12 @@ function sheetTripSignup(tripId) {
   const qs = t.questions || [];
   openSheet({
     title: t.title,
-    body: `<p style="margin-top:0"><b>${esc(capz(tripDates(t)))}</b>${t.place ? ` · ${esc(t.place)}` : ''}</p>
+    body: `<p class="u-mt-0"><b>${esc(capz(tripDates(t)))}</b>${t.place ? ` · ${esc(t.place)}` : ''}</p>
       ${qs.map(q => (q.options || []).length
         ? `<div class="field"><span>${esc(q.label)}</span><div class="pickers" data-q="${esc(q.id)}">${q.options.map(o => `<button type="button" class="pick" data-v="${esc(o)}" aria-pressed="${prev?.answers?.[q.id] === o}">${esc(o)}</button>`).join('')}</div></div>`
         : `<label class="field"><span>${esc(q.label)}</span><input class="inp" data-q="${esc(q.id)}" maxlength="120" value="${esc(prev?.answers?.[q.id] || '')}"></label>`).join('')}
-      <label class="field"><span>Nota per a l’organització (opcional)</span><textarea class="inp" id="ts-note" maxlength="200" style="min-height:70px" placeholder="p. ex. Hi aniré pel meu compte · Arribo el dissabte al matí">${esc(prev?.note || '')}</textarea></label>
-      <p class="muted" style="margin:0;font-size:var(--t-13)">Les al·lèrgies i intoleràncies alimentàries es prenen de <button class="linkish" data-act="acct-open" data-k="profile">la teva fitxa</button>: posa-les-hi un sol cop i valen per a tot.</p>`,
+      <label class="field"><span>Nota per a l’organització (opcional)</span><textarea class="inp u-minh-70" id="ts-note" maxlength="200" placeholder="p. ex. Hi aniré pel meu compte · Arribo el dissabte al matí">${esc(prev?.note || '')}</textarea></label>
+      <p class="muted u-m-0 u-fs-t-13">Les al·lèrgies i intoleràncies alimentàries es prenen de <button class="linkish" data-act="acct-open" data-k="profile">la teva fitxa</button>: posa-les-hi un sol cop i valen per a tot.</p>`,
     foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="ts-ok">M’hi apunto</button>`,
     onMount: el => {
       el.querySelectorAll('.pickers[data-q] .pick').forEach(b => b.onclick = () => b.parentElement.querySelectorAll('.pick').forEach(x => x.setAttribute('aria-pressed', String(x === b))));
@@ -101,9 +101,9 @@ function sheetTrip(id) {
   const ex = id ? S.trips.get(id) : null;
   const t = ex ? clone(ex) : { id: uid('tr'), title: '', from: '', to: '', place: '', deadline: '', notes: '', sections: [], transports: [], rooms: [], questions: [], createdAt: new Date().toISOString(), by: S.me?.name || S.email || '' };
   t.transports = t.transports || []; t.rooms = t.rooms || []; t.questions = t.questions || [];
-  const listRows = (key, label, unit) => t[key].map(x => `<div class="sec-row" data-k="${key}" data-id="${esc(x.id)}" style="display:flex;gap:6px;align-items:center">
-      <input class="inp" data-f="name" type="text" maxlength="40" value="${esc(x.name)}" placeholder="${label}" style="flex:1;min-width:0">
-      <input class="inp" data-f="n" type="number" min="1" max="200" inputmode="numeric" value="${esc(String(x[unit] || ''))}" style="width:84px" aria-label="${unit === 'seats' ? 'Places' : 'Llits'}">
+  const listRows = (key, label, unit) => t[key].map(x => `<div class="sec-row u-d-flex u-gap-6 u-ai-center" data-k="${key}" data-id="${esc(x.id)}">
+      <input class="inp u-flex-1 u-minw-0" data-f="name" type="text" maxlength="40" value="${esc(x.name)}" placeholder="${label}">
+      <input class="inp u-w-84" data-f="n" type="number" min="1" max="200" inputmode="numeric" value="${esc(String(x[unit] || ''))}" aria-label="${unit === 'seats' ? 'Places' : 'Llits'}">
       <button type="button" class="icon-btn" data-rm="${esc(x.id)}" aria-label="Treu-lo">${ICON.close}</button></div>`).join('');
   const read = el => {
     for (const k of ['title', 'from', 'to', 'place', 'deadline', 'notes']) t[k] = el.querySelector(`#tr-${k}`).value.trim();
@@ -114,12 +114,12 @@ function sheetTrip(id) {
     t.closed = el.querySelector('#tr-closed').checked;
   };
   const paint = el => {
-    el.querySelector('#tr-tr').innerHTML = listRows('transports', 'p. ex. Autocar 1', 'seats') || '<p class="muted" style="margin:0;font-size:var(--t-13)">Cap. Si hi aneu en autocar o en tren, posa-hi cada vehicle i quantes places té.</p>';
-    el.querySelector('#tr-rm').innerHTML = listRows('rooms', 'p. ex. 204', 'beds') || '<p class="muted" style="margin:0;font-size:var(--t-13)">Cap. Si hi ha allotjament, posa-hi cada habitació i quants llits té.</p>';
-    el.querySelector('#tr-qs').innerHTML = t.questions.map(q => `<div class="sec-row" data-k="questions" data-id="${esc(q.id)}" style="display:grid;gap:6px;grid-template-columns:1fr auto">
+    el.querySelector('#tr-tr').innerHTML = listRows('transports', 'p. ex. Autocar 1', 'seats') || '<p class="muted u-m-0 u-fs-t-13">Cap. Si hi aneu en autocar o en tren, posa-hi cada vehicle i quantes places té.</p>';
+    el.querySelector('#tr-rm').innerHTML = listRows('rooms', 'p. ex. 204', 'beds') || '<p class="muted u-m-0 u-fs-t-13">Cap. Si hi ha allotjament, posa-hi cada habitació i quants llits té.</p>';
+    el.querySelector('#tr-qs').innerHTML = t.questions.map(q => `<div class="sec-row u-d-grid u-gap-6 u-gtc-1fr-auto" data-k="questions" data-id="${esc(q.id)}">
         <input class="inp" data-f="label" maxlength="80" value="${esc(q.label)}" placeholder="p. ex. Dinaràs el dissabte?"><button type="button" class="icon-btn" data-rm="${esc(q.id)}" aria-label="Treu-la">${ICON.close}</button>
-        <input class="inp" data-f="opts" maxlength="160" value="${esc((q.options || []).join(', '))}" placeholder="Opcions separades per comes (p. ex. Sí, No). Buit: resposta lliure" style="grid-column:1/-1"></div>`).join('')
-      || '<p class="muted" style="margin:0;font-size:var(--t-13)">Cap. Per exemple: els àpats, si van amb autocar o pel seu compte, la talla de la samarreta…</p>';
+        <input class="inp u-grid-column-1-1" data-f="opts" maxlength="160" value="${esc((q.options || []).join(', '))}" placeholder="Opcions separades per comes (p. ex. Sí, No). Buit: resposta lliure"></div>`).join('')
+      || '<p class="muted u-m-0 u-fs-t-13">Cap. Per exemple: els àpats, si van amb autocar o pel seu compte, la talla de la samarreta…</p>';
     el.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { read(el); t.transports = t.transports.filter(x => x.id !== b.dataset.rm); t.rooms = t.rooms.filter(x => x.id !== b.dataset.rm); t.questions = t.questions.filter(x => x.id !== b.dataset.rm); paint(el); });
   };
   const secs = new Set((t.sections || []).length ? t.sections : SECTIONS.map(x => x.id));
@@ -130,12 +130,12 @@ function sheetTrip(id) {
       <label class="field"><span>Títol</span><input class="inp" id="tr-title" maxlength="80" value="${esc(t.title)}" placeholder="p. ex. Gira a Viena · Cap de setmana a Montserrat"></label>
       <div class="row2"><label class="field"><span>Del</span><input class="inp" id="tr-from" type="date" value="${esc(t.from)}"></label><label class="field"><span>Al</span><input class="inp" id="tr-to" type="date" value="${esc(t.to)}"></label></div>
       <div class="row2"><label class="field"><span>On</span><input class="inp" id="tr-place" maxlength="80" value="${esc(t.place)}"></label><label class="field"><span>Apuntar-s’hi fins al</span><input class="inp" id="tr-deadline" type="date" value="${esc(t.deadline)}"></label></div>
-      <label class="field"><span>Informació</span><textarea class="inp" id="tr-notes" maxlength="1500" style="min-height:90px" placeholder="Horaris, preu, què cal portar, enllaços…">${esc(t.notes)}</textarea></label>
+      <label class="field"><span>Informació</span><textarea class="inp u-minh-90" id="tr-notes" maxlength="1500" placeholder="Horaris, preu, què cal portar, enllaços…">${esc(t.notes)}</textarea></label>
       <div class="field"><span>Per a</span><div class="pickers" id="tr-secs">${SECTIONS.map(x => secPick(x, secs.has(x.id))).join('')}</div></div>
-      <div class="field"><span>Preguntes per a qui s’hi apunta</span><div id="tr-qs" style="display:grid;gap:10px"></div><button type="button" class="btn btn-sm" id="tr-q-add" style="width:max-content;margin-top:6px">+ Pregunta</button></div>
-      <div class="field"><span>Transport</span><div id="tr-tr" style="display:grid;gap:6px"></div><button type="button" class="btn btn-sm" id="tr-tr-add" style="width:max-content;margin-top:6px">+ Vehicle</button></div>
-      <div class="field"><span>Habitacions</span><div id="tr-rm" style="display:grid;gap:6px"></div><button type="button" class="btn btn-sm" id="tr-rm-add" style="width:max-content;margin-top:6px">+ Habitació</button></div>
-      <div class="toggle-row"><span><b>Inscripcions tancades</b><br><span class="muted" style="font-size:var(--t-13)">Ningú més s’hi pot apuntar ni desapuntar</span></span><label class="switch"><input type="checkbox" id="tr-closed" ${t.closed ? 'checked' : ''}><span></span></label></div>
+      <div class="field"><span>Preguntes per a qui s’hi apunta</span><div id="tr-qs" class="u-d-grid u-gap-10"></div><button type="button" class="btn btn-sm u-w-max-content u-mt-6" id="tr-q-add">+ Pregunta</button></div>
+      <div class="field"><span>Transport</span><div id="tr-tr" class="u-d-grid u-gap-6"></div><button type="button" class="btn btn-sm u-w-max-content u-mt-6" id="tr-tr-add">+ Vehicle</button></div>
+      <div class="field"><span>Habitacions</span><div id="tr-rm" class="u-d-grid u-gap-6"></div><button type="button" class="btn btn-sm u-w-max-content u-mt-6" id="tr-rm-add">+ Habitació</button></div>
+      <div class="toggle-row"><span><b>Inscripcions tancades</b><br><span class="muted u-fs-t-13">Ningú més s’hi pot apuntar ni desapuntar</span></span><label class="switch"><input type="checkbox" id="tr-closed" ${t.closed ? 'checked' : ''}><span></span></label></div>
     </div>`,
     foot: `${ex ? '<button class="btn btn-danger-ghost" id="tr-del">Esborra</button>' : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="tr-save">Desa</button>`,
     onMount: el => {
@@ -172,8 +172,8 @@ function sheetTripAdmin(id) {
     el.querySelector('#ta-list').innerHTML = SECTIONS.map(x => {
       const ms = c.people.filter(m => m.section === x.id);
       if (!ms.length) return '';
-      return `<div class="section-title" style="margin-top:12px"><h2 class="h2">${esc(x.name)}</h2><span class="eyebrow">${ms.filter(m => signupOf(t, m.id)?.answer === 'yes').length} de ${ms.length}</span></div>
-        <ul class="mini-list" style="max-height:none">${ms.map(m => {
+      return `<div class="section-title u-mt-12"><h2 class="h2">${esc(x.name)}</h2><span class="eyebrow">${ms.filter(m => signupOf(t, m.id)?.answer === 'yes').length} de ${ms.length}</span></div>
+        <ul class="mini-list u-maxh-none">${ms.map(m => {
           const s = signupOf(t, m.id);
           const diet = s?.answer === 'yes' ? dietOf(m.id) : '';
           return `<li class="ta-row" data-mid="${m.id}"><span><b>${esc(m.name)}</b>${tripAnswersText(t, s) ? `<br><span class="m">${esc(tripAnswersText(t, s))}</span>` : ''}${diet ? `<br><span class="m diet">Al·lèrgies: ${esc(diet)}</span>` : ''}${s?.note ? `<br><span class="m">${esc(s.note)}</span>` : ''}</span>
@@ -194,7 +194,7 @@ function sheetTripAdmin(id) {
   openSheet({
     title: t.title,
     wide: true,
-    body: `<p style="margin-top:0"><b>${esc(capz(tripDates(t)))}</b>${t.place ? ` · ${esc(t.place)}` : ''}<br><span class="muted" id="ta-sum" style="font-size:var(--t-13)"></span></p><div id="ta-list"></div>`,
+    body: `<p class="u-mt-0"><b>${esc(capz(tripDates(t)))}</b>${t.place ? ` · ${esc(t.place)}` : ''}<br><span class="muted u-fs-t-13" id="ta-sum"></span></p><div id="ta-list"></div>`,
     foot: `<span class="spacer"></span><button class="btn" id="ta-xls">Excel</button><button class="btn btn-primary" id="ta-pdf">PDF</button>`,
     onMount: el => {
       draw(el);
@@ -249,12 +249,12 @@ async function sheetMyProfile() {
       <div class="field"><span>Talla de vestuari</span><div class="pickers" id="pf-size">${SIZES.map(z => `<button type="button" class="pick" data-k="${z}" aria-pressed="${p.size === z}">${z}</button>`).join('')}</div></div>
       <div class="row2"><label class="field"><span>Contacte d’emergència</span><input class="inp" id="pf-en" maxlength="60" value="${esc(p.emergencyName || '')}" placeholder="Nom (i qui és: mare, parella…)"></label>
         <label class="field"><span>El seu telèfon</span><input class="inp" id="pf-ep" type="tel" maxlength="20" value="${esc(p.emergencyPhone || '')}"></label></div>
-      <p class="muted" style="font-size:var(--t-13);margin:0">El telèfon, la talla i el contacte d’emergència només els veu qui porta les persones ${esc(V.del)} (administració, direcció, gerència i secretaria), per a les llistes dels concerts i de les sortides.</p>
+      <p class="muted u-fs-t-13 u-m-0">El telèfon, la talla i el contacte d’emergència només els veu qui porta les persones ${esc(V.del)} (administració, direcció, gerència i secretaria), per a les llistes dels concerts i de les sortides.</p>
       <label class="field"><span>Al·lèrgies i intoleràncies alimentàries</span><input class="inp" id="pf-diet" maxlength="200" value="${esc(diet0)}" placeholder="p. ex. Celíac · Al·lèrgia als fruits secs · Vegetarià"><small>Per als àpats de les sortides i els caps de setmana. Només les veuen la secretaria i la gerència.</small></label>
-      <div class="toggle-row" id="pf-diet-ok-row"${diet0 ? '' : ' hidden'}><span><b>Consentiment</b><br><span class="muted" style="font-size:var(--t-13)">Accepto que la secretaria i la gerència ${esc(V.del)} sàpiguen les meves al·lèrgies per organitzar els àpats.</span></span><label class="switch"><input type="checkbox" id="pf-diet-ok" aria-label="Accepto que la secretaria i la gerència sàpiguen les meves al·lèrgies" ${h?.consentAt ? 'checked' : ''}><span></span></label></div>
+      <div class="toggle-row" id="pf-diet-ok-row"${diet0 ? '' : ' hidden'}><span><b>Consentiment</b><br><span class="muted u-fs-t-13">Accepto que la secretaria i la gerència ${esc(V.del)} sàpiguen les meves al·lèrgies per organitzar els àpats.</span></span><label class="switch"><input type="checkbox" id="pf-diet-ok" aria-label="Accepto que la secretaria i la gerència sàpiguen les meves al·lèrgies" ${h?.consentAt ? 'checked' : ''}><span></span></label></div>
       <fieldset class="fieldset"><legend>Consentiments</legend>
         <div class="field"><span>Drets d’imatge: puc sortir a les fotos i els vídeos ${esc(V.del)}</span><div class="pickers" id="pf-img">${[['yes', 'Sí'], ['no', 'No']].map(([v, t]) => `<button type="button" class="pick" data-k="${v}" aria-pressed="${p.imageOk === v}">${t}</button>`).join('')}</div></div>
-        <div class="toggle-row"><span><b>Protecció de dades</b><br><span class="muted" style="font-size:var(--t-13)">Accepto que ${esc(ofName())} tracti les meves dades per organitzar l’activitat.</span></span><label class="switch"><input type="checkbox" id="pf-data" ${p.dataOk === 'yes' ? 'checked' : ''}><span></span></label></div>
+        <div class="toggle-row"><span><b>Protecció de dades</b><br><span class="muted u-fs-t-13">Accepto que ${esc(ofName())} tracti les meves dades per organitzar l’activitat.</span></span><label class="switch"><input type="checkbox" id="pf-data" ${p.dataOk === 'yes' ? 'checked' : ''}><span></span></label></div>
         ${p.consentAt ? `<small class="muted">Respost el ${esc(shortDate(p.consentAt.slice(0, 10)))}.</small>` : ''}
       </fieldset>
       <div id="pf-mine"></div>
@@ -305,5 +305,5 @@ async function profileBox(el, mid) {
   if (!box.isConnected) return;
   box.innerHTML = p && (p.phone || p.size || p.emergencyName || p.emergencyPhone) || diet
     ? `<dl class="fitxa">${[['Telèfon', p?.phone], ['Talla', p?.size], ['Emergència', [p?.emergencyName, p?.emergencyPhone].filter(Boolean).join(' · ')], ['Al·lèrgies', diet]].filter(([, v]) => v).map(([l, v]) => `<div><dt>${l}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>`
-    : '<span class="muted" style="font-size:var(--t-13)">Encara no ha omplert la seva fitxa (telèfon, talla i contacte d’emergència).</span>';
+    : '<span class="muted u-fs-t-13">Encara no ha omplert la seva fitxa (telèfon, talla i contacte d’emergència).</span>';
 }

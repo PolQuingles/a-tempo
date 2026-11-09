@@ -12,13 +12,13 @@ function sheetProduction(pid) {
   let guests = [...(d.guests || [])].filter(id => S.members.has(id));
   const fresh = [];
   const guestsList = () => [...guests.map(id => S.members.get(id)), ...fresh].length
-    ? `<ul class="mini-list" style="max-height:none">${[...guests.map(id => S.members.get(id)), ...fresh].map(m => `<li><span>${codeTag(m, d.id)}<b>${esc(m.name)}</b> <span class="m">· ${esc(SEC[m.section]?.name || '')}${fresh.includes(m) ? ' · es crearà en desar' : ''}</span></span><button type="button" class="icon-btn" data-g-rm="${esc(m.id)}" aria-label="Treu ${esc(m.name)} dels reforços">${ICON.close}</button></li>`).join('')}</ul>`
-    : '<p class="muted" style="margin:0;font-size:var(--t-13)">Cap.</p>';
+    ? `<ul class="mini-list u-maxh-none">${[...guests.map(id => S.members.get(id)), ...fresh].map(m => `<li><span>${codeTag(m, d.id)}<b>${esc(m.name)}</b> <span class="m">· ${esc(SEC[m.section]?.name || '')}${fresh.includes(m) ? ' · es crearà en desar' : ''}</span></span><button type="button" class="icon-btn" data-g-rm="${esc(m.id)}" aria-label="Treu ${esc(m.name)} dels reforços">${ICON.close}</button></li>`).join('')}</ul>`
+    : '<p class="muted u-m-0 u-fs-t-13">Cap.</p>';
   const gen = { from: d.start || TODAY, to: d.end || '', days: new Set(['1', '3']), time: '20:30', end: '22:30', type: 'Assaig', place: '' };
 
   const sessionsList = () => d.sessions.length
     ? `<ul class="mini-list" id="pe-sessions">${[...d.sessions].sort((a, b) => a.date.localeCompare(b.date)).map(s => `<li><span><span class="mono">${ddmm(s.date)} ${wdShort(s.date)}</span> · ${esc(s.type)} <span class="mono">${esc(timeRange(s))}</span></span><button class="icon-btn" data-rm="${s.id}" aria-label="Treu la sessió">${ICON.close}</button></li>`).join('')}</ul>`
-    : '<p class="muted" style="margin:0;font-size:var(--t-13)">Encara no hi ha sessions.</p>';
+    : '<p class="muted u-m-0 u-fs-t-13">Encara no hi ha sessions.</p>';
 
   openSheet({
     title: existing ? 'Edita la producció' : 'Nova producció', wide: true,
@@ -27,7 +27,7 @@ function sheetProduction(pid) {
       <label class="field"><span>Nom curt (opcional)</span><input class="inp" id="pe-short" type="text" maxlength="24" value="${esc(d.short || '')}" placeholder="p. ex. Nadal"><small>Surt a Inici i al calendari, on el nom sencer no hi cap.</small></label>
       <div class="field"><span>Color al calendari</span><div class="pickers" id="pe-hue">${PROD_HUES.map(h => `<button type="button" class="hue-pick prod-tone" style="--ph:${h}" data-hue="${h}" aria-pressed="${prodHue(d) === h}" aria-label="Color ${h}"></button>`).join('')}</div></div>
       <div class="field"><span>Cartell</span><div class="poster-edit"><span id="pe-poster">${d.poster ? `<span class="poster-th"><img src="${esc(d.poster)}" alt=""></span>` : '<span class="poster-th empty">Cap</span>'}</span>
-        <span style="display:flex;gap:6px;flex-wrap:wrap"><label class="btn btn-sm" for="pe-poster-f">${d.poster ? 'Canvia’l' : 'Tria una imatge'}</label><input id="pe-poster-f" type="file" accept="image/*" class="sr">
+        <span class="u-d-flex u-gap-6 u-fw-wrap"><label class="btn btn-sm" for="pe-poster-f">${d.poster ? 'Canvia’l' : 'Tria una imatge'}</label><input id="pe-poster-f" type="file" accept="image/*" class="sr">
         <button type="button" class="btn btn-sm btn-ghost" id="pe-poster-rm" ${d.poster ? '' : 'hidden'}>Treu-lo</button></span></div>
         <small>Surt a Inici, al calendari i a la fitxa ${V.sh.del}. Una foto o el PDF del cartell convertit en imatge.</small></div>
       <div class="row2"><label class="field"><span>Inici</span><input class="inp" id="pe-start" type="date" value="${d.start || ''}"></label>
@@ -38,19 +38,19 @@ function sheetProduction(pid) {
 
       <fieldset class="fieldset"><legend>Sessions</legend>
         <div id="pe-slist">${sessionsList()}</div>
-        ${d.sessions.some(s => s.date >= TODAY) ? `<details id="pe-bulk"><summary class="btn btn-sm" style="list-style:none;width:max-content">Edita’n unes quantes alhora</summary>
-          <div class="kv" style="margin-top:12px">
+        ${d.sessions.some(s => s.date >= TODAY) ? `<details id="pe-bulk"><summary class="btn btn-sm u-ls-none u-w-max-content">Edita’n unes quantes alhora</summary>
+          <div class="kv u-mt-12">
             <div class="pickers" id="b-pick"><button type="button" class="pick" data-k="noplace" aria-pressed="false">Sense lloc</button><button type="button" class="pick" data-k="all" aria-pressed="false">Totes les que vénen</button><button type="button" class="pick" data-k="none" aria-pressed="false">Cap</button></div>
             <div class="bulk-list" id="b-list"></div>
             <label class="field"><span>Lloc</span><input class="inp" id="b-place" type="text" maxlength="60" list="b-places" value="${esc(d.place || '')}" placeholder="Es deixa com està"><datalist id="b-places">${[...new Set(allSessions().map(s => s.place).filter(Boolean))].map(p => `<option value="${esc(p)}"></option>`).join('')}</datalist></label>
             <div class="row2"><label class="field"><span>Hora d’inici</span><input class="inp" id="b-time" type="time"></label>
             <label class="field"><span>Hora de final</span><input class="inp" id="b-end" type="time"></label></div>
             <label class="field"><span>Nota</span><input class="inp" id="b-note" type="text" maxlength="80" placeholder="Es deixa com està"></label>
-            <button type="button" class="btn btn-sm btn-primary" id="b-run" style="width:max-content">Aplica a les marcades</button>
+            <button type="button" class="btn btn-sm btn-primary u-w-max-content" id="b-run">Aplica a les marcades</button>
             <small class="muted">El que deixis en blanc no canvia. Si canvies l’hora o el lloc d’una sessió que ja en tenia, en desar s’avisarà els convocats.</small>
           </div></details>` : ''}
-        <details id="pe-gen" ${d.sessions.length ? '' : 'open'}><summary class="btn btn-sm" style="list-style:none;width:max-content">Genera sessions recurrents</summary>
-          <div class="kv" style="margin-top:12px">
+        <details id="pe-gen" ${d.sessions.length ? '' : 'open'}><summary class="btn btn-sm u-ls-none u-w-max-content">Genera sessions recurrents</summary>
+          <div class="kv u-mt-12">
             <div class="row2"><label class="field"><span>Des de</span><input class="inp" id="g-from" type="date" value="${gen.from}"></label>
             <label class="field"><span>Fins a</span><input class="inp" id="g-to" type="date" value="${gen.to}"></label></div>
             <div class="field"><span>Dies</span><div class="pickers" id="g-days">${WEEKDAYS.map(([v, l]) => `<button type="button" class="pick" aria-pressed="${gen.days.has(v)}" data-d="${v}">${l}</button>`).join('')}</div></div>
@@ -58,21 +58,21 @@ function sheetProduction(pid) {
             <label class="field"><span>Hora de final</span><input class="inp" id="g-end" type="time" value="${gen.end}"></label></div>
             <label class="field"><span>Tipus</span><select class="inp" id="g-type">${TYPES.map(t => `<option>${t}</option>`).join('')}</select></label>
             <label class="field"><span>Lloc</span><input class="inp" id="g-place" type="text" maxlength="60" value="${esc(d.place || '')}" placeholder="Sala d’assaig"></label>
-            <button type="button" class="btn btn-sm btn-primary" id="g-run" style="width:max-content">Afegeix les sessions</button>
+            <button type="button" class="btn btn-sm btn-primary u-w-max-content" id="g-run">Afegeix les sessions</button>
           </div></details>
       </fieldset>
 
       <fieldset class="fieldset"><legend>Qui no fa aquesta producció</legend>
-        <p class="muted" style="margin:0;font-size:var(--t-13)">Els marcats sortiran en gris («No fa») a totes les sessions i no comptaran a les estadístiques.</p>
+        <p class="muted u-m-0 u-fs-t-13">Els marcats sortiran en gris («No fa») a totes les sessions i no comptaran a les estadístiques.</p>
         ${SECTIONS.map(x => { const ms = membersOf(x.id).filter(mm => !isGuest(mm.id)); return ms.length ? `<div class="field"><span>${x.name}</span><div class="pickers">${ms.map(mm => `<button type="button" class="pick" data-ex="${mm.id}" aria-pressed="${excluded.has(mm.id)}">${esc(mm.name)}</button>`).join('')}</div></div>` : ''; }).join('')}
       </fieldset>
 
       <fieldset class="fieldset"><legend>Reforços</legend>
-        <p class="muted" style="margin:0;font-size:var(--t-13)">Gent de fora ${V.del} que només canta en aquesta producció. Surten a les llistes, a l’assistència i a l’arxiu de partitures (amb el codi R1, R2…), però no a les altres produccions.</p>
+        <p class="muted u-m-0 u-fs-t-13">Gent de fora ${V.del} que només canta en aquesta producció. Surten a les llistes, a l’assistència i a l’arxiu de partitures (amb el codi R1, R2…), però no a les altres produccions.</p>
         <div id="pe-guests">${guestsList()}</div>
         <div class="row2"><input class="inp" id="pe-g-name" type="text" maxlength="60" placeholder="Nom i cognoms" aria-label="Nom del reforç">
           <select class="inp" id="pe-g-sec" aria-label="${esc(V.Section)}">${SECTIONS.map(x => `<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('')}</select></div>
-        <button type="button" class="btn btn-sm" id="pe-g-add" style="width:max-content">+ Afegeix el reforç</button>
+        <button type="button" class="btn btn-sm u-w-max-content" id="pe-g-add">+ Afegeix el reforç</button>
       </fieldset>
     </div>`,
     foot: `${existing ? '<button class="btn btn-danger-ghost" id="pe-del">Esborra</button>' : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="pe-save">Desa</button>`,

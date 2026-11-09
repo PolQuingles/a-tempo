@@ -24,11 +24,11 @@ function sheetAnnouncement(id) {
     wide: true,
     body: `<div class="kv">
       <label class="field"><span>Títol</span><input class="inp" id="an-title" maxlength="90" value="${esc(a.title)}" placeholder="p. ex. Informacions de la setmana"></label>
-      <label class="field"><span>Text</span><textarea class="inp" id="an-body" maxlength="12000" style="min-height:220px" placeholder="Pots escriure-hi tant com vulguis, com un correu.">${esc(a.body)}</textarea>
+      <label class="field"><span>Text</span><textarea class="inp u-minh-220" id="an-body" maxlength="12000" placeholder="Pots escriure-hi tant com vulguis, com un correu.">${esc(a.body)}</textarea>
         <small>Format: una línia en blanc separa paràgrafs · les línies que comencen amb «-» fan una llista · una línia en MAJÚSCULES és un títol · **així** surt en negreta · els enllaços es poden clicar.</small></label>
       <div class="field"><span>Adjunts</span><ul class="att-edit" id="an-files"></ul>
-        <div style="display:flex;gap:8px;flex-wrap:wrap"><label class="btn btn-sm" for="an-file">Adjunta fitxers</label><input id="an-file" type="file" multiple class="sr"><button type="button" class="btn btn-sm" id="an-link">Afegeix un enllaç</button></div>
-        <div id="an-link-f" hidden style="display:grid;gap:6px;margin-top:8px"><input class="inp" id="an-link-url" type="url" placeholder="https://…"><input class="inp" id="an-link-t" maxlength="80" placeholder="Com es diu (p. ex. Formulari del cap de setmana)"><button type="button" class="btn btn-sm" id="an-link-ok" style="justify-self:start">Afegeix-lo</button></div>
+        <div class="u-d-flex u-gap-8 u-fw-wrap"><label class="btn btn-sm" for="an-file">Adjunta fitxers</label><input id="an-file" type="file" multiple class="sr"><button type="button" class="btn btn-sm" id="an-link">Afegeix un enllaç</button></div>
+        <div id="an-link-f" hidden class="u-d-grid u-gap-6 u-mt-8"><input class="inp" id="an-link-url" type="url" placeholder="https://…"><input class="inp" id="an-link-t" maxlength="80" placeholder="Com es diu (p. ex. Formulari del cap de setmana)"><button type="button" class="btn btn-sm u-js-start" id="an-link-ok">Afegeix-lo</button></div>
         <small>PDF, àudios, imatges… fins a 20 MB cadascun. Els veuen tots els qui veuen l’anunci.</small></div>
       <div class="field"><span>Per a (si no en tries cap, per a tothom)</span>${sectionPickers('an-secs', a.sections)}</div>
       <label class="field"><span>Visible fins al (opcional)</span><input class="inp" id="an-until" type="date" value="${esc(a.until || '')}"></label>
@@ -162,14 +162,14 @@ function sheetPoll(id) {
     title: ex ? 'Edita l’enquesta' : 'Nova enquesta',
     body: `<div class="kv">
       <label class="field"><span>Pregunta</span><input class="inp" id="pl-title" maxlength="120" value="${esc(p.title)}" placeholder="p. ex. Quin dissabte podeu fer assaig extra?"></label>
-      <label class="field"><span>Explicació (opcional)</span><textarea class="inp" id="pl-desc" maxlength="600" style="min-height:70px">${esc(p.description || '')}</textarea></label>
+      <label class="field"><span>Explicació (opcional)</span><textarea class="inp u-minh-70" id="pl-desc" maxlength="600">${esc(p.description || '')}</textarea></label>
       <label class="field"><span>Opcions, una per línia</span><textarea class="inp" id="pl-opts" placeholder="Dissabte 7 de novembre, 10–14 h&#10;Dissabte 14 de novembre, 10–14 h&#10;Diumenge 15 de novembre, 17–20 h">${esc((p.options || []).map(o => o.label).join('\n'))}</textarea>
         ${ex ? '<small>Si canvies el text d’una opció, es mantenen els vots de les que no hagis tocat.</small>' : ''}</label>
       <div class="toggle-row"><span><b>Es poden triar diverses opcions</b></span><label class="switch"><input type="checkbox" id="pl-multi" ${p.multi ? 'checked' : ''}><span></span></label></div>
-      <div class="toggle-row"><span><b>Deixa escriure un comentari</b><br><span class="muted" style="font-size:var(--t-13)">Per a dubtes, casos especials o què es prepara (p. ex. per a una audició)</span></span><label class="switch"><input type="checkbox" id="pl-note" ${p.allowNote ? 'checked' : ''}><span></span></label></div>
+      <div class="toggle-row"><span><b>Deixa escriure un comentari</b><br><span class="muted u-fs-t-13">Per a dubtes, casos especials o què es prepara (p. ex. per a una audició)</span></span><label class="switch"><input type="checkbox" id="pl-note" ${p.allowNote ? 'checked' : ''}><span></span></label></div>
       <div class="field"><span>Per a (si no en tries cap, per a tothom)</span>${sectionPickers('pl-secs', p.sections)}</div>
       <label class="field"><span>Respondre fins al (opcional)</span><input class="inp" id="pl-close" type="date" value="${esc(p.closesAt || '')}"></label>
-      ${ex ? `<div class="toggle-row"><span><b>Tancada</b><br><span class="muted" style="font-size:var(--t-13)">Ja no s’hi pot respondre</span></span><label class="switch"><input type="checkbox" id="pl-closed" ${p.closed ? 'checked' : ''}><span></span></label></div>` : ''}
+      ${ex ? `<div class="toggle-row"><span><b>Tancada</b><br><span class="muted u-fs-t-13">Ja no s’hi pot respondre</span></span><label class="switch"><input type="checkbox" id="pl-closed" ${p.closed ? 'checked' : ''}><span></span></label></div>` : ''}
     </div>`,
     foot: `${ex ? '<button class="btn btn-danger-ghost" id="pl-del">Esborra</button>' : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="pl-save">${ex ? 'Desa' : 'Publica'}</button>`,
     onMount: el => {
@@ -217,7 +217,7 @@ function sheetPollResults(id) {
   const block = x => {
     const ms = membersOf(x.id);
     const rows = ms.map(m => { const v = S.pollVotes.get(`${id}_${m.id}`); return `<li><span>${esc(m.name)}${v ? `<br><span class="m">${v.choices.map(c => esc(label[c] || '—')).join(' · ')}</span>${v.note ? `<br><span class="m">«${esc(v.note)}»</span>` : ''}` : ''}</span><span class="rsvp ${v ? 'yes' : 'none'}">${v ? 'Ha respost' : '—'}</span></li>`; }).join('');
-    return `<div class="eyebrow" style="margin:14px 0 4px">${x.name}</div><ul class="mini-list" style="max-height:none">${rows}</ul>`;
+    return `<div class="eyebrow u-m-14-0-4">${x.name}</div><ul class="mini-list u-maxh-none">${rows}</ul>`;
   };
   openSheet({ title: p.title, body: SECTIONS.filter(x => !p.sections?.length || p.sections.includes(x.id)).map(block).join('') });
 }
@@ -239,16 +239,16 @@ function sheetReminder(title, pending, messageFor, nudge) {
   const group = `${title}\n\nFalten per respondre:\n${bySec.map(([x, l]) => `${x.name}: ${l.map(first).join(', ')}`).join('\n')}\n\nPodeu respondre a l’app: ${appUrl()}`;
   openSheet({
     title: 'Recordatori',
-    body: pending.length ? `<p style="margin-top:0"><b>${pending.length} ${pending.length === 1 ? 'persona encara no ha' : 'persones encara no han'} respost.</b> Envia’ls una notificació: els arriba en pocs minuts (a qui té les notificacions activades) i a l’app ja ho tenen a «Per fer».</p>
+    body: pending.length ? `<p class="u-mt-0"><b>${pending.length} ${pending.length === 1 ? 'persona encara no ha' : 'persones encara no han'} respost.</b> Envia’ls una notificació: els arriba en pocs minuts (a qui té les notificacions activades) i a l’app ja ho tenen a «Per fer».</p>
       <div class="remind-who">${bySec.map(([x, l]) => `<p><b>${esc(x.name)}:</b> ${esc(l.map(first).join(', '))}</p>`).join('')}</div>
-      <details class="np-group" style="margin-top:12px"><summary><span>Altres maneres (per a qui encara no té l’app)</span>${ICON.chev}</summary>
-      ${bySec.map(([x, l]) => `<div class="eyebrow" style="margin:14px 0 4px">${x.name}</div><ul class="mini-list remind-list" style="max-height:none">${l.map(m => {
+      <details class="np-group u-mt-12"><summary><span>Altres maneres (per a qui encara no té l’app)</span>${ICON.chev}</summary>
+      ${bySec.map(([x, l]) => `<div class="eyebrow u-m-14-0-4">${x.name}</div><ul class="mini-list remind-list u-maxh-none">${l.map(m => {
         const msg = messageFor(m);
         return `<li><span>${esc(m.name)}${S.staffReady && !accountFor(m.id) ? '<br><span class="m">Encara no té accés a l’app</span>' : ''}</span>
-          <span style="display:flex;gap:4px">${phone(m) ? `<a class="btn btn-sm" href="https://wa.me/${phone(m)}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">WhatsApp</a>` : ''}<button class="btn btn-sm" data-copy="${esc(msg)}">Copia</button></span></li>`;
+          <span class="u-d-flex u-gap-4">${phone(m) ? `<a class="btn btn-sm" href="https://wa.me/${phone(m)}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">WhatsApp</a>` : ''}<button class="btn btn-sm" data-copy="${esc(msg)}">Copia</button></span></li>`;
       }).join('')}</ul>`).join('')}
-      <button class="btn btn-sm" id="rm-group" style="margin-top:10px">Copia el missatge per al grup</button></details>`
-      : '<p style="margin:0">Tothom ha respost.</p>',
+      <button class="btn btn-sm u-mt-10" id="rm-group">Copia el missatge per al grup</button></details>`
+      : '<p class="u-m-0">Tothom ha respost.</p>',
     foot: pending.length && nudge ? `<span class="spacer"></span><button class="btn" data-act="sheet-close">Tanca</button><button class="btn btn-primary" id="rm-push">Envia’ls un avís</button>` : '',
     onMount: el => {
       el.querySelectorAll('[data-copy]').forEach(b => b.onclick = () => copyText(b.dataset.copy, 'Missatge copiat'));

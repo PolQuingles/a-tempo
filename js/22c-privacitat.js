@@ -9,7 +9,7 @@ function privacyHtml() {
   const g = esc(S.config.name || MARCA?.name || V.aquest);
   const priv = attPrivate();
   return `<div class="manual priv-page">
-    <p style="margin-top:0">Aquesta app la fa servir <b>${g}</b> per organitzar els assajos i els concerts. Qui en respon és ${g}: si tens cap pregunta sobre les teves dades, o en vols corregir o esborrar alguna, parla amb l’administració ${esc(V.del)}.</p>
+    <p class="u-mt-0">Aquesta app la fa servir <b>${g}</b> per organitzar els assajos i els concerts. Qui en respon és ${g}: si tens cap pregunta sobre les teves dades, o en vols corregir o esborrar alguna, parla amb l’administració ${esc(V.del)}.</p>
     <h3>Quines dades hi ha</h3>
     <ul><li>El teu nom, el correu amb què entres, la ${esc(V.section)} i la ${esc(V.part)}.</li>
       <li>La teva assistència: cada llista, els retards i les faltes, i els avisos d’absència amb el motiu que hi escriguis.</li>
@@ -94,7 +94,7 @@ function sheetRetention() {
   let cut = season.from;
   const paint = el => {
     const p = retentionPlan(cut);
-    el.querySelector('#rt-sum').innerHTML = `<ul class="mini-list" style="max-height:none">
+    el.querySelector('#rt-sum').innerHTML = `<ul class="mini-list u-maxh-none">
       <li><span><b>${p.att.length}</b> llistes d’assistència (de ${p.sessions} sessions)${p.arch.length ? ` i ${p.arch.length} ${p.arch.length === 1 ? 'tros arxivat' : 'trossos arxivats'}` : ''}</span></li>
       <li><span><b>${p.abs.length}</b> avisos d’absència</span></li>
       <li><span><b>${p.rsvp.length}</b> respostes a convocatòries</span></li>
@@ -103,10 +103,10 @@ function sheetRetention() {
   };
   openSheet({
     title: 'Esborra les temporades velles',
-    body: `<p style="margin-top:0">Esborra per sempre l’assistència, els avisos d’absència, les respostes i les ${esc(V.classes.toLowerCase())} d’abans d’una data. Les produccions, la plantilla i el repertori es queden. Fes-ho quan ja no calguin (per exemple, un cop acabada i tancada la temporada).</p>
+    body: `<p class="u-mt-0">Esborra per sempre l’assistència, els avisos d’absència, les respostes i les ${esc(V.classes.toLowerCase())} d’abans d’una data. Les produccions, la plantilla i el repertori es queden. Fes-ho quan ja no calguin (per exemple, un cop acabada i tancada la temporada).</p>
       <label class="field"><span>Esborra tot el que és d’abans del</span><input class="inp" type="date" id="rt-cut" value="${esc(cut)}" max="${esc(TODAY)}"></label>
       <div id="rt-sum"></div>
-      <p class="muted" style="font-size:var(--t-13)">Les estadístiques i la norma d’aquelles temporades ja no es podran mirar. La còpia de seguretat de cada nit encara les tindrà un temps.</p>`,
+      <p class="muted u-fs-t-13">Les estadístiques i la norma d’aquelles temporades ja no es podran mirar. La còpia de seguretat de cada nit encara les tindrà un temps.</p>`,
     foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-danger" id="rt-go">Esborra-ho</button>`,
     onMount: el => {
       el.querySelector('#rt-cut').onchange = e => { cut = e.target.value || season.from; paint(el); };

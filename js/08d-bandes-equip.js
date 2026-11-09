@@ -9,36 +9,36 @@ function sheetBandes(id) {
   const p = ex ? clone(ex) : { id: uid('q'), kind: 'bandes', title: `Bandes ${S.config.shortName || S.config.name || ''} ${TODAY.slice(0, 4)}`.replace(/\s+/g, ' '), description: '', cats: [], picks: 2, win: 2, sections: [], out: [], selfOk: false, closesAt: '', closed: false, draft: true };
   const choose = (k, v, opts) => `<div class="pickers" id="${k}">${opts.map(o => `<button type="button" class="pick" data-v="${o}" aria-pressed="${o === v}">${o}</button>`).join('')}</div>`;
   const all = bdSorted(membersOf(null));
-  const outList = () => SECTIONS.map(x => [x, all.filter(m => m.section === x.id)]).filter(([, l]) => l.length).map(([x, l]) => `<div class="eyebrow" style="margin:10px 0 4px">${esc(x.name)}</div>
-    <ul class="mini-list bd-out" style="max-height:none">${l.map(m => `<li><label class="bd-out-r"><input type="checkbox" data-mid="${esc(m.id)}" ${(p.out || []).includes(m.id) ? '' : 'checked'}><span>${esc(bdName(m.id))}</span></label></li>`).join('')}</ul>`).join('');
+  const outList = () => SECTIONS.map(x => [x, all.filter(m => m.section === x.id)]).filter(([, l]) => l.length).map(([x, l]) => `<div class="eyebrow u-m-10-0-4">${esc(x.name)}</div>
+    <ul class="mini-list bd-out u-maxh-none">${l.map(m => `<li><label class="bd-out-r"><input type="checkbox" data-mid="${esc(m.id)}" ${(p.out || []).includes(m.id) ? '' : 'checked'}><span>${esc(bdName(m.id))}</span></label></li>`).join('')}</ul>`).join('');
   openSheet({
     title: ex ? 'Edita les bandes' : 'Noves bandes',
     wide: true,
     body: `<div class="kv">
-      <p class="m" style="margin:0">Una votació on tothom tria qui s’emporta cada categoria. El vot és secret: l’equip només en veu els recomptes, les estadístiques i qui ha votat.</p>
+      <p class="m u-m-0">Una votació on tothom tria qui s’emporta cada categoria. El vot és secret: l’equip només en veu els recomptes, les estadístiques i qui ha votat.</p>
       <label class="field"><span>Títol</span><input class="inp" id="bd-title" maxlength="90" value="${esc(p.title)}"></label>
-      <label class="field"><span>Presentació</span><textarea class="inp" id="bd-desc" maxlength="4000" style="min-height:120px" placeholder="Arriben les bandes! Com cada any…">${esc(p.description || '')}</textarea>
+      <label class="field"><span>Presentació</span><textarea class="inp u-minh-120" id="bd-desc" maxlength="4000" placeholder="Arriben les bandes! Com cada any…">${esc(p.description || '')}</textarea>
         <small>Surt a la papereta i a l’anunci. Amb el mateix format que els anuncis: **negreta**, llistes amb «-»…</small></label>
-      <label class="field"><span>Categories, una per línia</span><textarea class="inp" id="bd-cats" style="min-height:220px" placeholder="Nom de la categoria: qui s’ho mereix&#10;Soprano: la millor soprano&#10;&#10;De parella&#10;Parella de l’any: …">${esc(bandesText(p))}</textarea>
+      <label class="field"><span>Categories, una per línia</span><textarea class="inp u-minh-220" id="bd-cats" placeholder="Nom de la categoria: qui s’ho mereix&#10;Soprano: la millor soprano&#10;&#10;De parella&#10;Parella de l’any: …">${esc(bandesText(p))}</textarea>
         <small>«Nom: descripció». Les de parella, sota una línia que digui «De parella» o amb [parella] després del nom. Una categoria que es diu com una ${esc(V.section)} («Soprano», «Tenor»…) només és d’aquella ${esc(V.section)}; també s’hi pot posar [S]. Les de ${esc(V.section)} i les de parella donen una banda; les altres, les que triïs a sota (o [1], [3]… després del nom).</small></label>
       <div class="bd-prev" id="bd-prev"></div>
       <div class="field"><span>Persones per categoria (a cada papereta)</span>${choose('bd-picks', +p.picks || 2, [1, 2, 3])}</div>
       <div class="field"><span>Bandes per categoria (les més votades)</span>${choose('bd-win', +p.win || 2, [1, 2, 3])}<small>A les de parella i a les d’una ${esc(V.section)}, una sola banda.</small></div>
       <div class="field"><span>Qui hi participa (si no en tries cap, tothom)</span>${sectionPickers('bd-secs', p.sections)}</div>
-      <details class="np-group"><summary><span id="bd-out-h"></span>${ICON.chev}</summary><p class="m" style="margin:8px 0 0">Qui no hi surt ni vota ni pot ser votat (p. ex. qui és de baixa tota la temporada).</p>${outList()}</details>
-      <div class="toggle-row"><span><b>Es pot votar a un mateix</b><br><span class="muted" style="font-size:var(--t-13)">Si no, cadascú no surt a les seves llistes</span></span><label class="switch"><input type="checkbox" id="bd-self" ${p.selfOk ? 'checked' : ''}><span></span></label></div>
+      <details class="np-group"><summary><span id="bd-out-h"></span>${ICON.chev}</summary><p class="m u-m-8-0-0">Qui no hi surt ni vota ni pot ser votat (p. ex. qui és de baixa tota la temporada).</p>${outList()}</details>
+      <div class="toggle-row"><span><b>Es pot votar a un mateix</b><br><span class="muted u-fs-t-13">Si no, cadascú no surt a les seves llistes</span></span><label class="switch"><input type="checkbox" id="bd-self" ${p.selfOk ? 'checked' : ''}><span></span></label></div>
       <label class="field"><span>Es pot votar fins al (inclòs)</span><input class="inp" id="bd-close" type="date" value="${esc(p.closesAt || '')}"><small>La vespra, l’app ho recorda a qui encara no ha votat.</small></label>
-      <div class="eyebrow" style="margin-top:6px">La Nit: l’entrega de les bandes</div>
+      <div class="eyebrow u-mt-6">La Nit: l’entrega de les bandes</div>
       <label class="field"><span>Com es diu</span><input class="inp" id="bd-gname" maxlength="60" value="${esc(galaName(p))}"></label>
       <label class="field"><span>Quin dia és</span><input class="inp" id="bd-gala" type="date" value="${esc(p.galaAt || '')}"><small>Surt a Inici amb el compte enrere.</small></label>
       <label class="field"><span>A quina hora (opcional)</span><input class="inp" id="bd-gtime" type="time" value="${esc(p.galaTime || '')}"><small>Amb l’hora, el compte enrere va per hores i minuts.</small></label>
       <label class="field"><span>On (opcional)</span><input class="inp" id="bd-gplace" maxlength="80" value="${esc(p.galaPlace || '')}" placeholder="p. ex. Restaurant Can Culleretes, Barcelona"><small>Surt amb el botó «Com s’hi arriba» (obre el mapa).</small></label>
       <label class="field"><span>Etiqueta (opcional)</span><input class="inp" id="bd-gdress" maxlength="80" value="${esc(p.galaDress || '')}" placeholder="p. ex. Vestit de gala: és la nit de l’any"></label>
-      <label class="field"><span>El programa (opcional), un moment per línia</span><textarea class="inp" id="bd-gprog" style="min-height:110px" placeholder="21:00 Arribada i photocall&#10;21:30 Sopar&#10;23:00 Entrega de les bandes&#10;00:30 Festa">${esc(programText(p))}</textarea></label>
+      <label class="field"><span>El programa (opcional), un moment per línia</span><textarea class="inp u-minh-110" id="bd-gprog" placeholder="21:00 Arribada i photocall&#10;21:30 Sopar&#10;23:00 Entrega de les bandes&#10;00:30 Festa">${esc(programText(p))}</textarea></label>
       <div class="field"><span>Finalistes per categoria</span>${choose('bd-fin', +p.finalists || BANDES_FINAL, [3, 5])}</div>
       <div class="field"><span>Com es revelen els finalistes</span><div class="pickers" id="bd-every"><button type="button" class="pick" data-v="day" aria-pressed="${p.nomEvery !== 'all'}">Una categoria cada dia fins a la Nit</button><button type="button" class="pick" data-v="all" aria-pressed="${p.nomEvery === 'all'}">Totes alhora</button></div></div>
       <label class="field"><span>Es revelen a partir del (opcional)</span><input class="inp" id="bd-nom" type="date" value="${esc(p.nomFrom || '')}"><small id="bd-nom-s"></small></label>
-      ${ex && !ex.draft ? `<div class="toggle-row"><span><b>Tancada</b><br><span class="muted" style="font-size:var(--t-13)">Ja no s’hi pot votar</span></span><label class="switch"><input type="checkbox" id="bd-closed" ${p.closed ? 'checked' : ''}><span></span></label></div>` : ''}
+      ${ex && !ex.draft ? `<div class="toggle-row"><span><b>Tancada</b><br><span class="muted u-fs-t-13">Ja no s’hi pot votar</span></span><label class="switch"><input type="checkbox" id="bd-closed" ${p.closed ? 'checked' : ''}><span></span></label></div>` : ''}
     </div>`,
     foot: `${ex ? '<button class="btn btn-danger-ghost" id="bd-del">Esborra</button>' : ''}<span class="spacer"></span>${p.draft ? '<button class="btn" id="bd-save">Desa l’esborrany</button><button class="btn btn-primary" id="bd-pub">Publica…</button>' : '<button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="bd-save">Desa</button>'}`,
     onMount: el => {
@@ -58,9 +58,9 @@ function sheetBandes(id) {
       };
       const preview = () => {
         const r = read(), cs = r.cats, nPair = cs.filter(c => c.pair).length;
-        el.querySelector('#bd-prev').innerHTML = cs.length ? `<p class="eyebrow" style="margin:0 0 6px">${cs.length} ${cs.length === 1 ? 'categoria' : 'categories'}${nPair ? ` · ${cs.length - nPair} individuals · ${nPair} de parella` : ''}</p>
+        el.querySelector('#bd-prev').innerHTML = cs.length ? `<p class="eyebrow u-m-0-0-6">${cs.length} ${cs.length === 1 ? 'categoria' : 'categories'}${nPair ? ` · ${cs.length - nPair} individuals · ${nPair} de parella` : ''}</p>
           <ol class="bd-prev-l">${cs.map(c => `<li><span><b>${esc(c.name)}</b>${c.desc ? `<small>${esc(cutText(c.desc, 90))}</small>` : ''}</span><span class="bd-tags">${c.pair ? '<span class="tag">Parella</span>' : ''}${c.sec ? `<span class="tag">${esc(SEC[c.sec]?.name || c.sec)}</span>` : ''}<span class="m mono">${c.win} ${c.win === 1 ? 'banda' : 'bandes'}</span></span></li>`).join('')}</ol>`
-          : '<p class="m" style="margin:0">Encara no hi ha cap categoria.</p>';
+          : '<p class="m u-m-0">Encara no hi ha cap categoria.</p>';
         const n = bandesPeople(r).length, outN = r.out.filter(x => pollExpected(r).some(m => m.id === x)).length;
         el.querySelector('#bd-out-h').textContent = `Hi participen ${n} ${n === 1 ? 'persona' : 'persones'}${outN ? ` (${outN} fora)` : ''}`;
         // Quan sortiran els finalistes: el dia triat o, si no n'hi ha, l'endemà de tancar la votació.
@@ -121,8 +121,8 @@ function bandesPublish(pid) {
   const n = bandesPeople(p).length;
   openSheet({
     title: 'Publicar la votació?',
-    body: `<p style="margin-top:0">La podran votar <b>${n} persones</b>${p.closesAt ? ` fins al ${shortDate(p.closesAt)}` : ''}. A qui té les notificacions activades li arribarà un avís al mòbil.</p>
-      <div class="toggle-row"><span><b>Publica també un anunci al tauler</b><br><span class="muted" style="font-size:var(--t-13)">Amb la presentació, totes les categories i el botó per votar. L’avís al mòbil serà el de l’anunci.</span></span><label class="switch"><input type="checkbox" id="bp-ann" checked><span></span></label></div>
+    body: `<p class="u-mt-0">La podran votar <b>${n} persones</b>${p.closesAt ? ` fins al ${shortDate(p.closesAt)}` : ''}. A qui té les notificacions activades li arribarà un avís al mòbil.</p>
+      <div class="toggle-row"><span><b>Publica també un anunci al tauler</b><br><span class="muted u-fs-t-13">Amb la presentació, totes les categories i el botó per votar. L’avís al mòbil serà el de l’anunci.</span></span><label class="switch"><input type="checkbox" id="bp-ann" checked><span></span></label></div>
       <label class="field" id="bp-t-f"><span>Títol de l’anunci</span><input class="inp" id="bp-title" maxlength="90" value="${esc(p.title)}"></label>`,
     foot: '<span class="spacer"></span><button class="btn" data-act="sheet-close">Encara no</button><button class="btn btn-primary" id="bp-ok">Publica-la</button>',
     onMount: el => {
@@ -154,12 +154,12 @@ function bandesNominate(pid) {
   const stillOpen = !pollClosed(p);
   openSheet({
     title: 'Publicar els finalistes?',
-    body: `<p style="margin-top:0">Es publiquen els ${k} més votats de cada categoria, per ordre alfabètic i sense els vots${stillOpen ? '. <b>La votació es tanca:</b> ja no s’hi podrà votar' : ''}. Qui guanya no es veu fins que publiquis el palmarès.</p>
+    body: `<p class="u-mt-0">Es publiquen els ${k} més votats de cada categoria, per ordre alfabètic i sense els vots${stillOpen ? '. <b>La votació es tanca:</b> ja no s’hi podrà votar' : ''}. Qui guanya no es veu fins que publiquis el palmarès.</p>
       <div class="field"><span>Com es revelen</span><div class="pickers" id="bn-every"><button type="button" class="pick" data-v="day" aria-pressed="${p.nomEvery !== 'all' && !!p.galaAt}">Una categoria cada dia fins a la Nit</button><button type="button" class="pick" data-v="all" aria-pressed="${p.nomEvery === 'all' || !p.galaAt}">Totes alhora</button></div></div>
       <label class="field"><span>A partir del</span><input class="inp" type="date" id="bn-from" value="${esc(from0)}"></label>
-      <p class="m" id="bn-plan" style="margin:0"></p>
+      <p class="m u-m-0" id="bn-plan"></p>
       <details class="np-group"><summary><span>Quants finalistes hi ha a cada categoria</span>${ICON.chev}</summary>
-        <ul class="mini-list" style="max-height:none">${t.cats.map(x => `<li><span>${esc(x.cat.name)}</span><span class="mono">${fin[x.cat.id].length}${fin[x.cat.id].length > k ? ' · empat' : ''}</span></li>`).join('')}</ul></details>`,
+        <ul class="mini-list u-maxh-none">${t.cats.map(x => `<li><span>${esc(x.cat.name)}</span><span class="mono">${fin[x.cat.id].length}${fin[x.cat.id].length > k ? ' · empat' : ''}</span></li>`).join('')}</ul></details>`,
     foot: '<span class="spacer"></span><button class="btn" data-act="sheet-close">Encara no</button><button class="btn btn-primary" id="bn-ok">Publica’ls</button>',
     onMount: el => {
       const every = () => el.querySelector('#bn-every .pick[aria-pressed="true"]')?.dataset.v || 'all';

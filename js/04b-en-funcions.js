@@ -56,9 +56,9 @@ function sheetProdRoll(pid) {
   };
   openSheet({
     title: `${capz(actingWord())} · ${p.name}`,
-    body: `<p style="margin-top:0">Passa llista el ${esc(V.leader)}. Si no fa aquesta producció, tria una persona de la ${esc(V.section)} que <b>sí</b> la fa: en serà <b>${esc(actingWord())}</b> mentre duri la producció i passarà llista a tots els assajos i ${esc(V.sh.els.replace(/^(els|les) /, ''))}, des de l’app i entrant amb el seu correu.</p>
+    body: `<p class="u-mt-0">Passa llista el ${esc(V.leader)}. Si no fa aquesta producció, tria una persona de la ${esc(V.section)} que <b>sí</b> la fa: en serà <b>${esc(actingWord())}</b> mentre duri la producció i passarà llista a tots els assajos i ${esc(V.sh.els.replace(/^(els|les) /, ''))}, des de l’app i entrant amb el seu correu.</p>
       <div class="kv">${secs.map(row).join('')}</div>
-      <p class="muted" style="font-size:var(--t-13);margin:10px 0 0">Si només falta un dia, a la llista de la ${esc(V.section)} es pot triar un substitut per a aquell dia.</p>`,
+      <p class="muted u-fs-t-13 u-m-10-0-0">Si només falta un dia, a la llista de la ${esc(V.section)} es pot triar un substitut per a aquell dia.</p>`,
     foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="pr-save">Desa</button>`,
     onMount: el => {
       el.querySelector('#pr-save').onclick = () => {

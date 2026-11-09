@@ -91,7 +91,7 @@ function sheetKit(sec0) {
         <span class="sw-n">${codeTag(m, curGuestProd(m))}${esc(m.name)}${isGuest(m.id) ? ' <span class="tag">Reforç</span>' : ''}</span>
         <span class="kit-gs">${KIT_ITEMS.map(([k, l]) => { const s = kitOf(m, k); return `<span class="kit-g"><small>${l}</small><span class="seg3 kit-seg" role="radiogroup" aria-label="${esc(l)} de ${esc(m.name)}">
           <button type="button" role="radio" data-item="${k}" data-k="yes" aria-checked="${s === 'yes'}" ${can ? '' : 'disabled'}>La té</button><button type="button" role="radio" data-item="${k}" data-k="no" aria-checked="${s === 'no'}" ${can ? '' : 'disabled'}>No</button></span></span>`; }).join('')}</span></li>`).join('')
-      : `<li class="muted" style="padding:12px 2px">No hi ha ningú en aquesta ${esc(V.section)}.</li>`;
+      : `<li class="muted u-p-12-2">No hi ha ningú en aquesta ${esc(V.section)}.</li>`;
     el.querySelectorAll('.kit-row').forEach(r => r.querySelectorAll('button[data-k]').forEach(b => b.onclick = () => {
       const m = S.members.get(r.dataset.mid);
       if (!m || !canKit()) return;
@@ -101,7 +101,7 @@ function sheetKit(sec0) {
     // Qui no en té: la llista per encarregar-ne o fer-ne de noves.
     const lack = KIT_ITEMS.map(([k, l]) => ({ k, l, list: ms.filter(m => kitOf(m, k) === 'no') })).filter(x => x.list.length);
     el.querySelector('#kt-lack').innerHTML = lack.map(({ k, l, list }) => `<div class="section-title"><h2 class="h2">Sense ${esc(l.toLowerCase())} (${list.length})</h2><button class="btn btn-sm btn-ghost" data-copy="${k}">Copia la llista</button></div>
-      <ul class="mini-list" style="max-height:none">${list.map(m => `<li><span>${codeTag(m, curGuestProd(m))}<b>${esc(m.name)}</b>${kitAt(m, k) ? ` <span class="m">· des del ${esc(shortDate(isoDate(new Date(kitAt(m, k)))))}</span>` : ''}</span></li>`).join('')}</ul>`).join('');
+      <ul class="mini-list u-maxh-none">${list.map(m => `<li><span>${codeTag(m, curGuestProd(m))}<b>${esc(m.name)}</b>${kitAt(m, k) ? ` <span class="m">· des del ${esc(shortDate(isoDate(new Date(kitAt(m, k)))))}</span>` : ''}</span></li>`).join('')}</ul>`).join('');
     el.querySelectorAll('#kt-lack [data-copy]').forEach(b => b.onclick = () => {
       const { l, list } = lack.find(x => x.k === b.dataset.copy);
       copyText(`Sense ${l.toLowerCase()} · ${SEC[sec].name}\n${list.map(m => `- ${codeName(m, curGuestProd(m))}`).join('\n')}`, 'Llista copiada');
@@ -111,12 +111,12 @@ function sheetKit(sec0) {
   openSheet({
     title: 'Carpetes i etiquetes',
     wide: true,
-    body: `<p class="muted" style="margin:0 0 10px;font-size:var(--t-13)">Tothom ha de tenir la carpeta i l’etiqueta ${V.del}. Quan algú la perd, se li trenca o és nou, marca-ho aquí i sabràs quantes en cal fer.</p>
+    body: `<p class="muted u-m-0-0-10 u-fs-t-13">Tothom ha de tenir la carpeta i l’etiqueta ${V.del}. Quan algú la perd, se li trenca o és nou, marca-ho aquí i sabràs quantes en cal fer.</p>
       <div class="chips" id="kt-sec" role="group" aria-label="${esc(V.Section)}">${SECTIONS.map(x => `<button class="chip" data-sec="${esc(x.id)}" aria-pressed="${x.id === sec}">${esc(x.name)}</button>`).join('')}</div>
       <div class="ax-kpis" id="kt-sum"></div>
       <div class="sw-bulk" id="kt-bulk"><button type="button" class="btn btn-sm" data-bulk="folder">Tothom té carpeta</button><button type="button" class="btn btn-sm" data-bulk="label">Tothom té etiqueta</button></div>
       <ul class="sw-list" id="kt-list"></ul>
-      <p class="muted" id="kt-note" style="margin:8px 2px 0;font-size:var(--t-13)"></p>
+      <p class="muted u-m-8-2-0 u-fs-t-13" id="kt-note"></p>
       <div id="kt-lack"></div>`,
     foot: `<button class="btn" data-act="arx-codes" data-sec="${esc(sec)}">Codis</button><span class="spacer"></span><button class="btn btn-primary" data-act="sheet-close">Fet</button>`,
     onMount: el => {
@@ -157,20 +157,20 @@ function sheetCodes(sec0, pid0) {
       const own = pid ? d.prod?.[pid]?.[m.id] || '' : d.codes?.[m.id] || '';
       const base = d.codes?.[m.id] || '';
       return `<li class="sw-row" data-mid="${esc(m.id)}"><span class="sw-n">${esc(m.name)}${guestOf(pid, m.id) ? ' <span class="tag">Reforç</span>' : ''}
-          ${pid && !own && base ? `<small class="m" style="display:block;font-weight:500">Fa servir el de sempre: ${esc(base)}</small>` : ''}
+          ${pid && !own && base ? `<small class="m u-d-block u-fwt-500">Fa servir el de sempre: ${esc(base)}</small>` : ''}
           ${own && dup.get(own) > 1 ? `<small class="sc-out">Hi ha algú més amb el ${esc(own)}</small>` : ''}</span>
         <input class="inp cd-inp" type="text" maxlength="8" autocapitalize="characters" value="${esc(own)}" placeholder="${esc(pid ? base || 'R1' : `${sec}1`)}" aria-label="Codi de ${esc(m.name)}" ${can ? '' : 'disabled'}></li>`;
-    }).join('') : `<li class="muted" style="padding:12px 2px">No hi ha ningú.</li>`;
+    }).join('') : `<li class="muted u-p-12-2">No hi ha ningú.</li>`;
     el.querySelectorAll('#cd-list .sw-row').forEach(r => { const inp = r.querySelector('.cd-inp'); inp.onchange = () => { const m = S.members.get(r.dataset.mid); if (m && canKit()) { setCode(m, inp.value, pid); paint(el); } }; });
   };
   openSheet({
     title: 'Codis d’arxiu',
     wide: true,
-    body: `<p class="muted" style="margin:0 0 10px;font-size:var(--t-13)">Cada ${esc(V.member)} té un codi (S1, C4, T6…) que surt al costat del nom a les llistes de partitures. Un reforç, o algú que només durant una producció en porta un altre, el té en aquella producció: tria-la a sota.</p>
+    body: `<p class="muted u-m-0-0-10 u-fs-t-13">Cada ${esc(V.member)} té un codi (S1, C4, T6…) que surt al costat del nom a les llistes de partitures. Un reforç, o algú que només durant una producció en porta un altre, el té en aquella producció: tria-la a sota.</p>
       <label class="field"><span>Codis</span><select class="inp" id="cd-prod"><option value="">De sempre (tota la temporada)</option>${prods.map(p => `<option value="${esc(p.id)}" ${p.id === pid ? 'selected' : ''}>Només per a ${esc(p.name)}</option>`).join('')}</select></label>
-      <div class="chips" id="cd-sec" role="group" aria-label="${esc(V.Section)}" style="margin-top:10px">${SECTIONS.map(x => `<button class="chip" data-sec="${esc(x.id)}" aria-pressed="${x.id === sec}">${esc(x.name)}</button>`).join('')}</div>
-      <div class="sw-bulk" id="cd-guests" style="margin-top:10px" hidden><button type="button" class="btn btn-sm" id="cd-r">Dona codis R als reforços</button></div>
-      <ul class="sw-list" id="cd-list" style="margin-top:10px"></ul>`,
+      <div class="chips u-mt-10" id="cd-sec" role="group" aria-label="${esc(V.Section)}">${SECTIONS.map(x => `<button class="chip" data-sec="${esc(x.id)}" aria-pressed="${x.id === sec}">${esc(x.name)}</button>`).join('')}</div>
+      <div class="sw-bulk u-mt-10" id="cd-guests" hidden><button type="button" class="btn btn-sm" id="cd-r">Dona codis R als reforços</button></div>
+      <ul class="sw-list u-mt-10" id="cd-list"></ul>`,
     foot: `<span class="spacer"></span><button class="btn btn-primary" data-act="sheet-close">Fet</button>`,
     onMount: el => {
       el.querySelector('#cd-prod').onchange = e => { pid = e.target.value; paint(el); };
@@ -195,7 +195,7 @@ function kitPanel() {
   const x = kitSummary(sec);
   const bits = [...KIT_ITEMS.map(([k, l]) => x[k].no ? `${x[k].no} sense ${l.toLowerCase()}` : ''), x.unk ? `${x.unk} per mirar` : ''].filter(Boolean);
   return `<div class="panel arx-panel"><span><b>Carpeta i etiqueta</b>${sec ? ` · ${esc(SEC[sec].name)}` : ''}<br><span class="muted">${bits.join(' · ') || 'Tothom en té'}</span></span>
-    <span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" data-act="arx-codes" data-sec="${esc(sec)}">Codis</button><button class="btn btn-sm btn-primary" data-act="arx-kit" data-sec="${esc(sec)}">Carpetes i etiquetes</button></span></div>`;
+    <span class="u-d-flex u-gap-6 u-fw-wrap"><button class="btn btn-sm" data-act="arx-codes" data-sec="${esc(sec)}">Codis</button><button class="btn btn-sm btn-primary" data-act="arx-kit" data-sec="${esc(sec)}">Carpetes i etiquetes</button></span></div>`;
 }
 /** A «Per fer» de l'arxiver: qui no té carpeta o etiqueta, i qui és nou i encara no s'ha mirat (quan ja es porta). */
 function kitTodos() {

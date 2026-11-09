@@ -8,18 +8,18 @@ function sheetTeacherSeats() {
   const seats = teacherSeats().map(t => ({ ...t }));
   ensureStaff();
   const withAccount = [...S.staff.values()].filter(p => hasRole(p, 'voice'));
-  const rows = () => seats.length ? seats.map((t, i) => `<div class="sec-row" data-i="${i}" style="display:flex;gap:6px;align-items:center">
-      <input class="inp" type="text" maxlength="40" value="${esc(t.name)}" data-f="name" style="flex:1" placeholder="Nom i cognom">
+  const rows = () => seats.length ? seats.map((t, i) => `<div class="sec-row u-d-flex u-gap-6 u-ai-center" data-i="${i}">
+      <input class="inp u-flex-1" type="text" maxlength="40" value="${esc(t.name)}" data-f="name" placeholder="Nom i cognom">
       <button type="button" class="icon-btn" data-rm="${i}" aria-label="Treu-lo">${ICON.close}</button>
-    </div>`).join('') : '<p class="muted" style="margin:0;font-size:var(--t-13)">Encara no n’hi ha cap.</p>';
+    </div>`).join('') : '<p class="muted u-m-0 u-fs-t-13">Encara no n’hi ha cap.</p>';
   const read = el => el.querySelectorAll('.sec-row').forEach(r => { const t = seats[+r.dataset.i]; if (t) t.name = r.querySelector('[data-f="name"]').value.trim(); });
   const paint = el => { el.querySelector('#ts-rows').innerHTML = rows(); el.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { read(el); seats.splice(+b.dataset.rm, 1); paint(el); }); };
   openSheet({
     title: `${V.Teacher}s sense compte`,
-    body: `<p style="margin-top:0">Posa-hi qui fa classes però encara no entra a l’app: així ja en pots fer el calendari i els ${esc(V.members)} hi veuen la seva hora. Quan tingui compte, dona-li accés a <b>Gestió › Personal</b> amb el rol de ${esc(V.Teacher.toLowerCase())}: l’app hi reconeixerà el nom i les classes d’aquí passaran al seu compte.</p>
-      <div id="ts-rows" style="display:grid;gap:8px"></div>
-      <button type="button" class="btn btn-sm" id="ts-add" style="margin-top:10px">+ Afegeix</button>
-      ${withAccount.length ? `<p class="muted" style="font-size:var(--t-13);margin:14px 0 0">Amb compte: ${esc(withAccount.map(p => p.name || p.email).join(', '))}.</p>` : ''}`,
+    body: `<p class="u-mt-0">Posa-hi qui fa classes però encara no entra a l’app: així ja en pots fer el calendari i els ${esc(V.members)} hi veuen la seva hora. Quan tingui compte, dona-li accés a <b>Gestió › Personal</b> amb el rol de ${esc(V.Teacher.toLowerCase())}: l’app hi reconeixerà el nom i les classes d’aquí passaran al seu compte.</p>
+      <div id="ts-rows" class="u-d-grid u-gap-8"></div>
+      <button type="button" class="btn btn-sm u-mt-10" id="ts-add">+ Afegeix</button>
+      ${withAccount.length ? `<p class="muted u-fs-t-13 u-m-14-0-0">Amb compte: ${esc(withAccount.map(p => p.name || p.email).join(', '))}.</p>` : ''}`,
     foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="ts-save">Desa</button>`,
     onMount: el => {
       paint(el);
@@ -78,10 +78,10 @@ function sheetClassNote(classId, slotId) {
   openSheet({
     title: `Nota de la classe${m ? ` de ${firstName(m.name)}` : ''}`,
     body: `<div class="kv">
-      <p style="margin:0">${esc(longDate(c.date))}, a les <b>${esc(slot.time || '')}</b>.</p>
-      <label class="field"><span>Què s’ha treballat i què cal preparar</span><textarea class="inp" id="cn-text" maxlength="600" style="min-height:130px" placeholder="p. ex. Vocalitzacions fins al la. Per la setmana vinent, els compassos 1-40 de memòria.">${esc(ex?.text || '')}</textarea>
+      <p class="u-m-0">${esc(longDate(c.date))}, a les <b>${esc(slot.time || '')}</b>.</p>
+      <label class="field"><span>Què s’ha treballat i què cal preparar</span><textarea class="inp u-minh-130" id="cn-text" maxlength="600" placeholder="p. ex. Vocalitzacions fins al la. Per la setmana vinent, els compassos 1-40 de memòria.">${esc(ex?.text || '')}</textarea>
         <small>Ho veieu tu i ${m ? esc(firstName(m.name)) : 'qui tingui aquesta hora'}. La resta de l’agrupació, no.</small></label>
-      <label class="field"><span>Nota privada</span><textarea class="inp" id="cn-priv" maxlength="600" style="min-height:70px" placeholder="p. ex. Li costa concentrar-se quan ve cansat.">${esc(exPriv?.text || '')}</textarea>
+      <label class="field"><span>Nota privada</span><textarea class="inp u-minh-70" id="cn-priv" maxlength="600" placeholder="p. ex. Li costa concentrar-se quan ve cansat.">${esc(exPriv?.text || '')}</textarea>
         <small>${m ? esc(firstName(m.name)) : 'L’alumne'} no la veu. Només la veus tu i, si cal, l’administració de l’app.</small></label>
       <div class="field"><span>Enregistrament de la classe (opcional)</span>
         ${ex?.file ? `<div class="rec-cur" id="cn-cur"><span>${esc(ex.file.name)} · ${fmtSize(ex.file.size)}</span><button type="button" class="btn btn-sm btn-ghost" id="cn-rec-rm">Treu-lo</button></div>` : ''}
@@ -223,13 +223,13 @@ function sheetClassMove(classId, slotId, after) {
   openSheet({
     title: `Mou la classe de ${firstName(m.name)}`,
     body: `<div class="kv">
-      <p style="margin:0">Ara és ${esc(longDate(c.date).toLowerCase())}, a les <b>${esc(x.time || '')}</b>. Només canvia aquesta classe: l’horari fix queda igual.</p>
+      <p class="u-m-0">Ara és ${esc(longDate(c.date).toLowerCase())}, a les <b>${esc(x.time || '')}</b>. Només canvia aquesta classe: l’horari fix queda igual.</p>
       <div class="row3">
         <label class="field"><span>Dia</span><input class="inp" id="mv-date" type="date" min="${TODAY}" value="${esc(c.date)}"></label>
         <label class="field"><span>Hora</span><input class="inp" id="mv-time" type="time" value="${esc(x.time || '')}"></label>
       </div>
-      <label class="field"><span>Minuts</span><input class="inp" id="mv-mins" type="number" min="5" max="120" step="5" value="${+x.mins || 30}" style="width:96px"></label>
-      <p id="mv-hint" class="muted" style="margin:0;font-size:var(--t-13)"></p>
+      <label class="field"><span>Minuts</span><input class="inp u-w-96" id="mv-mins" type="number" min="5" max="120" step="5" value="${+x.mins || 30}"></label>
+      <p id="mv-hint" class="muted u-m-0 u-fs-t-13"></p>
     </div>`,
     foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="mv-go">Mou-la</button>`,
     onMount: el => {
@@ -260,7 +260,7 @@ function sheetClassClashes() {
   openSheet({
     title: 'Coincidències per resoldre',
     wide: true,
-    body: `<p style="margin-top:0">Classes que vénen i que coincideixen amb un assaig o un concert d’aquell alumne.</p>
+    body: `<p class="u-mt-0">Classes que vénen i que coincideixen amb un assaig o un concert d’aquell alumne.</p>
       ${days.map(d => `<div class="clash-day"><h3 class="clash-d">${esc(capz(longDate(d)))}</h3>${list.filter(i => i.c.date === d).map(({ c, x, s }) => `<div class="clash-row">
         <span class="mono clash-t">${esc(x.time || '')}</span>
         <span class="clash-w"><b>${esc(S.members.get(x.memberId)?.name || '')}</b><small>${esc([`${s.type || 'Assaig'} · ${timeRange(s)}`, isAdmin() ? teacherOf(c) : ''].filter(Boolean).join(' · '))}</small></span>
@@ -298,7 +298,7 @@ function sheetLinkName(who, name) {
   const hit = matchMember(name), t = classUnlinked(who).find(u => normTxt(u.name) === normTxt(name));
   openSheet({
     title: 'Vincula a una fitxa',
-    body: `<p style="margin-top:0"><b>${esc(name)}</b> surt a l’horari${t?.n ? ` en ${t.n} ${t.n === 1 ? 'classe' : 'classes'}` : ''} sense fitxa. En vincular-ho, canviarà a totes les classes i a l’horari fix.</p>
+    body: `<p class="u-mt-0"><b>${esc(name)}</b> surt a l’horari${t?.n ? ` en ${t.n} ${t.n === 1 ? 'classe' : 'classes'}` : ''} sense fitxa. En vincular-ho, canviarà a totes les classes i a l’horari fix.</p>
       <label class="field"><span>Qui és?</span><select class="inp" id="ln-m"><option value="">Tria la persona</option>${memberOptions(hit.sure ? hit.hits[0].id : '')}</select></label>`,
     foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="ln-go">Vincula</button>`,
     onMount: el => {
@@ -325,13 +325,13 @@ async function sheetClassIcs() {
   const url = `${location.origin}${location.pathname.replace(/[^/]*$/, '')}calendaris/classes/${token}.ics`;
   openSheet({
     title: 'Les teves classes al calendari',
-    body: `<p style="margin-top:0">Aquesta adreça porta <b>només les teves classes</b>. Si te la subscrius, se t’aniran actualitzant soles cada poques hores.</p>
+    body: `<p class="u-mt-0">Aquesta adreça porta <b>només les teves classes</b>. Si te la subscrius, se t’aniran actualitzant soles cada poques hores.</p>
       <div class="linkbox">${esc(url)}</div>
-      <p class="muted" style="font-size:var(--t-13);margin:10px 0 0">És una adreça personal: no la comparteixis. Si algú l’hagués de deixar de tenir, digues-ho a l’administració.</p>
-      <h3 style="margin:14px 0 4px;font-size:var(--t-15)">Com subscriure-s’hi</h3>
-      <ul class="mini-list" style="max-height:none"><li><span><b>iPhone</b><br><span class="m">Calendari › Calendaris › Afegeix calendari › Afegeix calendari subscrit, i hi enganxes l’adreça.</span></span></li>
+      <p class="muted u-fs-t-13 u-m-10-0-0">És una adreça personal: no la comparteixis. Si algú l’hagués de deixar de tenir, digues-ho a l’administració.</p>
+      <h3 class="u-m-14-0-4 u-fs-t-15">Com subscriure-s’hi</h3>
+      <ul class="mini-list u-maxh-none"><li><span><b>iPhone</b><br><span class="m">Calendari › Calendaris › Afegeix calendari › Afegeix calendari subscrit, i hi enganxes l’adreça.</span></span></li>
         <li><span><b>Android o ordinador</b><br><span class="m">Google Calendar › Altres calendaris › + › Des d’un URL, i hi enganxes l’adreça.</span></span></li></ul>
-      <p class="muted" style="font-size:var(--t-13);margin:10px 0 0">Les classes noves hi surten al cap d’unes hores, no immediatament.</p>`,
+      <p class="muted u-fs-t-13 u-m-10-0-0">Les classes noves hi surten al cap d’unes hores, no immediatament.</p>`,
     foot: `${navigator.share ? '<button class="btn" id="ci-share">Comparteix…</button>' : ''}<span class="spacer"></span><button class="btn btn-primary" id="ci-copy">Copia l’adreça</button>`,
     onMount: el => {
       el.querySelector('#ci-copy').onclick = () => copyText(url, 'Adreça copiada');
@@ -344,13 +344,13 @@ function sheetClassStats(onlyMine) {
   openSheet({
     title: onlyMine ? 'La meva assistència a classe' : 'Assistència a les classes',
     wide: !onlyMine,
-    body: '<p class="muted" style="margin:0">Carregant les classes del curs…</p>',
+    body: '<p class="muted u-m-0">Carregant les classes del curs…</p>',
     onMount: async el => {
       let days = [];
       // Cada professor/a només veu els seus alumnes; l'administració, tots.
       const q = !onlyMine && !isAdmin() ? db.collection('classes').where('teacher', '==', myEmail()) : db.collection('classes');
       try { const snap = await q.get(); days = snap.docs.map(d => d.data()).filter(c => !c.deleted); }
-      catch { el.querySelector('.sheet-b').innerHTML = '<p style="margin:0">No s’han pogut llegir les classes. Comprova la connexió.</p>'; return; }
+      catch { el.querySelector('.sheet-b').innerHTML = '<p class="u-m-0">No s’han pogut llegir les classes. Comprova la connexió.</p>'; return; }
       const per = new Map();
       let marked = 0;
       for (const c of days) for (const x of c.slots || []) {
@@ -365,11 +365,11 @@ function sheetClassStats(onlyMine) {
         .filter(x => x.m).sort((a, b) => a.m.name.localeCompare(b.m.name, 'ca'));
       const pct = r => r.total ? Math.round(((r.P + r.R) / r.total) * 100) : null;
       el.querySelector('.sheet-b').innerHTML = !marked
-        ? `<p style="margin:0">Encara no hi ha cap classe amb l’assistència marcada. ${teachesClasses() ? 'Marca-la des del calendari, al dia que toqui.' : ''}</p>`
-        : `<p style="margin-top:0">${days.length} dies de classe al curs · ${marked} assistències marcades.</p>
-          <ul class="mini-list" style="max-height:none">${rows.map(({ m, r }) => `<li><span>${esc(m.name)}<br><span class="m">${r.P + r.R} de ${r.total} classes${r.FJ ? ` · ${r.FJ} just.` : ''}${r.FNJ ? ` · ${r.FNJ} no just.` : ''}</span></span>
+        ? `<p class="u-m-0">Encara no hi ha cap classe amb l’assistència marcada. ${teachesClasses() ? 'Marca-la des del calendari, al dia que toqui.' : ''}</p>`
+        : `<p class="u-mt-0">${days.length} dies de classe al curs · ${marked} assistències marcades.</p>
+          <ul class="mini-list u-maxh-none">${rows.map(({ m, r }) => `<li><span>${esc(m.name)}<br><span class="m">${r.P + r.R} de ${r.total} classes${r.FJ ? ` · ${r.FJ} just.` : ''}${r.FNJ ? ` · ${r.FNJ} no just.` : ''}</span></span>
             <span class="mono"><b>${pct(r)}%</b></span></li>`).join('')}</ul>
-          <p class="muted" style="font-size:var(--t-13);margin:10px 0 0">Compta les classes marcades: hi ha assistit (present o amb retard) sobre el total.</p>`;
+          <p class="muted u-fs-t-13 u-m-10-0-0">Compta les classes marcades: hi ha assistit (present o amb retard) sobre el total.</p>`;
     },
   });
 }
@@ -380,10 +380,10 @@ function sheetClassDay(id, preset) {
   // Les hores noves duren el mateix que les altres del dia o, si no n'hi ha, que l'horari fix.
   const usualMins = () => +rec.slots[rec.slots.length - 1]?.mins || +planRows(rec.teacher)[0]?.mins || 30;
   const taken = () => new Set(rec.slots.map(x => x.memberId).filter(Boolean));
-  const rows = () => rec.slots.map((x, i) => `<div class="sec-row" data-i="${i}" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-      <input class="inp" type="time" value="${esc(x.time || '')}" data-f="time" style="width:110px">
-      <input class="inp" type="number" min="5" max="120" step="5" value="${+x.mins || usualMins()}" data-f="mins" style="width:72px" aria-label="Minuts">
-      <select class="inp" data-f="member" style="flex:1;min-width:130px"><option value="">— lliure —</option>${memberOptions(x.memberId || '')}</select>
+  const rows = () => rec.slots.map((x, i) => `<div class="sec-row u-d-flex u-gap-6 u-ai-center u-fw-wrap" data-i="${i}">
+      <input class="inp u-w-110" type="time" value="${esc(x.time || '')}" data-f="time">
+      <input class="inp u-w-72" type="number" min="5" max="120" step="5" value="${+x.mins || usualMins()}" data-f="mins" aria-label="Minuts">
+      <select class="inp u-flex-1 u-minw-130" data-f="member"><option value="">— lliure —</option>${memberOptions(x.memberId || '')}</select>
       <button type="button" class="icon-btn" data-rm="${i}" aria-label="Treu aquesta hora">${ICON.close}</button>
     </div>`).join('');
   const read = el => {
@@ -411,15 +411,15 @@ function sheetClassDay(id, preset) {
       <label class="field"><span>Nota</span><input class="inp" id="cd-note" type="text" maxlength="80" value="${esc(rec.note || '')}" placeholder="p. ex. Preparació del concert"></label>
       ${teacherOptions().length > 1 ? `<label class="field"><span>${esc(V.Teacher)}</span><select class="inp" id="cd-who">${teacherOptions().map(t => `<option value="${esc(t.key)}" ${t.key === (rec.teacher || '') ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></label>` : ''}
       <div class="field"><span>Genera les hores</span>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-          <input class="inp" id="cd-from" type="time" value="17:00" style="width:110px">
-          <input class="inp" id="cd-mins" type="number" min="5" max="120" step="5" value="${usualMins()}" style="width:80px" aria-label="Minuts per classe">
-          <span class="muted" style="font-size:var(--t-13)">min ·</span>
-          <input class="inp" id="cd-n" type="number" min="1" max="20" value="6" style="width:70px" aria-label="Quantes classes">
+        <div class="u-d-flex u-gap-6 u-fw-wrap u-ai-center">
+          <input class="inp u-w-110" id="cd-from" type="time" value="17:00">
+          <input class="inp u-w-80" id="cd-mins" type="number" min="5" max="120" step="5" value="${usualMins()}" aria-label="Minuts per classe">
+          <span class="muted u-fs-t-13">min ·</span>
+          <input class="inp u-w-70" id="cd-n" type="number" min="1" max="20" value="6" aria-label="Quantes classes">
           <button type="button" class="btn btn-sm" id="cd-gen">Genera</button>
         </div><small>Omple les hores seguides; després hi tries qui ve a cadascuna.</small></div>
-      <div class="field"><span>Hores</span><div id="cd-rows" style="display:grid;gap:8px">${rows()}</div>
-        <button type="button" class="btn btn-sm" id="cd-add" style="justify-self:start;margin-top:8px">+ Afegeix una hora</button></div>
+      <div class="field"><span>Hores</span><div id="cd-rows" class="u-d-grid u-gap-8">${rows()}</div>
+        <button type="button" class="btn btn-sm u-js-start u-mt-8" id="cd-add">+ Afegeix una hora</button></div>
     </div>`,
     foot: `${ex ? `<button class="btn btn-danger-ghost" id="cd-del">Esborra</button><button class="btn" data-act="cl-cancel-day" data-c="${esc(rec.id)}">${ex.cancelled ? 'Restableix el dia' : 'Anul·la el dia'}</button>` : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="cd-save">Desa</button>`,
     onMount: el => {
@@ -470,7 +470,7 @@ function sheetClassAct(classId, slotId) {
   const opt = (act, k, t, s) => `<button class="write-o" data-act="${act}" data-c="${esc(classId)}" data-s="${esc(slotId)}"${k ? ` data-k="${k}"` : ''}><b>${t}</b><small>${s}</small></button>`;
   openSheet({
     title: 'La teva classe',
-    body: `<p style="margin:0 0 12px">${esc(longDate(c.date))}, a les <b>${esc(slotTime(c, slotId))}</b>${teacherOf(c) ? `, amb ${esc(teacherOf(c))}` : ''}.</p>
+    body: `<p class="u-m-0-0-12">${esc(longDate(c.date))}, a les <b>${esc(slotTime(c, slotId))}</b>${teacherOf(c) ? `, amb ${esc(teacherOf(c))}` : ''}.</p>
       <div class="write-opts">
       ${opt('cl-notice', 'late', 'Arribaré tard', 'Digues quants minuts, més o menys.')}
       ${opt('cl-notice', 'absent', 'No hi podré anar', `Ho rebrà el ${esc(V.Teacher.toLowerCase())} al mòbil.`)}
@@ -485,10 +485,10 @@ function sheetClassNotice(classId, slotId, kind) {
   openSheet({
     title: late ? 'Arribaré tard' : 'No hi podré anar',
     body: `<div class="kv">
-      <p style="margin:0">Classe ${esc(longDate(c.date))}, a les <b>${esc(slotTime(c, slotId))}</b>.</p>
-      ${late ? '<label class="field"><span>Minuts de retard aproximats</span><input class="inp" id="cn-min" type="number" inputmode="numeric" min="1" max="120" value="10" style="width:120px"></label>' : ''}
-      <label class="field"><span>Motiu</span><textarea class="inp" id="cn-why" maxlength="200" style="min-height:80px" placeholder="p. ex. Tinc classe fins a les 17:15"></textarea></label>
-      <p class="muted" style="font-size:var(--t-13);margin:0">Ho rebrà el ${esc(V.Teacher.toLowerCase())} al mòbil.</p>
+      <p class="u-m-0">Classe ${esc(longDate(c.date))}, a les <b>${esc(slotTime(c, slotId))}</b>.</p>
+      ${late ? '<label class="field"><span>Minuts de retard aproximats</span><input class="inp u-w-120" id="cn-min" type="number" inputmode="numeric" min="1" max="120" value="10"></label>' : ''}
+      <label class="field"><span>Motiu</span><textarea class="inp u-minh-80" id="cn-why" maxlength="200" placeholder="p. ex. Tinc classe fins a les 17:15"></textarea></label>
+      <p class="muted u-fs-t-13 u-m-0">Ho rebrà el ${esc(V.Teacher.toLowerCase())} al mòbil.</p>
     </div>`,
     foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="cn-go">Envia l’avís</button>`,
     onMount: el => {
@@ -515,11 +515,11 @@ function sheetClassSwap(classId, slotId) {
   openSheet({
     title: 'Canvia l’hora amb algú',
     body: `<div class="kv">
-      <p style="margin:0">Classe ${esc(longDate(c.date))}. Ara tens les <b>${esc(slotTime(c, slotId))}</b>. El canvi val <b>només per aquesta setmana</b>, i l’ha d’acceptar qui triïs.</p>
+      <p class="u-m-0">Classe ${esc(longDate(c.date))}. Ara tens les <b>${esc(slotTime(c, slotId))}</b>. El canvi val <b>només per aquesta setmana</b>, i l’ha d’acceptar qui triïs.</p>
       <div class="field"><span>A qui ho demanes</span><div class="pickers" id="cs-mode"><button type="button" class="pick" data-k="pick" aria-pressed="true">Tria a qui</button><button type="button" class="pick" data-k="all" aria-pressed="false">A tothom</button></div>
         <small id="cs-hint"></small></div>
       <div id="cs-list" class="cs-list">${days.map(k => { const os = cands.filter(o => o.k.id === k.id); return os.length ? `<div class="cs-day"><b>${esc(capz(fmtD(k.date, { weekday: 'long', day: 'numeric', month: 'short' })))}</b>${os.map(o => `<label class="cs-row"><input type="checkbox" value="${esc(key(o))}"><span>${esc(S.members.get(o.x.memberId).name)}</span><span class="mono m">${esc(o.x.time || '')}</span></label>`).join('')}</div>` : ''; }).join('')}</div>
-      <label class="field"><span>Missatge</span><textarea class="inp" id="cs-why" maxlength="200" style="min-height:70px" placeholder="p. ex. Aquell dia treballo fins a les 18h"></textarea></label>
+      <label class="field"><span>Missatge</span><textarea class="inp u-minh-70" id="cs-why" maxlength="200" placeholder="p. ex. Aquell dia treballo fins a les 18h"></textarea></label>
     </div>`,
     foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="cs-go">Demana el canvi</button>`,
     onMount: el => {
@@ -650,7 +650,7 @@ async function sheetStudent(mid) {
   const m = S.members.get(mid);
   const teach = teachesClasses();
   if (!m || (!teach && mid !== myId())) return;
-  openSheet({ title: m.name, wide: true, body: '<p class="muted" style="margin:0">Carregant la fitxa…</p>' });
+  openSheet({ title: m.name, wide: true, body: '<p class="muted u-m-0">Carregant la fitxa…</p>' });
   let rec = { goals: '', repertoire: [] }, notes = [], loaded = 'ok';
   const loadRec = async () => { const d = await db.doc(`students/${mid}`).get(); if (d.exists) rec = { ...rec, ...d.data() }; };
   try { await loadRec(); }
@@ -661,7 +661,7 @@ async function sheetStudent(mid) {
   if (!sheetClose) return;
   // Sense haver llegit la fitxa no s'ensenya un formulari buit: en desar-lo s'esborraria el que hi hagués.
   if (loaded !== 'ok') {
-    openSheet({ title: m.name, body: `<p style="margin:0">${loaded === 'denied' ? `Aquesta fitxa la porta un altre ${esc(V.Teacher.toLowerCase())}. Quan ${esc(firstName(m.name))} tingui classe amb tu, la podràs obrir.` : 'No s’ha pogut carregar la fitxa. Comprova la connexió i torna-ho a provar.'}</p>` });
+    openSheet({ title: m.name, body: `<p class="u-m-0">${loaded === 'denied' ? `Aquesta fitxa la porta un altre ${esc(V.Teacher.toLowerCase())}. Quan ${esc(firstName(m.name))} tingui classe amb tu, la podràs obrir.` : 'No s’ha pogut carregar la fitxa. Comprova la connexió i torna-ho a provar.'}</p>` });
     return;
   }
   // La pròpia fitxa sempre es llegeix com a alumne, encara que qui l'obri sigui de l'equip.
@@ -685,13 +685,13 @@ async function sheetStudent(mid) {
   rec.repertoire = (rec.repertoire || []).map(x => ({ ...x }));
   const hours = [...S.classPlan.values()].flatMap(p => (p.rows || []).filter(r => r.memberId === mid).map(r => `${capz(DAYS_CA[r.day])} ${r.time} amb ${teacherName(p.teacher || p.id) || V.Teacher}`));
   const repRows = () => rec.repertoire.length ? rec.repertoire.map(x => edit
-    ? `<div class="sec-row st-rep" data-id="${esc(x.id)}" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-        <input class="inp" data-f="title" maxlength="80" value="${esc(x.title)}" placeholder="Obra" style="flex:2 1 150px;min-width:0">
-        <input class="inp" data-f="composer" maxlength="50" value="${esc(x.composer || '')}" placeholder="Compositor" style="flex:1 1 110px;min-width:0">
-        <select class="inp" data-f="status" style="flex:1 1 120px">${Object.entries(STUDENT_STATUS).map(([k, l]) => `<option value="${k}" ${x.status === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
+    ? `<div class="sec-row st-rep u-d-flex u-gap-6 u-ai-center u-fw-wrap" data-id="${esc(x.id)}">
+        <input class="inp u-flex-2-1-150 u-minw-0" data-f="title" maxlength="80" value="${esc(x.title)}" placeholder="Obra">
+        <input class="inp u-flex-1-1-110 u-minw-0" data-f="composer" maxlength="50" value="${esc(x.composer || '')}" placeholder="Compositor">
+        <select class="inp u-flex-1-1-120" data-f="status">${Object.entries(STUDENT_STATUS).map(([k, l]) => `<option value="${k}" ${x.status === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
         <button type="button" class="icon-btn" data-rm="${esc(x.id)}" aria-label="Treu-la">${ICON.close}</button></div>`
     : `<li><span><b>${esc(x.title)}</b>${x.composer ? ` · ${esc(x.composer)}` : ''}</span><span class="st-pill ${x.status === 'apunt' ? 'st-accepted' : 'st-pending'}">${STUDENT_STATUS[x.status] || ''}</span></li>`).join('')
-    : `<p class="muted" style="margin:0;font-size:var(--t-13)">${edit ? 'Encara no n’hi ha. Afegeix les obres que treballa.' : 'Encara no hi ha repertori.'}</p>`;
+    : `<p class="muted u-m-0 u-fs-t-13">${edit ? 'Encara no n’hi ha. Afegeix les obres que treballa.' : 'Encara no hi ha repertori.'}</p>`;
   const read = el => {
     if (!edit) return;
     rec.goals = el.querySelector('#stu-goals').value.trim();
@@ -699,23 +699,23 @@ async function sheetStudent(mid) {
   };
   const paint = el => {
     const box = el.querySelector('#stu-rep');
-    box.innerHTML = edit ? repRows() : (rec.repertoire.length ? `<ul class="mini-list" style="max-height:none">${repRows()}</ul>` : repRows());
+    box.innerHTML = edit ? repRows() : (rec.repertoire.length ? `<ul class="mini-list u-maxh-none">${repRows()}</ul>` : repRows());
     box.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { read(el); rec.repertoire = rec.repertoire.filter(x => x.id !== b.dataset.rm); paint(el); });
   };
   openSheet({
     title: m.name,
     wide: true,
-    body: `<p style="margin-top:0"><span class="muted" style="font-size:var(--t-13)">${esc(SEC[m.section].name)}${hours.length ? ` · ${esc(hours.join(' · '))}` : ''}</span></p>
+    body: `<p class="u-mt-0"><span class="muted u-fs-t-13">${esc(SEC[m.section].name)}${hours.length ? ` · ${esc(hours.join(' · '))}` : ''}</span></p>
       <div class="section-title"><h2 class="h2">Objectius</h2></div>
-      ${edit ? `<textarea class="inp" id="stu-goals" maxlength="1000" style="min-height:80px" placeholder="p. ex. Guanyar agilitat a la zona aguda. Treballar el suport a les frases llargues.">${esc(rec.goals || '')}</textarea>`
-        : `<p style="white-space:pre-wrap;margin:0">${esc(rec.goals || '') || '<span class="muted">Encara no n’hi ha.</span>'}</p>`}
-      <div class="section-title" style="margin-top:14px"><h2 class="h2">Repertori</h2>${edit ? '<button type="button" class="btn btn-sm" id="stu-add">' + ICON.plus + 'Obra</button>' : ''}</div>
-      <div id="stu-rep" style="display:grid;gap:8px"></div>
-      <div class="section-title" style="margin-top:14px"><h2 class="h2">Notes de classe</h2><span class="eyebrow">${notes.length}</span></div>
-      ${notes.length ? `<ul class="mini-list" style="max-height:none">${notes.map(n => `<li style="display:grid;gap:4px"><span class="m mono">${esc(shortDate(n.date))}</span>${n.text ? `<span style="white-space:pre-wrap">${esc(n.text)}</span>` : ''}${privs.get(n.id)?.text ? `<span class="cl-priv" style="white-space:pre-wrap;font-size:var(--t-13)"><b>Privada</b> ${esc(privs.get(n.id).text)}</span>` : ''}
-          ${n.file ? `<button class="btn btn-sm" style="justify-self:start" data-act="cl-rec" data-id="${esc(n.id)}">Escolta l’enregistrament</button>` : ''}</li>`).join('')}</ul>`
-        : '<p class="muted" style="margin:0;font-size:var(--t-13)">Encara no hi ha notes.</p>'}
-      ${edit ? '' : `<p class="muted" style="font-size:var(--t-13);margin-top:12px">Només ho veieu tu i el professorat de cant.</p>`}`,
+      ${edit ? `<textarea class="inp u-minh-80" id="stu-goals" maxlength="1000" placeholder="p. ex. Guanyar agilitat a la zona aguda. Treballar el suport a les frases llargues.">${esc(rec.goals || '')}</textarea>`
+        : `<p class="u-ws-pre-wrap u-m-0">${esc(rec.goals || '') || '<span class="muted">Encara no n’hi ha.</span>'}</p>`}
+      <div class="section-title u-mt-14"><h2 class="h2">Repertori</h2>${edit ? '<button type="button" class="btn btn-sm" id="stu-add">' + ICON.plus + 'Obra</button>' : ''}</div>
+      <div id="stu-rep" class="u-d-grid u-gap-8"></div>
+      <div class="section-title u-mt-14"><h2 class="h2">Notes de classe</h2><span class="eyebrow">${notes.length}</span></div>
+      ${notes.length ? `<ul class="mini-list u-maxh-none">${notes.map(n => `<li class="u-d-grid u-gap-4"><span class="m mono">${esc(shortDate(n.date))}</span>${n.text ? `<span class="u-ws-pre-wrap">${esc(n.text)}</span>` : ''}${privs.get(n.id)?.text ? `<span class="cl-priv u-ws-pre-wrap u-fs-t-13"><b>Privada</b> ${esc(privs.get(n.id).text)}</span>` : ''}
+          ${n.file ? `<button class="btn btn-sm u-js-start" data-act="cl-rec" data-id="${esc(n.id)}">Escolta l’enregistrament</button>` : ''}</li>`).join('')}</ul>`
+        : '<p class="muted u-m-0 u-fs-t-13">Encara no hi ha notes.</p>'}
+      ${edit ? '' : `<p class="muted u-fs-t-13 u-mt-12">Només ho veieu tu i el professorat de cant.</p>`}`,
     foot: edit ? `<span class="spacer"></span><button class="btn" data-act="sheet-close">Tanca</button><button class="btn btn-primary" id="stu-save">Desa</button>` : '',
     onMount: el => {
       paint(el);

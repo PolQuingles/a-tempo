@@ -143,19 +143,19 @@ function sheetPush() {
   const prefs = { ...DEFAULT_PREFS, ...(S.pushPrefs || {}) };
   const kinds = Object.entries(pushKinds()).filter(([k]) => k !== 'absencies' || myId());
   const cordes = new Set(S.pushCordes || defaultCordes());
-  const row = ([k, [l, d]]) => `<div class="toggle-row"><span><b>${l}</b><br><span class="muted" style="font-size:var(--t-13)">${d}</span></span>
+  const row = ([k, [l, d]]) => `<div class="toggle-row"><span><b>${l}</b><br><span class="muted u-fs-t-13">${d}</span></span>
         <label class="switch"><input type="checkbox" id="pf-${k}" ${prefs[k] ? 'checked' : ''}><span></span></label></div>`;
   openSheet({
     title: 'Notificacions',
-    body: `${needsInstall ? `<div class="sub-line sub-hint" style="margin:0 0 12px"><span>Al iPhone i al iPad, les notificacions només funcionen si abans afegeixes l’app a la <b>pantalla d’inici</b>: al Safari, toca <b>Comparteix</b> i tria <b>Afegeix a la pantalla d’inici</b>. Després obre-la des d’allà.</span></div>` : ''}
-      ${blocked ? `<div class="sub-line sub-hint" style="margin:0 0 12px"><span>Aquest navegador té les notificacions <b>bloquejades</b>. Actíva’ls als ajustos del lloc web i torna-ho a provar.</span></div>` : ''}
-      <p style="margin-top:0">Tria de què vols que t’avisi. Pots canviar-ho quan vulguis.</p>
+    body: `${needsInstall ? `<div class="sub-line sub-hint u-m-0-0-12"><span>Al iPhone i al iPad, les notificacions només funcionen si abans afegeixes l’app a la <b>pantalla d’inici</b>: al Safari, toca <b>Comparteix</b> i tria <b>Afegeix a la pantalla d’inici</b>. Després obre-la des d’allà.</span></div>` : ''}
+      ${blocked ? `<div class="sub-line sub-hint u-m-0-0-12"><span>Aquest navegador té les notificacions <b>bloquejades</b>. Actíva’ls als ajustos del lloc web i torna-ho a provar.</span></div>` : ''}
+      <p class="u-mt-0">Tria de què vols que t’avisi. Pots canviar-ho quan vulguis.</p>
       <div class="kv">${kinds.map(row).join('')}</div>
-      ${canEdit() ? `<div class="section-title" style="margin:18px 0 6px"><h2 class="h2">Com a ${V.leader}</h2></div>
+      ${canEdit() ? `<div class="section-title u-m-18-0-6"><h2 class="h2">Com a ${V.leader}</h2></div>
         <div class="kv">${Object.entries(leaderKinds()).map(row).join('')}
           <div class="field"><span>De quines ${V.sections}?</span><div class="pickers" id="pf-cordes">${SECTIONS.map(x => secPick(x, cordes.has(x.id))).join('')}</div>
             <small>Si no en tries cap, no rebràs aquestes dues notificacions.</small></div></div>` : ''}
-      <p class="muted" style="font-size:var(--t-13)">Les notificacions arriben a aquest aparell. Si entres des d’un altre, actíva’ls també allà.</p>`,
+      <p class="muted u-fs-t-13">Les notificacions arriben a aquest aparell. Si entres des d’un altre, actíva’ls també allà.</p>`,
     foot: `${S.pushOn ? '<button class="btn btn-danger-ghost" id="pu-off">Desactiva’ls</button>' : ''}<span class="spacer"></span>
       <button class="btn" data-act="sheet-close">Cancel·la</button>
       <button class="btn btn-primary" id="pu-on" ${blocked ? 'disabled' : ''}>${S.pushOn ? 'Desa' : 'Activa’ls'}</button>`,

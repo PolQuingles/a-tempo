@@ -12,7 +12,7 @@ function viewCalendar() {
   </div>`;
   const month = ui.calView === 'month';
   const head = `<div class="page-head"><h1 class="h1">Calendari</h1>
-    <span style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="seg3" role="radiogroup" aria-label="Vista del calendari"><button type="button" role="radio" aria-checked="${!month}" data-act="cal-view" data-k="list">Llista</button><button type="button" role="radio" aria-checked="${month}" data-act="cal-view" data-k="month">Mes</button></span>
+    <span class="u-d-flex u-gap-8 u-fw-wrap u-ai-center"><span class="seg3" role="radiogroup" aria-label="Vista del calendari"><button type="button" role="radio" aria-checked="${!month}" data-act="cal-view" data-k="list">Llista</button><button type="button" role="radio" aria-checked="${month}" data-act="cal-view" data-k="month">Mes</button></span>
     ${canProd() ? `<button class="btn btn-sm btn-primary" data-act="session-new" ${month && ui.calDay ? `data-date="${ui.calDay}"` : ''}>${ICON.plus}Sessió</button>` : ''}</span></div>
 `;
   // Subscriure's al calendari és al menú del compte; les sessions passades, amb un enllaç a dalt de la llista.
@@ -114,11 +114,11 @@ function calMonthView() {
       <div class="mnav"><button class="nav-arrow" data-act="cal-month" data-dir="-1" aria-label="Mes anterior">${ICON.left}</button><h2 class="h2">${esc(title)}</h2><button class="nav-arrow" data-act="cal-month" data-dir="1" aria-label="Mes següent">${ICON.right}</button></div>
       <div class="mweek" aria-hidden="true">${['dl', 'dt', 'dc', 'dj', 'dv', 'ds', 'dg'].map(d => `<span>${d}</span>`).join('')}</div>
       <div class="mgrid">${cells.join('')}</div>
-      ${legendProds.length || clByDay.size ? `<div class="mlegend">${legendProds.map(p => `<span class="prod-tone" style="--ph:${prodHue(p)}"><i class="pdot"></i>${esc(p.name)}</span>`).join('')}${hasConcert ? `<span><i class="mk concert key"></i>${V.sh.Show}</span>` : ''}${clByDay.size ? `<span><i class="mk cl mine"></i>${esc(V.classes)}</span>` : ''}</div>` : '<p class="muted" style="margin:10px 4px 0;font-size:var(--t-13)">Aquest mes no hi ha cap sessió.</p>'}
+      ${legendProds.length || clByDay.size ? `<div class="mlegend">${legendProds.map(p => `<span class="prod-tone" style="--ph:${prodHue(p)}"><i class="pdot"></i>${esc(p.name)}</span>`).join('')}${hasConcert ? `<span><i class="mk concert key"></i>${V.sh.Show}</span>` : ''}${clByDay.size ? `<span><i class="mk cl mine"></i>${esc(V.classes)}</span>` : ''}</div>` : '<p class="muted u-m-10-4-0 u-fs-t-13">Aquest mes no hi ha cap sessió.</p>'}
     </div>
-    <div class="section-title" style="margin-top:18px"><h2 class="h2">${esc(longDate(ui.calDay))}</h2>${ui.calDay !== TODAY ? '<button class="btn btn-sm btn-ghost" data-act="cal-today">Avui</button>' : ''}</div>
+    <div class="section-title u-mt-18"><h2 class="h2">${esc(longDate(ui.calDay))}</h2>${ui.calDay !== TODAY ? '<button class="btn btn-sm btn-ghost" data-act="cal-today">Avui</button>' : ''}</div>
     ${daySessions.length || (clByDay.get(ui.calDay) || []).length ? `<ul class="cal-list cal-day-list">${daySessions.map(x => calRow(x, x.prodId, true)).join('')}${(clByDay.get(ui.calDay) || []).map(calClassRow).join('')}</ul>`
-      : `<div class="panel" style="padding:14px;font-size:var(--t-13);color:var(--muted)">Cap sessió aquest dia.</div>`}`;
+      : `<div class="panel u-p-14 u-fs-t-13 u-c-muted">Cap sessió aquest dia.</div>`}`;
 }
 function calRow(s, underProd, tone, named) {
   let marks;

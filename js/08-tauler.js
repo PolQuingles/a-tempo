@@ -160,7 +160,7 @@ function boardAnnouncements() {
   const card = a => annCard(a, true);
   markAnnSeen(active);
   loadAnnSeen(active);
-  return `${canBoard() ? `<div class="sec-h end" style="margin-top:6px"><button class="btn btn-sm btn-primary" data-act="ann-new">${ICON.plus}Anunci</button></div>` : ''}
+  return `${canBoard() ? `<div class="sec-h end u-mt-6"><button class="btn btn-sm btn-primary" data-act="ann-new">${ICON.plus}Anunci</button></div>` : ''}
     ${active.length ? `<div class="panel">${active.map(card).join('')}</div>` : `<div class="empty"><p>No hi ha anuncis.</p></div>`}
     ${canBoard() && expired.length ? `<details class="np-group"><summary><span>Caducats (${expired.length})</span>${ICON.chev}</summary><div class="panel">${expired.map(card).join('')}</div></details>` : ''}`;
 }
@@ -241,7 +241,7 @@ function loadPdfjs() {
 const PDF_ZOOMS = [1, 1.5, 2, 3];
 const pdfViewerHtml = () => `<div class="pdfv">
     <div class="pdfv-bar"><button type="button" class="btn btn-sm pdfv-b" data-z="-1" aria-label="Redueix" disabled>−</button><span class="pdfv-z mono" aria-live="polite">100%</span><button type="button" class="btn btn-sm pdfv-b" data-z="1" aria-label="Amplia">+</button><span class="pdfv-n muted"></span></div>
-    <div class="pdfv-pages"><p class="muted" style="margin:0">Preparant el PDF…</p></div></div>`;
+    <div class="pdfv-pages"><p class="muted u-m-0">Preparant el PDF…</p></div></div>`;
 /** Pinta el PDF de `url` dins del visor de `box`. Llança un error si no es pot (llavors queden els botons d'obrir i desar). */
 async function bindPdfViewer(box, url) {
   const wrap = box.querySelector('.pdfv-pages');
@@ -294,15 +294,15 @@ function sheetOpenFile(f, title) {
   openSheet({
     wide: kind === 'PDF',
     title: title || f.name,
-    body: `<div id="fo-body"><p class="muted" style="margin:0">Carregant el fitxer (${esc(kind)} · ${fmtSize(f.size)})…</p></div>`,
+    body: `<div id="fo-body"><p class="muted u-m-0">Carregant el fitxer (${esc(kind)} · ${fmtSize(f.size)})…</p></div>`,
     onMount: async el => {
       const box = el.querySelector('#fo-body');
       try {
         const url = await loadFile(f);
         if (!box.isConnected) return;
         const media = kind === 'Àudio' ? studyPlayer(url)
-          : kind === 'Imatge' ? `<img src="${url}" alt="" style="display:block;width:100%;border-radius:12px">`
-          : kind === 'Vídeo' ? `<video src="${url}" controls playsinline preload="metadata" style="display:block;width:100%;border-radius:12px;background:#000"></video>`
+          : kind === 'Imatge' ? `<img src="${url}" alt="" class="u-d-block u-w-100pc u-br-12">`
+          : kind === 'Vídeo' ? `<video src="${url}" controls playsinline preload="metadata" class="u-d-block u-w-100pc u-br-12 u-bg-000"></video>`
           : kind === 'PDF' ? pdfViewerHtml() : '';
         const kept = offlineSaved().has(f.id);
         // Un PDF es llegeix aquí mateix: els botons van a dalt (sota d'una partitura llarga no es veurien) i «Obre» és secundari.
@@ -314,7 +314,7 @@ function sheetOpenFile(f, title) {
         bindStudyPlayer(box);
         if (kind === 'PDF') bindPdfViewer(box, url).catch(() => {
           const v = box.querySelector('.pdfv');
-          if (v) v.innerHTML = `<p class="muted" style="margin:0">No s’ha pogut mostrar el PDF aquí${navigator.onLine ? '' : ' (sense connexió)'}. Obre’l o desa’l amb els botons de sota.</p>`;
+          if (v) v.innerHTML = `<p class="muted u-m-0">No s’ha pogut mostrar el PDF aquí${navigator.onLine ? '' : ' (sense connexió)'}. Obre’l o desa’l amb els botons de sota.</p>`;
         });
         box.querySelector('#fo-keep')?.addEventListener('click', async e => {
           try {
@@ -323,7 +323,7 @@ function sheetOpenFile(f, title) {
           } catch { toast('No s’ha pogut desar al mòbil'); }
         });
       } catch {
-        if (box.isConnected) box.innerHTML = '<p style="margin:0">No s’ha pogut carregar el fitxer. Comprova la connexió i torna-ho a provar.</p>';
+        if (box.isConnected) box.innerHTML = '<p class="u-m-0">No s’ha pogut carregar el fitxer. Comprova la connexió i torna-ho a provar.</p>';
       }
     },
   });
@@ -411,7 +411,7 @@ const choirDocs = () => [...(S.config.documents || [])]
 function boardDocuments() {
   const docs = choirDocs();
   const tools = canBoard()
-    ? `<div class="sec-h end" style="margin-top:6px"><button class="btn btn-sm btn-primary" data-act="doc-new">${ICON.plus}Document</button></div>`
+    ? `<div class="sec-h end u-mt-6"><button class="btn btn-sm btn-primary" data-act="doc-new">${ICON.plus}Document</button></div>`
     : '';
   const row = d => `<div class="mat"><span class="mat-k doc-${esc(d.kind)}">${DOC_KINDS[d.kind]?.[1] || 'Doc'}</span>
       <span class="mat-i">${itemLink(d, `data-act="file-open" data-src="doc" data-id="${esc(d.id)}"`)}<small>${[DOC_KINDS[d.kind]?.[0], d.note, fileNote(d)].filter(Boolean).map(esc).join(' · ')}</small></span>
@@ -482,15 +482,15 @@ function boardPolls() {
     const mine = S.pollVotes.get(`${p.id}_${myId()}`);
     const chosen = new Set(mine?.choices || []);
     const form = `${(p.options || []).map(o => `<label class="opt-row"><input type="${p.multi ? 'checkbox' : 'radio'}" name="poll-${p.id}" value="${o.id}" ${chosen.has(o.id) ? 'checked' : ''} ${canVote ? '' : 'disabled'}><span>${esc(o.label)}</span><span></span></label>`).join('')}
-      ${canVote && p.allowNote ? `<label class="field" style="margin-top:8px"><span>Comentari (opcional)</span><textarea class="inp" data-poll-note maxlength="300" style="min-height:60px">${esc(mine?.note || '')}</textarea></label>` : !canVote && mine?.note ? `<p class="m" style="margin:6px 0 0">«${esc(mine.note)}»</p>` : ''}
-      ${canVote ? `<div class="c-a" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="btn btn-sm btn-primary" data-act="poll-vote" data-id="${p.id}">${mine ? 'Actualitza la resposta' : 'Envia la resposta'}</button>${mine ? '<span class="rsvp yes">Resposta desada</span>' : ''}</div>` : ''}`;
+      ${canVote && p.allowNote ? `<label class="field u-mt-8"><span>Comentari (opcional)</span><textarea class="inp u-minh-60" data-poll-note maxlength="300">${esc(mine?.note || '')}</textarea></label>` : !canVote && mine?.note ? `<p class="m u-m-6-0-0">«${esc(mine.note)}»</p>` : ''}
+      ${canVote ? `<div class="c-a u-d-flex u-gap-8 u-ai-center u-fw-wrap"><button class="btn btn-sm btn-primary" data-act="poll-vote" data-id="${p.id}">${mine ? 'Actualitza la resposta' : 'Envia la resposta'}</button>${mine ? '<span class="rsvp yes">Resposta desada</span>' : ''}</div>` : ''}`;
     if (canBoard()) {
       const r = pollResults(p);
       const max = Math.max(1, ...Object.values(r.counts));
       return `<div class="poll"><div class="ann-h"><h2 class="ann-t">${esc(p.title)}</h2><button class="icon-btn" data-act="poll-edit" data-id="${p.id}" aria-label="Edita">${ICON.more}</button></div>
         ${p.description ? `<div class="ann-b">${linkify(p.description)}</div>` : ''}${meta}
         ${(p.options || []).map(o => `<div class="opt-row ${r.counts[o.id] === max && max > 0 ? 'best' : ''}"><span></span><span>${esc(o.label)}</span><span class="n">${r.counts[o.id]}</span><span class="opt-bar"><span style="width:${(r.counts[o.id] / Math.max(1, r.voters)) * 100}%"></span></span></div>`).join('')}
-        <div class="c-a" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="muted" style="font-size:var(--t-13)">${r.voters} de ${r.expected} han respost</span>
+        <div class="c-a u-d-flex u-gap-8 u-fw-wrap u-ai-center"><span class="muted u-fs-t-13">${r.voters} de ${r.expected} han respost</span>
           <button class="btn btn-sm" data-act="poll-results" data-id="${p.id}">Qui ha votat</button>${closed ? '' : `<button class="btn btn-sm" data-act="poll-remind" data-id="${p.id}">Recorda-ho</button>`}</div>
         ${canVote && forMySection(p) ? `<details class="poll-mine" data-poll="${p.id}"><summary>${mine ? 'La teva resposta · desada' : 'Encara no hi has respost'}${ICON.chev}</summary>${form}</details>` : ''}</div>`;
     }
@@ -498,6 +498,6 @@ function boardPolls() {
       ${p.description ? `<div class="ann-b">${linkify(p.description)}</div>` : ''}${meta}
       ${form}</div>`;
   };
-  return `${canBoard() ? '<div class="sec-h" style="margin-top:6px"><span></span><span style="display:flex;gap:8px"><button class="btn btn-sm" data-act="bandes-new">' + ICON.plus + 'Bandes</button><button class="btn btn-sm btn-primary" data-act="poll-new">' + ICON.plus + 'Enquesta</button></span></div>' : ''}
+  return `${canBoard() ? '<div class="sec-h u-mt-6"><span></span><span class="u-d-flex u-gap-8"><button class="btn btn-sm" data-act="bandes-new">' + ICON.plus + 'Bandes</button><button class="btn btn-sm btn-primary" data-act="poll-new">' + ICON.plus + 'Enquesta</button></span></div>' : ''}
     ${all.length ? `<div class="panel">${all.map(card).join('')}</div>` : '<div class="empty"><p>No hi ha enquestes.</p></div>'}`;
 }

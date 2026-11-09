@@ -12,17 +12,17 @@ function viewStats(inBoard) {
   // Dins d'Assistència l'abast és un selector petit, perquè no s'apilin dues files de pestanyes.
   const scopeTabs = inBoard
     ? `<div class="scope-row"><span class="seg3 scope-seg" role="radiogroup" aria-label="Període">${[['prod', 'Producció'], ['season', 'Temporada']].map(([k, l]) => `<button type="button" role="radio" aria-checked="${ui.statsScope === k}" data-act="stats-scope" data-k="${k}">${l}</button>`).join('')}</span></div>`
-    : `<div class="subtabs" role="tablist" style="margin-bottom:10px;grid-template-columns:repeat(3,1fr)">${[['prod', 'Producció'], ['season', 'Temporada'], ['risk', 'Risc']].map(([k, l]) => `<button class="subtab" role="tab" aria-selected="${ui.statsScope === k}" data-act="stats-scope" data-k="${k}" style="font-size:12.5px">${l}</button>`).join('')}</div>`;
+    : `<div class="subtabs u-mb-10 u-gtc-repeat-3-1fr" role="tablist">${[['prod', 'Producció'], ['season', 'Temporada'], ['risk', 'Risc']].map(([k, l]) => `<button class="subtab u-fs-12_5" role="tab" aria-selected="${ui.statsScope === k}" data-act="stats-scope" data-k="${k}">${l}</button>`).join('')}</div>`;
   if (ui.statsScope === 'risk') return `<div class="page-head${inBoard ? ' in-board' : ''}"><div><div class="eyebrow">Estadístiques</div>${title(`Norma del ${minAttendance()}%`)}</div></div>` + scopeTabs + riskView();
   const scope = currentScope();
   const st = computeStats(scope, ui.statsSec);
   const choice = ui.statsScope === 'prod'
     ? `<div class="chips" role="group" aria-label="Producció">${prods.map(p => `<button class="chip" aria-pressed="${p.id === scope.id}" data-act="stats-prod" data-id="${p.id}"><i class="pdot prod-tone" style="--ph:${prodHue(p)}"></i>${esc(p.name)}</button>`).join('')}</div>`
     : '';
-  const secChips = `<div class="chips" role="group" aria-label="${V.Section}" style="padding-bottom:4px">
+  const secChips = `<div class="chips u-pb-4" role="group" aria-label="${V.Section}">
     <button class="chip" aria-pressed="${!ui.statsSec}" data-act="stats-sec" data-sec="">${capz(V.tot)}</button>
     ${SECTIONS.map(x => `<button class="chip" aria-pressed="${ui.statsSec === x.id}" data-act="stats-sec" data-sec="${x.id}">${esc(x.name)}</button>`).join('')}</div>`;
-  const sub = scope.kind === 'range' ? `<p class="muted mono" style="margin:4px 0 0;font-size:var(--t-13)">${ddmm(scope.from)}/${scope.from.slice(0, 4)} – ${ddmm(scope.to)}/${scope.to.slice(0, 4)}</p>` : '';
+  const sub = scope.kind === 'range' ? `<p class="muted mono u-m-4-0-0 u-fs-t-13">${ddmm(scope.from)}/${scope.from.slice(0, 4)} – ${ddmm(scope.to)}/${scope.to.slice(0, 4)}</p>` : '';
   const tone = scope.kind === 'prod' ? ` prod-tone tinted" style="--ph:${prodHue(S.productions.get(scope.id))}` : '';
   const head = `<div class="page-head${inBoard ? ' in-board' : ''}${tone}"><div><div class="eyebrow">${scope.kind === 'prod' ? '<i class="pdot"></i>Producció' : 'Estadístiques'}</div>${title(esc(scope.name))}${sub}</div>
     ${S.role === 'edit' ? '<span class="stats-exp"><button class="btn btn-sm" data-act="stats-report">Informe PDF</button><button class="btn btn-sm" data-act="export-csv">Exporta CSV</button></span>' : ''}</div>`;
@@ -44,10 +44,10 @@ function viewStats(inBoard) {
     <div class="kpi"><div class="kpi-v">${minsKpi(t.min)}</div><div class="kpi-l">Retard acumulat · ${t.R} retards</div></div>
     <div class="kpi ${t.FNJ ? 'alert' : ''}"><div class="kpi-v">${t.FNJ}</div><div class="kpi-l">Faltes no justificades · ${t.FJ} just.</div></div>
   </div>
-  <p class="muted" style="font-size:var(--t-13);margin:10px 2px 0">${st.counted.length} de ${st.all.length} ${st.all.length === 1 ? 'sessió' : 'sessions'} amb llista ${helpBtn('assist')}</p>
+  <p class="muted u-fs-t-13 u-m-10-2-0">${st.counted.length} de ${st.all.length} ${st.all.length === 1 ? 'sessió' : 'sessions'} amb llista ${helpBtn('assist')}</p>
   ${helpText('assist', 'L’assistència es compta en minuts: els minuts que cadascú ha estat a l’assaig dividits pels minuts que ha durat (si una sessió no té hora de final, compta dues hores). Un retard hi resta els minuts que s’ha fet tard; marxar abans d’hora, els minuts que s’ha perdut del final; i una falta, justificada o no, hi resta tota la sessió. No compten «no fa» ni les baixes.')}`;
 
-  const dist = `<div class="panel" style="padding:14px;margin-top:14px">${stackBar(t)}<div class="legend">${ORDER.map(k => `<span><i class="i-${k}"></i>${STATUS[k].label} <b>${t[k]}</b></span>`).join('')}</div></div>`;
+  const dist = `<div class="panel u-p-14 u-mt-14">${stackBar(t)}<div class="legend">${ORDER.map(k => `<span><i class="i-${k}"></i>${STATUS[k].label} <b>${t[k]}</b></span>`).join('')}</div></div>`;
 
   // Norma del concert (only per production)
   let rule = '';
@@ -63,7 +63,7 @@ function viewStats(inBoard) {
     rule = `<div class="section-title"><h2 class="h2">Norma del ${minAttendance()}% ${helpBtn('norma')}</h2>${hasConcert ? `<button class="btn btn-sm" data-act="concert-list" data-pid="${scope.id}">${V.sh.list}</button>` : '<span class="eyebrow">assistència mínima</span>'}</div>
       <div class="panel">
         ${outL.length || riskL.length ? `<ul class="ru-list">${outL.length ? `<li class="ru-h">No poden fer ${V.sh.el} · ${outL.length}</li>` : ''}${outL.map(r => item(r, ruleMap.get(r.m.id))).join('')}${riskL.length ? `<li class="ru-h">En risc · ${riskL.length}</li>` : ''}${riskL.map(r => item(r, ruleMap.get(r.m.id))).join('')}</ul>`
-          : `<p style="margin:0;padding:14px;font-size:var(--t-13)">Ara mateix tothom compleix la norma.</p>`}
+          : `<p class="u-m-0 u-p-14 u-fs-t-13">Ara mateix tothom compleix la norma.</p>`}
       </div>
       ${helpText('norma', `Es compta en minuts: el temps que s’ha estat a tots els assajos de la producció (no ${V.sh.els} ni les sessions «Altres») dividit pel temps que han durat. «En risc» vol dir que ara està per sota però encara hi pot arribar amb els assajos que queden.`)}`;
   }
@@ -78,7 +78,7 @@ function viewStats(inBoard) {
     const d = c.P + c.R + c.FJ + c.FNJ;
     const seg = k => d ? `<span class="s-${k}" style="height:${(c[k] / d) * 100}%;background:var(--${k.toLowerCase()})"></span>` : '';
     return `<button class="tcol" data-act="open-session" data-sid="${s.id}" title="${shortDate(s.date)} · ${s.type || 'Assaig'} · ${pct(rate(c))}" aria-label="${longDate(s.date)}: ${pct(rate(c))}">
-      <span class="tbar" style="height:100%">${['P', 'R', 'FJ', 'FNJ'].map(seg).join('')}</span></button>`;
+      <span class="tbar u-h-100pc">${['P', 'R', 'FJ', 'FNJ'].map(seg).join('')}</span></button>`;
   }).join('');
   const every = Math.max(1, Math.ceil(st.counted.length / 8));
   const labels = st.counted.map(({ s }, i) => `<span>${i % every === 0 ? ddmm(s.date) : ''}</span>`).join('');
@@ -87,7 +87,7 @@ function viewStats(inBoard) {
     <div class="panel"><div class="trend-wrap"><div style="min-width:${minW}px">
       <div class="trend">${[100, 75, 50, 25].map(v => `<div class="grid" style="bottom:${v}%"><span>${v}%</span></div>`).join('')}${cols}</div>
       <div class="tlabels">${labels}</div></div></div>
-      <div class="trend-note legend" style="margin:0;padding:0 14px 12px">${['P', 'R', 'FJ', 'FNJ'].map(k => `<span><i class="i-${k}"></i>${STATUS[k].short}</span>`).join('')}</div></div>`;
+      <div class="trend-note legend u-m-0 u-p-0-14-12">${['P', 'R', 'FJ', 'FNJ'].map(k => `<span><i class="i-${k}"></i>${STATUS[k].short}</span>`).join('')}</div></div>`;
 
   const fnjAlert = st.rows.filter(r => r.FNJ >= (+S.config.alertFNJ || 3)).sort((a, b) => b.FNJ - a.FNJ);
   const alerts = fnjAlert.length ? `<div class="section-title"><h2 class="h2">Cal fer seguiment</h2><span class="eyebrow">≥ ${S.config.alertFNJ || 3} faltes no just.</span></div>
@@ -174,11 +174,11 @@ function sheetRiskWrite(pid) {
   openSheet({
     title: 'Escriu als que no arriben',
     body: `<div class="kv">
-      <p class="muted" style="margin:0;font-size:var(--t-13)">${esc(prod.name)} · cadascú rep un missatge privat amb les seves xifres. Pots canviar el text: {nom}, {percentatge}, {queden}, {maxim} i {minim} s’omplen per a cada persona.</p>
+      <p class="muted u-m-0 u-fs-t-13">${esc(prod.name)} · cadascú rep un missatge privat amb les seves xifres. Pots canviar el text: {nom}, {percentatge}, {queden}, {maxim} i {minim} s’omplen per a cada persona.</p>
       ${groups.map(([k, l]) => `<div class="field"><span>${title[k]} · ${l.length}</span>
-        <ul class="mini-list rw-list" style="max-height:none">${l.map(r => `<li><label class="cs-row"><input type="checkbox" value="${esc(r.m.id)}" checked><span><b>${esc(r.m.name)}</b> <span class="m">${esc(SEC[r.m.section].short)} · ${pct(r.rs.cur)}</span></span></label></li>`).join('')}</ul>
-        <textarea class="inp" id="rw-${k}" maxlength="${THREAD_MAX}" style="min-height:110px">${esc(RISK_TEXT[k])}</textarea></div>`).join('')}
-      <p class="muted" id="rw-prev" style="margin:0;font-size:var(--t-13)"></p>
+        <ul class="mini-list rw-list u-maxh-none">${l.map(r => `<li><label class="cs-row"><input type="checkbox" value="${esc(r.m.id)}" checked><span><b>${esc(r.m.name)}</b> <span class="m">${esc(SEC[r.m.section].short)} · ${pct(r.rs.cur)}</span></span></label></li>`).join('')}</ul>
+        <textarea class="inp u-minh-110" id="rw-${k}" maxlength="${THREAD_MAX}">${esc(RISK_TEXT[k])}</textarea></div>`).join('')}
+      <p class="muted u-m-0 u-fs-t-13" id="rw-prev"></p>
     </div>`,
     foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="rw-send">Envia</button>`,
     onMount: el => {
@@ -222,11 +222,11 @@ function riskView() {
     nRisk += rows.filter(r => r.rs.status === 'risk').length;
     const hasConcert = allSessions(pr.id).some(isShow);
     return `<div class="section-title prod-tone" style="--ph:${prodHue(pr)}"><h2 class="h2"><i class="pdot"></i>${esc(pr.name)}</h2>
-        <span style="display:flex;gap:6px;flex-wrap:wrap">${riskWritable(rows).length ? `<button class="btn btn-sm" data-act="risk-write" data-pid="${pr.id}">Escriu-los</button>` : ''}${hasConcert ? `<button class="btn btn-sm" data-act="concert-list" data-pid="${pr.id}">${V.sh.list}</button>` : ''}</span></div>
+        <span class="u-d-flex u-gap-6 u-fw-wrap">${riskWritable(rows).length ? `<button class="btn btn-sm" data-act="risk-write" data-pid="${pr.id}">Escriu-los</button>` : ''}${hasConcert ? `<button class="btn btn-sm" data-act="concert-list" data-pid="${pr.id}">${V.sh.list}</button>` : ''}</span></div>
       <div class="panel prod-tone tinted" style="--ph:${prodHue(pr)}">${rows.length ? rows.map(({ m, rs }) => `<button class="risk-row" data-act="member-stats" data-mid="${m.id}">
           <span class="rn">${esc(m.name)}</span><span class="rule ${rs.status}">${rs.status === 'out' ? `${pct(rs.cur)} · no hi arriba` : `${pct(rs.cur)} · en risc`}</span>
           <span class="rm">${esc(SEC[m.section].name)} · ${minsText(rs.attM)} de ${minsText(rs.attM + rs.absM)} d’assaig · ${riskLine(rs)}</span></button>`).join('')
-        : '<p style="margin:0;padding:14px;font-size:var(--t-13)">Tothom compleix la norma.</p>'}</div>`;
+        : '<p class="u-m-0 u-p-14 u-fs-t-13">Tothom compleix la norma.</p>'}</div>`;
   }).join('');
   const text = () => {
     const out = [`Seguiment de la norma del ${minAttendance()}%`];
@@ -241,15 +241,15 @@ function riskView() {
     return out.join('\n');
   };
   window.__riskText = text;
-  return `<div class="kpis" style="grid-template-columns:repeat(2,1fr)">
+  return `<div class="kpis u-gtc-repeat-2-1fr">
       <div class="kpi ${nOut ? 'alert' : ''}"><div class="kpi-v">${nOut}</div><div class="kpi-l">No poden fer ${V.sh.el}</div></div>
       <div class="kpi"><div class="kpi-v">${nRisk}</div><div class="kpi-l">Hi són a temps</div></div>
     </div>
-    <p class="muted" style="font-size:var(--t-13);margin:10px 2px 0">Produccions en curs i properes ${helpBtn('risc')}</p>
+    <p class="muted u-fs-t-13 u-m-10-2-0">Produccions en curs i properes ${helpBtn('risc')}</p>
     ${helpText('risc', `Compten els assajos (no ${V.sh.els} ni les sessions «Altres») i no compten les baixes.`)}
     ${blocks}
-    ${S.role === 'edit' ? `<div class="panel" style="padding:14px;margin-top:14px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
-      <span style="font-size:var(--t-13)">Passa-ho a direcció o guarda-ho.</span>
+    ${S.role === 'edit' ? `<div class="panel u-p-14 u-mt-14 u-d-flex u-jc-space-between u-ai-center u-gap-10 u-fw-wrap">
+      <span class="u-fs-t-13">Passa-ho a direcció o guarda-ho.</span>
       <button class="btn btn-sm" data-act="risk-copy">Copia el resum</button></div>` : ''}`;
 }
 
@@ -299,8 +299,8 @@ function sheetConcertDecide(pid, mid) {
   };
   openSheet({
     title: r.m.name,
-    body: `<p style="margin-top:0"><b>${stateLabel(r.state)}</b><br><span class="muted" style="font-size:var(--t-13)">${esc(r.note)}</span></p>
-      ${r.forced ? `<p class="muted" style="font-size:var(--t-13)">Ara està decidit a mà${r.why ? `: ${esc(r.why)}` : ''}.</p>` : ''}
+    body: `<p class="u-mt-0"><b>${stateLabel(r.state)}</b><br><span class="muted u-fs-t-13">${esc(r.note)}</span></p>
+      ${r.forced ? `<p class="muted u-fs-t-13">Ara està decidit a mà${r.why ? `: ${esc(r.why)}` : ''}.</p>` : ''}
       <label class="field"><span>Motiu (surt a la llista)</span><input class="inp" id="cd-why" type="text" maxlength="90" value="${esc(r.forced ? r.why : '')}" placeholder="p. ex. es va incorporar tard"></label>`,
     foot: `${r.forced ? '<button class="btn" id="cd-auto">Torna a l’automàtic</button>' : ''}<span class="spacer"></span>
       <button class="btn btn-danger-ghost" id="cd-no">No hi ${V.plays}</button><button class="btn btn-primary" id="cd-yes">Hi ${V.plays}</button>`,
@@ -329,14 +329,14 @@ function voiceBalance(rows) {
   });
 }
 function balanceHtml(bal) {
-  return `<div class="section-title" style="margin-top:18px"><h2 class="h2">${V.balance}</h2><span class="eyebrow">qui hi pot ${V.play}</span></div>
+  return `<div class="section-title u-mt-18"><h2 class="h2">${V.balance}</h2><span class="eyebrow">qui hi pot ${V.play}</span></div>
     <div class="balance">${bal.map(b => `<div class="bal" aria-label="${esc(b.x.name)}: ${b.total}">
       <div class="bal-h"><em>${esc(b.x.short)}</em><b>${b.total}</b>${b.wait ? `<span class="bal-w" title="Encara hi són a temps">+${b.wait}</span>` : ''}</div>
       <div class="bal-bar">${b.parts.filter(pt => pt.n).map(pt => `<span class="${pt.cls}" style="flex:${pt.n}"></span>`).join('')}</div>
       <ul class="bal-parts">${b.parts.map(pt => `<li><span>${pt.label}</span><b>${pt.n}${pt.w ? `<i>+${pt.w}</i>` : ''}</b></li>`).join('')}</ul>
       ${b.gap ? `<span class="bal-note" title="Diferència entre primeres i segones">${b.gap}</span>` : ''}
     </div>`).join('')}</div>
-    <p class="muted" style="font-size:var(--t-13);margin:8px 2px 0">«+» són els que encara hi són a temps. «1/2» ${V.plays} tant de primera com de segona. Si entre primeres i segones hi ha 3 o més de diferència, s’indica a sota.</p>`;
+    <p class="muted u-fs-t-13 u-m-8-2-0">«+» són els que encara hi són a temps. «1/2» ${V.plays} tant de primera com de segona. Si entre primeres i segones hi ha 3 o més de diferència, s’indica a sota.</p>`;
 }
 function sheetConcertList(pid) {
   const { prod, dates, rows } = concertRows(pid);
@@ -355,7 +355,7 @@ function sheetConcertList(pid) {
     const ms = rows.filter(r => r.m.section === x.id);
     if (!ms.length) return '';
     const n = ms.filter(r => r.state === 'apte').length;
-    return `<div class="section-title" style="margin-top:14px"><h2 class="h2">${x.name}</h2><span class="eyebrow">${n} de ${ms.length}</span></div>
+    return `<div class="section-title u-mt-14"><h2 class="h2">${x.name}</h2><span class="eyebrow">${n} de ${ms.length}</span></div>
       <div class="panel">${ms.map(r => `<button class="elig ${r.state === 'fora' ? 'no' : ''}" ${canEdit() ? `data-act="concert-toggle" data-pid="${pid}" data-mid="${r.m.id}"` : 'disabled'}>
         <span><span class="en">${esc(r.m.name)}</span>${r.m.part ? ` <span class="part">${esc(partTag(r.m))}</span>` : ''}<span class="em">${esc(r.why || r.note)}</span></span>${pill(r)}</button>`).join('')}</div>`;
   };
@@ -373,14 +373,14 @@ function sheetConcertList(pid) {
     title: V.sh.list,
     wide: true,
     body: `<div class="prod-band prod-tone" style="--ph:${prodHue(prod)}"><h2 class="h2"><i class="pdot"></i>${esc(prod.name)}</h2><span class="eyebrow">${dates.length ? dates.map(d => shortDate(d)).join(' · ') : `sense ${V.sh.show} al calendari`}</span></div>
-      <div class="kpis" style="grid-template-columns:repeat(3,1fr)">
+      <div class="kpis u-gtc-repeat-3-1fr">
         <div class="kpi"><div class="kpi-v">${inList.length}</div><div class="kpi-l">Hi poden ${V.play}</div></div>
         <div class="kpi"><div class="kpi-v">${waiting.length}</div><div class="kpi-l">Hi són a temps</div></div>
         <div class="kpi ${outList.length ? 'alert' : ''}"><div class="kpi-v">${outList.length}</div><div class="kpi-l">Fora</div></div>
       </div>
-      <p class="muted" style="font-size:var(--t-13);margin:10px 0 0">Feta amb la norma del ${minAttendance()}% sobre els assajos de la producció.${canEdit() ? ' Toca una persona per afegir-la o treure-la a mà, amb el motiu.' : ''}</p>
+      <p class="muted u-fs-t-13 u-m-10-0-0">Feta amb la norma del ${minAttendance()}% sobre els assajos de la producció.${canEdit() ? ' Toca una persona per afegir-la o treure-la a mà, amb el motiu.' : ''}</p>
       ${balanceHtml(voiceBalance(rows))}
-      ${stamp ? `<p class="muted" style="font-size:var(--t-13);margin:6px 0 0">Desada com a definitiva el ${(d => `${pad(d.getDate())}/${pad(d.getMonth() + 1)} a les ${pad(d.getHours())}:${pad(d.getMinutes())}`)(new Date(stamp))}${prod.concert.by ? ` per ${esc(prod.concert.by)}` : ''}.</p>` : ''}
+      ${stamp ? `<p class="muted u-fs-t-13 u-m-6-0-0">Desada com a definitiva el ${(d => `${pad(d.getDate())}/${pad(d.getMonth() + 1)} a les ${pad(d.getHours())}:${pad(d.getMinutes())}`)(new Date(stamp))}${prod.concert.by ? ` per ${esc(prod.concert.by)}` : ''}.</p>` : ''}
       ${SECTIONS.map(block).join('')}`,
     foot: `${canEdit() ? '<button class="btn" id="cl-final">Marca com a definitiva</button>' : ''}<span class="spacer"></span><button class="btn btn-primary" id="cl-copy">Copia la llista</button>`,
     onMount: el => {
@@ -405,8 +405,8 @@ function ruleSentence(rs) {
   if (!rs) return '';
   const min = minAttendance();
   if (rs.status === 'ok') return `<span class="rsvp yes">Compleixes la norma del ${min}%</span>`;
-  if (rs.status === 'risk') return `<span class="rsvp none" style="background:var(--fj-soft);color:var(--fj-ink)">Per sota del ${min}%</span> <span class="muted" style="font-size:var(--t-13)">Encara hi pots arribar: si vens a tot el que queda (${minsText(rs.remM)} d’assaig), arribaràs al ${pct(rs.best)}.</span>`;
-  return `<span class="rsvp no">No arribes al ${min}%</span> <span class="muted" style="font-size:var(--t-13)">Parla amb el teu ${V.leader}.</span>`;
+  if (rs.status === 'risk') return `<span class="rsvp none u-bg-fj-soft u-c-fj-ink">Per sota del ${min}%</span> <span class="muted u-fs-t-13">Encara hi pots arribar: si vens a tot el que queda (${minsText(rs.remM)} d’assaig), arribaràs al ${pct(rs.best)}.</span>`;
+  return `<span class="rsvp no">No arribes al ${min}%</span> <span class="muted u-fs-t-13">Parla amb el teu ${V.leader}.</span>`;
 }
 /** «Encara pots perdre 1 h 50 min d’assaig abans del concert del 17 d’oct.»: els minuts que pot faltar (o arribar tard)
  *  i continuar arribant a la norma, que es compta en minuts. */
@@ -441,7 +441,7 @@ function myAttendanceCard(me, inTab) {
         <span class="att-facts"><b>${esc(facts[0])}</b>${facts.length > 1 ? `<small>${esc(facts.slice(1).join(' · '))}</small>` : ''}</span></div>
         <div class="dots" aria-label="Sessió a sessió">${dots}</div>
         ${normHint(me, prod.id) || `<div>${ruleSentence(rs)}</div>`}`
-      : `<span class="muted" style="font-size:var(--t-13)">Encara no hi ha cap llista passada en aquesta producció.</span>`}
+      : `<span class="muted u-fs-t-13">Encara no hi ha cap llista passada en aquesta producció.</span>`}
       ${inTab ? '' : '<div class="att-acts"><button class="btn btn-sm btn-ghost" data-act="my-att">Totes les produccions</button><button class="btn btn-sm btn-ghost" data-act="absence-new">Avisa d’una absència</button></div>'}
     </div>`;
 }
@@ -460,18 +460,18 @@ function myAttSeason(me, skip, head = '') {
   const rows = productionsSorted().map(p => myProdSummary(me, p.id)).filter(x => x && x.counted);
   const done = x => !allSessions(x.prod.id).some(s => s.date >= TODAY);
   const now = rows.filter(x => !done(x) && x.prod.id !== skip), past = rows.filter(done).reverse();
-  const list = xs => `<ul class="mini-list" style="max-height:none">${xs.map(({ prod, r, rs }) => `<li style="display:grid;gap:4px;padding:10px 12px">
-        <span style="display:flex;justify-content:space-between;gap:8px"><b>${esc(prod.name)}</b><span class="mono">${pct(rate(r))}</span></span>
+  const list = xs => `<ul class="mini-list u-maxh-none">${xs.map(({ prod, r, rs }) => `<li class="u-d-grid u-gap-4 u-p-10-12">
+        <span class="u-d-flex u-jc-space-between u-gap-8"><b>${esc(prod.name)}</b><span class="mono">${pct(rate(r))}</span></span>
         <span class="m">${[`${minsText(r.mDone)} de ${minsText(r.mAll)} d’assaig`, r.FJ ? `${r.FJ} just.` : '', r.FNJ ? `${r.FNJ} no just.` : ''].filter(Boolean).join(' · ')}</span><span>${ruleSentence(rs)}</span></li>`).join('')}</ul>`;
   return `${now.length || past.length ? head : ''}${now.length ? list(now) : ''}
       ${past.length ? `<details class="np-group my-past"><summary><span>Produccions acabades (${past.length})</span>${ICON.chev}</summary>${list(past)}</details>` : ''}
       ${rows.length ? '' : '<p class="muted">Encara no hi ha llistes passades.</p>'}
       <details class="np-group my-season"><summary><span>Tota la temporada${sc ? ` · ${pct(rate(sr))}` : ''}</span>${ICON.chev}</summary>
-        <div class="kpis" style="grid-template-columns:repeat(2,1fr)">
+        <div class="kpis u-gtc-repeat-2-1fr">
           <div class="kpi"><div class="kpi-v">${sc ? kpiPct(rate(sr)) : '—'}</div><div class="kpi-l">${esc(season.name)}${sc ? ` · ${esc(minsText(sr.mDone))} de ${esc(minsText(sr.mAll))}` : ''}</div></div>
           <div class="kpi"><div class="kpi-v">${minsKpi(sr ? sr.min : 0)}</div><div class="kpi-l">Retard acumulat</div></div>
         </div></details>
-      <p class="muted" style="font-size:var(--t-13)">${attPrivate() ? `Només tu i l’equip ${V.del} veieu aquestes dades.` : `Tothom ${V.del} pot veure l’assistència de tothom; els teus avisos d’absència, només l’equip.`} Si hi ha algun error, parla amb el teu ${V.leader}.</p>`;
+      <p class="muted u-fs-t-13">${attPrivate() ? `Només tu i l’equip ${V.del} veieu aquestes dades.` : `Tothom ${V.del} pot veure l’assistència de tothom; els teus avisos d’absència, només l’equip.`} Si hi ha algun error, parla amb el teu ${V.leader}.</p>`;
 }
 /** Assistència, amb el rol de cantaire: només la teva. Avisar d'una absència o d'un retard, els avisos que has fet, com vas a
  *  la producció d'ara i a tota la temporada; i, si avui passes llista d'una corda (en funcions), el botó per fer-ho. */

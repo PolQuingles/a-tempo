@@ -88,7 +88,7 @@ function confirmSheet(title, text, ok = 'Confirma', danger = true) {
     let done = false;
     const finish = v => { if (done) return; done = true; closeSheet(); resolve(v); };
     openSheet({
-      title, body: `<p style="margin:0">${text}</p>`,
+      title, body: `<p class="u-m-0">${text}</p>`,
       foot: `<button class="btn" id="cf-no">Cancel·la</button><button class="btn ${danger ? 'btn-danger' : 'btn-primary'}" id="cf-yes">${esc(ok)}</button>`,
       onMount: el => {
         el.querySelector('#cf-no').onclick = () => finish(false);
@@ -170,11 +170,11 @@ function sheetSummary(initial) {
   const text = () => summaryText(cur, scope === 'sec' ? [ui.section] : SECTIONS.map(x => x.id));
   openSheet({
     title: 'Resum de la llista',
-    body: `<div class="pickers" style="margin-bottom:10px">
+    body: `<div class="pickers u-mb-10">
         <button class="pick" aria-pressed="${scope === 'sec'}" data-scope="sec">${SEC[ui.section].name}</button>
         <button class="pick" aria-pressed="${scope === 'all'}" data-scope="all">${capz(V.tot)}</button></div>
       <textarea class="summary-pre" id="summary-text" readonly>${esc(text())}</textarea>
-      <p class="muted" style="font-size:var(--t-13);margin:8px 0 0">Copia’l i envia’l al grup de WhatsApp o a la direcció.</p>`,
+      <p class="muted u-fs-t-13 u-m-8-0-0">Copia’l i envia’l al grup de WhatsApp o a la direcció.</p>`,
     foot: `<button class="btn btn-primary" id="copy-summary">Copia el resum</button>`,
     onMount: el => {
       el.querySelectorAll('[data-scope]').forEach(b => b.onclick = () => {
@@ -217,7 +217,7 @@ function fitxaHtml(s) {
     ...INFO_FIELDS.filter(([k]) => s.info?.[k]).map(([k, l]) => [l, s.info[k]])];
   const steps = infoSteps(s);
   return `<dl class="fitxa">${rows.map(([l, v]) => `<div class="${l === 'Convocatòria' ? 'key' : ''}"><dt>${l}</dt><dd>${l === 'On' ? placeLink(v) : linkify(v)}</dd></div>`).join('')}</dl>
-    ${steps.length ? `<div class="section-title" style="margin-top:14px"><h2 class="h2">Horari del dia</h2></div><ol class="steps">${steps.map(x => `<li><span class="mono">${esc(x.time || '')}</span><span><b>${esc(x.what || '')}</b>${x.where ? `<small>${esc(x.where)}</small>` : ''}</span></li>`).join('')}</ol>` : ''}`;
+    ${steps.length ? `<div class="section-title u-mt-14"><h2 class="h2">Horari del dia</h2></div><ol class="steps">${steps.map(x => `<li><span class="mono">${esc(x.time || '')}</span><span><b>${esc(x.what || '')}</b>${x.where ? `<small>${esc(x.where)}</small>` : ''}</span></li>`).join('')}</ol>` : ''}`;
 }
 /** El temps d'assaig: 335 → «5:35» (per escriure'l) i «5 h 35 min» (per llegir-lo). */
 const fmtMins = n => `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}`;
@@ -253,8 +253,8 @@ function sheetSessionInfo(sid) {
     body: `${prod && prod.poster && isShow(s) ? `<button class="poster-banner" data-act="poster" data-pid="${esc(prod.id)}" aria-label="Cartell de ${esc(prod.name)}"><img src="${esc(prod.poster)}" alt=""></button>` : ''}<div class="prod-band prod-tone" style="--ph:${prodHue(prod)}"><h2 class="h2"><i class="pdot"></i>${esc(prodNames(s))}</h2><span class="eyebrow">${esc(s.type || 'Assaig')}</span></div>
       ${fitxaHtml(s)}
       ${s.note ? `<p class="fitxa-note">${esc(s.note)}</p>` : ''}
-      ${planOf(s) || canProd() ? `<div class="section-title" style="margin-top:16px"><h2 class="h2">${isShow(s) ? 'Programa' : s.date < TODAY ? 'Què s’hi va treballar' : 'Pla d’assaig'}</h2>${canProd() ? `<button class="btn btn-sm" data-act="plan-edit" data-sid="${s.id}">${planOf(s) ? 'Edita’l' : 'Fes-lo'}</button>` : ''}</div>
-        ${planHtml(s, false, planSec(s)) || `<p class="muted" style="font-size:var(--t-13);margin:0">${isShow(s) ? 'Encara no hi ha programa: quines obres es cantaran i en quin ordre.' : 'Encara no hi ha pla: quines obres i quins compassos s’assajaran.'}</p>`}` : ''}
+      ${planOf(s) || canProd() ? `<div class="section-title u-mt-16"><h2 class="h2">${isShow(s) ? 'Programa' : s.date < TODAY ? 'Què s’hi va treballar' : 'Pla d’assaig'}</h2>${canProd() ? `<button class="btn btn-sm" data-act="plan-edit" data-sid="${s.id}">${planOf(s) ? 'Edita’l' : 'Fes-lo'}</button>` : ''}</div>
+        ${planHtml(s, false, planSec(s)) || `<p class="muted u-fs-t-13 u-m-0">${isShow(s) ? 'Encara no hi ha programa: quines obres es cantaran i en quin ordre.' : 'Encara no hi ha pla: quines obres i quins compassos s’assajaran.'}</p>`}` : ''}
       ${tasksBlock(s)}
       ${isShow(s) ? balanceBlock(s) + seatingBlock(s) : ''}`,
     foot: `${canProd() ? `<button class="btn" data-act="session-edit" data-sid="${s.id}">Edita</button>` : ''}${canProd() && isShow(s) ? `<button class="btn" data-act="participants" data-sid="${s.id}">Llista de participants</button>` : ''}<span class="spacer"></span>${absenceAct ? `<button class="btn" id="fx-copy">Copia per al grup</button>${absenceAct}` : '<button class="btn btn-primary" id="fx-copy">Copia per al grup</button>'}`,
@@ -287,31 +287,31 @@ function sheetSession(sid, presetProd, presetDate) {
       <label class="field"><span>Tipus</span><select class="inp" id="se-type">${[...new Set([...TYPES, cur.type].filter(Boolean))].map(t => `<option ${t === cur.type ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label></div>
       <div class="row2"><label class="field"><span>Hora d’inici</span><input class="inp" id="se-time" type="time" value="${esc(cur.time || '')}"></label>
       <label class="field"><span>Hora de final</span><input class="inp" id="se-end" type="time" value="${esc(cur.end || '')}"></label></div>
-      <label class="field"><span>Temps d’assaig (opcional)</span><input class="inp" id="se-mins" type="text" inputmode="decimal" style="max-width:170px" value="${cur.mins ? esc(fmtMins(cur.mins)) : ''}" placeholder="p. ex. 5:35">
+      <label class="field"><span>Temps d’assaig (opcional)</span><input class="inp u-maxw-170" id="se-mins" type="text" inputmode="decimal" value="${cur.mins ? esc(fmtMins(cur.mins)) : ''}" placeholder="p. ex. 5:35">
         <small>Per a un cap de setmana o una jornada amb pauses i àpats: les hores que s’assaja de debò, en hores i minuts. És el que compta a l’assistència. En blanc, de l’hora d’inici a la de final.</small></label>
       <label class="field"><span>Lloc</span><input class="inp" id="se-place" type="text" maxlength="60" value="${esc(cur.place || '')}" placeholder="Sala d’assaig"></label>
       <div class="field"><span>${V.Sections} convocades</span><div class="pickers" id="se-secs">${SECTIONS.map(x => secPick(x, secs.has(x.id))).join('')}</div></div>
-      <div class="toggle-row"><span><b>Demana confirmació</b><br><span class="muted" style="font-size:var(--t-13)">Els ${V.members} convocats responen si hi seran</span></span><label class="switch"><input type="checkbox" id="se-rsvp" ${cur.rsvp ? 'checked' : ''}><span></span></label></div>
-      <div id="se-rsvp-more" ${cur.rsvp ? '' : 'hidden'} style="display:grid;gap:12px">
+      <div class="toggle-row"><span><b>Demana confirmació</b><br><span class="muted u-fs-t-13">Els ${V.members} convocats responen si hi seran</span></span><label class="switch"><input type="checkbox" id="se-rsvp" ${cur.rsvp ? 'checked' : ''}><span></span></label></div>
+      <div id="se-rsvp-more" ${cur.rsvp ? '' : 'hidden'} class="u-d-grid u-gap-12">
         <label class="field"><span>Respondre abans del (opcional)</span><input class="inp" id="se-rsvpby" type="date" value="${esc(cur.rsvpBy || '')}"></label>
-        <div class="toggle-row"><span><b>Hi ha autocar</b><br><span class="muted" style="font-size:var(--t-13)">Qui diu que hi serà, diu també si va amb l’autocar o pel seu compte</span></span><label class="switch"><input type="checkbox" id="se-bus" ${cur.bus ? 'checked' : ''}><span></span></label></div>
-        <div class="field"><span>Feines per a voluntaris (opcional)</span><div id="se-tasks" style="display:grid;gap:6px"></div><button type="button" class="btn btn-sm" id="se-task-add" style="width:max-content;margin-top:6px">+ Feina</button>
+        <div class="toggle-row"><span><b>Hi ha autocar</b><br><span class="muted u-fs-t-13">Qui diu que hi serà, diu també si va amb l’autocar o pel seu compte</span></span><label class="switch"><input type="checkbox" id="se-bus" ${cur.bus ? 'checked' : ''}><span></span></label></div>
+        <div class="field"><span>Feines per a voluntaris (opcional)</span><div id="se-tasks" class="u-d-grid u-gap-6"></div><button type="button" class="btn btn-sm u-w-max-content u-mt-6" id="se-task-add">+ Feina</button>
           <small>P. ex. «Carregar i descarregar el material» · 4 persones. Qui confirma s’hi pot apuntar.</small></div>
       </div>
       <div class="field"><span>També compta per a</span><div class="pickers" id="se-also">${prods.map(p => `<button type="button" class="pick" data-also="${p.id}" aria-pressed="${(cur.alsoIn || []).includes(p.id)}">${esc(p.name)}</button>`).join('')}</div>
         <small>Per a assajos compartits entre produccions: comptaran a les estadístiques i a la norma de totes les marcades, amb els minuts repartits a parts iguals (un assaig de 2 h de dues produccions, 1 h a cada una; a tota la temporada, les 2 h).</small></div>
       <label class="field"><span>Nota</span><input class="inp" id="se-note" type="text" maxlength="80" value="${esc(cur.note || '')}" placeholder="p. ex. Portar partitures del Gloria"></label>
       <details class="fitxa-edit" id="se-fitxa" ${isShow(cur) || hasInfo(cur) ? 'open' : ''}>
-        <summary><span><b>Fitxa ${V.sh.del}</b><br><span class="muted" style="font-size:var(--t-13)">Convocatòria, vestuari, punt de trobada… La veuen tots els convocats.</span></span>${ICON.chev}</summary>
-        <div class="kv" style="margin-top:12px">
+        <summary><span><b>Fitxa ${V.sh.del}</b><br><span class="muted u-fs-t-13">Convocatòria, vestuari, punt de trobada… La veuen tots els convocats.</span></span>${ICON.chev}</summary>
+        <div class="kv u-mt-12">
           ${infoFrom.length ? `<label class="field"><span>Copia la fitxa d’una altra sessió</span><select class="inp" id="se-copy"><option value="">Tria’n una…</option>${infoFrom.map(x => `<option value="${esc(x.id)}">${esc(sessionLabel(x))}</option>`).join('')}</select><small>Omple els camps de sota. Fins que no desis, no canvia res.</small></label>` : ''}
-          <label class="field"><span>Hora de convocatòria</span><input class="inp" id="se-call" type="time" style="max-width:170px" value="${esc(cur.info?.call || '')}"><small>A quina hora han de ser-hi els ${V.members}.</small></label>
+          <label class="field"><span>Hora de convocatòria</span><input class="inp u-maxw-170" id="se-call" type="time" value="${esc(cur.info?.call || '')}"><small>A quina hora han de ser-hi els ${V.members}.</small></label>
           <label class="field"><span>Vestuari</span><input class="inp" id="se-dress" type="text" maxlength="100" value="${esc(cur.info?.dress || '')}" placeholder="p. ex. Uniforme negre i fulard lila"></label>
           <label class="field"><span>Punt de trobada</span><input class="inp" id="se-meet" type="text" maxlength="100" value="${esc(cur.info?.meet || '')}" placeholder="p. ex. Entrada d’artistes, c. Sant Pere Més Alt"></label>
           <label class="field"><span>Cal portar</span><input class="inp" id="se-bring" type="text" maxlength="120" value="${esc(cur.info?.bring || '')}" placeholder="p. ex. Carpeta negra, partitures i aigua"></label>
-          <div class="field"><span>Horari del dia (opcional)</span><div id="se-steps" style="display:grid;gap:8px"></div><button type="button" class="btn btn-sm" id="se-step-add" style="width:max-content;margin-top:6px">+ Pas</button>
+          <div class="field"><span>Horari del dia (opcional)</span><div id="se-steps" class="u-d-grid u-gap-8"></div><button type="button" class="btn btn-sm u-w-max-content u-mt-6" id="se-step-add">+ Pas</button>
             <small>Cada pas amb l’hora, què es fa i on: recollida de material, trobada, sortida de l’autocar, prova de so, concert, tornada…</small></div>
-          <label class="field"><span>Altres indicacions</span><textarea class="inp" id="se-extra" maxlength="800" style="min-height:70px" placeholder="p. ex. Porteu el DNI per a l’acreditació. Qui vingui en cotxe, aparqueu al pàrquing de la T1.">${esc(cur.info?.extra || '')}</textarea></label>
+          <label class="field"><span>Altres indicacions</span><textarea class="inp u-minh-70" id="se-extra" maxlength="800" placeholder="p. ex. Porteu el DNI per a l’acreditació. Qui vingui en cotxe, aparqueu al pàrquing de la T1.">${esc(cur.info?.extra || '')}</textarea></label>
         </div>
       </details>
     </div>`,
@@ -333,8 +333,8 @@ function sheetSession(sid, presetProd, presetDate) {
         el.querySelector('#se-steps').innerHTML = steps.map((x, i) => `<div class="step-row" data-i="${i}"><input class="inp" data-f="time" type="time" value="${esc(x.time || '')}" aria-label="Hora">
           <input class="inp" data-f="what" maxlength="80" value="${esc(x.what || '')}" placeholder="Què (p. ex. Sortida de l’autocar)"><button type="button" class="icon-btn" data-rm-step="${i}" aria-label="Treu-lo">${ICON.close}</button>
           <input class="inp" data-f="where" maxlength="80" value="${esc(x.where || '')}" placeholder="On (opcional)"></div>`).join('');
-        el.querySelector('#se-tasks').innerHTML = tasks.map((x, i) => `<div class="sec-row" data-i="${i}" style="display:flex;gap:6px;align-items:center"><input class="inp" data-f="label" maxlength="80" value="${esc(x.label || '')}" placeholder="Feina" style="flex:1;min-width:0">
-          <input class="inp" data-f="need" type="number" min="1" max="99" inputmode="numeric" value="${esc(String(x.need || ''))}" style="width:74px" aria-label="Quantes persones"><button type="button" class="icon-btn" data-rm-task="${i}" aria-label="Treu-la">${ICON.close}</button></div>`).join('');
+        el.querySelector('#se-tasks').innerHTML = tasks.map((x, i) => `<div class="sec-row u-d-flex u-gap-6 u-ai-center" data-i="${i}"><input class="inp u-flex-1 u-minw-0" data-f="label" maxlength="80" value="${esc(x.label || '')}" placeholder="Feina">
+          <input class="inp u-w-74" data-f="need" type="number" min="1" max="99" inputmode="numeric" value="${esc(String(x.need || ''))}" aria-label="Quantes persones"><button type="button" class="icon-btn" data-rm-task="${i}" aria-label="Treu-la">${ICON.close}</button></div>`).join('');
         el.querySelectorAll('[data-rm-step]').forEach(b => b.onclick = () => { readRows(); steps.splice(+b.dataset.rmStep, 1); paintRows(); });
         el.querySelectorAll('[data-rm-task]').forEach(b => b.onclick = () => { readRows(); tasks.splice(+b.dataset.rmTask, 1); paintRows(); });
       };
@@ -429,24 +429,24 @@ function sheetMember(mid, sec) {
       <label class="field"><span>Nom i cognoms</span><input class="inp" id="me-name" type="text" maxlength="60" value="${esc(m.name)}" autocomplete="off"></label>
       <div class="field"><span>${V.Section}</span><div class="pickers" id="me-sec">${SECTIONS.map(x => secPick(x, m.section === x.id)).join('')}</div></div>
       <div class="field"><span>${V.Part} dins la ${V.section}</span><div class="pickers" id="me-part"><button type="button" class="pick" data-part="" aria-pressed="${!m.part}">Sense</button>${PARTS.map(v => `<button type="button" class="pick" data-part="${v}" aria-pressed="${m.part === v}">${v}</button>`).join('')}</div></div>
-      <div class="toggle-row"><span><b>${V.Leader}</b><br><span class="muted" style="font-size:var(--t-13)">${leadHint()}</span></span><label class="switch"><input type="checkbox" id="me-leader" ${leadNow ? 'checked' : ''} ${leadLocked ? 'disabled' : ''}><span></span></label></div>
+      <div class="toggle-row"><span><b>${V.Leader}</b><br><span class="muted u-fs-t-13">${leadHint()}</span></span><label class="switch"><input type="checkbox" id="me-leader" ${leadNow ? 'checked' : ''} ${leadLocked ? 'disabled' : ''}><span></span></label></div>
       ${isAdmin() ? memberAccessHtml(acc0) : ''}
       <fieldset class="fieldset"><legend>Baixes temporals</legend>
-        <div id="me-leaves" style="display:grid;gap:6px"></div>
+        <div id="me-leaves" class="u-d-grid u-gap-6"></div>
         <div class="row3"><label class="field"><span>Des del</span><input class="inp" id="lv-from" type="date"></label><label class="field"><span>Fins al</span><input class="inp" id="lv-to" type="date"></label></div>
         <label class="field"><span>Motiu</span><input class="inp" id="lv-note" type="text" maxlength="60" placeholder="p. ex. Erasmus, lesió…"></label>
-        <button type="button" class="btn btn-sm" id="lv-add" style="width:max-content">Afegeix la baixa</button>
+        <button type="button" class="btn btn-sm u-w-max-content" id="lv-add">Afegeix la baixa</button>
         <small class="muted">Durant la baixa surt en gris («No fa») i no compta a les estadístiques ni a la norma.</small>
       </fieldset>
-      <label class="field"><span>Data d’alta</span><input class="inp" id="me-joined" type="date" value="${esc(m.joined || '')}" style="max-width:190px"><small>${m.joined ? `Antiguitat: ${esc(seniority(m) || '')}` : 'Quan va entrar: serveix per a l’antiguitat.'}</small></label>
-      <div class="toggle-row"><span><b>Actiu</b><br><span class="muted" style="font-size:var(--t-13)">Desactiva’l si deixa ${V.el}; conserva l’historial</span></span><label class="switch"><input type="checkbox" id="me-active" ${m.active !== false ? 'checked' : ''}><span></span></label></div>
+      <label class="field"><span>Data d’alta</span><input class="inp u-maxw-190" id="me-joined" type="date" value="${esc(m.joined || '')}"><small>${m.joined ? `Antiguitat: ${esc(seniority(m) || '')}` : 'Quan va entrar: serveix per a l’antiguitat.'}</small></label>
+      <div class="toggle-row"><span><b>Actiu</b><br><span class="muted u-fs-t-13">Desactiva’l si deixa ${V.el}; conserva l’historial</span></span><label class="switch"><input type="checkbox" id="me-active" ${m.active !== false ? 'checked' : ''}><span></span></label></div>
       <div class="row2" id="me-move" hidden><label class="field"><span id="me-move-l">Data de la baixa</span><input class="inp" id="me-move-date" type="date" value="${TODAY}"></label>
         <label class="field"><span>Motiu (opcional)</span><input class="inp" id="me-move-note" maxlength="80" placeholder="p. ex. Estudis a fora, trasllat…"></label></div>
-      ${(m.history || []).length ? `<div class="field"><span>Historial</span><ul class="mini-list" style="max-height:none">${m.history.slice().sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(h => `<li><span><span class="hist-k ${h.kind}">${HIST_WORD[h.kind] || h.kind}</span> ${esc(ddmm(h.date))}/${h.date.slice(2, 4)}${h.note ? ` · ${esc(h.note)}` : ''}</span></li>`).join('')}</ul></div>` : ''}
-      ${existing && canDocs() && (docsOn() || feesOn()) ? `<div class="toggle-row"><span><b>${docsOn() && feesOn() ? 'Documents i quota' : docsOn() ? 'Documents' : 'Quota'}</b><br><span class="muted" style="font-size:var(--t-13)">${esc([...docItems().map(([, l]) => l), ...(feesOn() ? ['quota'] : [])].join(', '))}</span></span><span style="display:flex;gap:6px">${docsOn() ? `<button type="button" class="btn btn-sm" data-act="member-docs" data-mid="${m.id}">Documents</button>` : ''}${feesOn() ? `<button type="button" class="btn btn-sm" data-act="fee-edit" data-mid="${m.id}">Quota</button>` : ''}</span></div>` : ''}
+      ${(m.history || []).length ? `<div class="field"><span>Historial</span><ul class="mini-list u-maxh-none">${m.history.slice().sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(h => `<li><span><span class="hist-k ${h.kind}">${HIST_WORD[h.kind] || h.kind}</span> ${esc(ddmm(h.date))}/${h.date.slice(2, 4)}${h.note ? ` · ${esc(h.note)}` : ''}</span></li>`).join('')}</ul></div>` : ''}
+      ${existing && canDocs() && (docsOn() || feesOn()) ? `<div class="toggle-row"><span><b>${docsOn() && feesOn() ? 'Documents i quota' : docsOn() ? 'Documents' : 'Quota'}</b><br><span class="muted u-fs-t-13">${esc([...docItems().map(([, l]) => l), ...(feesOn() ? ['quota'] : [])].join(', '))}</span></span><span class="u-d-flex u-gap-6">${docsOn() ? `<button type="button" class="btn btn-sm" data-act="member-docs" data-mid="${m.id}">Documents</button>` : ''}${feesOn() ? `<button type="button" class="btn btn-sm" data-act="fee-edit" data-mid="${m.id}">Quota</button>` : ''}</span></div>` : ''}
       <label class="field"><span>Telèfon</span><input class="inp" id="me-phone" type="tel" maxlength="20" value="${esc(m.phone || '')}"></label>
       <label class="field"><span>Notes</span><input class="inp" id="me-notes" type="text" maxlength="120" value="${esc(m.notes || '')}"></label>
-      ${existing ? `<div class="field"><span>La seva fitxa</span><div id="me-profile"><span class="muted" style="font-size:var(--t-13)">Carregant…</span></div></div>` : ''}
+      ${existing ? `<div class="field"><span>La seva fitxa</span><div id="me-profile"><span class="muted u-fs-t-13">Carregant…</span></div></div>` : ''}
     </div>`,
     foot: `${existing ? '<button class="btn btn-danger-ghost" id="me-del">Esborra</button>' : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="me-save">Desa</button>`,
     onMount: el => {
@@ -461,7 +461,7 @@ function sheetMember(mid, sec) {
       });
       m.leaves = [...(m.leaves || [])];
       const drawLeaves = () => {
-        el.querySelector('#me-leaves').innerHTML = m.leaves.length ? m.leaves.map((l, i) => `<div class="leave-row"><span><span class="mono">${ddmm(l.from)}/${l.from.slice(2, 4)} – ${l.to ? `${ddmm(l.to)}/${l.to.slice(2, 4)}` : 'sense data'}</span>${l.note ? ` · ${esc(l.note)}` : ''}</span><button type="button" class="icon-btn" data-lv="${i}" aria-label="Treu la baixa">${ICON.close}</button></div>`).join('') : '<span class="muted" style="font-size:var(--t-13)">Cap baixa.</span>';
+        el.querySelector('#me-leaves').innerHTML = m.leaves.length ? m.leaves.map((l, i) => `<div class="leave-row"><span><span class="mono">${ddmm(l.from)}/${l.from.slice(2, 4)} – ${l.to ? `${ddmm(l.to)}/${l.to.slice(2, 4)}` : 'sense data'}</span>${l.note ? ` · ${esc(l.note)}` : ''}</span><button type="button" class="icon-btn" data-lv="${i}" aria-label="Treu la baixa">${ICON.close}</button></div>`).join('') : '<span class="muted u-fs-t-13">Cap baixa.</span>';
         el.querySelectorAll('[data-lv]').forEach(b => b.onclick = () => { m.leaves.splice(+b.dataset.lv, 1); drawLeaves(); });
       };
       drawLeaves();
@@ -547,23 +547,23 @@ function sheetMemberStats(mid) {
   const hist = r.hist.map(({ s, mk }) => `<button class="hcell" data-act="open-session" data-sid="${s.id}" title="${longDate(s.date)} · ${mk ? STATUS[mk.s].label + (mk.min ? ` ${mk.min}′` : '') : 'Sense llista'}"><i class="${mk ? 's-' + mk.s : ''}"></i>${ddmm(s.date)}</button>`).join('');
   openSheet({
     title: m.name,
-    body: `<div class="eyebrow" style="margin-bottom:10px">${SEC[m.section].name} · ${esc(scope.name)}</div>
+    body: `<div class="eyebrow u-mb-10">${SEC[m.section].name} · ${esc(scope.name)}</div>
       ${rs ? `<div class="notice" style="margin:0 0 12px;background:${rs.status === 'ok' ? 'var(--p-soft)' : rs.status === 'risk' ? 'var(--fj-soft)' : 'var(--fnj-soft)'};border:0">
         <b>${rs.status === 'ok' ? `Compleix la norma del ${minAttendance()}%` : rs.status === 'risk' ? 'En risc de no poder fer el concert' : 'No pot fer el concert'}</b>
         <span>Assistència als assajos: ${pct(rs.cur)} (${rs.att} de ${rs.att + rs.abs})${rs.remaining ? ` · queden ${rs.remaining} assajos, màxim possible ${pct(rs.best)}` : ''}.</span></div>` : ''}
-      ${leaveText(m) ? `<p class="muted" style="margin:0 0 10px;font-size:var(--t-13)">${leaveText(m)}</p>` : ''}
-      <div class="kpis" style="grid-template-columns:repeat(2,1fr)">
+      ${leaveText(m) ? `<p class="muted u-m-0-0-10 u-fs-t-13">${leaveText(m)}</p>` : ''}
+      <div class="kpis u-gtc-repeat-2-1fr">
         <div class="kpi"><div class="kpi-v">${pct(rate(r))}</div><div class="kpi-l">Assistència</div></div>
         <div class="kpi"><div class="kpi-v">${r.min}<small>min</small></div><div class="kpi-l">${r.R} retards</div></div>
         <div class="kpi ${r.FNJ ? 'alert' : ''}"><div class="kpi-v">${r.FNJ}</div><div class="kpi-l">Faltes no justificades</div></div>
         <div class="kpi"><div class="kpi-v">${r.FJ}</div><div class="kpi-l">Faltes justificades</div></div>
       </div>
-      <div class="section-title" style="margin-top:20px"><h3 class="eyebrow">Sessió a sessió</h3></div>
+      <div class="section-title u-mt-20"><h3 class="eyebrow">Sessió a sessió</h3></div>
       ${hist ? `<div class="hist">${hist}</div>` : '<p class="muted">Encara no hi ha sessions passades.</p>'}
       <div class="legend">${ORDER.map(k => `<span><i class="i-${k}"></i>${STATUS[k].short}</span>`).join('')}<span><i class="i-none"></i>Sense llista</span></div>
-      ${r.notes.length ? `<div class="section-title" style="margin-top:20px"><h3 class="eyebrow">Motius registrats</h3></div>
+      ${r.notes.length ? `<div class="section-title u-mt-20"><h3 class="eyebrow">Motius registrats</h3></div>
       <ul class="notes-list">${r.notes.map(({ s, mk }) => `<li><span class="mono muted">${ddmm(s.date)}</span><span><span class="pill ${mk.s === 'FNJ' ? 'fnj' : ''}" style="${mk.s === 'FJ' ? 'background:var(--fj-soft);color:var(--ink)' : ''}">${mk.s}</span> ${esc(mk.note)}</span></li>`).join('')}</ul>` : ''}
-      ${m.phone ? `<p style="margin-top:18px"><a class="btn btn-sm" href="tel:${esc(m.phone.replace(/\s/g, ''))}">Truca ${esc(m.phone)}</a></p>` : ''}
+      ${m.phone ? `<p class="u-mt-18"><a class="btn btn-sm" href="tel:${esc(m.phone.replace(/\s/g, ''))}">Truca ${esc(m.phone)}</a></p>` : ''}
       ${canTrack(m) ? '<div id="ms-track"></div>' : ''}`,
     foot: canEdit() || canWriteTo() ? `<span class="spacer"></span>${canWriteTo() && writableMembers().some(x => x.id === m.id) ? `<button class="btn" data-act="thread-to" data-mid="${m.id}">Escriu-li</button>` : ''}${canEdit() ? `<button class="btn" data-act="certificate" data-mid="${m.id}">Certificat d’assistència</button>` : ''}` : '',
     onMount: el => trackBox(el, m),

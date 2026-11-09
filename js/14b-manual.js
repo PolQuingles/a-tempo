@@ -124,5 +124,5 @@ function sheetHelp() {
     <p>A Inici et sortirà «Avui passes llista de…». Toca <b>Passa llista</b> i marca els teus companys de ${w.section}.</p>
     ${S.groups.length > 1 ? '<h3>Diverses agrupacions</h3><p>Toca el nom a dalt de tot per canviar d’agrupació.</p>' : ''}
   </div>`;
-  openSheet({ title: 'Com funciona', body: body + `<div class="panel" style="margin-top:18px">${themeRow()}</div>`, foot: pushSupported() ? '<span class="spacer"></span><button class="btn" data-act="push-setup">Activa les notificacions</button>' : '' });
+  openSheet({ title: 'Com funciona', body: body + `<div class="panel u-mt-18">${themeRow()}</div>`, foot: pushSupported() ? '<span class="spacer"></span><button class="btn" data-act="push-setup">Activa les notificacions</button>' : '' });
 }

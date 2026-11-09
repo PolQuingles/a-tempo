@@ -108,19 +108,19 @@ function joinListHtml() {
 function viewJoin(hero) {
   const j = JOIN;
   const gname = j.doc?.name || shownName() || 'l’agrupació';
-  const other = `<button class="btn btn-ghost" data-act="sign-out" style="justify-self:center">Entra amb un altre compte</button>`;
+  const other = `<button class="btn btn-ghost u-js-center" data-act="sign-out">Entra amb un altre compte</button>`;
   if (j.step === 'loading') return `<section class="entry">${hero}<p class="entry-wait">Obrint l’enllaç…</p></section>`;
   if (j.step === 'bad') return `<section class="entry">${hero}<div class="login-card"><h2 class="h2">Aquest enllaç ja no funciona</h2>
       <p>L’administració ${esc(ofName(gname))} n’ha fet un de nou. Demana-li l’enllaç d’ara (o el QR) i torna-hi.</p>${other}</div></section>`;
   if (j.step === 'refused') return `<section class="entry">${hero}<div class="login-card"><h2 class="h2">No s’ha acceptat la petició</h2>
       <p>L’administració ${esc(ofName(gname))} no t’hi ha donat accés amb <b>${esc(S.email)}</b>. Si creus que és un error, parla-hi.</p>
-      <button class="btn" data-act="jn-again" style="justify-self:center">Torna-ho a demanar</button>${other}</div></section>`;
+      <button class="btn u-js-center" data-act="jn-again">Torna-ho a demanar</button>${other}</div></section>`;
   if (j.step === 'sent') {
     const who = j.req?.memberId ? (j.doc?.people || []).find(p => p.id === j.req.memberId)?.n || j.req.name : j.req?.name;
     return `<section class="entry">${hero}<div class="login-card"><h2 class="h2">Petició enviada</h2>
       <p>Has demanat entrar a l’app ${esc(ofName(gname))} com a <b>${esc(who || '')}</b>${j.req?.section ? ` (${esc(joinSecName(j.req.section))})` : ''}, amb <b>${esc(S.email)}</b>.</p>
       <p>Quan l’administració ho aprovi, entraràs sol a l’app. Pots tancar-la: t’hi esperarà.</p>
-      <button class="btn" data-act="jn-again" style="justify-self:center">Canvia la petició</button>${other}</div></section>`;
+      <button class="btn u-js-center" data-act="jn-again">Canvia la petició</button>${other}</div></section>`;
   }
   const ready = j.other ? (j.name || '').trim().length > 2 && !!j.sec : !!j.pick;
   return `<section class="entry">${hero}<div class="login-card join-card">
@@ -128,12 +128,12 @@ function viewJoin(hero) {
       <p>${S.userName ? `Hola, <b>${esc(firstName(S.userName))}</b>! ` : ''}Tria el teu nom de la llista. L’administració ho comprovarà i et donarà accés.</p>
       ${j.other ? `<label class="field"><span>El teu nom i cognoms</span><input class="inp" id="jn-name" type="text" maxlength="80" autocomplete="name" value="${esc(j.name || '')}"></label>
         <label class="field"><span>${esc(capz(j.doc?.secLabel || 'La teva corda'))}</span><select class="inp" id="jn-sec"><option value="">Tria-la</option>${(j.doc?.secs || []).map(x => `<option value="${esc(x.id)}" ${j.sec === x.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>
-        <button class="btn btn-ghost" data-act="jn-list" style="justify-self:start;padding-inline:0">Torna a la llista</button>`
+        <button class="btn btn-ghost u-js-start u-padding-inline-0" data-act="jn-list">Torna a la llista</button>`
       : `<input class="inp" id="jn-q" type="search" placeholder="Busca el teu nom" autocomplete="off" value="${esc(j.q || '')}" aria-label="Busca el teu nom">
         <div class="jn-list" id="jn-list" role="group" aria-label="Noms">${joinListHtml()}</div>
-        <button class="btn btn-ghost" data-act="jn-other" style="justify-self:start;padding-inline:0">No em trobo a la llista</button>`}
+        <button class="btn btn-ghost u-js-start u-padding-inline-0" data-act="jn-other">No em trobo a la llista</button>`}
       <button class="btn btn-primary" data-act="jn-send" ${ready && !j.busy ? '' : 'disabled'}>${j.busy ? 'Enviant…' : 'Demana l’accés'}</button>
-      <p class="muted" style="font-size:var(--t-13);margin:0">Entraràs amb <b>${esc(S.email)}</b>.</p>${other}
+      <p class="muted u-fs-t-13 u-m-0">Entraràs amb <b>${esc(S.email)}</b>.</p>${other}
     </div></section>`;
 }
 function mountJoin(v) {
@@ -192,10 +192,10 @@ async function sheetJoinLink(fresh) {
   const left = joinPeople().length;
   openSheet({
     title: 'Enllaç per entrar',
-    body: `<p style="margin-top:0">Qui l’obri entra amb el seu compte de Google (o amb un altre correu), tria el seu nom de la llista i et demana l’accés. Tu l’aproves amb un toc, des d’Inici (a «Per fer»). Així no cal recollir els correus.</p>
+    body: `<p class="u-mt-0">Qui l’obri entra amb el seu compte de Google (o amb un altre correu), tria el seu nom de la llista i et demana l’accés. Tu l’aproves amb un toc, des d’Inici (a «Per fer»). Així no cal recollir els correus.</p>
       <div class="jn-qr" id="jn-qr" aria-label="Codi QR de l’enllaç"><span class="muted">Fent el QR…</span></div>
       <div class="linkbox" id="jn-url">${esc(url)}</div>
-      <p class="muted" style="font-size:var(--t-13)">${left ? `A la llista per triar-s’hi hi ha les ${left} persones de la plantilla que encara no tenen accés.` : 'Tota la plantilla ja té accés: qui l’obri haurà de dir el seu nom.'} Si l’enllaç arriba a qui no toca, fes-ne un de nou: el d’ara deixarà de funcionar.</p>`,
+      <p class="muted u-fs-t-13">${left ? `A la llista per triar-s’hi hi ha les ${left} persones de la plantilla que encara no tenen accés.` : 'Tota la plantilla ja té accés: qui l’obri haurà de dir el seu nom.'} Si l’enllaç arriba a qui no toca, fes-ne un de nou: el d’ara deixarà de funcionar.</p>`,
     foot: `<button class="btn btn-danger-ghost" id="jn-off">Desactiva’l</button><button class="btn" id="jn-new">Fes-ne un de nou</button><span class="spacer"></span><button class="btn" id="jn-print">Imprimeix el QR</button><button class="btn btn-primary" id="jn-share">${navigator.share ? 'Comparteix' : 'Copia l’enllaç'}</button>`,
     onMount: el => {
       drawJoinQr(el.querySelector('#jn-qr'), url);
@@ -271,8 +271,8 @@ function sheetJoinReqs() {
   const list = joinRequests();
   openSheet({
     title: 'Peticions per entrar',
-    body: list.length ? `<p style="margin-top:0">Han obert l’enllaç del cor i han triat el seu nom. Comprova que sigui qui diu i dona-li accés: entrarà a l’app com a ${esc(V.member)}.</p><div class="jr-list">${list.map(joinReqRow).join('')}</div>`
-      : '<p class="muted" style="margin:0">No hi ha cap petició per revisar.</p>',
+    body: list.length ? `<p class="u-mt-0">Han obert l’enllaç del cor i han triat el seu nom. Comprova que sigui qui diu i dona-li accés: entrarà a l’app com a ${esc(V.member)}.</p><div class="jr-list">${list.map(joinReqRow).join('')}</div>`
+      : '<p class="muted u-m-0">No hi ha cap petició per revisar.</p>',
     foot: `<button class="btn" data-act="join-link">L’enllaç i el QR</button><span class="spacer"></span><button class="btn btn-primary" data-act="sheet-close">Fet</button>`,
   });
 }
