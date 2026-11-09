@@ -1651,8 +1651,9 @@ def main():
           out.author = !('T' in doc.data());
           const d = n => { const x = new Date(); x.setDate(x.getDate() + n); return isoDate(x); };
           saveProduction({ id: 'p9', name: 'Un sol concert', sessions: [{ id: 's9', date: d(40), time: '19:00', end: '', type: 'Concert', place: '', note: '' }], excluded: [] });
-          applyRoute('calendari'); render(); await s(400);
+          applyRoute('calendari'); ui.calProd = 'p9'; render(); await s(400);
           out.one = [...document.querySelectorAll('.cph-m .mono')].some(x => x.textContent.trim() === '1 sessió') && ![...document.querySelectorAll('.cph-m .mono')].some(x => /^1 sessions/.test(x.textContent.trim()));
+          ui.calProd = 'all';
           // «Ha marxat abans», a la llista d'avui dels tenors (la corda que porta).
           applyRoute('inici'); render(); await s(300);
           document.querySelector('[data-act="home-roll"]').click(); await s(500);
