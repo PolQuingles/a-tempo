@@ -135,7 +135,7 @@ function sheetSummary(initial) {
         <button class="pick" aria-pressed="${scope === 'sec'}" data-scope="sec">${SEC[ui.section].name}</button>
         <button class="pick" aria-pressed="${scope === 'all'}" data-scope="all">${capz(V.tot)}</button></div>
       <textarea class="summary-pre" id="summary-text" readonly>${esc(text())}</textarea>
-      <p class="muted" style="font-size:calc(13px*var(--ts));margin:8px 0 0">Copia’l i envia’l al grup de WhatsApp o a la direcció.</p>`,
+      <p class="muted" style="font-size:var(--t-13);margin:8px 0 0">Copia’l i envia’l al grup de WhatsApp o a la direcció.</p>`,
     foot: `<button class="btn btn-primary" id="copy-summary">Copia el resum</button>`,
     onMount: el => {
       el.querySelectorAll('[data-scope]').forEach(b => b.onclick = () => {
@@ -215,7 +215,7 @@ function sheetSessionInfo(sid) {
       ${fitxaHtml(s)}
       ${s.note ? `<p class="fitxa-note">${esc(s.note)}</p>` : ''}
       ${planOf(s) || canProd() ? `<div class="section-title" style="margin-top:16px"><h2 class="h2">${isShow(s) ? 'Programa' : s.date < TODAY ? 'Què s’hi va treballar' : 'Pla d’assaig'}</h2>${canProd() ? `<button class="btn btn-sm" data-act="plan-edit" data-sid="${s.id}">${planOf(s) ? 'Edita’l' : 'Fes-lo'}</button>` : ''}</div>
-        ${planHtml(s, false, planSec(s)) || `<p class="muted" style="font-size:calc(13px*var(--ts));margin:0">${isShow(s) ? 'Encara no hi ha programa: quines obres es cantaran i en quin ordre.' : 'Encara no hi ha pla: quines obres i quins compassos s’assajaran.'}</p>`}` : ''}
+        ${planHtml(s, false, planSec(s)) || `<p class="muted" style="font-size:var(--t-13);margin:0">${isShow(s) ? 'Encara no hi ha programa: quines obres es cantaran i en quin ordre.' : 'Encara no hi ha pla: quines obres i quins compassos s’assajaran.'}</p>`}` : ''}
       ${tasksBlock(s)}
       ${isShow(s) ? balanceBlock(s) + seatingBlock(s) : ''}`,
     foot: `${canProd() ? `<button class="btn" data-act="session-edit" data-sid="${s.id}">Edita</button>` : ''}${canProd() && isShow(s) ? `<button class="btn" data-act="participants" data-sid="${s.id}">Llista de participants</button>` : ''}<span class="spacer"></span>${absenceAct ? `<button class="btn" id="fx-copy">Copia per al grup</button>${absenceAct}` : '<button class="btn btn-primary" id="fx-copy">Copia per al grup</button>'}`,
@@ -247,10 +247,10 @@ function sheetSession(sid, presetProd, presetDate) {
         <small>Per a un cap de setmana o una jornada amb pauses i àpats: les hores que s’assaja de debò, en hores i minuts. És el que compta a l’assistència. En blanc, de l’hora d’inici a la de final.</small></label>
       <label class="field"><span>Lloc</span><input class="inp" id="se-place" type="text" maxlength="60" value="${esc(cur.place || '')}" placeholder="Sala d’assaig"></label>
       <div class="field"><span>${V.Sections} convocades</span><div class="pickers" id="se-secs">${SECTIONS.map(x => secPick(x, secs.has(x.id))).join('')}</div></div>
-      <div class="toggle-row"><span><b>Demana confirmació</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Els ${V.members} convocats responen si hi seran</span></span><label class="switch"><input type="checkbox" id="se-rsvp" ${cur.rsvp ? 'checked' : ''}><span></span></label></div>
+      <div class="toggle-row"><span><b>Demana confirmació</b><br><span class="muted" style="font-size:var(--t-13)">Els ${V.members} convocats responen si hi seran</span></span><label class="switch"><input type="checkbox" id="se-rsvp" ${cur.rsvp ? 'checked' : ''}><span></span></label></div>
       <div id="se-rsvp-more" ${cur.rsvp ? '' : 'hidden'} style="display:grid;gap:12px">
         <label class="field"><span>Respondre abans del (opcional)</span><input class="inp" id="se-rsvpby" type="date" value="${esc(cur.rsvpBy || '')}"></label>
-        <div class="toggle-row"><span><b>Hi ha autocar</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Qui diu que hi serà, diu també si va amb l’autocar o pel seu compte</span></span><label class="switch"><input type="checkbox" id="se-bus" ${cur.bus ? 'checked' : ''}><span></span></label></div>
+        <div class="toggle-row"><span><b>Hi ha autocar</b><br><span class="muted" style="font-size:var(--t-13)">Qui diu que hi serà, diu també si va amb l’autocar o pel seu compte</span></span><label class="switch"><input type="checkbox" id="se-bus" ${cur.bus ? 'checked' : ''}><span></span></label></div>
         <div class="field"><span>Feines per a voluntaris (opcional)</span><div id="se-tasks" style="display:grid;gap:6px"></div><button type="button" class="btn btn-sm" id="se-task-add" style="width:max-content;margin-top:6px">+ Feina</button>
           <small>P. ex. «Carregar i descarregar el material» · 4 persones. Qui confirma s’hi pot apuntar.</small></div>
       </div>
@@ -258,7 +258,7 @@ function sheetSession(sid, presetProd, presetDate) {
         <small>Per a assajos compartits entre produccions: comptaran a les estadístiques i a la norma de totes les marcades, amb els minuts repartits a parts iguals (un assaig de 2 h de dues produccions, 1 h a cada una; a tota la temporada, les 2 h).</small></div>
       <label class="field"><span>Nota</span><input class="inp" id="se-note" type="text" maxlength="80" value="${esc(cur.note || '')}" placeholder="p. ex. Portar partitures del Gloria"></label>
       <details class="fitxa-edit" id="se-fitxa" ${isShow(cur) || hasInfo(cur) ? 'open' : ''}>
-        <summary><span><b>Fitxa ${V.sh.del}</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Convocatòria, vestuari, punt de trobada… La veuen tots els convocats.</span></span>${ICON.chev}</summary>
+        <summary><span><b>Fitxa ${V.sh.del}</b><br><span class="muted" style="font-size:var(--t-13)">Convocatòria, vestuari, punt de trobada… La veuen tots els convocats.</span></span>${ICON.chev}</summary>
         <div class="kv" style="margin-top:12px">
           <label class="field"><span>Hora de convocatòria</span><input class="inp" id="se-call" type="time" style="max-width:170px" value="${esc(cur.info?.call || '')}"><small>A quina hora han de ser-hi els ${V.members}.</small></label>
           <label class="field"><span>Vestuari</span><input class="inp" id="se-dress" type="text" maxlength="100" value="${esc(cur.info?.dress || '')}" placeholder="p. ex. Uniforme negre i fulard lila"></label>
@@ -374,7 +374,7 @@ function sheetMember(mid, sec) {
       <label class="field"><span>Nom i cognoms</span><input class="inp" id="me-name" type="text" maxlength="60" value="${esc(m.name)}" autocomplete="off"></label>
       <div class="field"><span>${V.Section}</span><div class="pickers" id="me-sec">${SECTIONS.map(x => secPick(x, m.section === x.id)).join('')}</div></div>
       <div class="field"><span>${V.Part} dins la ${V.section}</span><div class="pickers" id="me-part"><button type="button" class="pick" data-part="" aria-pressed="${!m.part}">Sense</button>${PARTS.map(v => `<button type="button" class="pick" data-part="${v}" aria-pressed="${m.part === v}">${v}</button>`).join('')}</div></div>
-      <div class="toggle-row"><span><b>${V.Leader}</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">${leadHint()}</span></span><label class="switch"><input type="checkbox" id="me-leader" ${leadNow ? 'checked' : ''} ${leadLocked ? 'disabled' : ''}><span></span></label></div>
+      <div class="toggle-row"><span><b>${V.Leader}</b><br><span class="muted" style="font-size:var(--t-13)">${leadHint()}</span></span><label class="switch"><input type="checkbox" id="me-leader" ${leadNow ? 'checked' : ''} ${leadLocked ? 'disabled' : ''}><span></span></label></div>
       ${isAdmin() ? memberAccessHtml(acc0) : ''}
       <fieldset class="fieldset"><legend>Baixes temporals</legend>
         <div id="me-leaves" style="display:grid;gap:6px"></div>
@@ -384,14 +384,14 @@ function sheetMember(mid, sec) {
         <small class="muted">Durant la baixa surt en gris («No fa») i no compta a les estadístiques ni a la norma.</small>
       </fieldset>
       <label class="field"><span>Data d’alta</span><input class="inp" id="me-joined" type="date" value="${esc(m.joined || '')}" style="max-width:190px"><small>${m.joined ? `Antiguitat: ${esc(seniority(m) || '')}` : 'Quan va entrar: serveix per a l’antiguitat.'}</small></label>
-      <div class="toggle-row"><span><b>Actiu</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Desactiva’l si deixa ${V.el}; conserva l’historial</span></span><label class="switch"><input type="checkbox" id="me-active" ${m.active !== false ? 'checked' : ''}><span></span></label></div>
+      <div class="toggle-row"><span><b>Actiu</b><br><span class="muted" style="font-size:var(--t-13)">Desactiva’l si deixa ${V.el}; conserva l’historial</span></span><label class="switch"><input type="checkbox" id="me-active" ${m.active !== false ? 'checked' : ''}><span></span></label></div>
       <div class="row2" id="me-move" hidden><label class="field"><span id="me-move-l">Data de la baixa</span><input class="inp" id="me-move-date" type="date" value="${TODAY}"></label>
         <label class="field"><span>Motiu (opcional)</span><input class="inp" id="me-move-note" maxlength="80" placeholder="p. ex. Estudis a fora, trasllat…"></label></div>
       ${(m.history || []).length ? `<div class="field"><span>Historial</span><ul class="mini-list" style="max-height:none">${m.history.slice().sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(h => `<li><span><span class="hist-k ${h.kind}">${HIST_WORD[h.kind] || h.kind}</span> ${esc(ddmm(h.date))}/${h.date.slice(2, 4)}${h.note ? ` · ${esc(h.note)}` : ''}</span></li>`).join('')}</ul></div>` : ''}
-      ${existing && canDocs() && (docsOn() || feesOn()) ? `<div class="toggle-row"><span><b>${docsOn() && feesOn() ? 'Documents i quota' : docsOn() ? 'Documents' : 'Quota'}</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">${esc([...docItems().map(([, l]) => l), ...(feesOn() ? ['quota'] : [])].join(', '))}</span></span><span style="display:flex;gap:6px">${docsOn() ? `<button type="button" class="btn btn-sm" data-act="member-docs" data-mid="${m.id}">Documents</button>` : ''}${feesOn() ? `<button type="button" class="btn btn-sm" data-act="fee-edit" data-mid="${m.id}">Quota</button>` : ''}</span></div>` : ''}
+      ${existing && canDocs() && (docsOn() || feesOn()) ? `<div class="toggle-row"><span><b>${docsOn() && feesOn() ? 'Documents i quota' : docsOn() ? 'Documents' : 'Quota'}</b><br><span class="muted" style="font-size:var(--t-13)">${esc([...docItems().map(([, l]) => l), ...(feesOn() ? ['quota'] : [])].join(', '))}</span></span><span style="display:flex;gap:6px">${docsOn() ? `<button type="button" class="btn btn-sm" data-act="member-docs" data-mid="${m.id}">Documents</button>` : ''}${feesOn() ? `<button type="button" class="btn btn-sm" data-act="fee-edit" data-mid="${m.id}">Quota</button>` : ''}</span></div>` : ''}
       <label class="field"><span>Telèfon</span><input class="inp" id="me-phone" type="tel" maxlength="20" value="${esc(m.phone || '')}"></label>
       <label class="field"><span>Notes</span><input class="inp" id="me-notes" type="text" maxlength="120" value="${esc(m.notes || '')}"></label>
-      ${existing ? `<div class="field"><span>La seva fitxa</span><div id="me-profile"><span class="muted" style="font-size:calc(13px*var(--ts))">Carregant…</span></div></div>` : ''}
+      ${existing ? `<div class="field"><span>La seva fitxa</span><div id="me-profile"><span class="muted" style="font-size:var(--t-13)">Carregant…</span></div></div>` : ''}
     </div>`,
     foot: `${existing ? '<button class="btn btn-danger-ghost" id="me-del">Esborra</button>' : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="me-save">Desa</button>`,
     onMount: el => {
@@ -406,7 +406,7 @@ function sheetMember(mid, sec) {
       });
       m.leaves = [...(m.leaves || [])];
       const drawLeaves = () => {
-        el.querySelector('#me-leaves').innerHTML = m.leaves.length ? m.leaves.map((l, i) => `<div class="leave-row"><span><span class="mono">${ddmm(l.from)}/${l.from.slice(2, 4)} – ${l.to ? `${ddmm(l.to)}/${l.to.slice(2, 4)}` : 'sense data'}</span>${l.note ? ` · ${esc(l.note)}` : ''}</span><button type="button" class="icon-btn" data-lv="${i}" aria-label="Treu la baixa">${ICON.close}</button></div>`).join('') : '<span class="muted" style="font-size:calc(13px*var(--ts))">Cap baixa.</span>';
+        el.querySelector('#me-leaves').innerHTML = m.leaves.length ? m.leaves.map((l, i) => `<div class="leave-row"><span><span class="mono">${ddmm(l.from)}/${l.from.slice(2, 4)} – ${l.to ? `${ddmm(l.to)}/${l.to.slice(2, 4)}` : 'sense data'}</span>${l.note ? ` · ${esc(l.note)}` : ''}</span><button type="button" class="icon-btn" data-lv="${i}" aria-label="Treu la baixa">${ICON.close}</button></div>`).join('') : '<span class="muted" style="font-size:var(--t-13)">Cap baixa.</span>';
         el.querySelectorAll('[data-lv]').forEach(b => b.onclick = () => { m.leaves.splice(+b.dataset.lv, 1); drawLeaves(); });
       };
       drawLeaves();
@@ -496,7 +496,7 @@ function sheetMemberStats(mid) {
       ${rs ? `<div class="notice" style="margin:0 0 12px;background:${rs.status === 'ok' ? 'var(--p-soft)' : rs.status === 'risk' ? 'var(--fj-soft)' : 'var(--fnj-soft)'};border:0">
         <b>${rs.status === 'ok' ? `Compleix la norma del ${minAttendance()}%` : rs.status === 'risk' ? 'En risc de no poder fer el concert' : 'No pot fer el concert'}</b>
         <span>Assistència als assajos: ${pct(rs.cur)} (${rs.att} de ${rs.att + rs.abs})${rs.remaining ? ` · queden ${rs.remaining} assajos, màxim possible ${pct(rs.best)}` : ''}.</span></div>` : ''}
-      ${leaveText(m) ? `<p class="muted" style="margin:0 0 10px;font-size:calc(13px*var(--ts))">${leaveText(m)}</p>` : ''}
+      ${leaveText(m) ? `<p class="muted" style="margin:0 0 10px;font-size:var(--t-13)">${leaveText(m)}</p>` : ''}
       <div class="kpis" style="grid-template-columns:repeat(2,1fr)">
         <div class="kpi"><div class="kpi-v">${pct(rate(r))}</div><div class="kpi-l">Assistència</div></div>
         <div class="kpi"><div class="kpi-v">${r.min}<small>min</small></div><div class="kpi-l">${r.R} retards</div></div>

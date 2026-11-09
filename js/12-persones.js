@@ -140,7 +140,7 @@ function sheetPerson(email, preset = {}) {
     const ms = free().filter(m => m.section === x.id).sort(byName);
     return ms.length ? `<optgroup label="${esc(x.name)}">${ms.map(m => `<option value="${esc(m.id)}" ${m.id === sel ? 'selected' : ''}>${esc(m.name)}${m.active === false ? ' (inactiu)' : ''}</option>`).join('')}</optgroup>` : '';
   }).join('');
-  const small = 'style="font-size:calc(13px*var(--ts))"';
+  const small = 'style="font-size:var(--t-13)"';
   openSheet({
     title: existing ? (existing.name || existing.email) : from ? `Accés per a ${fullName(from.name)}` : 'Afegeix una persona',
     body: `<div class="kv">
@@ -160,7 +160,7 @@ function sheetPerson(email, preset = {}) {
         <select class="inp" id="ps-seat"><option value="">Cap: encara no en té</option>${teacherSeats().map(t => `<option value="${esc(t.id)}">${esc(t.name)} (${esc(V.Teacher.toLowerCase())} sense compte)</option>`).join('')}</select>
         <small id="ps-seat-hint"></small></label>` : ''}
       <div class="field" id="ps-lead-f"><span>${V.Section} que porta</span><div class="pickers" id="ps-lead">${SECTIONS.map(x => secPick(x, x.id === (existing?.section || sec0))).join('')}</div></div>
-      ${existing ? '' : `<p class="muted" style="margin:0;font-size:calc(13px*var(--ts))">Són unes quantes persones? <button type="button" class="linkish" data-act="staff-bulk">Enganxa’n una llista</button>.</p>`}
+      ${existing ? '' : `<p class="muted" style="margin:0;font-size:var(--t-13)">Són unes quantes persones? <button type="button" class="linkish" data-act="staff-bulk">Enganxa’n una llista</button>.</p>`}
     </div>`,
     foot: `${existing ? '<button class="btn btn-danger-ghost" id="ps-del">Treu l’accés</button>' : ''}<span class="spacer"></span>${existing && !existing.lastSeen ? '<button class="btn" id="ps-inv">Convida</button>' : ''}<button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="ps-save">${existing ? 'Desa' : 'Afegeix'}</button>`,
     onMount: el => {
@@ -283,7 +283,7 @@ function sheetPerson(email, preset = {}) {
 /** A la fitxa de la plantilla (administració): el seu accés, o on posar-li el correu perquè en tingui. */
 const MEMBER_MAIL_HINT = 'Amb el correu podrà entrar a l’app: avisar de les absències, confirmar les convocatòries i veure la seva assistència.';
 function memberAccessHtml(acc) {
-  if (acc) return `<div class="toggle-row"><span><b>Accés a l’app</b><br><span class="muted" style="font-size:calc(13px*var(--ts));overflow-wrap:anywhere">${esc(acc.email)} · ${esc(rolesText(acc))}${acc.lastSeen ? '' : acc.invitedAt ? ' · convidat, encara no ha entrat' : ' · encara no ha entrat'}</span></span>
+  if (acc) return `<div class="toggle-row"><span><b>Accés a l’app</b><br><span class="muted" style="font-size:var(--t-13);overflow-wrap:anywhere">${esc(acc.email)} · ${esc(rolesText(acc))}${acc.lastSeen ? '' : acc.invitedAt ? ' · convidat, encara no ha entrat' : ' · encara no ha entrat'}</span></span>
     <button type="button" class="btn btn-sm" data-act="staff-edit" data-email="${esc(acc.email)}">Canvia</button></div>`;
   return `<label class="field"><span>Correu per entrar a l’app <span class="muted" style="font-weight:500">· opcional</span></span>
     <input class="inp" id="me-email" type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="nom@exemple.com"><small id="me-email-hint">${MEMBER_MAIL_HINT}</small></label>`;
@@ -352,7 +352,7 @@ function sheetInvite(p, fresh) {
     title: fresh ? `${firstName(p.name) || p.email} ja pot entrar` : `Convida ${p.name || p.email}`,
     body: `<p style="margin-top:0">${fresh ? 'Envia-li ara la invitació' : 'Envia-li la invitació'} des del teu correu${tel ? ' o pel WhatsApp' : ''}. Li explica com entrar${isGoogleMail(p.email) ? ' amb el seu compte de Google' : ', també si el seu correu no és de Google'}. Abans d’enviar-lo, el pots retocar al teu programa de correu.</p>
       <textarea class="summary-pre" readonly style="min-height:230px">${esc(text)}</textarea>
-      ${p.invitedAt ? `<p class="muted" style="font-size:calc(13px*var(--ts));margin:8px 0 0">Última invitació: ${esc(agoText(p.invitedAt).toLowerCase())}.${p.lastSeen ? '' : ' Encara no ha entrat.'}</p>` : ''}`,
+      ${p.invitedAt ? `<p class="muted" style="font-size:var(--t-13);margin:8px 0 0">Última invitació: ${esc(agoText(p.invitedAt).toLowerCase())}.${p.lastSeen ? '' : ' Encara no ha entrat.'}</p>` : ''}`,
     foot: `<button class="btn" id="inv-copy">Copia</button>${tel ? `<a class="btn" id="inv-wa" href="https://wa.me/${tel}?text=${encodeURIComponent(text)}" target="_blank" rel="noopener">WhatsApp</a>` : ''}<span class="spacer"></span><a class="btn btn-primary" id="inv-mail" href="${esc(mailtoUrl({ to: p.email, subject: inviteSubject(), body: text }))}">Envia per correu</a>`,
     onMount: el => {
       const sent = () => { markInvited([p.email]).then(() => { if (S.mode === 'shared') scheduleRender(); }); };
@@ -375,7 +375,7 @@ function sheetInviteMany(people, added) {
     body: `<p style="margin-top:0">Envia’ls la invitació en un sol correu, amb tothom en <b>còpia oculta</b>: ningú no veurà els correus dels altres. ${chunks.length > 1 ? `Són ${list.length} persones: s’envia en ${chunks.length} correus de ${size} en ${size}.` : `${list.length === 1 ? 'És 1 persona.' : `Són ${list.length} persones.`}`}</p>
       <textarea class="summary-pre" readonly style="min-height:210px">${esc(text)}</textarea>
       <div class="pickers" style="margin-top:12px">${chunks.map((c, i) => `<a class="btn ${i === 0 ? 'btn-primary' : ''}" data-chunk="${i}" href="${esc(mailtoUrl({ bcc: c.map(p => p.email), subject: inviteSubject(), body: text }))}">${chunks.length > 1 ? `Correu ${i + 1} (${i * size + 1}–${i * size + c.length})` : 'Obre el correu'}</a>`).join('')}</div>
-      <p class="muted" style="font-size:calc(13px*var(--ts));margin:10px 0 0">Si el correu no s’obre, copia els correus i el missatge i enganxa’ls al teu programa de correu (els correus, a «Cco»).</p>`,
+      <p class="muted" style="font-size:var(--t-13);margin:10px 0 0">Si el correu no s’obre, copia els correus i el missatge i enganxa’ls al teu programa de correu (els correus, a «Cco»).</p>`,
     foot: `<button class="btn" id="im-mails">Copia els correus</button><button class="btn" id="im-text">Copia el missatge</button><span class="spacer"></span><button class="btn" data-act="sheet-close">Fet</button>`,
     onMount: el => {
       el.querySelectorAll('[data-chunk]').forEach(a => a.addEventListener('click', () => markInvited(chunks[+a.dataset.chunk].map(p => p.email))));
@@ -469,10 +469,10 @@ function sheetPeopleBulk(sec) {
         const rows = plan(), ok = rows.filter(r => !r.skip);
         if (!rows.length) { q('#pb-prev').innerHTML = ''; return; }
         const nNew = ok.filter(r => r.newMember).length, nMail = ok.filter(r => r.adds).length, bad = rows.length - ok.length;
-        q('#pb-prev').innerHTML = `<p style="margin:0 0 8px;font-size:calc(13.5px*var(--ts))"><b>${rows.length}</b> ${rows.length === 1 ? 'persona' : 'persones'}${nNew ? ` · <b>${nNew}</b> ${nNew === 1 ? 'fitxa nova' : 'fitxes noves'}` : ''}${nMail ? ` · <b>${nMail}</b> amb accés` : ''}${bad ? ` · <b>${bad}</b> per revisar` : ''}</p>
+        q('#pb-prev').innerHTML = `<p style="margin:0 0 8px;font-size:var(--t-13)"><b>${rows.length}</b> ${rows.length === 1 ? 'persona' : 'persones'}${nNew ? ` · <b>${nNew}</b> ${nNew === 1 ? 'fitxa nova' : 'fitxes noves'}` : ''}${nMail ? ` · <b>${nMail}</b> amb accés` : ''}${bad ? ` · <b>${bad}</b> per revisar` : ''}</p>
           <ul class="mini-list" style="max-height:260px">${rows.map(r => `<li><span>${esc(r.name || r.mail)}${r.name && r.mail ? `<br><span class="m mono">${esc(r.mail)}</span>` : ''}<br><span class="m">${esc(r.skip || r.status)}</span></span>
             <span class="rsvp ${r.skip ? 'no' : r.newMember || r.adds ? 'yes' : 'none'}">${r.skip ? 'Revisa-la' : r.newMember ? 'Nova' : r.adds ? 'Accés' : 'Ja hi és'}</span></li>`).join('')}</ul>
-          ${rows.some(r => r.mailIgnored) ? '<p class="muted" style="margin:8px 0 0;font-size:calc(13px*var(--ts))">Els correus només els pot donar d’alta l’administració: ara només s’afegiran els noms a la plantilla.</p>' : ''}`;
+          ${rows.some(r => r.mailIgnored) ? '<p class="muted" style="margin:8px 0 0;font-size:var(--t-13)">Els correus només els pot donar d’alta l’administració: ara només s’afegiran els noms a la plantilla.</p>' : ''}`;
       };
       let t = 0;
       q('#pb-text').addEventListener('input', () => { clearTimeout(t); t = setTimeout(draw, 250); });

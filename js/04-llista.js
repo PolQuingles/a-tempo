@@ -52,7 +52,7 @@ function attAbsences() {
       <button class="pick" aria-pressed="${ui.absFilter !== 'all'}" data-act="abs-filter" data-k="pending">Pendents</button>
       <button class="pick" aria-pressed="${ui.absFilter === 'all'}" data-act="abs-filter" data-k="all">Tots</button></div></div>
     ${list.length ? `<div class="panel">${list.map(a => absenceCard(a, { staff: true })).join('')}</div>`
-      : `<div class="panel" style="padding:16px;font-size:calc(13.5px*var(--ts));color:var(--muted)">${ui.absFilter === 'all' ? 'Encara no hi ha cap avís.' : 'No hi ha cap avís per respondre.'} Cada ${V.member} avisa des de la seva pestanya d’Assistència.</div>`}`;
+      : `<div class="panel" style="padding:16px;font-size:var(--t-13);color:var(--muted)">${ui.absFilter === 'all' ? 'Encara no hi ha cap avís.' : 'No hi ha cap avís per respondre.'} Cada ${V.member} avisa des de la seva pestanya d’Assistència.</div>`}`;
 }
 /** Des de la corda només es porta aquella corda: no es torna a «totes les cordes». */
 const rollOneSec = () => !!areaSec();
@@ -130,7 +130,7 @@ function viewRollOverview(cur, list, pendingBySec) {
         <div><i class="i-FNJ"></i><b>${c.FNJ}</b><span>Faltes injustificades</span></div>
         <div><i class="i-none"></i><b>${c.none}</b><span>Sense marcar</span></div>
       </div>
-      ${out ? `<p class="muted" style="margin:0;font-size:calc(13px*var(--ts))">${out === 1 ? `1 ${V.member} està` : `${out} ${V.members} estan`} de baixa o no fan aquesta producció.</p>` : ''}
+      ${out ? `<p class="muted" style="margin:0;font-size:var(--t-13)">${out === 1 ? `1 ${V.member} està` : `${out} ${V.members} estan`} de baixa o no fan aquesta producció.</p>` : ''}
     </div>`;
   return `${attTabs()}<div class="ctx" id="ctx">${sessionNav(cur, list, false)}</div>
     ${fitxaChip(cur)}
@@ -227,7 +227,7 @@ function viewRollSection(cur, list, sec, pendingBySec) {
       <ul class="roster${rollCompact() ? ' compact' : ''}" style="margin-top:0">${out.map(m => rowHtml(cur, m)).join('')}</ul>
     </details>` : ''}
   ${rollOneSec() ? '' : `<button class="btn" data-act="close-sec" style="display:flex;margin:18px auto 0">Torna a totes les ${V.sections}</button>`}
-  ${canMark(cur, sec) ? '<p class="muted" style="font-size:calc(13px*var(--ts));text-align:center;margin-top:12px">Toca l’estat marcat una altra vegada per desmarcar-lo.</p>' : ''}`;
+  ${canMark(cur, sec) ? '<p class="muted" style="font-size:var(--t-13);text-align:center;margin-top:12px">Toca l’estat marcat una altra vegada per desmarcar-lo.</p>' : ''}`;
 }
 function subLine(cur, sec, leader) {
   const sub = subFor(cur.id, sec);
@@ -304,7 +304,7 @@ function rowHtml(session, m) {
         <input class="note-input" id="note-${m.id}" type="text" maxlength="120" placeholder="Opcional" value="${esc(mk.note || '')}" data-bind="note"></div>`;
     }
   } else if (mk && mk.note) {
-    body = `<div class="muted" style="font-size:calc(13px*var(--ts))">${esc(mk.note)}</div>`;
+    body = `<div class="muted" style="font-size:var(--t-13)">${esc(mk.note)}</div>`;
   }
   const dot = s === 'none' ? '' : `<i class="i-${s}" style="display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px"></i>`;
   return `<li class="row ${mk ? 'has-mark' : ''}${editable ? ' ed' : ''}" data-mid="${m.id}" data-s="${s}">

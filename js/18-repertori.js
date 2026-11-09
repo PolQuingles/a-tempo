@@ -33,7 +33,7 @@ function boardRepertoire() {
   const tools = canRepertoire()
     ? `<div class="sec-h end" style="margin-top:4px">
         <span style="display:flex;gap:6px;flex-wrap:wrap">${prod ? '<button class="btn btn-sm" data-act="work-link">Afegeix-ne una que ja hi és</button>' : ''}<button class="btn btn-sm btn-primary" data-act="work-new">+ Obra</button></span></div>`
-    : me ? `<div class="sec-h" style="margin-top:4px"><span class="muted" style="font-size:calc(13px*var(--ts))">${onlyMine ? `Mostrant el material per a ${esc(SEC[me.section].name.toLowerCase())}${me.part ? ` ${esc(me.part)}` : ''}` : 'Mostrant tot el material'}</span><button class="btn btn-sm btn-ghost" data-act="mat-mine">${onlyMine ? 'Mostra-ho tot' : `Només la meva ${V.part}`}</button></div>` : '';
+    : me ? `<div class="sec-h" style="margin-top:4px"><span class="muted" style="font-size:var(--t-13)">${onlyMine ? `Mostrant el material per a ${esc(SEC[me.section].name.toLowerCase())}${me.part ? ` ${esc(me.part)}` : ''}` : 'Mostrant tot el material'}</span><button class="btn btn-sm btn-ghost" data-act="mat-mine">${onlyMine ? 'Mostra-ho tot' : `Només la meva ${V.part}`}</button></div>` : '';
   const files = offlineCandidates(works, prod, onlyMine ? me : null);
   const saved = offlineSaved();
   const toSave = files.filter(f => !saved.has(f.id));
@@ -53,7 +53,7 @@ function boardRepertoire() {
     + (works.length ? `<div class="works">${works.map(card).join('')}</div>` : `<div class="empty"><p>${all ? 'Encara no hi ha cap obra al repertori.' : `Encara no hi ha obres a ${esc(prod.name)}.`}</p></div>`)
     + archivePanel(prod, works)
     + (files.length ? `<div class="panel" style="padding:12px 14px;margin-top:12px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
-        <span style="font-size:calc(13.5px*var(--ts))">${toSave.length ? `${files.length - toSave.length} de ${files.length} fitxers desats al mòbil.` : `Tens els ${files.length} fitxers desats al mòbil: els pots obrir sense cobertura.`}</span>
+        <span style="font-size:var(--t-13)">${toSave.length ? `${files.length - toSave.length} de ${files.length} fitxers desats al mòbil.` : `Tens els ${files.length} fitxers desats al mòbil: els pots obrir sense cobertura.`}</span>
         ${toSave.length ? `<button class="btn btn-sm" data-act="offline-save-all">Desa’ls al mòbil</button>` : `<button class="btn btn-sm btn-ghost" data-act="offline-clear">Treu-los</button>`}</div>` : '')
     + (prod ? boardMaterialsOf(prod, onlyMine, me) : '');
 }
@@ -67,7 +67,7 @@ function boardMaterialsOf(prod, onlyMine, me) {
       ${canRepertoire() ? `<button class="icon-btn" data-act="mat-edit" data-pid="${prod.id}" data-id="${x.id}" aria-label="Edita">${ICON.more}</button>` : ''}</div>`;
   if (!sorted.length && !canRepertoire()) return '';
   return `<div class="section-title"><h2 class="h2">Altres materials</h2>${canRepertoire() ? '<button class="btn btn-sm" data-act="mat-new">+ Material</button>' : ''}</div>
-    ${sorted.length ? `<div class="panel prod-tone tinted" style="--ph:${prodHue(prod)}">${sorted.map(row).join('')}</div>` : '<p class="muted" style="font-size:calc(13px*var(--ts));margin:0 2px">El programa, horaris, enllaços…</p>'}`;
+    ${sorted.length ? `<div class="panel prod-tone tinted" style="--ph:${prodHue(prod)}">${sorted.map(row).join('')}</div>` : '<p class="muted" style="font-size:var(--t-13);margin:0 2px">El programa, horaris, enllaços…</p>'}`;
 }
 function sheetWork(id) {
   const w = S.works.get(id);
@@ -81,7 +81,7 @@ function sheetWork(id) {
     const saved = offlineSaved();
     el.querySelector('#wk-mats').innerHTML = mats.length ? mats.map(x => `<div class="mat">${matTag(x.kind)}
         <span class="mat-i">${itemLink(x, `data-act="file-open" data-src="work" data-pid="${esc(w.id)}" data-id="${esc(x.id)}"`)}<small>${[MAT_KINDS[x.kind], x.section ? esc(SEC[x.section].name) : capz(V.tot), x.part ? `${V.part} ${esc(x.part)}` : '', fileNote(x), x.file && saved.has(x.file.id) ? 'desat al mòbil' : ''].filter(Boolean).join(' · ')}</small></span></div>`).join('')
-      : `<p class="muted" style="margin:0;padding:12px 14px;font-size:calc(13px*var(--ts))">${onlyMine ? `No hi ha material per a la teva ${V.part}.` : 'Encara no hi ha partitures ni àudios.'}</p>`;
+      : `<p class="muted" style="margin:0;padding:12px 14px;font-size:var(--t-13)">${onlyMine ? `No hi ha material per a la teva ${V.part}.` : 'Encara no hi ha partitures ni àudios.'}</p>`;
     const tog = el.querySelector('#wk-mine');
     if (tog) tog.textContent = onlyMine ? 'Mostra-ho tot' : `Només la meva ${V.part}`;
   };
@@ -92,7 +92,7 @@ function sheetWork(id) {
       ${w.notes ? `<p class="fitxa-note" style="white-space:pre-wrap">${esc(w.notes)}</p>` : ''}
       <div class="section-title" style="margin-top:14px"><h2 class="h2">Qui canta què</h2></div>
       ${(w.roles || []).length ? `<ul class="mini-list" style="max-height:none">${w.roles.map(r => `<li class="${me && (r.memberIds || []).includes(me.id) ? 'is-me' : ''}"><span><b>${esc(r.name)}</b><br>${roleNames(r).length ? `<span class="who-sings">${(r.memberIds || []).map(id => S.members.get(id)).filter(Boolean).map(x => `<span class="ws">${avatar(x)}${esc(fullName(x.name))}</span>`).join('')}</span>` : '<span class="m">Encara per decidir</span>'}</span></li>`).join('')}</ul>`
-        : '<p class="muted" style="font-size:calc(13px*var(--ts));margin:0">No hi ha solos ni petits grups.</p>'}
+        : '<p class="muted" style="font-size:var(--t-13);margin:0">No hi ha solos ni petits grups.</p>'}
       ${scoreBox(ui.matProd !== 'all' ? ui.matProd : '', w)}
       <div class="section-title" style="margin-top:14px"><h2 class="h2">Partitures i àudios</h2>${me && !canRepertoire() ? '<button class="btn btn-sm btn-ghost" id="wk-mine"></button>' : ''}</div>
       <div class="panel" id="wk-mats"></div>`,
@@ -123,7 +123,7 @@ function sheetWorkEdit(id, presetProd) {
         <div style="display:flex;gap:6px;align-items:center"><input class="inp wk-rname" type="text" maxlength="60" value="${esc(r.name)}" placeholder="p. ex. Solo de soprano, núm. 3" style="flex:1;min-width:0">
         <button type="button" class="icon-btn" data-rrm="${esc(r.id)}" aria-label="Treu aquest solo">${ICON.close}</button></div>
         ${peoplePicker(r.memberIds || [])}</div>`).join('')
-      : '<p class="muted" style="margin:0;font-size:calc(13px*var(--ts))">Cap. Afegeix-ne un per cada solo o petit grup (duets, quartets, semicor…).</p>';
+      : '<p class="muted" style="margin:0;font-size:var(--t-13)">Cap. Afegeix-ne un per cada solo o petit grup (duets, quartets, semicor…).</p>';
     el.querySelectorAll('#wk-roles [data-rrm]').forEach(b => b.onclick = () => { read(el); w.roles = w.roles.filter(r => r.id !== b.dataset.rrm); paintRoles(el); });
     el.querySelectorAll('#wk-roles .wk-role').forEach(row => {
       const r = w.roles.find(x => x.id === row.dataset.role);
@@ -135,7 +135,7 @@ function sheetWorkEdit(id, presetProd) {
     el.querySelector('#wk-matlist').innerHTML = w.materials.length ? w.materials.map(x => `<div class="mat">${matTag(x.kind)}
         <span class="mat-i"><b style="font-weight:600">${esc(x.title)}</b><small>${[MAT_KINDS[x.kind], x.section ? esc(SEC[x.section].name) : capz(V.tot), x.part ? `${V.part} ${esc(x.part)}` : '', fileNote(x)].filter(Boolean).join(' · ')}</small></span>
         <button type="button" class="icon-btn" data-mrm="${esc(x.id)}" aria-label="Treu aquest material">${ICON.close}</button></div>`).join('')
-      : '<p class="muted" style="margin:0;padding:12px 14px;font-size:calc(13px*var(--ts))">Encara no n’hi ha.</p>';
+      : '<p class="muted" style="margin:0;padding:12px 14px;font-size:var(--t-13)">Encara no n’hi ha.</p>';
     el.querySelectorAll('[data-mrm]').forEach(b => b.onclick = () => { const x = w.materials.find(m => m.id === b.dataset.mrm); w.materials = w.materials.filter(m => m.id !== b.dataset.mrm); if (x?.file) w._drop = [...(w._drop || []), x.file]; paintMats(el); });
   };
   openSheet({
@@ -439,7 +439,7 @@ function sheetPlan(sid) {
   };
   const paint = el => {
     let n = 0;
-    el.querySelector('#pl-items').innerHTML = plan.items.length ? plan.items.map(it => rowHtml(it, it.kind ? 0 : ++n)).join('') : '<p class="muted" style="margin:0;font-size:calc(13px*var(--ts))">Encara no hi ha res. Afegeix les obres que s’assajaran, per ordre. Si hi ha parcials, afegeix un bloc per a cada grup de cordes, amb l’aula i qui el porta.</p>';
+    el.querySelector('#pl-items').innerHTML = plan.items.length ? plan.items.map(it => rowHtml(it, it.kind ? 0 : ++n)).join('') : '<p class="muted" style="margin:0;font-size:var(--t-13)">Encara no hi ha res. Afegeix les obres que s’assajaran, per ordre. Si hi ha parcials, afegeix un bloc per a cada grup de cordes, amb l’aula i qui el porta.</p>';
     el.querySelectorAll('#pl-items [data-rm]').forEach(b => b.onclick = () => { read(el); plan.items = plan.items.filter(x => x.id !== b.dataset.rm); paint(el); });
     el.querySelectorAll('#pl-items [data-up]').forEach(b => b.onclick = () => { read(el); const i = plan.items.findIndex(x => x.id === b.dataset.up); if (i > 0) { const [x] = plan.items.splice(i, 1); plan.items.splice(i - 1, 0, x); } paint(el); });
     el.querySelectorAll('#pl-items [data-f="work"], #pl-items [data-f="kind"]').forEach(x => x.onchange = () => { read(el); paint(el); });
@@ -449,7 +449,7 @@ function sheetPlan(sid) {
   openSheet({
     title: 'Pla d’assaig',
     wide: true,
-    body: `<p style="margin-top:0"><b>${esc(longDate(s.date))}</b>${s.time ? ` · ${esc(timeRange(s))}` : ''} · ${esc(s.type || 'Assaig')}<br><span class="muted" style="font-size:calc(13px*var(--ts))">El veuen tots els ${V.members} convocats, per preparar-ho; cadascú hi veu primer el que li toca. Qui falti sabrà què s’ha fet.</span></p>
+    body: `<p style="margin-top:0"><b>${esc(longDate(s.date))}</b>${s.time ? ` · ${esc(timeRange(s))}` : ''} · ${esc(s.type || 'Assaig')}<br><span class="muted" style="font-size:var(--t-13)">El veuen tots els ${V.members} convocats, per preparar-ho; cadascú hi veu primer el que li toca. Qui falti sabrà què s’ha fet.</span></p>
       <div id="pl-items" style="display:grid;gap:12px"></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button type="button" class="btn btn-sm" id="pl-add">+ Obra</button><button type="button" class="btn btn-sm" id="pl-add-head">+ Bloc (parcial o tutti)</button><button type="button" class="btn btn-sm" id="pl-add-break">+ Pausa</button></div>
       <label class="field" style="margin-top:14px"><span>Indicacions (opcional)</span><textarea class="inp" id="pl-text" maxlength="800" style="min-height:60px" placeholder="p. ex. Porteu el llapis. Mirarem sobretot la pronunciació.">${esc(plan.text || '')}</textarea></label>

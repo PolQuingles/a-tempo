@@ -17,6 +17,16 @@ sys.path.insert(0, HERE)
 from build import build  # noqa: E402
 
 SWEEP = open(os.path.join(HERE, "sweep.js"), encoding="utf-8").read()
+DETECTOR = open(os.path.join(HERE, "detector.js"), encoding="utf-8").read()
+# Recorre les pantalles principals amb el detector i torna el que hi troba.
+DETECT = """async () => {
+  const A = window.AUD, s = A.sleep, out = [];
+  const routes = ['inici', 'assistencia/meva', 'calendari', 'tauler/anuncis', 'tauler/repertori', 'tauler/documents', 'tauler/enquestes', 'tauler/sortides', 'classes', 'gestio/personal', 'gestio/produccions', 'gestio/ajustos'];
+  for (const r of routes) { applyRoute(r); render(); window.scrollTo(0, 0); await s(260); A.scan(r); }
+  for (const a of attAreas()) for (const k of a === 'me' ? ['llista'] : areaKeys(a)) { applyRoute('assistencia'); ui.attArea = a; ui.att = k; ui.rollSec = null; render(); await s(260); A.scan(`assistencia/${a}/${k}`); }
+  applyRoute('calendari'); ui.calView = 'month'; render(); await s(260); A.scan('calendari/mes'); ui.calView = 'list';
+  return { vistes: A.seen.length, problemes: A.issues.map(x => `${x.label}: ${x.kind} · ${x.el}${x.extra}`) };
+}"""
 SMALL = dict(viewport={"width": 320, "height": 700}, is_mobile=True, has_touch=True, device_scale_factor=2)
 MOBILE = dict(viewport={"width": 375, "height": 812}, is_mobile=True, has_touch=True, device_scale_factor=2)
 DESKTOP = dict(viewport={"width": 1366, "height": 860})
@@ -137,6 +147,17 @@ def main():
             check(res["vistes"] >= 8, f"{user} a {label}: {res['vistes']} pantalles recorregudes")
             check(not res["desbordaments"], f"{user} a {label}: res no surt de la pantalla", "; ".join(res["desbordaments"][:3]))
             check(not errors, f"{user} a {label}: sense errors", "; ".join(errors[:3]))
+            ctx.close()
+
+        print("El detector visual: res vessa, res es talla, cap text se solapa")
+        for w, text in [(375, ""), (360, ""), (375, "molt")]:
+            ctx, page, errors = open_app(browser, base, "pol", {**MOBILE, "viewport": {"width": w, "height": 812}})
+            if text:
+                page.evaluate("t => setTextSize(t)", text)
+            page.evaluate(DETECTOR)
+            res = page.evaluate(DETECT)
+            check(res["vistes"] >= 15, f"{w} px{' amb el text molt gran' if text else ''}: {res['vistes']} pantalles mirades")
+            check(not res["problemes"], f"{w} px{' amb el text molt gran' if text else ''}: cap problema visual", "; ".join(res["problemes"][:6]))
             ctx.close()
 
         print("Ordinador: menú lateral i taules")

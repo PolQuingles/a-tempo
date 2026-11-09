@@ -106,7 +106,7 @@ function sheetRetention() {
     body: `<p style="margin-top:0">Esborra per sempre l’assistència, els avisos d’absència, les respostes i les ${esc(V.classes.toLowerCase())} d’abans d’una data. Les produccions, la plantilla i el repertori es queden. Fes-ho quan ja no calguin (per exemple, un cop acabada i tancada la temporada).</p>
       <label class="field"><span>Esborra tot el que és d’abans del</span><input class="inp" type="date" id="rt-cut" value="${esc(cut)}" max="${esc(TODAY)}"></label>
       <div id="rt-sum"></div>
-      <p class="muted" style="font-size:calc(13px*var(--ts))">Les estadístiques i la norma d’aquelles temporades ja no es podran mirar. La còpia de seguretat de cada nit encara les tindrà un temps.</p>`,
+      <p class="muted" style="font-size:var(--t-13)">Les estadístiques i la norma d’aquelles temporades ja no es podran mirar. La còpia de seguretat de cada nit encara les tindrà un temps.</p>`,
     foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-danger" id="rt-go">Esborra-ho</button>`,
     onMount: el => {
       el.querySelector('#rt-cut').onchange = e => { cut = e.target.value || season.from; paint(el); };

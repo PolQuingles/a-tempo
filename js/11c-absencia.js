@@ -36,7 +36,7 @@ function sheetAbsence(presetSid) {
   openSheet({
     title: 'Avís d’absència',
     body: `<div class="kv">
-      ${singer ? `<p style="margin:0">De part de <b>${esc(S.members.get(memberId).name)}</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Avisa’n amb temps: el teu ${V.leader} ho veurà i, si ho accepta, la falta quedarà justificada.</span></p>`
+      ${singer ? `<p style="margin:0">De part de <b>${esc(S.members.get(memberId).name)}</b><br><span class="muted" style="font-size:var(--t-13)">Avisa’n amb temps: el teu ${V.leader} ho veurà i, si ho accepta, la falta quedarà justificada.</span></p>`
         : `<label class="field"><span>${V.Member}</span><select class="inp" id="ab-member"><option value="">—</option>${memberOptions('')}</select></label>`}
       <div class="field"><span>Què passa?</span><div class="pickers" id="ab-kind">
         <button type="button" class="pick" data-k="absent" aria-pressed="true">No hi podré anar</button>
@@ -49,9 +49,9 @@ function sheetAbsence(presetSid) {
     onMount: el => {
       const drawSessions = () => {
         const box = el.querySelector('#ab-sessions');
-        if (!memberId) { box.innerHTML = '<span class="muted" style="font-size:calc(13px*var(--ts))">Tria primer qui és.</span>'; return; }
+        if (!memberId) { box.innerHTML = '<span class="muted" style="font-size:var(--t-13)">Tria primer qui és.</span>'; return; }
         const list = sessionsFor(memberId);
-        if (!list.length) { box.innerHTML = '<span class="muted" style="font-size:calc(13px*var(--ts))">No hi ha sessions properes.</span>'; return; }
+        if (!list.length) { box.innerHTML = '<span class="muted" style="font-size:var(--t-13)">No hi ha sessions properes.</span>'; return; }
         let month = '', html = '<ul class="checklist">';
         for (const s of list) {
           const mo = s.date.slice(0, 7);

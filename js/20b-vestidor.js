@@ -158,7 +158,7 @@ function sheetWardAsk(editId) {
       ${ed ? '' : `<div class="field"><span>Quina peça et toca?</span><div class="pickers" id="wa-item">${items.map(it => `<button type="button" class="pick" data-k="${esc(it.id)}" aria-pressed="${item === it.id}">${esc(it.name)}</button>`).join('')}</div></div>`}
       <div class="field" id="wa-size-f"><span>La teva talla</span><div class="pickers" id="wa-size"></div><small id="wa-size-h"></small></div>
       <label class="field"><span>Nota (opcional)</span><input class="inp" id="wa-note" maxlength="300" value="${esc(ed?.note || '')}" placeholder="p. ex. Entre dues talles · Màniga llarga"></label>
-      <p class="muted" style="margin:0;font-size:calc(13px*var(--ts))">Si no saps la talla, posa la que creguis i la secretaria te la farà emprovar abans d’entregar-te-la.</p>
+      <p class="muted" style="margin:0;font-size:var(--t-13)">Si no saps la talla, posa la que creguis i la secretaria te la farà emprovar abans d’entregar-te-la.</p>
     </div>`,
     foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="wa-go">${ed ? 'Desa' : 'Demana-la'}</button>`,
     onMount: el => {
@@ -303,7 +303,7 @@ function wardConfigPanel() {
       <input class="inp" maxlength="30" value="${esc(it.name)}" placeholder="Peça" aria-label="Nom de la peça" data-f="name">
       <input class="inp" maxlength="200" value="${esc((it.sizes || []).join(', '))}" placeholder="Talles, separades per comes" aria-label="Talles" data-f="sizes">
       <button type="button" class="icon-btn" data-act="ward-cfg-del" data-i="${i}" aria-label="Treu la peça" ${wardItems().length < 2 ? 'disabled' : ''}>${ICON.close}</button></div>`).join('');
-  return `<div class="toggle-row setting"><span><b>${on ? 'Activat' : 'Desactivat'}</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">${on
+  return `<div class="toggle-row setting"><span><b>${on ? 'Activat' : 'Desactivat'}</b><br><span class="muted" style="font-size:var(--t-13)">${on
       ? `Cada ${esc(V.member)} hi demana el seu vestuari amb la talla i en segueix l’estat; la secretaria i la gerència ho porten tot des de la mateixa pantalla.`
       : 'Activa’l si l’agrupació dona vestuari (americana, estola…): cadascú el demanarà amb la seva talla i la secretaria en portarà el seguiment.'}</span></span>
       <label class="switch"><input type="checkbox" id="cfg-ward" ${on ? 'checked' : ''} data-bind="cfg-ward"><span></span></label></div>

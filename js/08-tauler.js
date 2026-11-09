@@ -307,7 +307,7 @@ function sheetOpenFile(f, title) {
         const kept = offlineSaved().has(f.id);
         // Un PDF es llegeix aquí mateix: els botons van a dalt (sota d'una partitura llarga no es veurien) i «Obre» és secundari.
         const pdf = kind === 'PDF';
-        const info = `<p class="muted" style="margin:${media && !pdf ? '12px' : '0'} 0 ${pdf ? '10px' : '14px'};font-size:calc(13px*var(--ts));overflow-wrap:anywhere">${esc(f.name)} · ${esc(kind)} · ${fmtSize(f.size)}${kept ? ' · desat al mòbil' : ''}</p>
+        const info = `<p class="muted" style="margin:${media && !pdf ? '12px' : '0'} 0 ${pdf ? '10px' : '14px'};font-size:var(--t-13);overflow-wrap:anywhere">${esc(f.name)} · ${esc(kind)} · ${fmtSize(f.size)}${kept ? ' · desat al mòbil' : ''}</p>
           <div style="display:flex;gap:8px;flex-wrap:wrap${pdf ? ';margin-bottom:14px' : ''}"><a class="btn${pdf ? ' btn-sm' : ' btn-primary'}" href="${url}" target="_blank" rel="noopener">${pdf ? 'Obre a part' : 'Obre'}</a><a class="btn${pdf ? ' btn-sm' : ''}" href="${url}" download="${esc(f.name)}">Desa al dispositiu</a>
             ${!f.where && 'caches' in window ? `<button class="btn${pdf ? ' btn-sm' : ''}" id="fo-keep">${kept ? 'Treu-lo del mòbil' : 'Tenir-lo sense cobertura'}</button>` : ''}</div>`;
         box.innerHTML = pdf ? info + media : media + info;
@@ -490,7 +490,7 @@ function boardPolls() {
       return `<div class="poll"><div class="ann-h"><h2 class="ann-t">${esc(p.title)}</h2><button class="icon-btn" data-act="poll-edit" data-id="${p.id}" aria-label="Edita">${ICON.more}</button></div>
         ${p.description ? `<div class="ann-b">${linkify(p.description)}</div>` : ''}${meta}
         ${(p.options || []).map(o => `<div class="opt-row ${r.counts[o.id] === max && max > 0 ? 'best' : ''}"><span></span><span>${esc(o.label)}</span><span class="n">${r.counts[o.id]}</span><span class="opt-bar"><span style="width:${(r.counts[o.id] / Math.max(1, r.voters)) * 100}%"></span></span></div>`).join('')}
-        <div class="c-a" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="muted" style="font-size:calc(13px*var(--ts))">${r.voters} de ${r.expected} han respost</span>
+        <div class="c-a" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="muted" style="font-size:var(--t-13)">${r.voters} de ${r.expected} han respost</span>
           <button class="btn btn-sm" data-act="poll-results" data-id="${p.id}">Qui ha votat</button>${closed ? '' : `<button class="btn btn-sm" data-act="poll-remind" data-id="${p.id}">Recorda-ho</button>`}</div>
         ${canVote && forMySection(p) ? `<details class="poll-mine" data-poll="${p.id}"><summary>${mine ? 'La teva resposta · desada' : 'Encara no hi has respost'}${ICON.chev}</summary>${form}</details>` : ''}</div>`;
     }
@@ -498,6 +498,6 @@ function boardPolls() {
       ${p.description ? `<div class="ann-b">${linkify(p.description)}</div>` : ''}${meta}
       ${form}</div>`;
   };
-  return `${canBoard() ? '<div class="sec-h" style="margin-top:6px"><span class="muted" style="font-size:calc(13px*var(--ts))">Per saber quan pot venir la gent.</span><span style="display:flex;gap:6px"><button class="btn btn-sm" data-act="bandes-new">+ Bandes</button><button class="btn btn-sm btn-primary" data-act="poll-new">+ Enquesta</button></span></div>' : ''}
+  return `${canBoard() ? '<div class="sec-h" style="margin-top:6px"><span class="muted" style="font-size:var(--t-13)">Per saber quan pot venir la gent.</span><span style="display:flex;gap:6px"><button class="btn btn-sm" data-act="bandes-new">+ Bandes</button><button class="btn btn-sm btn-primary" data-act="poll-new">+ Enquesta</button></span></div>' : ''}
     ${all.length ? `<div class="panel">${all.map(card).join('')}</div>` : '<div class="empty"><p>No hi ha enquestes.</p></div>'}`;
 }

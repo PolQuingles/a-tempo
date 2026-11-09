@@ -13,12 +13,12 @@ function sheetProduction(pid) {
   const fresh = [];
   const guestsList = () => [...guests.map(id => S.members.get(id)), ...fresh].length
     ? `<ul class="mini-list" style="max-height:none">${[...guests.map(id => S.members.get(id)), ...fresh].map(m => `<li><span>${codeTag(m, d.id)}<b>${esc(m.name)}</b> <span class="m">· ${esc(SEC[m.section]?.name || '')}${fresh.includes(m) ? ' · es crearà en desar' : ''}</span></span><button type="button" class="icon-btn" data-g-rm="${esc(m.id)}" aria-label="Treu ${esc(m.name)} dels reforços">${ICON.close}</button></li>`).join('')}</ul>`
-    : '<p class="muted" style="margin:0;font-size:calc(13.5px*var(--ts))">Cap.</p>';
+    : '<p class="muted" style="margin:0;font-size:var(--t-13)">Cap.</p>';
   const gen = { from: d.start || TODAY, to: d.end || '', days: new Set(['1', '3']), time: '20:30', end: '22:30', type: 'Assaig', place: '' };
 
   const sessionsList = () => d.sessions.length
     ? `<ul class="mini-list" id="pe-sessions">${[...d.sessions].sort((a, b) => a.date.localeCompare(b.date)).map(s => `<li><span><span class="mono">${ddmm(s.date)} ${wdShort(s.date)}</span> · ${esc(s.type)} <span class="mono">${esc(timeRange(s))}</span></span><button class="icon-btn" data-rm="${s.id}" aria-label="Treu la sessió">${ICON.close}</button></li>`).join('')}</ul>`
-    : '<p class="muted" style="margin:0;font-size:calc(13.5px*var(--ts))">Encara no hi ha sessions.</p>';
+    : '<p class="muted" style="margin:0;font-size:var(--t-13)">Encara no hi ha sessions.</p>';
 
   openSheet({
     title: existing ? 'Edita la producció' : 'Nova producció', wide: true,
@@ -48,12 +48,12 @@ function sheetProduction(pid) {
       </fieldset>
 
       <fieldset class="fieldset"><legend>Qui no fa aquesta producció</legend>
-        <p class="muted" style="margin:0;font-size:calc(13px*var(--ts))">Els marcats sortiran en gris («No fa») a totes les sessions i no comptaran a les estadístiques.</p>
+        <p class="muted" style="margin:0;font-size:var(--t-13)">Els marcats sortiran en gris («No fa») a totes les sessions i no comptaran a les estadístiques.</p>
         ${SECTIONS.map(x => { const ms = membersOf(x.id).filter(mm => !isGuest(mm.id)); return ms.length ? `<div class="field"><span>${x.name}</span><div class="pickers">${ms.map(mm => `<button type="button" class="pick" data-ex="${mm.id}" aria-pressed="${excluded.has(mm.id)}">${esc(mm.name)}</button>`).join('')}</div></div>` : ''; }).join('')}
       </fieldset>
 
       <fieldset class="fieldset"><legend>Reforços</legend>
-        <p class="muted" style="margin:0;font-size:calc(13px*var(--ts))">Gent de fora ${V.del} que només canta en aquesta producció. Surten a les llistes, a l’assistència i a l’arxiu de partitures (amb el codi R1, R2…), però no a les altres produccions.</p>
+        <p class="muted" style="margin:0;font-size:var(--t-13)">Gent de fora ${V.del} que només canta en aquesta producció. Surten a les llistes, a l’assistència i a l’arxiu de partitures (amb el codi R1, R2…), però no a les altres produccions.</p>
         <div id="pe-guests">${guestsList()}</div>
         <div class="row2"><input class="inp" id="pe-g-name" type="text" maxlength="60" placeholder="Nom i cognoms" aria-label="Nom del reforç">
           <select class="inp" id="pe-g-sec" aria-label="${esc(V.Section)}">${SECTIONS.map(x => `<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('')}</select></div>

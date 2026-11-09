@@ -11,7 +11,7 @@ function sheetTeacherSeats() {
   const rows = () => seats.length ? seats.map((t, i) => `<div class="sec-row" data-i="${i}" style="display:flex;gap:6px;align-items:center">
       <input class="inp" type="text" maxlength="40" value="${esc(t.name)}" data-f="name" style="flex:1" placeholder="Nom i cognom">
       <button type="button" class="icon-btn" data-rm="${i}" aria-label="Treu-lo">${ICON.close}</button>
-    </div>`).join('') : '<p class="muted" style="margin:0;font-size:calc(13px*var(--ts))">Encara no n’hi ha cap.</p>';
+    </div>`).join('') : '<p class="muted" style="margin:0;font-size:var(--t-13)">Encara no n’hi ha cap.</p>';
   const read = el => el.querySelectorAll('.sec-row').forEach(r => { const t = seats[+r.dataset.i]; if (t) t.name = r.querySelector('[data-f="name"]').value.trim(); });
   const paint = el => { el.querySelector('#ts-rows').innerHTML = rows(); el.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { read(el); seats.splice(+b.dataset.rm, 1); paint(el); }); };
   openSheet({
@@ -19,7 +19,7 @@ function sheetTeacherSeats() {
     body: `<p style="margin-top:0">Posa-hi qui fa classes però encara no entra a l’app: així ja en pots fer el calendari i els ${esc(V.members)} hi veuen la seva hora. Quan tingui compte, dona-li accés a <b>Gestió › Personal</b> amb el rol de ${esc(V.Teacher.toLowerCase())}: l’app hi reconeixerà el nom i les classes d’aquí passaran al seu compte.</p>
       <div id="ts-rows" style="display:grid;gap:8px"></div>
       <button type="button" class="btn btn-sm" id="ts-add" style="margin-top:10px">+ Afegeix</button>
-      ${withAccount.length ? `<p class="muted" style="font-size:calc(13px*var(--ts));margin:14px 0 0">Amb compte: ${esc(withAccount.map(p => p.name || p.email).join(', '))}.</p>` : ''}`,
+      ${withAccount.length ? `<p class="muted" style="font-size:var(--t-13);margin:14px 0 0">Amb compte: ${esc(withAccount.map(p => p.name || p.email).join(', '))}.</p>` : ''}`,
     foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="ts-save">Desa</button>`,
     onMount: el => {
       paint(el);
@@ -52,7 +52,7 @@ function sheetClassNote(classId, slotId) {
         ${ex?.file ? `<div class="rec-cur" id="cn-cur"><span>${esc(ex.file.name)} · ${fmtSize(ex.file.size)}</span><button type="button" class="btn btn-sm btn-ghost" id="cn-rec-rm">Treu-lo</button></div>` : ''}
         <label class="dropzone" for="cn-file" id="cn-drop"><input id="cn-file" type="file" accept="audio/*,video/*,.m4a,.mp3" class="sr">
           <span class="dz-t">${ex?.file ? 'Canvia’l per un altre' : 'Tria l’àudio de la classe'}</span><span class="dz-s">Fins a 20 MB (uns 20 minuts en qualitat de veu). L’alumne el podrà escoltar més lent i repetir fragments.</span></label></div>
-      <p class="muted" style="font-size:calc(13px*var(--ts));margin:0">Només ho veieu tu i ${m ? esc(firstName(m.name)) : `qui tingui aquesta hora`}. La resta de l’agrupació, no.</p>
+      <p class="muted" style="font-size:var(--t-13);margin:0">Només ho veieu tu i ${m ? esc(firstName(m.name)) : `qui tingui aquesta hora`}. La resta de l’agrupació, no.</p>
     </div>`,
     foot: `${ex ? '<button class="btn btn-danger-ghost" id="cn-del">Esborra</button>' : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="cn-save">Desa</button>`,
     onMount: el => {
@@ -103,11 +103,11 @@ async function sheetClassIcs() {
     title: 'Les teves classes al calendari',
     body: `<p style="margin-top:0">Aquesta adreça porta <b>només les teves classes</b>. Si te la subscrius, se t’aniran actualitzant soles cada poques hores.</p>
       <div class="linkbox">${esc(url)}</div>
-      <p class="muted" style="font-size:calc(13px*var(--ts));margin:10px 0 0">És una adreça personal: no la comparteixis. Si algú l’hagués de deixar de tenir, digues-ho a l’administració.</p>
-      <h3 style="margin:14px 0 4px;font-size:calc(14px*var(--ts))">Com subscriure-s’hi</h3>
+      <p class="muted" style="font-size:var(--t-13);margin:10px 0 0">És una adreça personal: no la comparteixis. Si algú l’hagués de deixar de tenir, digues-ho a l’administració.</p>
+      <h3 style="margin:14px 0 4px;font-size:var(--t-15)">Com subscriure-s’hi</h3>
       <ul class="mini-list" style="max-height:none"><li><span><b>iPhone</b><br><span class="m">Calendari › Calendaris › Afegeix calendari › Afegeix calendari subscrit, i hi enganxes l’adreça.</span></span></li>
         <li><span><b>Android o ordinador</b><br><span class="m">Google Calendar › Altres calendaris › + › Des d’un URL, i hi enganxes l’adreça.</span></span></li></ul>
-      <p class="muted" style="font-size:calc(13px*var(--ts));margin:10px 0 0">Les classes noves hi surten al cap d’unes hores, no immediatament.</p>`,
+      <p class="muted" style="font-size:var(--t-13);margin:10px 0 0">Les classes noves hi surten al cap d’unes hores, no immediatament.</p>`,
     foot: `${navigator.share ? '<button class="btn" id="ci-share">Comparteix…</button>' : ''}<span class="spacer"></span><button class="btn btn-primary" id="ci-copy">Copia l’adreça</button>`,
     onMount: el => {
       el.querySelector('#ci-copy').onclick = () => copyText(url, 'Adreça copiada');
@@ -143,7 +143,7 @@ function sheetClassStats(onlyMine) {
         : `<p style="margin-top:0">${days.length} dies de classe al curs · ${marked} assistències marcades.</p>
           <ul class="mini-list" style="max-height:none">${rows.map(({ m, r }) => `<li><span>${esc(m.name)}<br><span class="m">${r.P + r.R} de ${r.total} classes${r.FJ ? ` · ${r.FJ} just.` : ''}${r.FNJ ? ` · ${r.FNJ} no just.` : ''}</span></span>
             <span class="mono"><b>${pct(r)}%</b></span></li>`).join('')}</ul>
-          <p class="muted" style="font-size:calc(13px*var(--ts));margin:10px 0 0">Compta les classes marcades: hi ha assistit (present o amb retard) sobre el total.</p>`;
+          <p class="muted" style="font-size:var(--t-13);margin:10px 0 0">Compta les classes marcades: hi ha assistit (present o amb retard) sobre el total.</p>`;
     },
   });
 }
@@ -184,7 +184,7 @@ function sheetClassDay(id, preset) {
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
           <input class="inp" id="cd-from" type="time" value="17:00" style="width:110px">
           <input class="inp" id="cd-mins" type="number" min="5" max="120" step="5" value="30" style="width:80px" aria-label="Minuts per classe">
-          <span class="muted" style="font-size:calc(13px*var(--ts))">min ·</span>
+          <span class="muted" style="font-size:var(--t-13)">min ·</span>
           <input class="inp" id="cd-n" type="number" min="1" max="20" value="6" style="width:70px" aria-label="Quantes classes">
           <button type="button" class="btn btn-sm" id="cd-gen">Genera</button>
         </div><small>Omple les hores seguides; després hi tries qui ve a cadascuna.</small></div>
@@ -256,7 +256,7 @@ function sheetClassNotice(classId, slotId, kind) {
       <p style="margin:0">Classe ${esc(longDate(c.date))}, a les <b>${esc(slotTime(c, slotId))}</b>.</p>
       ${late ? '<label class="field"><span>Minuts de retard aproximats</span><input class="inp" id="cn-min" type="number" inputmode="numeric" min="1" max="120" value="10" style="width:120px"></label>' : ''}
       <label class="field"><span>Motiu</span><textarea class="inp" id="cn-why" maxlength="200" style="min-height:80px" placeholder="p. ex. Tinc classe fins a les 17:15"></textarea></label>
-      <p class="muted" style="font-size:calc(13px*var(--ts));margin:0">Ho rebrà el ${esc(V.Teacher.toLowerCase())} al mòbil.</p>
+      <p class="muted" style="font-size:var(--t-13);margin:0">Ho rebrà el ${esc(V.Teacher.toLowerCase())} al mòbil.</p>
     </div>`,
     foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="cn-go">Envia l’avís</button>`,
     onMount: el => {
@@ -415,7 +415,7 @@ async function sheetStudent(mid) {
         <select class="inp" data-f="status" style="flex:1 1 120px">${Object.entries(STUDENT_STATUS).map(([k, l]) => `<option value="${k}" ${x.status === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
         <button type="button" class="icon-btn" data-rm="${esc(x.id)}" aria-label="Treu-la">${ICON.close}</button></div>`
     : `<li><span><b>${esc(x.title)}</b>${x.composer ? ` · ${esc(x.composer)}` : ''}</span><span class="st-pill ${x.status === 'apunt' ? 'st-accepted' : 'st-pending'}">${STUDENT_STATUS[x.status] || ''}</span></li>`).join('')
-    : `<p class="muted" style="margin:0;font-size:calc(13px*var(--ts))">${teach ? 'Encara no n’hi ha. Afegeix les obres que treballa.' : 'Encara no hi ha repertori.'}</p>`;
+    : `<p class="muted" style="margin:0;font-size:var(--t-13)">${teach ? 'Encara no n’hi ha. Afegeix les obres que treballa.' : 'Encara no hi ha repertori.'}</p>`;
   const read = el => {
     if (!teach) return;
     rec.goals = el.querySelector('#stu-goals').value.trim();
@@ -429,7 +429,7 @@ async function sheetStudent(mid) {
   openSheet({
     title: m.name,
     wide: true,
-    body: `<p style="margin-top:0"><span class="muted" style="font-size:calc(13.5px*var(--ts))">${esc(SEC[m.section].name)}${hours.length ? ` · ${esc(hours.join(' · '))}` : ''}</span></p>
+    body: `<p style="margin-top:0"><span class="muted" style="font-size:var(--t-13)">${esc(SEC[m.section].name)}${hours.length ? ` · ${esc(hours.join(' · '))}` : ''}</span></p>
       <div class="section-title"><h2 class="h2">Objectius</h2></div>
       ${teach ? `<textarea class="inp" id="stu-goals" maxlength="1000" style="min-height:80px" placeholder="p. ex. Guanyar agilitat a la zona aguda. Treballar el suport a les frases llargues.">${esc(rec.goals || '')}</textarea>`
         : `<p style="white-space:pre-wrap;margin:0">${esc(rec.goals || '') || '<span class="muted">Encara no n’hi ha.</span>'}</p>`}
@@ -438,8 +438,8 @@ async function sheetStudent(mid) {
       <div class="section-title" style="margin-top:14px"><h2 class="h2">Notes de classe</h2><span class="eyebrow">${notes.length}</span></div>
       ${notes.length ? `<ul class="mini-list" style="max-height:none">${notes.map(n => `<li style="display:grid;gap:4px"><span class="m mono">${esc(shortDate(n.date))}</span>${n.text ? `<span style="white-space:pre-wrap">${esc(n.text)}</span>` : ''}
           ${n.file ? `<button class="btn btn-sm" style="justify-self:start" data-act="cl-rec" data-id="${esc(n.id)}">Escolta l’enregistrament</button>` : ''}</li>`).join('')}</ul>`
-        : '<p class="muted" style="margin:0;font-size:calc(13px*var(--ts))">Encara no hi ha notes.</p>'}
-      ${teach ? '' : `<p class="muted" style="font-size:calc(13px*var(--ts));margin-top:12px">Només ho veieu tu i el professorat de cant.</p>`}`,
+        : '<p class="muted" style="margin:0;font-size:var(--t-13)">Encara no hi ha notes.</p>'}
+      ${teach ? '' : `<p class="muted" style="font-size:var(--t-13);margin-top:12px">Només ho veieu tu i el professorat de cant.</p>`}`,
     foot: teach ? `<span class="spacer"></span><button class="btn" data-act="sheet-close">Tanca</button><button class="btn btn-primary" id="stu-save">Desa</button>` : '',
     onMount: el => {
       paint(el);

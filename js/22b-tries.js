@@ -224,7 +224,7 @@ function sheetProdChoice(mid) {
     body: prods.length ? `<p style="margin-top:0">${mine ? 'Digues quines produccions faràs aquesta temporada.' : `Les produccions que farà ${esc(fullName(m.name))} aquesta temporada.`} Cal fer-ne com a mínim el <b>${choiceMin()}%</b>. ${mine ? 'On diguis que no, no et comptarà l’assistència ni et sortiran les convocatòries.' : 'On digui que no, no hi està convocat.'}</p>
       <div class="ch-sum" id="ch-sum" aria-live="polite"></div>
       <ul class="ch-list">${prods.map(row).join('')}</ul>
-      ${mine ? '<p class="muted" style="font-size:calc(13px*var(--ts));margin:10px 2px 0">Quan una producció ja ha començat, per canviar-ho parla amb l’equip.</p>' : ''}`
+      ${mine ? '<p class="muted" style="font-size:var(--t-13);margin:10px 2px 0">Quan una producció ja ha començat, per canviar-ho parla amb l’equip.</p>' : ''}`
       : '<p style="margin:0">Aquesta temporada encara no hi ha produccions per triar.</p>',
     foot: prods.length ? `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="ch-save">Desa</button>` : '',
     onMount: el => {

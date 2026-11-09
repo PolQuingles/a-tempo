@@ -79,7 +79,7 @@ function sheetTripSignup(tripId) {
         ? `<div class="field"><span>${esc(q.label)}</span><div class="pickers" data-q="${esc(q.id)}">${q.options.map(o => `<button type="button" class="pick" data-v="${esc(o)}" aria-pressed="${prev?.answers?.[q.id] === o}">${esc(o)}</button>`).join('')}</div></div>`
         : `<label class="field"><span>${esc(q.label)}</span><input class="inp" data-q="${esc(q.id)}" maxlength="120" value="${esc(prev?.answers?.[q.id] || '')}"></label>`).join('')}
       <label class="field"><span>Nota per a l’organització (opcional)</span><textarea class="inp" id="ts-note" maxlength="200" style="min-height:70px" placeholder="p. ex. Hi aniré pel meu compte · Arribo el dissabte al matí">${esc(prev?.note || '')}</textarea></label>
-      <p class="muted" style="margin:0;font-size:calc(13px*var(--ts))">Les al·lèrgies i intoleràncies alimentàries es prenen de <button class="linkish" data-act="acct-open" data-k="profile">la teva fitxa</button>: posa-les-hi un sol cop i valen per a tot.</p>`,
+      <p class="muted" style="margin:0;font-size:var(--t-13)">Les al·lèrgies i intoleràncies alimentàries es prenen de <button class="linkish" data-act="acct-open" data-k="profile">la teva fitxa</button>: posa-les-hi un sol cop i valen per a tot.</p>`,
     foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="ts-ok">M’hi apunto</button>`,
     onMount: el => {
       el.querySelectorAll('.pickers[data-q] .pick').forEach(b => b.onclick = () => b.parentElement.querySelectorAll('.pick').forEach(x => x.setAttribute('aria-pressed', String(x === b))));
@@ -114,12 +114,12 @@ function sheetTrip(id) {
     t.closed = el.querySelector('#tr-closed').checked;
   };
   const paint = el => {
-    el.querySelector('#tr-tr').innerHTML = listRows('transports', 'p. ex. Autocar 1', 'seats') || '<p class="muted" style="margin:0;font-size:calc(13px*var(--ts))">Cap. Si hi aneu en autocar o en tren, posa-hi cada vehicle i quantes places té.</p>';
-    el.querySelector('#tr-rm').innerHTML = listRows('rooms', 'p. ex. 204', 'beds') || '<p class="muted" style="margin:0;font-size:calc(13px*var(--ts))">Cap. Si hi ha allotjament, posa-hi cada habitació i quants llits té.</p>';
+    el.querySelector('#tr-tr').innerHTML = listRows('transports', 'p. ex. Autocar 1', 'seats') || '<p class="muted" style="margin:0;font-size:var(--t-13)">Cap. Si hi aneu en autocar o en tren, posa-hi cada vehicle i quantes places té.</p>';
+    el.querySelector('#tr-rm').innerHTML = listRows('rooms', 'p. ex. 204', 'beds') || '<p class="muted" style="margin:0;font-size:var(--t-13)">Cap. Si hi ha allotjament, posa-hi cada habitació i quants llits té.</p>';
     el.querySelector('#tr-qs').innerHTML = t.questions.map(q => `<div class="sec-row" data-k="questions" data-id="${esc(q.id)}" style="display:grid;gap:6px;grid-template-columns:1fr auto">
         <input class="inp" data-f="label" maxlength="80" value="${esc(q.label)}" placeholder="p. ex. Dinaràs el dissabte?"><button type="button" class="icon-btn" data-rm="${esc(q.id)}" aria-label="Treu-la">${ICON.close}</button>
         <input class="inp" data-f="opts" maxlength="160" value="${esc((q.options || []).join(', '))}" placeholder="Opcions separades per comes (p. ex. Sí, No). Buit: resposta lliure" style="grid-column:1/-1"></div>`).join('')
-      || '<p class="muted" style="margin:0;font-size:calc(13px*var(--ts))">Cap. Per exemple: els àpats, si van amb autocar o pel seu compte, la talla de la samarreta…</p>';
+      || '<p class="muted" style="margin:0;font-size:var(--t-13)">Cap. Per exemple: els àpats, si van amb autocar o pel seu compte, la talla de la samarreta…</p>';
     el.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { read(el); t.transports = t.transports.filter(x => x.id !== b.dataset.rm); t.rooms = t.rooms.filter(x => x.id !== b.dataset.rm); t.questions = t.questions.filter(x => x.id !== b.dataset.rm); paint(el); });
   };
   const secs = new Set((t.sections || []).length ? t.sections : SECTIONS.map(x => x.id));
@@ -135,7 +135,7 @@ function sheetTrip(id) {
       <div class="field"><span>Preguntes per a qui s’hi apunta</span><div id="tr-qs" style="display:grid;gap:10px"></div><button type="button" class="btn btn-sm" id="tr-q-add" style="width:max-content;margin-top:6px">+ Pregunta</button></div>
       <div class="field"><span>Transport</span><div id="tr-tr" style="display:grid;gap:6px"></div><button type="button" class="btn btn-sm" id="tr-tr-add" style="width:max-content;margin-top:6px">+ Vehicle</button></div>
       <div class="field"><span>Habitacions</span><div id="tr-rm" style="display:grid;gap:6px"></div><button type="button" class="btn btn-sm" id="tr-rm-add" style="width:max-content;margin-top:6px">+ Habitació</button></div>
-      <div class="toggle-row"><span><b>Inscripcions tancades</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Ningú més s’hi pot apuntar ni desapuntar</span></span><label class="switch"><input type="checkbox" id="tr-closed" ${t.closed ? 'checked' : ''}><span></span></label></div>
+      <div class="toggle-row"><span><b>Inscripcions tancades</b><br><span class="muted" style="font-size:var(--t-13)">Ningú més s’hi pot apuntar ni desapuntar</span></span><label class="switch"><input type="checkbox" id="tr-closed" ${t.closed ? 'checked' : ''}><span></span></label></div>
     </div>`,
     foot: `${ex ? '<button class="btn btn-danger-ghost" id="tr-del">Esborra</button>' : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="tr-save">Desa</button>`,
     onMount: el => {
@@ -194,7 +194,7 @@ function sheetTripAdmin(id) {
   openSheet({
     title: t.title,
     wide: true,
-    body: `<p style="margin-top:0"><b>${esc(capz(tripDates(t)))}</b>${t.place ? ` · ${esc(t.place)}` : ''}<br><span class="muted" id="ta-sum" style="font-size:calc(13.5px*var(--ts))"></span></p><div id="ta-list"></div>`,
+    body: `<p style="margin-top:0"><b>${esc(capz(tripDates(t)))}</b>${t.place ? ` · ${esc(t.place)}` : ''}<br><span class="muted" id="ta-sum" style="font-size:var(--t-13)"></span></p><div id="ta-list"></div>`,
     foot: `<span class="spacer"></span><button class="btn" id="ta-xls">Excel</button><button class="btn btn-primary" id="ta-pdf">PDF</button>`,
     onMount: el => {
       draw(el);
@@ -249,12 +249,12 @@ async function sheetMyProfile() {
       <div class="field"><span>Talla de vestuari</span><div class="pickers" id="pf-size">${SIZES.map(z => `<button type="button" class="pick" data-k="${z}" aria-pressed="${p.size === z}">${z}</button>`).join('')}</div></div>
       <div class="row2"><label class="field"><span>Contacte d’emergència</span><input class="inp" id="pf-en" maxlength="60" value="${esc(p.emergencyName || '')}" placeholder="Nom (i qui és: mare, parella…)"></label>
         <label class="field"><span>El seu telèfon</span><input class="inp" id="pf-ep" type="tel" maxlength="20" value="${esc(p.emergencyPhone || '')}"></label></div>
-      <p class="muted" style="font-size:calc(13px*var(--ts));margin:0">El telèfon, la talla i el contacte d’emergència només els veu qui porta les persones ${esc(V.del)} (administració, direcció, gerència i secretaria), per a les llistes dels concerts i de les sortides.</p>
+      <p class="muted" style="font-size:var(--t-13);margin:0">El telèfon, la talla i el contacte d’emergència només els veu qui porta les persones ${esc(V.del)} (administració, direcció, gerència i secretaria), per a les llistes dels concerts i de les sortides.</p>
       <label class="field"><span>Al·lèrgies i intoleràncies alimentàries</span><input class="inp" id="pf-diet" maxlength="200" value="${esc(diet0)}" placeholder="p. ex. Celíac · Al·lèrgia als fruits secs · Vegetarià"><small>Per als àpats de les sortides i els caps de setmana. Només les veuen la secretaria i la gerència.</small></label>
-      <div class="toggle-row" id="pf-diet-ok-row"${diet0 ? '' : ' hidden'}><span><b>Consentiment</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Accepto que la secretaria i la gerència ${esc(V.del)} sàpiguen les meves al·lèrgies per organitzar els àpats.</span></span><label class="switch"><input type="checkbox" id="pf-diet-ok" aria-label="Accepto que la secretaria i la gerència sàpiguen les meves al·lèrgies" ${h?.consentAt ? 'checked' : ''}><span></span></label></div>
+      <div class="toggle-row" id="pf-diet-ok-row"${diet0 ? '' : ' hidden'}><span><b>Consentiment</b><br><span class="muted" style="font-size:var(--t-13)">Accepto que la secretaria i la gerència ${esc(V.del)} sàpiguen les meves al·lèrgies per organitzar els àpats.</span></span><label class="switch"><input type="checkbox" id="pf-diet-ok" aria-label="Accepto que la secretaria i la gerència sàpiguen les meves al·lèrgies" ${h?.consentAt ? 'checked' : ''}><span></span></label></div>
       <fieldset class="fieldset"><legend>Consentiments</legend>
         <div class="field"><span>Drets d’imatge: puc sortir a les fotos i els vídeos ${esc(V.del)}</span><div class="pickers" id="pf-img">${[['yes', 'Sí'], ['no', 'No']].map(([v, t]) => `<button type="button" class="pick" data-k="${v}" aria-pressed="${p.imageOk === v}">${t}</button>`).join('')}</div></div>
-        <div class="toggle-row"><span><b>Protecció de dades</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Accepto que ${esc(ofName())} tracti les meves dades per organitzar l’activitat.</span></span><label class="switch"><input type="checkbox" id="pf-data" ${p.dataOk === 'yes' ? 'checked' : ''}><span></span></label></div>
+        <div class="toggle-row"><span><b>Protecció de dades</b><br><span class="muted" style="font-size:var(--t-13)">Accepto que ${esc(ofName())} tracti les meves dades per organitzar l’activitat.</span></span><label class="switch"><input type="checkbox" id="pf-data" ${p.dataOk === 'yes' ? 'checked' : ''}><span></span></label></div>
         ${p.consentAt ? `<small class="muted">Respost el ${esc(shortDate(p.consentAt.slice(0, 10)))}.</small>` : ''}
       </fieldset>
       <div id="pf-mine"></div>
@@ -305,5 +305,5 @@ async function profileBox(el, mid) {
   if (!box.isConnected) return;
   box.innerHTML = p && (p.phone || p.size || p.emergencyName || p.emergencyPhone) || diet
     ? `<dl class="fitxa">${[['Telèfon', p?.phone], ['Talla', p?.size], ['Emergència', [p?.emergencyName, p?.emergencyPhone].filter(Boolean).join(' · ')], ['Al·lèrgies', diet]].filter(([, v]) => v).map(([l, v]) => `<div><dt>${l}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>`
-    : '<span class="muted" style="font-size:calc(13px*var(--ts))">Encara no ha omplert la seva fitxa (telèfon, talla i contacte d’emergència).</span>';
+    : '<span class="muted" style="font-size:var(--t-13)">Encara no ha omplert la seva fitxa (telèfon, talla i contacte d’emergència).</span>';
 }

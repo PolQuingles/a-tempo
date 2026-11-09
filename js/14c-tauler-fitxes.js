@@ -166,10 +166,10 @@ function sheetPoll(id) {
       <label class="field"><span>Opcions, una per línia</span><textarea class="inp" id="pl-opts" placeholder="Dissabte 7 de novembre, 10–14 h&#10;Dissabte 14 de novembre, 10–14 h&#10;Diumenge 15 de novembre, 17–20 h">${esc((p.options || []).map(o => o.label).join('\n'))}</textarea>
         ${ex ? '<small>Si canvies el text d’una opció, es mantenen els vots de les que no hagis tocat.</small>' : ''}</label>
       <div class="toggle-row"><span><b>Es poden triar diverses opcions</b></span><label class="switch"><input type="checkbox" id="pl-multi" ${p.multi ? 'checked' : ''}><span></span></label></div>
-      <div class="toggle-row"><span><b>Deixa escriure un comentari</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Per a dubtes, casos especials o què es prepara (p. ex. per a una audició)</span></span><label class="switch"><input type="checkbox" id="pl-note" ${p.allowNote ? 'checked' : ''}><span></span></label></div>
+      <div class="toggle-row"><span><b>Deixa escriure un comentari</b><br><span class="muted" style="font-size:var(--t-13)">Per a dubtes, casos especials o què es prepara (p. ex. per a una audició)</span></span><label class="switch"><input type="checkbox" id="pl-note" ${p.allowNote ? 'checked' : ''}><span></span></label></div>
       <div class="field"><span>Per a (si no en tries cap, per a tothom)</span>${sectionPickers('pl-secs', p.sections)}</div>
       <label class="field"><span>Respondre fins al (opcional)</span><input class="inp" id="pl-close" type="date" value="${esc(p.closesAt || '')}"></label>
-      ${ex ? `<div class="toggle-row"><span><b>Tancada</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Ja no s’hi pot respondre</span></span><label class="switch"><input type="checkbox" id="pl-closed" ${p.closed ? 'checked' : ''}><span></span></label></div>` : ''}
+      ${ex ? `<div class="toggle-row"><span><b>Tancada</b><br><span class="muted" style="font-size:var(--t-13)">Ja no s’hi pot respondre</span></span><label class="switch"><input type="checkbox" id="pl-closed" ${p.closed ? 'checked' : ''}><span></span></label></div>` : ''}
     </div>`,
     foot: `${ex ? '<button class="btn btn-danger-ghost" id="pl-del">Esborra</button>' : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="pl-save">${ex ? 'Desa' : 'Publica'}</button>`,
     onMount: el => {

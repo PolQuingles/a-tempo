@@ -26,7 +26,7 @@ function sheetBandes(id) {
       <div class="field"><span>Bandes per categoria (les més votades)</span>${choose('bd-win', +p.win || 2, [1, 2, 3])}<small>A les de parella i a les d’una ${esc(V.section)}, una sola banda.</small></div>
       <div class="field"><span>Qui hi participa (si no en tries cap, tothom)</span>${sectionPickers('bd-secs', p.sections)}</div>
       <details class="np-group"><summary><span id="bd-out-h"></span>${ICON.chev}</summary><p class="m" style="margin:8px 0 0">Qui no hi surt ni vota ni pot ser votat (p. ex. qui és de baixa tota la temporada).</p>${outList()}</details>
-      <div class="toggle-row"><span><b>Es pot votar a un mateix</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Si no, cadascú no surt a les seves llistes</span></span><label class="switch"><input type="checkbox" id="bd-self" ${p.selfOk ? 'checked' : ''}><span></span></label></div>
+      <div class="toggle-row"><span><b>Es pot votar a un mateix</b><br><span class="muted" style="font-size:var(--t-13)">Si no, cadascú no surt a les seves llistes</span></span><label class="switch"><input type="checkbox" id="bd-self" ${p.selfOk ? 'checked' : ''}><span></span></label></div>
       <label class="field"><span>Es pot votar fins al (inclòs)</span><input class="inp" id="bd-close" type="date" value="${esc(p.closesAt || '')}"><small>La vespra, l’app ho recorda a qui encara no ha votat.</small></label>
       <div class="eyebrow" style="margin-top:6px">La Nit: l’entrega de les bandes</div>
       <label class="field"><span>Com es diu</span><input class="inp" id="bd-gname" maxlength="60" value="${esc(galaName(p))}"></label>
@@ -38,7 +38,7 @@ function sheetBandes(id) {
       <div class="field"><span>Finalistes per categoria</span>${choose('bd-fin', +p.finalists || BANDES_FINAL, [3, 5])}</div>
       <div class="field"><span>Com es revelen els finalistes</span><div class="pickers" id="bd-every"><button type="button" class="pick" data-v="day" aria-pressed="${p.nomEvery !== 'all'}">Una categoria cada dia fins a la Nit</button><button type="button" class="pick" data-v="all" aria-pressed="${p.nomEvery === 'all'}">Totes alhora</button></div></div>
       <label class="field"><span>Es revelen a partir del (opcional)</span><input class="inp" id="bd-nom" type="date" value="${esc(p.nomFrom || '')}"><small id="bd-nom-s"></small></label>
-      ${ex && !ex.draft ? `<div class="toggle-row"><span><b>Tancada</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Ja no s’hi pot votar</span></span><label class="switch"><input type="checkbox" id="bd-closed" ${p.closed ? 'checked' : ''}><span></span></label></div>` : ''}
+      ${ex && !ex.draft ? `<div class="toggle-row"><span><b>Tancada</b><br><span class="muted" style="font-size:var(--t-13)">Ja no s’hi pot votar</span></span><label class="switch"><input type="checkbox" id="bd-closed" ${p.closed ? 'checked' : ''}><span></span></label></div>` : ''}
     </div>`,
     foot: `${ex ? '<button class="btn btn-danger-ghost" id="bd-del">Esborra</button>' : ''}<span class="spacer"></span>${p.draft ? '<button class="btn" id="bd-save">Desa l’esborrany</button><button class="btn btn-primary" id="bd-pub">Publica…</button>' : '<button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="bd-save">Desa</button>'}`,
     onMount: el => {
@@ -122,7 +122,7 @@ function bandesPublish(pid) {
   openSheet({
     title: 'Publicar la votació?',
     body: `<p style="margin-top:0">La podran votar <b>${n} persones</b>${p.closesAt ? ` fins al ${shortDate(p.closesAt)}` : ''}. A qui té les notificacions activades li arribarà un avís al mòbil.</p>
-      <div class="toggle-row"><span><b>Publica també un anunci al tauler</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Amb la presentació, totes les categories i el botó per votar. L’avís al mòbil serà el de l’anunci.</span></span><label class="switch"><input type="checkbox" id="bp-ann" checked><span></span></label></div>
+      <div class="toggle-row"><span><b>Publica també un anunci al tauler</b><br><span class="muted" style="font-size:var(--t-13)">Amb la presentació, totes les categories i el botó per votar. L’avís al mòbil serà el de l’anunci.</span></span><label class="switch"><input type="checkbox" id="bp-ann" checked><span></span></label></div>
       <label class="field" id="bp-t-f"><span>Títol de l’anunci</span><input class="inp" id="bp-title" maxlength="90" value="${esc(p.title)}"></label>`,
     foot: '<span class="spacer"></span><button class="btn" data-act="sheet-close">Encara no</button><button class="btn btn-primary" id="bp-ok">Publica-la</button>',
     onMount: el => {

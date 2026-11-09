@@ -150,9 +150,9 @@ function convCard(s, me) {
   const a = S.rsvp.get(`${s.id}_${me.id}`);
   return `<div class="conv-card">
     <div class="a-h" style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><b>${longDate(s.date)}</b>${a ? `<span class="rsvp ${a.answer}">${a.answer === 'yes' ? 'Hi seràs' : 'No hi seràs'}</span>` : '<span class="rsvp none">Confirma-ho</span>'}</div>
-    <span class="muted" style="font-size:calc(13.5px*var(--ts))">${esc(s.type)}${s.time ? ` · ${esc(timeRange(s))}` : ''}${s.place ? ` · ${esc(s.place)}` : ''} · ${esc(prodNames(s))}</span>
-    ${s.note ? `<span style="font-size:calc(13px*var(--ts));color:var(--accent)">${esc(s.note)}</span>` : ''}
-    ${s.rsvpBy ? `<span class="muted mono" style="font-size:calc(13px*var(--ts))">Respon abans del ${shortDate(s.rsvpBy)}</span>` : ''}
+    <span class="muted" style="font-size:var(--t-13)">${esc(s.type)}${s.time ? ` · ${esc(timeRange(s))}` : ''}${s.place ? ` · ${esc(s.place)}` : ''} · ${esc(prodNames(s))}</span>
+    ${s.note ? `<span style="font-size:var(--t-13);color:var(--accent)">${esc(s.note)}</span>` : ''}
+    ${s.rsvpBy ? `<span class="muted mono" style="font-size:var(--t-13)">Respon abans del ${shortDate(s.rsvpBy)}</span>` : ''}
     ${hasInfo(s) ? fitxaChip(s) : ''}
     <div class="c-a"><button class="btn btn-sm ${a?.answer === 'yes' ? 'btn-primary' : ''}" data-act="rsvp-yes" data-sid="${s.id}">Hi seré</button>
       <button class="btn btn-sm ${a?.answer === 'no' ? 'btn-danger' : ''}" data-act="rsvp-no" data-sid="${s.id}">No hi podré anar</button></div>
@@ -474,7 +474,7 @@ function weekHtml(d) {
     ...d.polls.map(p => `<li><span><b>${esc(p.title)}</b><small>${isBandes(p) ? 'Votació' : 'Enquesta'}${p.closesAt ? ` · fins al ${shortDate(p.closesAt)}` : ''}</small></span></li>`),
     ...d.trips.map(t => `<li><span><b>${esc(t.title)}</b><small>Sortida · ${esc(tripDates(t))}${t.deadline ? ` · respon fins al ${shortDate(t.deadline)}` : ''}</small></span></li>`),
   ];
-  return `<p class="muted" style="margin:0 0 6px;font-size:calc(13px*var(--ts))">${esc(capz(shortDate(addDays(TODAY, -7))))} – ${esc(shortDate(addDays(TODAY, 10)))}${d.sec ? ` · el que toca a ${esc(SEC[d.sec].name.toLowerCase())}` : ''}</p>
+  return `<p class="muted" style="margin:0 0 6px;font-size:var(--t-13)">${esc(capz(shortDate(addDays(TODAY, -7))))} – ${esc(shortDate(addDays(TODAY, 10)))}${d.sec ? ` · el que toca a ${esc(SEC[d.sec].name.toLowerCase())}` : ''}</p>
     ${block('Què farem', d.next.length ? d.next.map(s => weekSession(s, d, false)).join('') : '<p class="m">No hi ha cap sessió els pròxims deu dies.</p>')}
     ${d.classes.length ? block(esc(V.classes), `<ul class="tasks">${d.classes.map(({ c, x }) => `<li><span><b>${esc(longDate(c.date))} · ${esc(x.time || '')}</b><small>${esc([teacherOf(c), c.place].filter(Boolean).join(' · '))}</small></span></li>`).join('')}</ul>`) : ''}
     ${block('Per respondre', ask.length ? `<ul class="tasks">${ask.join('')}</ul>` : '')}
