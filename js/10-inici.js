@@ -263,7 +263,7 @@ function nextCard(s, me) {
       <div class="next-b">
         <span class="next-k"><i class="pdot"></i>${esc(kind)}${n > 1 ? `<span class="soon-count">d’aquí a ${n} dies</span>` : ''}</span>
         <h2 class="next-t">${esc(prodNames(s))}</h2>
-        ${s.time || place ? `<span class="next-when">${s.time ? `<span class="next-time num">${esc(timeRange(s))}</span>` : ''}${s.time && place ? '<span class="sep">·</span>' : ''}${place}</span>` : ''}
+        ${s.time || place ? `<span class="next-when">${s.time ? `<span class="next-time num">${esc(timeRange(s))}</span>` : ''}${place}</span>` : ''}
         ${s.info?.call ? `<span class="next-m">Convocatòria a les <b class="num">${esc(s.info.call)}</b></span>` : ''}
         ${s.rsvp && s.rsvpBy && me && !S.rsvp.get(`${s.id}_${me.id}`) ? `<span class="next-m">Respon abans del ${shortDate(s.rsvpBy)}</span>` : ''}
         ${out ? `<span class="next-m">${esc(onLeave(me, s.date) ? 'Estàs de baixa' : 'No fas aquesta producció')}</span>` : ''}

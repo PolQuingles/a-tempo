@@ -16,7 +16,8 @@ INDEX = os.path.join(ROOT, "index.html")
 SW = os.path.join(ROOT, "sw.js")
 RULES = os.path.join(ROOT, "firestore.rules")
 RULES_MARK = re.compile(r"(match /reglesVersio/\{v\} \{\s*allow get: if v == ')([^']*)(';)")
-FIXED = ["./", "index.html", "app.webmanifest", "app/icon-192.png", "app/icon-180.png", "app/favicon-48.png"]
+FIXED = ["./", "index.html", "app.webmanifest", "app/icon-192.png", "app/icon-180.png", "app/favicon-48.png",
+         "fonts/hanken-grotesk-latin.woff2", "fonts/bodoni-moda-latin.woff2", "fonts/bodoni-moda-italic-latin.woff2"]
 ASSET = re.compile(r'(<(?:script|link)\b[^>]*?(?:src|href)=")((?:js/[\w.-]+\.js|css/[\w.-]+\.css|config\.js))(?:\?v=[\w-]*)?(")')
 
 
