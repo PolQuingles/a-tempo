@@ -1476,7 +1476,7 @@ def main():
         ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/calendari")
         r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
           const p = clone(S.productions.get('p1')); p.excluded = ['mS1']; saveProduction(p); await s(300);
-          ui.calProd = 'all'; ui.calView = 'list'; render(); await s(300);
+          ui.calProd = 'p1'; ui.calView = 'list'; render(); await s(300);
           const b = document.querySelector('[data-act="msg-new"][data-prod="p1"]'); out.btn = !!b; b.click(); await s(400);
           out.preset = document.querySelector('#mg-prod')?.value === 'p1';
           // (l'administrador també és cap de corda: la seva corda ja surt triada; primer «Tothom», després només sopranos)
