@@ -123,7 +123,9 @@ function sheetClassStats(onlyMine) {
     body: '<p class="muted" style="margin:0">Carregant les classes del curs…</p>',
     onMount: async el => {
       let days = [];
-      try { const snap = await db.collection('classes').get(); days = snap.docs.map(d => d.data()).filter(c => !c.deleted); }
+      // Cada professor/a només veu els seus alumnes; l'administració, tots.
+      const q = !onlyMine && !isAdmin() ? db.collection('classes').where('teacher', '==', myEmail()) : db.collection('classes');
+      try { const snap = await q.get(); days = snap.docs.map(d => d.data()).filter(c => !c.deleted); }
       catch { el.querySelector('.sheet-b').innerHTML = '<p style="margin:0">No s’han pogut llegir les classes. Comprova la connexió.</p>'; return; }
       const per = new Map();
       let marked = 0;
@@ -151,10 +153,13 @@ function sheetClassDay(id, preset) {
   const ex = id ? S.classes.get(id) : null;
   const rec = ex ? { ...ex, slots: (ex.slots || []).map(x => ({ ...x })) }
     : { id: uid('cl'), date: (preset && preset.date) || TODAY, place: '', note: '', teacher: (preset && preset.teacher) || planWho(), slots: [] };
+  // Les hores noves duren el mateix que les altres del dia o, si no n'hi ha, que l'horari fix.
+  const usualMins = () => +rec.slots[rec.slots.length - 1]?.mins || +planRows(rec.teacher)[0]?.mins || 30;
   const taken = () => new Set(rec.slots.map(x => x.memberId).filter(Boolean));
-  const rows = () => rec.slots.map((x, i) => `<div class="sec-row" data-i="${i}" style="display:flex;gap:6px;align-items:center">
+  const rows = () => rec.slots.map((x, i) => `<div class="sec-row" data-i="${i}" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
       <input class="inp" type="time" value="${esc(x.time || '')}" data-f="time" style="width:110px">
-      <select class="inp" data-f="member" style="flex:1"><option value="">— lliure —</option>${memberOptions(x.memberId || '')}</select>
+      <input class="inp" type="number" min="5" max="120" step="5" value="${+x.mins || usualMins()}" data-f="mins" style="width:72px" aria-label="Minuts">
+      <select class="inp" data-f="member" style="flex:1;min-width:130px"><option value="">— lliure —</option>${memberOptions(x.memberId || '')}</select>
       <button type="button" class="icon-btn" data-rm="${i}" aria-label="Treu aquesta hora">${ICON.close}</button>
     </div>`).join('');
   const read = el => {
@@ -162,6 +167,7 @@ function sheetClassDay(id, preset) {
       const i = +row.dataset.i;
       if (!rec.slots[i]) return;
       rec.slots[i].time = row.querySelector('[data-f="time"]').value;
+      rec.slots[i].mins = Math.max(5, +row.querySelector('[data-f="mins"]').value || usualMins());
       rec.slots[i].memberId = row.querySelector('[data-f="member"]').value;
       if (rec.slots[i].memberId) delete rec.slots[i].name;
     });
@@ -183,7 +189,7 @@ function sheetClassDay(id, preset) {
       <div class="field"><span>Genera les hores</span>
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
           <input class="inp" id="cd-from" type="time" value="17:00" style="width:110px">
-          <input class="inp" id="cd-mins" type="number" min="5" max="120" step="5" value="30" style="width:80px" aria-label="Minuts per classe">
+          <input class="inp" id="cd-mins" type="number" min="5" max="120" step="5" value="${usualMins()}" style="width:80px" aria-label="Minuts per classe">
           <span class="muted" style="font-size:var(--t-13)">min ·</span>
           <input class="inp" id="cd-n" type="number" min="1" max="20" value="6" style="width:70px" aria-label="Quantes classes">
           <button type="button" class="btn btn-sm" id="cd-gen">Genera</button>
@@ -194,11 +200,11 @@ function sheetClassDay(id, preset) {
     foot: `${ex ? `<button class="btn btn-danger-ghost" id="cd-del">Esborra</button><button class="btn" data-act="cl-cancel-day" data-c="${esc(rec.id)}">${ex.cancelled ? 'Restableix el dia' : 'Anul·la el dia'}</button>` : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="cd-save">Desa</button>`,
     onMount: el => {
       wire(el);
-      el.querySelector('#cd-add').onclick = () => { read(el); rec.slots.push({ id: uid('sl'), time: '', mins: 30, memberId: '' }); paint(el); };
+      el.querySelector('#cd-add').onclick = () => { read(el); rec.slots.push({ id: uid('sl'), time: '', mins: usualMins(), memberId: '' }); paint(el); };
       el.querySelector('#cd-gen').onclick = () => {
         read(el);
         const [h, m] = (el.querySelector('#cd-from').value || '17:00').split(':').map(Number);
-        const mins = Math.max(5, +el.querySelector('#cd-mins').value || 30), n = Math.min(20, Math.max(1, +el.querySelector('#cd-n').value || 1));
+        const mins = Math.max(5, +el.querySelector('#cd-mins').value || usualMins()), n = Math.min(20, Math.max(1, +el.querySelector('#cd-n').value || 1));
         const old = rec.slots.slice();
         rec.slots = [];
         for (let i = 0; i < n; i++) {
@@ -213,17 +219,19 @@ function sheetClassDay(id, preset) {
         if (!date) { toast('Posa-hi el dia'); return; }
         const dup = rec.slots.filter(x => x.memberId).map(x => x.memberId);
         if (new Set(dup).size !== dup.length) { toast(`Hi ha algun ${V.member} en dues hores del mateix dia`); return; }
-        saveClassDay({ ...rec, date, place: el.querySelector('#cd-place').value.trim(), note: el.querySelector('#cd-note').value.trim(),
+        const next = { ...rec, date, place: el.querySelector('#cd-place').value.trim(), note: el.querySelector('#cd-note').value.trim(),
           teacher: el.querySelector('#cd-who')?.value || rec.teacher || '',
           teacherName: teacherName(el.querySelector('#cd-who')?.value || rec.teacher || '') || rec.teacherName || '',
-          slots: rec.slots.filter(x => x.time).sort((a, b) => a.time.localeCompare(b.time)), at: new Date().toISOString(), by: S.email || '' });
-        closeSheet(); toast('Dia de classe desat'); render();
+          slots: rec.slots.filter(x => x.time).sort((a, b) => a.time.localeCompare(b.time)), edited: true, at: new Date().toISOString(), by: S.email || '' };
+        const told = classChanges(ex, next).length;
+        saveClassDay({ ...next, ...changeFields(ex, next) });
+        closeSheet(); toast(told ? `Dia de classe desat · s’avisarà ${told === 1 ? '1 persona' : `${told} persones`}` : 'Dia de classe desat'); render();
       };
       const del = el.querySelector('#cd-del');
       if (del) del.onclick = async () => {
         // Queda com a esborrat (i no s'esborra del tot) perquè els altres mòbils, que només demanen el que canvia, ho sàpiguen.
         const before = clone(S.classes.get(rec.id) || rec);
-        S.classes.delete(rec.id); persist('classes', rec.id, { id: rec.id, date: rec.date, teacher: rec.teacher || '', deleted: true, at: new Date().toISOString(), by: S.email || '' }, 10);
+        S.classes.delete(rec.id); persist('classes', rec.id, { id: rec.id, date: rec.date, teacher: rec.teacher || '', deleted: true, ...changeFields(before, null), at: new Date().toISOString(), by: S.email || '' }, 10);
         closeSheet(); render();
         undoable('Dia de classe esborrat', () => saveClassDay(before));
       };
@@ -357,7 +365,11 @@ function askFreeSlot(classId, slotId) {
 async function cancelClassDay(id) {
   const c = S.classes.get(id);
   if (!c) return;
-  if (c.cancelled) { saveClassDay({ ...c, cancelled: false, cancelledAt: '' }); toast('Dia restablert'); render(); return; }
+  if (c.cancelled) {
+    const back = c.date >= TODAY ? classSlots(c).filter(x => x.memberId && x.time).map(x => ({ m: x.memberId, b: `S’ha recuperat la teva classe de ${longDate(c.date).toLowerCase()} a les ${x.time}.` })) : [];
+    saveClassDay({ ...c, cancelled: false, cancelledAt: '', ...(back.length ? { changes: back, changedAt: new Date().toISOString() } : {}) });
+    toast('Dia restablert'); render(); return;
+  }
   const who = classSlots(c).filter(x => x.memberId).length;
   if (!await confirmSheet('Anul·lar el dia?', `S’avisarà ${who === 1 ? 'la persona' : `les ${who} persones`} que hi tenen hora. El dia queda marcat com a anul·lat, i el pots tornar a activar quan vulguis.`, 'Anul·la’l')) return;
   saveClassDay({ ...c, cancelled: true, cancelledAt: new Date().toISOString() });
@@ -368,8 +380,15 @@ function answerClassReq(id, status) {
   if (!r || r.status !== 'pending') return;
   // Acceptar una hora lliure vol dir donar-la: es posa aquella persona al calendari.
   if (r.kind === 'take' && status === 'accepted') {
-    const c = S.classes.get(r.classId);
-    if (c) saveClassDay({ ...c, slots: (c.slots || []).map(x => x.id === r.slotId ? { ...x, memberId: r.memberId, name: '' } : x) });
+    const c = S.classes.get(r.classId), sl = c && (c.slots || []).find(x => x.id === r.slotId);
+    const reviewed = { reviewedAt: new Date().toISOString(), reviewedBy: S.email || '' };
+    if (!sl || ((sl.memberId || sl.name) && sl.memberId !== r.memberId)) {
+      saveClassReq({ ...r, status: 'rejected', ...reviewed });
+      toast('Aquesta hora ja no està lliure'); render(); return;
+    }
+    saveClassDay({ ...c, edited: true, slots: c.slots.map(x => x.id === r.slotId ? { ...x, memberId: r.memberId, name: '' } : x) });
+    // Els altres que la demanaven ja saben que no.
+    for (const o of S.classReq.values()) if (o.id !== r.id && o.kind === 'take' && o.classId === r.classId && o.slotId === r.slotId && o.status === 'pending') saveClassReq({ ...o, status: 'rejected', ...reviewed });
   }
   saveClassReq({ ...r, status, reviewedAt: new Date().toISOString(), reviewedBy: S.email || '' });
   toast(status === 'accepted' ? 'Acceptat' : status === 'cancelled' ? 'Avís retirat' : 'Rebutjat');
@@ -392,13 +411,37 @@ function studentTeachers(mid, had) {
   return [...keys].filter(Boolean);
 }
 const NOTE_CACHE = new Map();   // les notes carregades a la fitxa, per obrir-ne l'enregistrament
+/** Un alumne que té classe amb mi però la fitxa encara és d'un altre professor: m'hi afegeixo. Les regles comproven que el dia de classe sigui meu i que hi surti. */
+async function joinStudent(mid) {
+  const me = myEmail();
+  const c = classDays(me).reverse().find(k => (k.slots || []).some(x => x.memberId === mid));
+  if (!c) return false;
+  try {
+    await db.doc(`classes/${c.id}`).set({ memberIds: [...new Set(c.slots.map(x => x.memberId).filter(Boolean))] }, { merge: true });
+    await db.doc(`students/${mid}`).update({ teachers: firebase.firestore.FieldValue.arrayUnion(me), viaClass: c.id, at: new Date().toISOString(), by: S.email || '' });
+    return true;
+  } catch { return false; }
+}
 async function sheetStudent(mid) {
   const m = S.members.get(mid);
   const teach = teachesClasses();
   if (!m || (!teach && mid !== myId())) return;
   openSheet({ title: m.name, wide: true, body: '<p class="muted" style="margin:0">Carregant la fitxa…</p>' });
-  let rec = { goals: '', repertoire: [] }, notes = [];
-  try { const d = await db.doc(`students/${mid}`).get(); if (d.exists) rec = { ...rec, ...d.data() }; } catch {}
+  let rec = { goals: '', repertoire: [] }, notes = [], loaded = 'ok';
+  const loadRec = async () => { const d = await db.doc(`students/${mid}`).get(); if (d.exists) rec = { ...rec, ...d.data() }; };
+  try { await loadRec(); }
+  catch (e) {
+    loaded = e && e.code === 'permission-denied' ? 'denied' : 'failed';
+    if (loaded === 'denied' && await joinStudent(mid)) { try { await loadRec(); loaded = 'ok'; } catch { loaded = 'failed'; } }
+  }
+  if (!sheetClose) return;
+  // Sense haver llegit la fitxa no s'ensenya un formulari buit: en desar-lo s'esborraria el que hi hagués.
+  if (loaded !== 'ok') {
+    openSheet({ title: m.name, body: `<p style="margin:0">${loaded === 'denied' ? `Aquesta fitxa la porta un altre ${esc(V.Teacher.toLowerCase())}. Quan ${esc(firstName(m.name))} tingui classe amb tu, la podràs obrir.` : 'No s’ha pogut carregar la fitxa. Comprova la connexió i torna-ho a provar.'}</p>` });
+    return;
+  }
+  // La pròpia fitxa sempre es llegeix com a alumne, encara que qui l'obri sigui de l'equip.
+  const edit = teach && mid !== myId();
   // Un professor només llegeix les notes de les seves classes (vegeu les regles); l'administració i l'alumne, totes.
   const q = db.collection('classNotes').where('memberId', '==', mid);
   try { notes = (await (isAdmin() || mid === myId() ? q : q.where('teacher', '==', myEmail())).get()).docs.map(d => d.data()); }
@@ -408,22 +451,22 @@ async function sheetStudent(mid) {
   for (const n of notes) NOTE_CACHE.set(n.id, n);
   rec.repertoire = (rec.repertoire || []).map(x => ({ ...x }));
   const hours = [...S.classPlan.values()].flatMap(p => (p.rows || []).filter(r => r.memberId === mid).map(r => `${capz(DAYS_CA[r.day])} ${r.time} amb ${teacherName(p.teacher || p.id) || V.Teacher}`));
-  const repRows = () => rec.repertoire.length ? rec.repertoire.map(x => teach
+  const repRows = () => rec.repertoire.length ? rec.repertoire.map(x => edit
     ? `<div class="sec-row st-rep" data-id="${esc(x.id)}" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
         <input class="inp" data-f="title" maxlength="80" value="${esc(x.title)}" placeholder="Obra" style="flex:2 1 150px;min-width:0">
         <input class="inp" data-f="composer" maxlength="50" value="${esc(x.composer || '')}" placeholder="Compositor" style="flex:1 1 110px;min-width:0">
         <select class="inp" data-f="status" style="flex:1 1 120px">${Object.entries(STUDENT_STATUS).map(([k, l]) => `<option value="${k}" ${x.status === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
         <button type="button" class="icon-btn" data-rm="${esc(x.id)}" aria-label="Treu-la">${ICON.close}</button></div>`
     : `<li><span><b>${esc(x.title)}</b>${x.composer ? ` · ${esc(x.composer)}` : ''}</span><span class="st-pill ${x.status === 'apunt' ? 'st-accepted' : 'st-pending'}">${STUDENT_STATUS[x.status] || ''}</span></li>`).join('')
-    : `<p class="muted" style="margin:0;font-size:var(--t-13)">${teach ? 'Encara no n’hi ha. Afegeix les obres que treballa.' : 'Encara no hi ha repertori.'}</p>`;
+    : `<p class="muted" style="margin:0;font-size:var(--t-13)">${edit ? 'Encara no n’hi ha. Afegeix les obres que treballa.' : 'Encara no hi ha repertori.'}</p>`;
   const read = el => {
-    if (!teach) return;
+    if (!edit) return;
     rec.goals = el.querySelector('#stu-goals').value.trim();
     el.querySelectorAll('.st-rep').forEach(row => { const x = rec.repertoire.find(z => z.id === row.dataset.id); if (x) for (const f of ['title', 'composer', 'status']) x[f] = row.querySelector(`[data-f="${f}"]`).value.trim(); });
   };
   const paint = el => {
     const box = el.querySelector('#stu-rep');
-    box.innerHTML = teach ? repRows() : (rec.repertoire.length ? `<ul class="mini-list" style="max-height:none">${repRows()}</ul>` : repRows());
+    box.innerHTML = edit ? repRows() : (rec.repertoire.length ? `<ul class="mini-list" style="max-height:none">${repRows()}</ul>` : repRows());
     box.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { read(el); rec.repertoire = rec.repertoire.filter(x => x.id !== b.dataset.rm); paint(el); });
   };
   openSheet({
@@ -431,16 +474,16 @@ async function sheetStudent(mid) {
     wide: true,
     body: `<p style="margin-top:0"><span class="muted" style="font-size:var(--t-13)">${esc(SEC[m.section].name)}${hours.length ? ` · ${esc(hours.join(' · '))}` : ''}</span></p>
       <div class="section-title"><h2 class="h2">Objectius</h2></div>
-      ${teach ? `<textarea class="inp" id="stu-goals" maxlength="1000" style="min-height:80px" placeholder="p. ex. Guanyar agilitat a la zona aguda. Treballar el suport a les frases llargues.">${esc(rec.goals || '')}</textarea>`
+      ${edit ? `<textarea class="inp" id="stu-goals" maxlength="1000" style="min-height:80px" placeholder="p. ex. Guanyar agilitat a la zona aguda. Treballar el suport a les frases llargues.">${esc(rec.goals || '')}</textarea>`
         : `<p style="white-space:pre-wrap;margin:0">${esc(rec.goals || '') || '<span class="muted">Encara no n’hi ha.</span>'}</p>`}
-      <div class="section-title" style="margin-top:14px"><h2 class="h2">Repertori</h2>${teach ? '<button type="button" class="btn btn-sm" id="stu-add">' + ICON.plus + 'Obra</button>' : ''}</div>
+      <div class="section-title" style="margin-top:14px"><h2 class="h2">Repertori</h2>${edit ? '<button type="button" class="btn btn-sm" id="stu-add">' + ICON.plus + 'Obra</button>' : ''}</div>
       <div id="stu-rep" style="display:grid;gap:8px"></div>
       <div class="section-title" style="margin-top:14px"><h2 class="h2">Notes de classe</h2><span class="eyebrow">${notes.length}</span></div>
       ${notes.length ? `<ul class="mini-list" style="max-height:none">${notes.map(n => `<li style="display:grid;gap:4px"><span class="m mono">${esc(shortDate(n.date))}</span>${n.text ? `<span style="white-space:pre-wrap">${esc(n.text)}</span>` : ''}
           ${n.file ? `<button class="btn btn-sm" style="justify-self:start" data-act="cl-rec" data-id="${esc(n.id)}">Escolta l’enregistrament</button>` : ''}</li>`).join('')}</ul>`
         : '<p class="muted" style="margin:0;font-size:var(--t-13)">Encara no hi ha notes.</p>'}
-      ${teach ? '' : `<p class="muted" style="font-size:var(--t-13);margin-top:12px">Només ho veieu tu i el professorat de cant.</p>`}`,
-    foot: teach ? `<span class="spacer"></span><button class="btn" data-act="sheet-close">Tanca</button><button class="btn btn-primary" id="stu-save">Desa</button>` : '',
+      ${edit ? '' : `<p class="muted" style="font-size:var(--t-13);margin-top:12px">Només ho veieu tu i el professorat de cant.</p>`}`,
+    foot: edit ? `<span class="spacer"></span><button class="btn" data-act="sheet-close">Tanca</button><button class="btn btn-primary" id="stu-save">Desa</button>` : '',
     onMount: el => {
       paint(el);
       el.querySelector('#stu-add')?.addEventListener('click', () => { read(el); rec.repertoire.push({ id: uid('sr'), title: '', composer: '', status: 'treballant' }); paint(el); });

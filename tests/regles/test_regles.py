@@ -952,6 +952,22 @@ expect("AA8h el seu professor sí", get(f"cors/{F}/classFiles/f1_0", T["prof"]),
 expect("AA8i un altre professor no escriu la nota", commit([upd(f"cors/{F}/classNotes/c1_s1", {"text": "X"}, ["text"])], T["prof2"]), False)
 expect("AA8j ni se la fa seva", commit([upd(f"cors/{F}/classNotes/c1_s1", {"teacher": "prof2@exemple.cat"}, ["teacher"])], T["prof2"]), False)
 expect("AA8k ni es posa a la fitxa de l'alumne", commit([upd(f"cors/{F}/students/m1", {"teachers": ["prof@exemple.cat", "prof2@exemple.cat"]}, ["teachers"])], T["prof2"]), False)
+# Un altre professor que passa a tenir l'alumne s'afegeix a la fitxa, només si el dia de classe és seu i l'alumne hi surt.
+seed(f"cors/{F}/students/m7", {"memberId": "m7", "goals": "Aguts", "teachers": ["prof@exemple.cat"]})
+seed(f"cors/{F}/classes/cj1", {"id": "cj1", "date": "2026-10-06", "teacher": "prof2@exemple.cat", "memberIds": ["m7"], "slots": []})
+seed(f"cors/{F}/classes/cj2", {"id": "cj2", "date": "2026-10-07", "teacher": "prof2@exemple.cat", "memberIds": ["m1"], "slots": []})
+seed(f"cors/{F}/classes/cj3", {"id": "cj3", "date": "2026-10-08", "teacher": "prof@exemple.cat", "memberIds": ["m7"], "slots": []})
+JOIN = ["teachers", "viaClass", "at", "by"]
+both = ["prof@exemple.cat", "prof2@exemple.cat"]
+expect("AA8l no s'hi afegeix amb un dia d'un altre professor", commit([upd(f"cors/{F}/students/m7", {"teachers": both, "viaClass": "cj3", "at": "x", "by": "y"}, JOIN)], T["prof2"]), False)
+expect("AA8m ni amb un dia on l'alumne no surt", commit([upd(f"cors/{F}/students/m7", {"teachers": both, "viaClass": "cj2", "at": "x", "by": "y"}, JOIN)], T["prof2"]), False)
+expect("AA8n ni aprofita per tocar els objectius", commit([upd(f"cors/{F}/students/m7", {"teachers": both, "viaClass": "cj1", "goals": "Res"}, ["teachers", "viaClass", "goals"])], T["prof2"]), False)
+expect("AA8o ni en treu l'altre professor", commit([upd(f"cors/{F}/students/m7", {"teachers": ["prof2@exemple.cat"], "viaClass": "cj1"}, ["teachers", "viaClass"])], T["prof2"]), False)
+expect("AA8p ni hi posa una altra persona", commit([upd(f"cors/{F}/students/m7", {"teachers": ["prof@exemple.cat", "x@exemple.cat"], "viaClass": "cj1"}, ["teachers", "viaClass"])], T["prof2"]), False)
+expect("AA8q però amb el seu dia de classe, sí", commit([upd(f"cors/{F}/students/m7", {"teachers": both, "viaClass": "cj1", "at": "x", "by": "y"}, JOIN)], T["prof2"]), True)
+expect("AA8r i ja la pot llegir", get(f"cors/{F}/students/m7", T["prof2"]), True)
+expect("AA8s una fitxa que encara no existeix, el professorat ho pot saber", get(f"cors/{F}/students/ningu", T["prof"]), True)
+expect("AA8t un cantaire, no", get(f"cors/{F}/students/ningu", T["singer"]), False)
 # El calendari personal: la clau, només de cadascú.
 expect("AA9 el cantaire es fa la clau del seu calendari", commit([upd(f"cors/{F}/calKeys/m1", {"memberId": "m1", "token": "K" * 32, "at": now})], T["singer"]), True)
 expect("AA9b no la d'un altre", commit([upd(f"cors/{F}/calKeys/m2", {"memberId": "m2", "token": "K" * 32, "at": now})], T["singer"]), False)

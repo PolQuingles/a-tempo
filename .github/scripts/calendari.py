@@ -92,13 +92,13 @@ def session_event(s, pnames, names, details):
     return L
 
 
-def class_events(days, mid):
+def class_events(days, mid, reqs=None):
     """Les hores de classe d'una sola persona, sense ningú més."""
     out = []
     for c in sorted(days.values(), key=lambda x: x.get("date") or ""):
         if c.get("cancelled") or c.get("deleted"):
             continue
-        for x in c.get("slots") or []:
+        for x in dades.class_slots(c, reqs):
             if x.get("memberId") != mid or not c.get("date") or not x.get("time"):
                 continue
             try:
@@ -163,6 +163,7 @@ for gid, entry in groups.items():
         old_keys = read(f"cors/{gid}/classIcs") if cfg.get("classesOn") else {}
         if keys or old_keys:
             days = r.list(f"cors/{gid}/classes") if cfg.get("classesOn") else {}
+            swaps = read(f"cors/{gid}/classReq") if days else {}
             if keys:
                 prods = prods if prods is not None else r.list(f"cors/{gid}/productions")
                 ps = norma.apply_guests(norma.apply_choices(prods, read(f"cors/{gid}/prodChoice")))
@@ -175,14 +176,14 @@ for gid, entry in groups.items():
                     mine = [s for s in sessions if norma.convoked(s, m.get("section")) and not norma.excluded(ps, mid, s.get("prods") or [])]
                     events = [session_event(s, [ps[p]["name"] for p in s.get("prods") or [] if p in ps and ps[p].get("name")], names, True) for s in mine]
                     target = os.path.join(OUT, f"calendaris/p/{token}.ics")
-                    write(target, calendar(f"{cfg.get('name') or 'Agrupació'} · el meu calendari", events + class_events(days, mid)))
+                    write(target, calendar(f"{cfg.get('name') or 'Agrupació'} · el meu calendari", events + class_events(days, mid, swaps)))
                     published.add(target)
                     personal += 1
             for mid, k in old_keys.items():
                 token = str(k.get("token") or "")
                 if TOKEN.fullmatch(token):
                     target = os.path.join(OUT, f"calendaris/classes/{token}.ics")
-                    write(target, calendar(f"Classes · {cfg.get('name') or 'Agrupació'}", class_events(days, k.get("memberId") or mid)))
+                    write(target, calendar(f"Classes · {cfg.get('name') or 'Agrupació'}", class_events(days, k.get("memberId") or mid, swaps)))
                     published.add(target)
                     personal += 1
     if marca:

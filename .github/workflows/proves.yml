@@ -77,7 +77,7 @@ jobs:
       - name: La norma de l'app i la dels avisos diuen el mateix
         run: python3 tests/logica/test_norma.py
       - name: Avisos al mòbil entre passades (dades inventades, sense enviar res)
-        run: python3 tests/logica/test_avisos.py
+        run: python3 tests/logica/test_avisos.py && python3 tests/logica/test_avisos_classes.py
       - name: Els resultats muts de les bandes (servidor)
         run: python3 tests/logica/test_bandes.py
   estructura:

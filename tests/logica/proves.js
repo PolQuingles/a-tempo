@@ -729,6 +729,37 @@ prova('Bandes: l’anell dels resultats muts (sense noms) i quan es veu', () => 
   igual(bandesVotes({ id: 'q', ballotsGone: '2027-01-27' }), [], 'amb les paperetes esborrades, no en compta cap (encara que el mòbil en tingui)');
 });
 
+prova('classes: un horari nou no trenca el que ja hi ha', () => {
+  const prev = { slots: [{ id: 'a', time: '17:00', memberId: 'm1', mark: 'P', markFor: 'm1' }, { id: 'b', time: '17:40', memberId: 'm2' }, { id: 'c', time: '18:20', memberId: '' }] };
+  const slots = [{ id: 'n1', time: '17:00', memberId: 'm1' }, { id: 'n2', time: '18:00', memberId: 'm2' }, { id: 'n3', time: '18:20', memberId: '' }, { id: 'n4', time: '19:00', memberId: 'm3' }];
+  igual(keepSlotIds(slots, prev).map(x => x.id), ['a', 'b', 'c', 'n4'], 'les hores conserven l’id');
+  igual(slots[0].mark, 'P', 'la marca es manté');
+  cert(slots.every(x => !('linked' in x)), 'no queda res temporal');
+  cert(keptDay({ date: D(3), cancelled: true }) && keptDay({ date: D(3), edited: true }) && keptDay({ date: D(-1) }), 'anul·lats, canviats a mà i passats no es toquen');
+  cert(!keptDay({ date: D(3) }) && !keptDay(undefined), 'la resta sí');
+});
+prova('classes: què s’avisa quan canvia un dia', () => {
+  const day = (date, slots, place = '') => ({ id: 'd', date, place, slots });
+  const was = day(D(2), [{ id: 'a', time: '17:00', memberId: 'm1' }, { id: 'b', time: '17:40', memberId: 'm2' }]);
+  igual(classChanges(was, was), [], 'sense canvis, res');
+  const ch = classChanges(was, day(D(2), [{ id: 'a', time: '18:00', memberId: 'm1' }, { id: 'c', time: '18:40', memberId: 'm3' }]));
+  igual(ch.map(x => x.m), ['m1', 'm2', 'm3'], 'qui s’ha d’assabentar');
+  cert(/passa a/.test(ch[0].b) && /Ja no tens/.test(ch[1].b) && /classe nova/.test(ch[2].b), 'el text de cadascú');
+  igual(classChanges(was, null).length, 2, 'un dia esborrat avisa tothom');
+  cert(/serà a Aula 3/.test(classChanges(was, { ...was, place: 'Aula 3' })[0].b), 'un canvi d’aula');
+  igual(classChanges({ ...was, cancelled: true }, was), [], 'un dia anul·lat ja s’ha avisat a part');
+  const past = day(D(-2), was.slots);
+  igual(classChanges(past, { ...past, slots: [] }), [], 'el passat no avisa');
+});
+prova('classes: les peticions velles deixen de sortir', () => {
+  const keep = new Map(S.classes);
+  S.classes.set('fut', { id: 'fut', date: D(1) }); S.classes.set('pas', { id: 'pas', date: D(-1) }); S.classes.set('off', { id: 'off', date: D(1), cancelled: true });
+  cert(reqOpen({ classId: 'fut' }), 'una classe que ve');
+  cert(!reqOpen({ classId: 'pas' }) && !reqOpen({ classId: 'off' }) && !reqOpen({ classId: 'no-hi-es' }), 'passada, anul·lada o sense dia');
+  cert(!reqOpen({ classId: 'fut', withClassId: 'pas' }), 'un canvi amb un dia que ja ha passat');
+  S.classes = keep;
+});
+
 /** Executa totes les proves: { ok, fail, lines }. */
 function runProves() {
   const lines = [];

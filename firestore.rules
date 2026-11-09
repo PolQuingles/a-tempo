@@ -135,6 +135,19 @@ service cloud.firestore {
     // i la fitxa de l'alumne, qui el porta (teachers). L'administració ho veu tot.
     function teacherOf(c, d) { return teaches(c) && (isAdmin(c) || d.get('teacher', '') == email()); }
     function teachersOf(c, d) { return teaches(c) && (isAdmin(c) || email() in d.get('teachers', [])); }
+    // Un altre professor que passa a tenir aquest alumne s'afegeix a la seva fitxa i prou: només si el dia de classe que indica
+    // (viaClass) és seu i l'alumne hi surt (memberIds). No pot treure ningú ni tocar res més.
+    function joinsStudent(c, mid) {
+      let after = request.resource.data;
+      let day = get(/databases/$(database)/documents/cors/$(c)/classes/$(after.viaClass)).data;
+      let had = resource.data.get('teachers', []).toSet();
+      return teaches(c)
+        && after.diff(resource.data).affectedKeys().hasOnly(['teachers', 'viaClass', 'at', 'by'])
+        && after.teachers.toSet().difference(had) == [email()].toSet()
+        && after.teachers.toSet().hasAll(had)
+        && day.get('teacher', '') == email()
+        && mid in day.get('memberIds', []);
+    }
     // Pot canviar la identitat de l'agrupació o esborrar-la: n'és administrador i és Usuari Pro.
     function canManage(c) { return isAdmin(c) && isPro(); }
     // Camps de config/main que fan d'identitat de l'agrupació.
@@ -192,7 +205,7 @@ service cloud.firestore {
     // tools/stamp.py hi escriu l'empremta d'aquest fitxer. La vigilància comprova que les regles publicades són les del
     // repositori demanant reglesVersio/<empremta>: si les publicades són unes altres, la lectura es denega.
     match /reglesVersio/{v} {
-      allow get: if v == '606745e8c24b';
+      allow get: if v == 'a3fbd37e1bda';
     }
 
     match /plataforma/equip {
@@ -695,9 +708,10 @@ service cloud.firestore {
       }
       // La fitxa de cant de cada alumne (objectius i repertori): la fa el seu professorat (teachers) i la veu l'alumne.
       match /students/{mid} {
-        allow read: if teachersOf(c, resource.data) || (hasSpace(c) && mine(c, mid));
+        // Si encara no existeix, el professorat ho ha de poder saber: és diferent de no tenir-hi accés.
+        allow read: if (resource == null && teaches(c)) || teachersOf(c, resource.data) || (hasSpace(c) && mine(c, mid));
         allow create: if teachersOf(c, request.resource.data);
-        allow update: if teachersOf(c, resource.data) && teachersOf(c, request.resource.data);
+        allow update: if (teachersOf(c, resource.data) && teachersOf(c, request.resource.data)) || joinsStudent(c, mid);
         allow delete: if teachersOf(c, resource.data);
       }
       // Enregistraments de classe, a trossos com els fitxers del tauler: només el professor que els ha pujat i l'alumne.
