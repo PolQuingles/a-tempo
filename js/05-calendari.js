@@ -4,7 +4,7 @@
 
 /* ---------- View: Calendar ---------- */
 function viewCalendar() {
-  const prods = productionsSorted();
+  const prods = productionsByNow();
   if (ui.calProd !== 'all' && !S.productions.has(ui.calProd)) ui.calProd = 'all';
   const chips = `<div class="chips" role="group" aria-label="Filtra per producció">
     <button class="chip" aria-pressed="${ui.calProd === 'all'}" data-act="cal-prod" data-id="all">Totes</button>
@@ -19,23 +19,24 @@ function viewCalendar() {
   if (!prods.length) return head + `<div class="empty">${staffSvg()}<h2 class="h2">Cap producció</h2><p>Les sessions s’organitzen per produccions.</p>${canProd() ? '<button class="btn btn-primary" data-act="prod-new">Nova producció</button>' : ''}</div>`;
 
   if (month) return head + chips + calMonthView();
-  const shown = ui.calProd === 'all' ? prods : prods.filter(p => p.id === ui.calProd);
   let body = '';
   let hiddenPast = 0;
-  for (const p of shown) {
-    // In «Totes», a shared session appears once, under its own production.
-    let sessions = allSessions(p.id).filter(s => ui.calProd !== 'all' || s.prodId === p.id);
+  if (ui.calProd === 'all') {
+    // «Totes» és l'agenda, per dates i amb les classes de cadascú al seu dia. Una sessió compartida hi surt una sola vegada.
+    const every = allSessions(), coming = every.filter(s => s.date >= TODAY);
+    if (!ui.calPast) hiddenPast = every.length - coming.length;
+    body = calMonths([
+      ...(ui.calPast ? every : coming).map(s => ({ date: s.date, at: s.time || '', row: () => calRow(s, '', true, true) })),
+      ...calClasses().filter(x => ui.calPast || x.c.date >= TODAY).map(x => ({ date: x.c.date, at: x.slot?.time || '', row: () => calClassRow(x) })),
+    ].sort((x, y) => (x.date + x.at).localeCompare(y.date + y.at)));
+    if (body) body = `<section class="cal-agenda">${body}</section>`;
+  } else {
+    const p = S.productions.get(ui.calProd);
+    let sessions = allSessions(p.id);
     const total = sessions.length;
     if (!ui.calPast) { const before = sessions.length; sessions = sessions.filter(s => s.date >= TODAY); hiddenPast += before - sessions.length; }
-    if (ui.calProd === 'all' && !sessions.length) continue;
-    let rows = '', month = '';
-    for (const s of sessions) {
-      const m = s.date.slice(0, 7);
-      if (m !== month) { if (rows) rows += '</ul>'; month = m; rows += `<div class="cal-month">${monthYear(s.date)}</div><ul class="cal-list">`; }
-      rows += calRow(s, p.id);
-    }
-    if (rows) rows += '</ul>';
-    body += `<section class="cal-prod prod-tone" style="--ph:${prodHue(p)}">
+    const rows = calMonths(sessions.map(s => ({ date: s.date, row: () => calRow(s, p.id) })));
+    body = `<section class="cal-prod prod-tone" style="--ph:${prodHue(p)}">
       <div class="cal-prod-h">${posterThumb(p)}<div class="cph-b"><h2 class="h2"><i class="pdot"></i>${esc(p.name)}</h2>
         <div class="cph-m"><span class="mono muted">${total} ${total === 1 ? 'sessió' : 'sessions'}</span>${canWriteAll() && msgProds().some(x => x.id === p.id) ? `<button class="btn btn-sm btn-ghost" data-act="msg-new" data-prod="${esc(p.id)}" title="Un missatge a qui fa ${esc(p.name)}">Escriu a qui la fa</button>` : ''}</div></div></div>
       ${rows || `<p class="muted">No queden sessions pendents. ${ui.calPast ? '' : 'Mostra les passades per veure-les.'}</p>`}
@@ -43,18 +44,17 @@ function viewCalendar() {
   }
   if (!body) body = `<div class="empty"><p>No hi ha sessions properes${hiddenPast ? ` (${hiddenPast} ja passades)` : ''}.</p><button class="btn" data-act="cal-past">Mostra les passades</button></div>`;
   else if (ui.calPast || hiddenPast) body = `<button class="linkish cal-past-link" data-act="cal-past">${ui.calPast ? 'Amaga les sessions passades' : hiddenPast === 1 ? 'Mostra la sessió passada' : `Mostra les ${hiddenPast} sessions passades`}</button>${body}`;
-  // Les classes de cadascú, en un bloc a part (no són de cap producció).
-  const cls = ui.calProd === 'all' ? calClasses().filter(x => ui.calPast || x.c.date >= TODAY) : [];
-  if (cls.length) {
-    let rows = '', mo = '';
-    for (const x of cls) {
-      const m = x.c.date.slice(0, 7);
-      if (m !== mo) { if (rows) rows += '</ul>'; mo = m; rows += `<div class="cal-month">${monthYear(x.c.date)}</div><ul class="cal-list">`; }
-      rows += calClassRow(x);
-    }
-    body += `<section class="cal-prod cal-classes"><div class="cal-prod-h"><h2 class="h2"><i class="pdot" style="background:var(--accent)"></i>${esc(V.classes)}</h2><span class="mono muted" style="font-size:calc(13px*var(--ts));white-space:nowrap">${cls.length} ${cls.length === 1 ? 'dia' : 'dies'}</span></div>${rows}</ul></section>`;
-  }
   return head + chips + body;
+}
+/** Les files agrupades per mesos, cada mes amb el seu títol. */
+function calMonths(items) {
+  let rows = '', month = '';
+  for (const x of items) {
+    const m = x.date.slice(0, 7);
+    if (m !== month) { if (rows) rows += '</ul>'; month = m; rows += `<div class="cal-month">${monthYear(x.date)}</div><ul class="cal-list">`; }
+    rows += x.row();
+  }
+  return rows ? `${rows}</ul>` : '';
 }
 /** Les classes que surten al calendari de cadascú: les hores que hi tinc i, si en faig, els dies que dono. */
 function calClasses() {
@@ -120,7 +120,7 @@ function calMonthView() {
     ${daySessions.length || (clByDay.get(ui.calDay) || []).length ? `<ul class="cal-list cal-day-list">${daySessions.map(x => calRow(x, x.prodId, true)).join('')}${(clByDay.get(ui.calDay) || []).map(calClassRow).join('')}</ul>`
       : `<div class="panel" style="padding:14px;font-size:calc(13.5px*var(--ts));color:var(--muted)">Cap sessió aquest dia.</div>`}`;
 }
-function calRow(s, underProd, tone) {
+function calRow(s, underProd, tone, named) {
   let marks;
   if (attHidden()) marks = '';   // llistes privades: ni com van les llistes ni el percentatge de la sessió
   else if (!canEdit()) marks = '';   // com van les llistes de cada corda només li diu res a qui en passa
@@ -146,12 +146,12 @@ function calRow(s, underProd, tone) {
   const r = rate(c);
   const rv = s.rsvp && canEdit() ? rsvpCounts(s) : null;
   const right = `<span class="cal-right">${marks ? `<span class="vmarks" aria-label="Llista per ${V.sections}">${marks}</span>` : ''}${r != null ? `<span class="cal-pct">${pct(r)}</span>` : rv ? `<span class="cal-badge" title="Confirmacions">${rv.yes}✓ ${rv.no}✗ ${rv.none}?</span>` : ''}</span>`;
-  const other = sessionProds(s).filter(id => id !== underProd).map(id => S.productions.get(id)?.name).filter(Boolean);
+  const other = named ? [] : sessionProds(s).filter(id => id !== underProd).map(id => S.productions.get(id)?.name).filter(Boolean);
   const cls = [s.date === TODAY ? 'is-today' : '', s.date < TODAY ? 'is-past' : '', isShow(s) ? 'type-concert' : ''].join(' ');
   return `<li class="cal-row ${cls}${tone ? ' prod-tone' : ''}" data-date="${s.date}"${tone ? ` style="--ph:${prodHue(S.productions.get(s.prodId))}"` : ''}>
     <button class="cal-main" data-act="open-session" data-sid="${s.id}">
       <span class="cal-date"><b>${+s.date.slice(8, 10)}</b><small>${wdShort(s.date)}</small></span>
-      <span class="cal-info"><span class="cal-type">${esc(s.type || 'Assaig')}</span><span class="cal-place">${[s.info?.call ? `Convocatòria <span class="mono">${esc(s.info.call)}</span>` : '', s.time ? `<span class="mono">${esc(timeRange(s))}</span>` : '', esc(s.place || ''), esc(s.note || ''), other.length ? `També: ${esc(other.join(', '))}` : ''].filter(Boolean).join(' · ')}</span>${planOf(s) && planWorks(s.plan.items).length ? `<span class="cal-plan">${esc(planLine(s.plan.items, false))}</span>` : ''}</span>
+      <span class="cal-info"><span class="cal-type">${esc(named ? prodNames(s) : s.type || 'Assaig')}</span><span class="cal-place">${[named ? esc(s.type || 'Assaig') : '', s.info?.call ? `Convocatòria <span class="mono">${esc(s.info.call)}</span>` : '', s.time ? `<span class="mono">${esc(timeRange(s))}</span>` : '', esc(s.place || ''), esc(s.note || ''), other.length ? `També: ${esc(other.join(', '))}` : ''].filter(Boolean).join(' · ')}</span>${planOf(s) && planWorks(s.plan.items).length ? `<span class="cal-plan">${esc(planLine(s.plan.items, false))}</span>` : ''}</span>
       ${right}
     </button>
     ${hasInfo(s) || planOf(s) || seatRows(s).length || (canProd() && isShow(s)) ? `<button class="icon-btn info" data-act="session-info" data-sid="${s.id}" aria-label="Fitxa de la sessió">${ICON.info}</button>` : ''}

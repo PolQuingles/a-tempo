@@ -175,7 +175,7 @@ function classQuads() {
     </button>`;
   }).join('');
   const anyPend = teach && list.some(t => classPending(t.key).length);
-  return `<div class="quads ${list.length === 4 ? '' : `n-other${list.length > 6 ? ' n-many' : ''}`}" data-n="${list.length}">${quads}</div>
+  return `<div class="quads cl-quads ${list.length === 4 ? '' : `n-other${list.length > 6 ? ' n-many' : ''}`}" data-n="${list.length}">${quads}</div>
     ${anyPend ? '<div class="q-legend"><span><i style="background:var(--fnj)"></i>Té canvis per veure</span></div>' : ''}`;
 }
 /** L'espai d'un professor/a: el mes, el dia triat hora per hora i els dies que vénen. */

@@ -71,6 +71,8 @@ function messagesBlock() {
   const write = canMessage() || canWriteTo() ? '<button class="btn btn-sm" data-act="write">Escriu</button>'
     : myId() && !PREVIEW ? '<button class="btn btn-sm" data-act="thread-new">Escriu a l’equip</button>' : '';
   const conv = threads || (myId() && (canWriteAll() || lead)) ? `<button class="btn btn-sm" data-act="threads">Converses${unreadThreads().length ? ` (${unreadThreads().length})` : ''}</button>` : '';
+  // Sense missatges no hi ha cap títol que encapçali un buit: només la fila per escriure.
+  if (!list.length) return conv || write ? `<div class="msgs-none"><span class="muted">Cap missatge nou</span><span class="msgs-none-a">${conv}${write}</span></div>` : '';
   return `<div class="section-title"><h2 class="h2">Missatges</h2><span style="display:flex;gap:6px;flex-wrap:wrap">${conv}${write}</span></div>
     ${list.length ? `<div class="panel msgs">${list.slice(0, 3).map(m => msgCard(m)).join('')}
       ${list.length > 3 || list.some(m => (m.body || '').length > 180) ? `<div style="padding:4px 14px 12px"><button class="btn btn-sm btn-ghost" data-act="msg-list">Tots els missatges${list.length > 3 ? ` (${list.length})` : ''}</button></div>` : ''}</div>`

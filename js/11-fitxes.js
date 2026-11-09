@@ -206,7 +206,7 @@ function sheetSessionInfo(sid) {
   const mineAb = canWarn ? myAbsence(s, me) : undefined;
   const absenceAct = canWarn
     ? mineAb ? `<span class="st-pill st-${mineAb.status}">${mineAb.kind === 'late' ? 'Has avisat que arribaràs tard' : 'Has avisat que no hi vas'}</span>`
-      : `<button class="btn btn-primary" data-act="absence-new" data-sid="${esc(s.id)}">No hi puc anar o arribaré tard</button>` : '';
+      : `<button class="btn btn-primary" data-act="absence-new" data-sid="${esc(s.id)}">Avisa d’una absència o retard</button>` : '';
   const text = [`${s.type || 'Assaig'} · ${prodNames(s)}`, `${longDate(s.date)}${s.time ? ` · ${timeRange(s)}` : ''}`, s.place ? `Lloc: ${s.place}` : '',
     ...INFO_FIELDS.filter(([k]) => s.info?.[k]).map(([k, l]) => `${l}: ${s.info[k]}`), infoSteps(s).length ? `Horari:\n${stepsText(s)}` : '', s.note || ''].filter(Boolean).join('\n');
   openSheet({
@@ -214,7 +214,6 @@ function sheetSessionInfo(sid) {
     body: `${prod && prod.poster && isShow(s) ? `<button class="poster-banner" data-act="poster" data-pid="${esc(prod.id)}" aria-label="Cartell de ${esc(prod.name)}"><img src="${esc(prod.poster)}" alt=""></button>` : ''}<div class="prod-band prod-tone" style="--ph:${prodHue(prod)}"><h2 class="h2"><i class="pdot"></i>${esc(prodNames(s))}</h2><span class="eyebrow">${esc(s.type || 'Assaig')}</span></div>
       ${fitxaHtml(s)}
       ${s.note ? `<p class="fitxa-note">${esc(s.note)}</p>` : ''}
-      ${hasInfo(s) ? '' : `<p class="muted" style="font-size:calc(13px*var(--ts))">Encara no hi ha indicacions de convocatòria, vestuari ni punt de trobada.</p>`}
       ${planOf(s) || canProd() ? `<div class="section-title" style="margin-top:16px"><h2 class="h2">${isShow(s) ? 'Programa' : s.date < TODAY ? 'Què s’hi va treballar' : 'Pla d’assaig'}</h2>${canProd() ? `<button class="btn btn-sm" data-act="plan-edit" data-sid="${s.id}">${planOf(s) ? 'Edita’l' : 'Fes-lo'}</button>` : ''}</div>
         ${planHtml(s, false, planSec(s)) || `<p class="muted" style="font-size:calc(13px*var(--ts));margin:0">${isShow(s) ? 'Encara no hi ha programa: quines obres es cantaran i en quin ordre.' : 'Encara no hi ha pla: quines obres i quins compassos s’assajaran.'}</p>`}` : ''}
       ${tasksBlock(s)}
@@ -232,7 +231,7 @@ function fitxaChip(s) {
 }
 function sheetSession(sid, presetProd, presetDate) {
   const existing = sid ? sessionById(sid) : null;
-  const prods = productionsSorted();
+  const prods = productionsByNow();
   if (!prods.length) { toast('Primer crea una producció'); ui.tab = 'gestio'; ui.manage = 'produccions'; closeSheet(); render(); return; }
   const cur = existing || { id: uid('s'), date: presetDate || TODAY, time: '20:30', end: '22:30', type: 'Assaig', place: '', note: '', sections: [], prodId: presetProd || (ui.calProd !== 'all' ? ui.calProd : currentProductionId()) };
   const secs = new Set(cur.sections && cur.sections.length ? cur.sections : SECTIONS.map(x => x.id));

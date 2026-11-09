@@ -20,14 +20,14 @@ const forMyVoice = (x, me) => !me || ((!x.section || x.section === me.section) &
 const roleNames = r => (r.memberIds || []).map(id => S.members.get(id)?.name).filter(Boolean);
 
 function boardRepertoire() {
-  const prods = productionsSorted();
+  const prods = productionsByNow();
   if (ui.matProd !== 'all' && (!ui.matProd || !S.productions.has(ui.matProd))) ui.matProd = currentProductionId() || 'all';
   const all = ui.matProd === 'all';
   const prod = all ? null : S.productions.get(ui.matProd);
   const me = S.members.get(myMemberId());
   const onlyMine = !!me && !canRepertoire() && ui.matMine !== false;
   const works = all ? worksSorted() : worksOf(prod.id);
-  const chips = `<div class="filters"><label class="sel"><span class="sr">Producció</span><select data-pick="mat-prod">
+  const chips = `<div class="filters full"><label class="sel"><span class="sr">Producció</span><select data-pick="mat-prod">
       <option value="all" ${all ? 'selected' : ''}>Tot el repertori · ${S.works.size}</option>
       ${prods.map(p => `<option value="${p.id}" ${prod && p.id === prod.id ? 'selected' : ''}>${esc(p.name)}${worksOf(p.id).length ? ` · ${worksOf(p.id).length}` : ''}</option>`).join('')}</select></label></div>`;
   const tools = canRepertoire()

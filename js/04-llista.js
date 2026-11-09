@@ -159,7 +159,7 @@ function rsvpCounts(session) {
 }
 function rsvpPanel(session) {
   const r = rsvpCounts(session);
-  return `<div class="section-title"><h2 class="h2">Confirmacions</h2><span class="eyebrow">${session.rsvpBy ? `fins al ${ddmm(session.rsvpBy)}` : 'convocatòria'}</span></div>
+  return `<div class="section-title"><h2 class="h2">Confirmacions</h2><span class="eyebrow">${session.rsvpBy ? `fins al ${shortDate(session.rsvpBy)}` : 'convocatòria'}</span></div>
     <div class="panel rsvp-panel">
       <div class="rsvp-nums"><span><b style="color:var(--p)">${r.yes}</b><span>hi seran</span></span><span><b style="color:var(--fnj)">${r.no}</b><span>no hi seran</span></span><span><b style="color:var(--muted)">${r.none}</b><span>sense resposta</span></span></div>
       <div class="legend" style="margin:0">${SECTIONS.filter(x => r.bySec[x.id]).map(x => `<span><b>${esc(x.short)}</b> ${r.bySec[x.id].yes}✓ ${r.bySec[x.id].no}✗ ${r.bySec[x.id].none}?</span>`).join('')}</div>
@@ -284,7 +284,7 @@ function rowHtml(session, m) {
   let state = 'Pendent', warn = false;
   if (mk) {
     if (s === 'R') { if (mk.min) state = `Retard ${mk.min}′`; else { state = 'Indica els minuts'; warn = true; } }
-    else if (mk.auto) state = mk.why === 'leave' ? `De baixa${mk.leave?.to ? ` fins al ${ddmm(mk.leave.to)}` : ''}` : 'No fa la producció';
+    else if (mk.auto) state = mk.why === 'leave' ? `De baixa${mk.leave?.to ? ` fins al ${shortDate(mk.leave.to)}` : ''}` : 'No fa la producció';
     else state = STATUS[s].label;
     if ((s === 'P' || s === 'R') && +mk.early > 0) state += ` · ha marxat ${mk.early}′ abans`;
   }

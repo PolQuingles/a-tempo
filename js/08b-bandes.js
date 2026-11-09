@@ -161,13 +161,13 @@ function bandesCard(p) {
   const closed = pollClosed(p), people = bandesPeople(p), me = myId(), mine = me ? S.pollVotes.get(`${p.id}_${me}`) : null;
   const voter = !!me && !p.draft && people.some(m => m.id === me), cats = p.cats || [];
   const state = p.draft ? (p.propOpen ? '<span class="st-pill st-accepted">Propostes</span>' : '<span class="st-pill st-pending">Esborrany</span>') : closed ? '<span class="st-pill st-rejected">Tancada</span>' : '<span class="st-pill st-accepted">Oberta</span>';
-  const meta = `<div class="ann-m">${state}<span>${cats.length} ${cats.length === 1 ? 'categoria' : 'categories'}</span>${p.closesAt ? `<span>Fins al ${ddmm(p.closesAt)}</span>` : ''}${p.sections?.length ? `<span>Per a: ${esc(p.sections.map(x => SEC[x]?.name || x).join(', '))}</span>` : ''}<span>Vot secret</span></div>`;
+  const meta = `<div class="ann-m">${state}<span>${cats.length} ${cats.length === 1 ? 'categoria' : 'categories'}</span>${p.closesAt ? `<span>Fins al ${shortDate(p.closesAt)}</span>` : ''}${p.sections?.length ? `<span>Per a: ${esc(p.sections.map(x => SEC[x]?.name || x).join(', '))}</span>` : ''}<span>Vot secret</span></div>`;
   const draft = voter && !mine ? ballotDraft(p) : null;
   const acts = [];
   if (voter && !closed) acts.push(`<button class="btn btn-sm ${mine ? '' : 'btn-primary'}" data-act="bandes-vote" data-id="${esc(p.id)}">${mine ? 'Canvia el vot' : draft ? 'Continua votant' : 'Vota'}</button>`);
   if (voter && mine) acts.push(`<span class="rsvp yes">Has votat ${mine.n || Object.keys(mine.picks || {}).length} de ${cats.length}</span>`);
   if (voter && mine && closed) acts.push(`<button class="btn btn-sm" data-act="bandes-mine" data-id="${esc(p.id)}">El teu vot</button>`);
-  else if (voter && !closed) acts.push('<span class="muted bd-note">Encara no has votat</span>');
+  else if (voter && !closed && !mine) acts.push('<span class="muted bd-note">Encara no has votat</span>');
   let board = '';
   if (canBoard()) {
     const voted = people.filter(m => S.pollVotes.get(`${p.id}_${m.id}`)).length;
@@ -221,7 +221,7 @@ function sheetBallot(pid) {
   // hub: s'hi ha arribat des de «El teu vot», i «Fet» hi torna (amb el vot enviat, sempre).
   const st = { step: sent ? n : fromDraft ? Math.min(draft.step ?? -1, n) : -1, hub: !!sent, picks: clone(fromDraft ? draft.picks : sent?.picks || {}), q: '', sec: '', saved: false };
   const people = bdSorted(bandesPeople(p0));
-  const until = p0.closesAt ? `fins al ${ddmm(p0.closesAt)}` : 'fins que es tanqui';
+  const until = p0.closesAt ? `fins al ${shortDate(p0.closesAt)}` : 'fins que es tanqui';
   const got = c => st.picks[c.id] || [];
   const filled = c => c.pair ? got(c).length === 2 : got(c).length > 0;
   const filledCount = () => cats.filter(filled).length;

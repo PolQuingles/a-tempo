@@ -4,7 +4,7 @@
 
 /* ---------- View: Stats ---------- */
 function viewStats(inBoard) {
-  const prods = productionsSorted();
+  const prods = productionsByNow();
   // Dins d'Assistència, el títol de cada vista és un subtítol de la pestanya.
   const title = t => inBoard ? `<h2 class="h1 stats-t">${t}</h2>` : `<h1 class="h1">${t}</h1>`;
   if (inBoard && ui.statsScope === 'risk') ui.statsScope = 'prod';
@@ -41,7 +41,7 @@ function viewStats(inBoard) {
   const kpis = `<div class="kpis">
     <div class="kpi"><div class="kpi-v">${kpiPct(rate(t))}</div><div class="kpi-l">Assistència</div></div>
     <div class="kpi"><div class="kpi-v">${kpiPct(punctuality(t))}</div><div class="kpi-l">Puntualitat</div></div>
-    <div class="kpi"><div class="kpi-v">${t.min}<small>min</small></div><div class="kpi-l">Retard acumulat · ${t.R} retards</div></div>
+    <div class="kpi"><div class="kpi-v">${minsKpi(t.min)}</div><div class="kpi-l">Retard acumulat · ${t.R} retards</div></div>
     <div class="kpi ${t.FNJ ? 'alert' : ''}"><div class="kpi-v">${t.FNJ}</div><div class="kpi-l">Faltes no justificades · ${t.FJ} just.</div></div>
   </div>
   <p class="muted" style="font-size:calc(13px*var(--ts));margin:10px 2px 0">${st.counted.length} de ${st.all.length} ${st.all.length === 1 ? 'sessió' : 'sessions'} amb llista ${helpBtn('assist')}</p>
@@ -468,7 +468,7 @@ function myAttSeason(me, skip, head = '') {
       <details class="np-group my-season"><summary><span>Tota la temporada${sc ? ` · ${pct(rate(sr))}` : ''}</span>${ICON.chev}</summary>
         <div class="kpis" style="grid-template-columns:repeat(2,1fr)">
           <div class="kpi"><div class="kpi-v">${sc ? kpiPct(rate(sr)) : '—'}</div><div class="kpi-l">${esc(season.name)}${sc ? ` · ${esc(minsText(sr.mDone))} de ${esc(minsText(sr.mAll))}` : ''}</div></div>
-          <div class="kpi"><div class="kpi-v">${sr ? sr.min : 0}<small>min</small></div><div class="kpi-l">Retard acumulat</div></div>
+          <div class="kpi"><div class="kpi-v">${minsKpi(sr ? sr.min : 0)}</div><div class="kpi-l">Retard acumulat</div></div>
         </div></details>
       <p class="muted" style="font-size:calc(13px*var(--ts))">${attPrivate() ? `Només tu i l’equip ${V.del} veieu aquestes dades.` : `Tothom ${V.del} pot veure l’assistència de tothom; els teus avisos d’absència, només l’equip.`} Si hi ha algun error, parla amb el teu ${V.leader}.</p>`;
 }

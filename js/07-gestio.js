@@ -102,14 +102,14 @@ function managePeople() {
 }
 function leaveText(m) {
   const now = onLeave(m, TODAY);
-  if (now) return `De baixa${now.to ? ` fins al ${ddmm(now.to)}` : ''}`;
+  if (now) return `De baixa${now.to ? ` fins al ${shortDate(now.to)}` : ''}`;
   const next = leavesOf(m).filter(l => l.from > TODAY).sort((a, b) => a.from.localeCompare(b.from))[0];
-  return next ? `Baixa prevista des del ${ddmm(next.from)}` : '';
+  return next ? `Baixa prevista des del ${shortDate(next.from)}` : '';
 }
 const SEARCH_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>';
 const findBox = (target, ph) => `<label class="find">${SEARCH_ICON}<input class="inp" type="search" inputmode="search" autocomplete="off" placeholder="${ph}" data-bind="find" data-target="${target}" aria-label="${ph}"></label>`;
 function manageProductions() {
-  const ps = productionsSorted();
+  const ps = productionsByNow();
   // Si cadascú tria les produccions: quants han respost i quants queden per sota del mínim.
   const ms = choicesOn() ? membersOf(null) : [];
   const low = ms.filter(m => !choiceSummary(m.id).ok).length, silent = ms.filter(m => choiceSummary(m.id).none).length;
@@ -117,12 +117,12 @@ function manageProductions() {
   return `${chPanel}<div class="sec-h"><span class="muted" style="font-size:calc(13.5px*var(--ts))">${ps.length} produccions</span><span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" data-act="season-report">Memòria de la temporada</button><button class="btn btn-sm btn-primary" data-act="prod-new">+ Producció</button></span></div>
     ${ps.length ? `<div class="only-narrow" style="display:grid;gap:10px">${ps.map(p => {
       const ss = allSessions(p.id);
-      const shared = ss.filter(s => s.prodId !== p.id).length;
+      const shared = sharedTxt(ss);
       const past = ss.filter(s => s.date <= TODAY).length;
       const status = p.end && p.end < TODAY ? 'Acabada' : p.start > TODAY ? 'Propera' : 'En curs';
       return `<div class="panel prod-card prod-tone tinted" style="--ph:${prodHue(p)}"><button data-act="prod-edit" data-pid="${p.id}" style="width:100%;text-align:left">
         <div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><h2 class="h2"><i class="pdot"></i>${esc(p.name)}</h2><span class="badge ${status === 'En curs' ? '' : 'soft'}">${status}</span></div>
-        <div class="prod-meta"><span>${p.start ? shortDate(p.start) : '?'} – ${p.end ? shortDate(p.end) : '?'}</span><span><b>${ss.length}</b> sessions${shared ? ` (${shared} compartides)` : ''} · <b>${past}</b> fetes</span><span><b>${(p.excluded || []).length}</b> no la fan</span></div>
+        <div class="prod-meta"><span>${p.start ? shortDate(p.start) : '?'} – ${p.end ? shortDate(p.end) : '?'}</span><span><b>${ss.length}</b> ${ss.length === 1 ? 'sessió' : 'sessions'}${shared ? ` (${shared})` : ''} · <b>${past}</b> ${past === 1 ? 'feta' : 'fetes'}</span><span><b>${(p.excluded || []).length}</b> no la fan</span></div>
       </button></div>`;
     }).join('')}</div>
     <div class="only-wide table-wrap"><table class="dtable"><thead><tr><th>Producció</th><th>Dates</th><th class="n">Sessions</th><th class="n">Fetes</th><th class="n">No la fan</th><th>Estat</th></tr></thead><tbody>
@@ -131,7 +131,7 @@ function manageProductions() {
         const shared = ss.filter(s => s.prodId !== p.id).length;
         const status = p.end && p.end < TODAY ? 'Acabada' : p.start > TODAY ? 'Propera' : 'En curs';
         return `<tr data-act="prod-edit" data-pid="${p.id}"><td class="prod-tone" style="--ph:${prodHue(p)}"><i class="pdot"></i> <b>${esc(p.name)}</b></td>
-          <td class="m">${p.start ? shortDate(p.start) : '?'} – ${p.end ? shortDate(p.end) : '?'}</td><td class="n">${ss.length}${shared ? ` <span class="m">(${shared} compartides)</span>` : ''}</td>
+          <td class="m">${p.start ? shortDate(p.start) : '?'} – ${p.end ? shortDate(p.end) : '?'}</td><td class="n">${ss.length}${shared ? ` <span class="m">(${shared})</span>` : ''}</td>
           <td class="n">${ss.filter(s => s.date <= TODAY).length}</td><td class="n">${(p.excluded || []).length}</td><td><span class="badge ${status === 'En curs' ? '' : 'soft'}">${status}</span></td></tr>`;
       }).join('')}</tbody></table></div>` : `<div class="empty"><p>Crea la primera producció (p. ex. «Concert de Nadal») i genera’n les sessions d’assaig.</p></div>`}`;
 }
@@ -508,7 +508,7 @@ function sheetAccount() {
     moreTabs().map(t => t === 'gestio' ? item('gestio', 'Gestió', `data-act="manage" data-k="${ROUTE_MANAGE[ui.manage] ? ui.manage : 'personal'}"`)
       : item(t, TAB_LABEL[t], `data-act="tab" data-tab="${t}"`)),
     [bandesMenuOn() && item('bandes', esc(galaName(currentBandes())), 'data-act="bandes-open"', bandesPending(currentBandes()) ? 1 : 0),
-      (myId() || S.threads.size) && item('threads', 'Converses', 'data-act="acct-open" data-k="threads"', unreadThreads().length), open('week', 'La setmana'),
+      (myId() || S.threads.size) && item('threads', 'Converses', 'data-act="acct-open" data-k="threads"', unreadThreads().length), open('week', 'Aquests dies'),
       myId() && !PREVIEW && open('profile', 'La meva fitxa'), wardOn() && (myId() || wardStaff()) && item('wardrobe', 'Vestidor', 'data-act="ward-open"', myId() ? wardOf(myId()).filter(x => x.status === 'emprovar').length : 0), open('calendar', icsOn() ? 'Calendari al mòbil' : 'Exporta el calendari'), pushSupported() && open('push', 'Notificacions')],
     [groupsVisible() && open('groups', 'Agrupacions'), open('theme', 'Aparença'), canInstall() && open('install', 'Instal·la l’app'), open('help', 'Com funciona'), open('privacy', 'Les teves dades')],
   ].map(g => g.filter(Boolean)).filter(g => g.length);

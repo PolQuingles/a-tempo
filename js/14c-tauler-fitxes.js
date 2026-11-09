@@ -86,7 +86,7 @@ function sheetAnnouncement(id) {
 }
 
 function sheetMaterial(pid, id) {
-  const prods = productionsSorted();
+  const prods = productionsByNow();
   const prodId = pid || ui.matProd || currentProductionId();
   const ex = id ? (S.productions.get(prodId)?.materials || []).find(x => x.id === id) : null;
   const m = ex ? { ...ex } : { id: uid('mt'), title: '', url: '', kind: 'partitura', section: '', part: '' };
@@ -267,30 +267,30 @@ function remindRsvp(sid) {
   if (!s) return;
   const pending = SECTIONS.filter(x => convoked(s, x.id)).flatMap(x => membersOf(x.id)).filter(m => !isOut(s, m) && !S.rsvp.get(`${sid}_${m.id}`));
   const what = `${s.type} del ${longDate(s.date).toLowerCase()}${s.place ? ` (${s.place})` : ''}`;
-  sheetReminder(`Recordatori: confirmeu si veniu al ${what}${s.rsvpBy ? `, abans del ${ddmm(s.rsvpBy)}` : ''}.`, pending,
-    m => `Hola ${firstName(m.name)}! Recorda confirmar si vens al ${what}${s.rsvpBy ? ` abans del ${ddmm(s.rsvpBy)}` : ''}. Respon aquí: ${appUrl()}`,
-    { kind: 'rsvp', ref: sid, title: `Encara no has dit si vens al ${what}${s.rsvpBy ? ` (fins al ${ddmm(s.rsvpBy)})` : ''}.` });
+  sheetReminder(`Recordatori: confirmeu si veniu al ${what}${s.rsvpBy ? `, abans del ${shortDate(s.rsvpBy)}` : ''}.`, pending,
+    m => `Hola ${firstName(m.name)}! Recorda confirmar si vens al ${what}${s.rsvpBy ? ` abans del ${shortDate(s.rsvpBy)}` : ''}. Respon aquí: ${appUrl()}`,
+    { kind: 'rsvp', ref: sid, title: `Encara no has dit si vens al ${what}${s.rsvpBy ? ` (fins al ${shortDate(s.rsvpBy)})` : ''}.` });
 }
 function remindPoll(id) {
   const p = S.polls.get(id);
   if (!p) return;
   const pending = (isBandes(p) ? bandesPeople(p) : pollExpected(p)).filter(m => !S.pollVotes.get(`${id}_${m.id}`));
-  const until = p.closesAt ? ` (fins al ${ddmm(p.closesAt)})` : '';
+  const until = p.closesAt ? ` (fins al ${shortDate(p.closesAt)})` : '';
   if (isBandes(p)) {
     sheetReminder(`Recordatori: encara podeu votar «${p.title}»${until}. El vot és secret.`, pending,
       m => `Hola ${firstName(m.name)}! Encara no has votat «${p.title}»${until}. Pots votar a l’app, a Tauler › Enquestes: ${appUrl()}`,
       { kind: 'poll', ref: id, title: `Encara no has votat «${p.title}»${until}.` });
     return;
   }
-  sheetReminder(`Recordatori: responeu l’enquesta «${p.title}»${p.closesAt ? ` abans del ${ddmm(p.closesAt)}` : ''}.`, pending,
-    m => `Hola ${firstName(m.name)}! Tens pendent l’enquesta «${p.title}»${p.closesAt ? ` (fins al ${ddmm(p.closesAt)})` : ''}. Respon-la aquí, a Tauler › Enquestes: ${appUrl()}`,
-    { kind: 'poll', ref: id, title: `Tens pendent l’enquesta «${p.title}»${p.closesAt ? ` (fins al ${ddmm(p.closesAt)})` : ''}.` });
+  sheetReminder(`Recordatori: responeu l’enquesta «${p.title}»${p.closesAt ? ` abans del ${shortDate(p.closesAt)}` : ''}.`, pending,
+    m => `Hola ${firstName(m.name)}! Tens pendent l’enquesta «${p.title}»${p.closesAt ? ` (fins al ${shortDate(p.closesAt)})` : ''}. Respon-la aquí, a Tauler › Enquestes: ${appUrl()}`,
+    { kind: 'poll', ref: id, title: `Tens pendent l’enquesta «${p.title}»${p.closesAt ? ` (fins al ${shortDate(p.closesAt)})` : ''}.` });
 }
 function remindTrip(id) {
   const t = S.trips.get(id);
   if (!t) return;
   const pending = tripPeople(t).filter(m => !signupOf(t, m.id));
-  sheetReminder(`Recordatori: digueu si veniu a «${t.title}»${t.deadline ? ` abans del ${ddmm(t.deadline)}` : ''}, encara que no hi pugueu anar.`, pending,
-    m => `Hola ${firstName(m.name)}! Encara no has dit si vens a «${t.title}»${t.deadline ? ` (fins al ${ddmm(t.deadline)})` : ''}. Respon aquí, a Tauler › Sortides: ${appUrl()}`,
-    { kind: 'trip', ref: id, title: `Encara no has dit si vens a «${t.title}»${t.deadline ? ` (fins al ${ddmm(t.deadline)})` : ''}. Cal respondre encara que no hi vagis.` });
+  sheetReminder(`Recordatori: digueu si veniu a «${t.title}»${t.deadline ? ` abans del ${shortDate(t.deadline)}` : ''}, encara que no hi pugueu anar.`, pending,
+    m => `Hola ${firstName(m.name)}! Encara no has dit si vens a «${t.title}»${t.deadline ? ` (fins al ${shortDate(t.deadline)})` : ''}. Respon aquí, a Tauler › Sortides: ${appUrl()}`,
+    { kind: 'trip', ref: id, title: `Encara no has dit si vens a «${t.title}»${t.deadline ? ` (fins al ${shortDate(t.deadline)})` : ''}. Cal respondre encara que no hi vagis.` });
 }

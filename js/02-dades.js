@@ -407,6 +407,17 @@ function prodHue(p) {
 function productionsSorted() {
   return [...S.productions.values()].sort((a, b) => (a.start || '').localeCompare(b.start || ''));
 }
+/** Per triar-ne una: primer les que estan en curs, després les que vénen i, al final, les acabades (la més recent primer).
+ *  productionsSorted es queda per data d'inici: d'aquell ordre en surt el color de cada producció. */
+function productionsByNow() {
+  const phase = p => p.end && p.end < TODAY ? 2 : p.start > TODAY ? 1 : 0;
+  return productionsSorted().sort((a, b) => phase(a) - phase(b) || (phase(a) === 2 ? (b.end || '').localeCompare(a.end || '') : 0));
+}
+/** «1 compartida», «4 compartides» o res: quantes d'aquestes sessions són també d'una altra producció. */
+function sharedTxt(ss) {
+  const n = ss.filter(s => sessionProds(s).length > 1).length;
+  return !n ? '' : n === 1 ? '1 compartida' : `${n} compartides`;
+}
 /** A session lives in one production and can also count for others (alsoIn). */
 function withProd(s, p) { return { ...s, prodId: p.id, alsoIn: (s.alsoIn || []).filter(id => id !== p.id && S.productions.has(id)) }; }
 function allSessions(prodId) {
@@ -579,6 +590,8 @@ function countMark(c, s, mk, pid) {
 // L'assistència es compta en minuts: un retard de 30′ en un assaig de 3 h compta com 2 h 30′ de les 3 h.
 const rate = c => c.mAll ? c.mDone / c.mAll : null;
 /** Minuts en hores i minuts: «18 h 30 min», «2 h», «45 min». */
+/** El mateix per a les xifres grans, amb les unitats petites (vegeu .kpi-v). */
+const minsKpi = n => minsText(n).replace(/ (h|min)\b/g, '<small>$1</small>');
 const minsText = n => { const t = Math.max(0, Math.round(+n || 0)), h = Math.floor(t / 60), m = t % 60; return h ? `${h} h${m ? ` ${m} min` : ''}` : `${m} min`; };
 const punctuality = c => { const d = c.P + c.R; return d ? c.P / d : null; };
 
