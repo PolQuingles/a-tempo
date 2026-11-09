@@ -70,7 +70,7 @@ def backup(gid):
         "productions": list(r.list(f"{base}/productions").values()),
         "attendance": r.list(f"{base}/attendance"),
     }
-    for name in ["absences", "rsvp", "subs", "staff", "announcements", "polls", "pollVotes", "classes", "classReq", "classPlan", "classNotes",
+    for name in ["absences", "rsvp", "subs", "staff", "announcements", "polls", "pollVotes", "classes", "classReq", "classPlan", "classNotes", "classPriv",
                  "works", "trips", "tripSignups", "profiles", "health", "students", "messages", "memberNotes", "memberDocs", "threads", "nudges", "prodChoice", "scores", "kit", "memberPriv", "wardrobe", "calKeys", "catProps", "turnout", "tally", "tallyMe"]:
         data[name] = list(r.list(f"{base}/{name}").values())
     # Els trossos de temporada arxivats (les mateixes llistes en un sol document cadascun: vegeu js/02-dades.js).

@@ -15,7 +15,7 @@ function sheetDrag(back) {
   let y0 = null, x0 = 0, t0 = 0, dy = 0, on = false;
   sh.addEventListener('touchstart', e => {
     y0 = null;
-    if (e.touches.length !== 1 || window.matchMedia('(min-width:700px)').matches) return;
+    if (sheetLock || e.touches.length !== 1 || window.matchMedia('(min-width:700px)').matches) return;
     if (body.contains(e.target) && (form || body.scrollTop > 0)) return;
     y0 = e.touches[0].clientY; x0 = e.touches[0].clientX; t0 = Date.now(); dy = 0; on = false;
   }, { passive: true });
@@ -42,10 +42,12 @@ function sheetDrag(back) {
   sh.addEventListener('touchend', end);
   sh.addEventListener('touchcancel', end);
 }
+// Mentre hi ha una gravació en marxa, una finestra no es tanca sense voler: un toc fora o arrossegar-la no la perden.
+let sheetLock = null;
 function openSheet({ title, body, foot = '', onMount = null, wide = false }) {
   const fromMenu = Date.now() - SHEET_BACK.at < 4000;
   SHEET_BACK.at = 0;
-  closeSheet();
+  closeSheet(true);
   const root = $('#sheet-root');
   root.innerHTML = `<div class="sheet-back" data-sheet-back>
     <div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(title)}" ${wide ? 'style="max-width:680px"' : ''}>
@@ -72,14 +74,14 @@ function openSheet({ title, body, foot = '', onMount = null, wide = false }) {
   document.addEventListener('keydown', onKey);
   sheetDrag(back);
   document.body.style.overflow = 'hidden';
-  sheetClose = () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = ''; root.innerHTML = ''; prevFocus?.focus?.({ preventScroll: true }); };
+  sheetClose = () => { sheetLock = null; document.removeEventListener('keydown', onKey); document.body.style.overflow = ''; root.innerHTML = ''; prevFocus?.focus?.({ preventScroll: true }); };
   const first = back.querySelector('.sheet-b input:not([type=checkbox]):not([type=file]), .sheet-b textarea');
   if (onMount) onMount(back.querySelector('.sheet'));
   if (first && window.matchMedia('(hover:hover)').matches) first.focus();
   else back.querySelector('[data-act="sheet-close"]').focus({ preventScroll: true });
   if (typeof routeSheetOpened === 'function') routeSheetOpened();
 }
-function closeSheet() { if (sheetClose) { const f = sheetClose; sheetClose = null; f(); if (typeof routeSheetClosed === 'function') routeSheetClosed(); } }
+function closeSheet(force) { if (sheetLock && force !== true) { sheetLock(); return; } if (sheetClose) { const f = sheetClose; sheetClose = null; f(); if (typeof routeSheetClosed === 'function') routeSheetClosed(); } }
 
 function confirmSheet(title, text, ok = 'Confirma', danger = true) {
   return new Promise(resolve => {

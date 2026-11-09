@@ -35,41 +35,107 @@ function sheetTeacherSeats() {
     },
   });
 }
-/** Què s'ha treballat i què cal preparar: ho veuen el professorat i aquell alumne. */
+/* ---------- Gravar des de l'app ---------- */
+// Primer l'MP4, que s'escolta a tots els mòbils; el WebM només on no n'hi ha. Sense els filtres del micròfon, pensats per a la
+// parla: la cancel·lació d'eco i el control de volum destrossen una veu cantada.
+const REC_TYPES = ['audio/mp4;codecs=mp4a.40.2', 'audio/mp4', 'audio/webm;codecs=opus', 'audio/webm'];
+const canRecord = () => !!(navigator.mediaDevices?.getUserMedia && window.MediaRecorder);
+async function startRecording({ name, onTick, onDone }) {
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+  const type = REC_TYPES.find(t => MediaRecorder.isTypeSupported(t)) || '';
+  const mr = new MediaRecorder(stream, { ...(type ? { mimeType: type } : {}), audioBitsPerSecond: 48000 });
+  const parts = [], t0 = Date.now();
+  let size = 0, dropped = false, full = false, wake = null;
+  // Que la pantalla no s'apagui: amb el mòbil bloquejat, el navegador talla el micròfon.
+  try { wake = await navigator.wakeLock?.request('screen'); } catch {}
+  const tick = setInterval(() => onTick(Date.now() - t0, size), 1000);
+  const release = () => { clearInterval(tick); stream.getTracks().forEach(t => t.stop()); try { wake?.release(); } catch {} };
+  mr.ondataavailable = e => {
+    if (!e.data || !e.data.size) return;
+    parts.push(e.data); size += e.data.size;
+    if (size >= FILE_MAX * 0.95 && mr.state === 'recording') { full = true; mr.stop(); }
+  };
+  mr.onstop = () => {
+    release();
+    if (dropped) return;
+    const mime = (mr.mimeType || type || 'audio/webm').split(';')[0];
+    onDone(new File(parts, `${name}.${mime.includes('mp4') ? 'm4a' : 'webm'}`, { type: mime }), full);
+  };
+  // Si el sistema talla el micròfon (una trucada, per exemple), es desa el que s'ha gravat fins aquí.
+  stream.getTracks().forEach(t => { t.onended = () => { if (mr.state !== 'inactive') mr.stop(); }; });
+  mr.start(5000);
+  return { stop: () => { if (mr.state !== 'inactive') mr.stop(); }, discard: () => { dropped = true; if (mr.state !== 'inactive') mr.stop(); else release(); } };
+}
+const recClock = ms => { const t = Math.floor(ms / 1000); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; };
+/** Què s'ha treballat i què cal preparar (ho veuen el professorat i aquell alumne), i una nota privada que l'alumne no veu. */
 function sheetClassNote(classId, slotId) {
   const c = S.classes.get(classId);
   const slot = c && classSlots(c).find(x => x.id === slotId);
   if (!slot) return;
   const id = `${classId}_${slotId}`;
-  const ex = S.classNotes.get(id);
+  const ex = S.classNotes.get(id), exPriv = S.classPriv.get(id);
   const m = S.members.get(slot.memberId || '');
   openSheet({
     title: `Nota de la classe${m ? ` de ${firstName(m.name)}` : ''}`,
     body: `<div class="kv">
       <p style="margin:0">${esc(longDate(c.date))}, a les <b>${esc(slot.time || '')}</b>.</p>
-      <label class="field"><span>Què s’ha treballat i què cal preparar</span><textarea class="inp" id="cn-text" maxlength="600" style="min-height:130px" placeholder="p. ex. Vocalitzacions fins al la. Per la setmana vinent, els compassos 1-40 de memòria.">${esc(ex?.text || '')}</textarea></label>
+      <label class="field"><span>Què s’ha treballat i què cal preparar</span><textarea class="inp" id="cn-text" maxlength="600" style="min-height:130px" placeholder="p. ex. Vocalitzacions fins al la. Per la setmana vinent, els compassos 1-40 de memòria.">${esc(ex?.text || '')}</textarea>
+        <small>Ho veieu tu i ${m ? esc(firstName(m.name)) : 'qui tingui aquesta hora'}. La resta de l’agrupació, no.</small></label>
+      <label class="field"><span>Nota privada</span><textarea class="inp" id="cn-priv" maxlength="600" style="min-height:70px" placeholder="p. ex. Li costa concentrar-se quan ve cansat.">${esc(exPriv?.text || '')}</textarea>
+        <small>${m ? esc(firstName(m.name)) : 'L’alumne'} no la veu. Només la veus tu i, si cal, l’administració de l’app.</small></label>
       <div class="field"><span>Enregistrament de la classe (opcional)</span>
         ${ex?.file ? `<div class="rec-cur" id="cn-cur"><span>${esc(ex.file.name)} · ${fmtSize(ex.file.size)}</span><button type="button" class="btn btn-sm btn-ghost" id="cn-rec-rm">Treu-lo</button></div>` : ''}
+        ${canRecord() ? `<div class="rec-box"><button type="button" class="btn" id="cn-rec-go"><i class="rec-dot"></i>Grava ara</button>
+          <div class="rec-live" id="cn-rec-live" hidden><i class="rec-dot on"></i><b class="mono" id="cn-rec-t">0:00</b><span class="muted" id="cn-rec-s">Gravant…</span><span class="spacer"></span><button type="button" class="btn btn-primary" id="cn-rec-stop">Atura</button></div>
+          <audio id="cn-rec-prev" controls playsinline preload="metadata" hidden></audio></div>` : ''}
         <label class="dropzone" for="cn-file" id="cn-drop"><input id="cn-file" type="file" accept="audio/*,video/*,.m4a,.mp3" class="sr">
-          <span class="dz-t">${ex?.file ? 'Canvia’l per un altre' : 'Tria l’àudio de la classe'}</span><span class="dz-s">Fins a 20 MB (uns 20 minuts en qualitat de veu). L’alumne el podrà escoltar més lent i repetir fragments.</span></label></div>
-      <p class="muted" style="font-size:var(--t-13);margin:0">Només ho veieu tu i ${m ? esc(firstName(m.name)) : `qui tingui aquesta hora`}. La resta de l’agrupació, no.</p>
+          <span class="dz-t">${ex?.file ? 'Canvia’l per un fitxer' : 'O tria un fitxer'}</span><span class="dz-s">Fins a 20 MB. L’alumne el podrà escoltar més lent i repetir fragments.</span></label></div>
     </div>`,
-    foot: `${ex ? '<button class="btn btn-danger-ghost" id="cn-del">Esborra</button>' : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="cn-save">Desa</button>`,
+    foot: `${ex || exPriv ? '<button class="btn btn-danger-ghost" id="cn-del">Esborra</button>' : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="cn-save">Desa</button>`,
     onMount: el => {
-      let picked = null, drop = false;
-      const input = el.querySelector('#cn-file');
-      input.onchange = () => {
-        const f = input.files && input.files[0];
-        if (!f) return;
-        if (f.size > FILE_MAX) { toast(`${f.name} passa de 20 MB. Retalla’l o grava’l en qualitat més baixa.`); input.value = ''; return; }
+      let picked = null, drop = false, rec = null, prevUrl = '';
+      const input = el.querySelector('#cn-file'), save = el.querySelector('#cn-save');
+      const pick = f => {
         picked = f;
         el.querySelector('#cn-drop .dz-t').textContent = f.name;
         el.querySelector('#cn-drop .dz-s').textContent = `${fileKind(f)} · ${fmtSize(f.size)} · es pujarà en desar`;
         el.querySelector('#cn-drop').classList.add('ready');
       };
+      input.onchange = () => {
+        const f = input.files && input.files[0];
+        if (!f) return;
+        if (f.size > FILE_MAX) { toast(`${f.name} passa de 20 MB. Retalla’l o grava’l en qualitat més baixa.`); input.value = ''; return; }
+        pick(f);
+      };
       el.querySelector('#cn-rec-rm')?.addEventListener('click', () => { drop = true; el.querySelector('#cn-cur').remove(); });
+      // La gravació: mentre dura, la finestra no es pot tancar sense voler ni es pot desar.
+      const close0 = sheetClose;
+      sheetClose = () => { rec?.discard(); if (prevUrl) URL.revokeObjectURL(prevUrl); close0(); };
+      const go = el.querySelector('#cn-rec-go'), live = el.querySelector('#cn-rec-live');
+      if (go) go.onclick = async () => {
+        go.disabled = true;
+        try {
+          rec = await startRecording({
+            name: `Classe del ${c.date}`,
+            onTick: (ms, size) => { el.querySelector('#cn-rec-t').textContent = recClock(ms); el.querySelector('#cn-rec-s').textContent = fmtSize(size); },
+            onDone: (f, full) => {
+              rec = null; sheetLock = null; save.disabled = false; live.hidden = true; go.hidden = false; go.disabled = false;
+              go.lastChild.textContent = 'Torna a gravar';
+              if (!f.size) { toast('No s’ha gravat res. Torna-ho a provar.'); return; }
+              pick(f);
+              const a = el.querySelector('#cn-rec-prev');
+              if (prevUrl) URL.revokeObjectURL(prevUrl);
+              prevUrl = URL.createObjectURL(f); a.src = prevUrl; a.hidden = false;
+              toast(full ? 'S’ha aturat en arribar al límit de 20 MB' : 'Gravació a punt: desa-la per enviar-la');
+            },
+          });
+        } catch (err) { go.disabled = false; toast(err && err.name === 'NotAllowedError' ? 'Dona permís al micròfon per poder gravar' : 'No s’ha pogut engegar el micròfon'); return; }
+        sheetLock = () => toast('Atura la gravació abans de tancar');
+        save.disabled = true; go.hidden = true; live.hidden = false; el.querySelector('#cn-rec-prev').hidden = true;
+      };
+      el.querySelector('#cn-rec-stop')?.addEventListener('click', () => rec?.stop());
       el.querySelector('#cn-save').onclick = async e => {
-        const text = el.querySelector('#cn-text').value.trim();
+        const text = el.querySelector('#cn-text').value.trim(), priv = el.querySelector('#cn-priv').value.trim();
         let file = drop ? null : ex?.file || null;
         if (picked) {
           if (!navigator.onLine) { toast('Cal connexió per pujar l’enregistrament'); return; }
@@ -79,12 +145,170 @@ function sheetClassNote(classId, slotId) {
           catch { toast('No s’ha pogut pujar l’enregistrament. Torna-ho a provar.'); btn.disabled = false; btn.textContent = label; return; }
         }
         if (ex?.file && (!file || file.id !== ex.file.id)) deleteFile(ex.file);
-        if (!text && !file) { if (ex) { S.classNotes.delete(id); persist('classNotes', id, null, 10); } closeSheet(); render(); return; }
-        const rec = { id, classId, slotId, memberId: slot.memberId || '', teacher: noteTeacher(c), date: c.date, text, at: new Date().toISOString(), by: S.email || '', ...(file ? { file } : {}) };
-        S.classNotes.set(id, rec); persist('classNotes', id, rec, 10);
+        const base = { id, classId, slotId, memberId: slot.memberId || '', teacher: noteTeacher(c), date: c.date, at: new Date().toISOString(), by: S.email || '' };
+        if (priv) { const r = { ...base, text: priv }; S.classPriv.set(id, r); persist('classPriv', id, r, 10); }
+        else if (exPriv) { S.classPriv.delete(id); persist('classPriv', id, null, 10); }
+        if (!text && !file) { if (ex) { S.classNotes.delete(id); persist('classNotes', id, null, 10); } closeSheet(); if (priv) toast('Nota desada'); render(); return; }
+        const rec2 = { ...base, text, ...(file ? { file } : {}) };
+        S.classNotes.set(id, rec2); persist('classNotes', id, rec2, 10);
         closeSheet(); toast(picked ? 'Nota i enregistrament desats' : 'Nota desada'); render();
       };
-      el.querySelector('#cn-del')?.addEventListener('click', () => { if (ex?.file) deleteFile(ex.file); S.classNotes.delete(id); persist('classNotes', id, null, 10); closeSheet(); toast('Nota esborrada'); render(); });
+      el.querySelector('#cn-del')?.addEventListener('click', () => {
+        if (ex?.file) deleteFile(ex.file);
+        if (ex) { S.classNotes.delete(id); persist('classNotes', id, null, 10); }
+        if (exPriv) { S.classPriv.delete(id); persist('classPriv', id, null, 10); }
+        closeSheet(); toast('Nota esborrada'); render();
+      });
+    },
+  });
+}
+/* ---------- Moure una classe ---------- */
+/** On aniria la classe i si es pot: { target, fill, error, warn }. */
+function moveCheck(c, x, date, time, mins) {
+  if (!date || !time) return { error: 'Posa-hi el dia i l’hora.' };
+  if (date < TODAY) return { error: 'Tria un dia que encara hagi de venir.' };
+  const target = date === c.date ? c : classDays(c.teacher || '-').find(k => k.date === date);
+  if (target?.cancelled) return { error: 'Aquell dia està anul·lat.' };
+  const others = target ? classSlots(target).filter(s => s.id !== x.id) : [];
+  if (others.some(s => s.memberId === x.memberId)) return { error: 'Aquell dia ja hi té classe.' };
+  const from = parseTime(time), to = from + mins;
+  const over = others.filter(s => s.time && parseTime(s.time) < to && parseTime(s.time) + (+s.mins || 30) > from);
+  const busy = over.find(s => s.memberId || s.name);
+  if (busy) return { error: `A aquesta hora ja hi ha ${S.members.get(busy.memberId)?.name || busy.name}.` };
+  const clash = classClash({ id: '', date }, { time, mins, memberId: x.memberId });
+  return { target, fill: over[0], warn: clash ? `Coincideix amb ${clash.type || 'un assaig'}${clash.time ? ` de les ${clash.time}` : ''}.` : '' };
+}
+/** Afegeix un avís a un dia sense perdre els que encara no s'hagin enviat. */
+function withChange(day, ch) {
+  const recent = day?.changedAt && Date.now() - Date.parse(day.changedAt) < 45 * 60e3 ? (day.changes || []).filter(o => o.m !== ch.m) : [];
+  return { changes: [...recent, ch], changedAt: new Date().toISOString() };
+}
+function moveClass(c, x, date, time, mins, check) {
+  const at = new Date().toISOString(), by = S.email || '';
+  const when = (d, t) => `${longDate(d).toLowerCase()} a les ${t}`;
+  const byTime = (a, b) => (a.time || '').localeCompare(b.time || '');
+  const dropFill = s => !check.fill || s.id !== check.fill.id;
+  const body = `La teva classe de ${when(c.date, x.time)} passa a ${when(date, time)}.`;
+  if (date === c.date) {
+    saveClassDay({ ...c, edited: true, at, by, slots: c.slots.filter(dropFill).map(s => s.id === x.id ? { ...s, time, mins } : s).sort(byTime), ...withChange(c, { m: x.memberId, b: body }) });
+    return;
+  }
+  const newSlot = { id: uid('sl'), time, mins, memberId: x.memberId };
+  // L'hora d'on marxa queda lliure, per si algú la vol.
+  saveClassDay({ ...c, edited: true, at, by, slots: c.slots.map(s => s.id === x.id ? { id: s.id, time: s.time, mins: s.mins, memberId: '' } : s) });
+  const dow = new Date(date + 'T12:00:00').getDay();
+  const day = check.target || { id: uid('cl'), date, place: planPlaces(c.teacher)[dow] || c.place || '', note: '', teacher: c.teacher || '', teacherName: c.teacherName || teacherName(c.teacher) || '', slots: [] };
+  saveClassDay({ ...day, edited: true, at, by, slots: [...day.slots.filter(dropFill), newSlot].sort(byTime), ...withChange(day, { m: x.memberId, b: body }) });
+  // La nota, si n'hi ha, va amb la classe.
+  const oldId = `${c.id}_${x.id}`, newId = `${day.id}_${newSlot.id}`;
+  for (const col of ['classNotes', 'classPriv']) {
+    const n = S[col].get(oldId);
+    if (!n) continue;
+    const r = { ...n, id: newId, classId: day.id, slotId: newSlot.id, date };
+    S[col].set(newId, r); persist(col, newId, r, 10);
+    S[col].delete(oldId); persist(col, oldId, null, 10);
+  }
+  // Els avisos d'aquella hora ja estan resolts.
+  const reviewed = { reviewedAt: at, reviewedBy: by };
+  for (const r of S.classReq.values()) {
+    if (r.status !== 'pending') continue;
+    if (['late', 'absent'].includes(r.kind) && r.classId === c.id && r.memberId === x.memberId) saveClassReq({ ...r, status: 'accepted', ...reviewed });
+    else if (r.kind === 'swap' && ((r.classId === c.id && r.slotId === x.id) || (swapWithClass(r) === c.id && r.withSlotId === x.id))) saveClassReq({ ...r, status: 'rejected', ...reviewed });
+  }
+}
+/** Mou només aquesta classe a una altra hora o a un altre dia (una recuperació, per exemple). */
+function sheetClassMove(classId, slotId, after) {
+  const c = S.classes.get(classId), x = c && classSlots(c).find(s => s.id === slotId), m = x && S.members.get(x.memberId);
+  if (!x || !m || !canMoveSlot(c, x)) { toast('Aquesta classe ja no es pot moure'); return; }
+  openSheet({
+    title: `Mou la classe de ${firstName(m.name)}`,
+    body: `<div class="kv">
+      <p style="margin:0">Ara és ${esc(longDate(c.date).toLowerCase())}, a les <b>${esc(x.time || '')}</b>. Només canvia aquesta classe: l’horari fix queda igual.</p>
+      <div class="row3">
+        <label class="field"><span>Dia</span><input class="inp" id="mv-date" type="date" min="${TODAY}" value="${esc(c.date)}"></label>
+        <label class="field"><span>Hora</span><input class="inp" id="mv-time" type="time" value="${esc(x.time || '')}"></label>
+      </div>
+      <label class="field"><span>Minuts</span><input class="inp" id="mv-mins" type="number" min="5" max="120" step="5" value="${+x.mins || 30}" style="width:96px"></label>
+      <p id="mv-hint" class="muted" style="margin:0;font-size:var(--t-13)"></p>
+    </div>`,
+    foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="mv-go">Mou-la</button>`,
+    onMount: el => {
+      const read = () => ({ date: el.querySelector('#mv-date').value, time: el.querySelector('#mv-time').value, mins: Math.max(5, +el.querySelector('#mv-mins').value || 30) });
+      const hint = () => {
+        const v = read(), ch = moveCheck(c, x, v.date, v.time, v.mins);
+        el.querySelector('#mv-hint').textContent = ch.error || [v.date !== c.date ? 'L’hora d’ara quedarà lliure.' : '', !ch.target ? 'Aquell dia encara no hi ha classes: se’n crearà un.' : '', ch.warn, `S’avisarà ${firstName(m.name)}.`].filter(Boolean).join(' ');
+        return ch;
+      };
+      ['#mv-date', '#mv-time', '#mv-mins'].forEach(id => el.querySelector(id).addEventListener('input', hint));
+      hint();
+      el.querySelector('#mv-go').onclick = () => {
+        const v = read(), ch = hint();
+        if (ch.error) { toast(ch.error); return; }
+        if (v.date === c.date && v.time === x.time && v.mins === (+x.mins || 30)) { closeSheet(); return; }
+        moveClass(c, x, v.date, v.time, v.mins, ch);
+        closeSheet(); toast(`Classe moguda · s’avisarà ${firstName(m.name)}`); render();
+        if (after) after();
+      };
+    },
+  });
+}
+/* ---------- Coincidències amb assajos i concerts ---------- */
+function sheetClassClashes() {
+  const list = classClashList();
+  if (!list.length) { closeSheet(); toast('Cap coincidència per resoldre'); render(); return; }
+  const days = [...new Set(list.map(i => i.c.date))];
+  openSheet({
+    title: 'Coincidències per resoldre',
+    wide: true,
+    body: `<p style="margin-top:0">Classes que vénen i que coincideixen amb un assaig o un concert d’aquell alumne.</p>
+      ${days.map(d => `<div class="clash-day"><h3 class="clash-d">${esc(capz(longDate(d)))}</h3>${list.filter(i => i.c.date === d).map(({ c, x, s }) => `<div class="clash-row">
+        <span class="mono clash-t">${esc(x.time || '')}</span>
+        <span class="clash-w"><b>${esc(S.members.get(x.memberId)?.name || '')}</b><small>${esc([`${s.type || 'Assaig'} · ${timeRange(s)}`, isAdmin() ? teacherOf(c) : ''].filter(Boolean).join(' · '))}</small></span>
+        <span class="clash-a"><button class="btn btn-sm" data-act="cl-move" data-k="clash" data-c="${esc(c.id)}" data-s="${esc(x.id)}">Mou</button><button class="btn btn-sm" data-act="cl-clash-ok" data-c="${esc(c.id)}" data-s="${esc(x.id)}" data-k="${esc(s.id)}">Deixa-la</button></span>
+      </div>`).join('')}</div>`).join('')}`,
+  });
+}
+/** Aquesta coincidència ja està vista: la classe es queda on és. Si l'assaig canvia, tornarà a sortir. */
+function acceptClash(classId, slotId, sessionId) {
+  const c = S.classes.get(classId);
+  if (!c) return;
+  saveClassDay({ ...c, slots: c.slots.map(x => x.id === slotId ? { ...x, clashOk: sessionId } : x) });
+  render(); sheetClassClashes();
+}
+/* ---------- Vincular un nom a una fitxa ---------- */
+/** Posa aquesta persona a totes les classes on sortia només el nom, i a l'horari fix. Torna quantes classes ha canviat. */
+async function linkClassName(who, name, mid) {
+  const key = normTxt(name), match = x => !x.memberId && normTxt(x.name) === key;
+  const days = [...(await classDaysByDate(who)).values()].filter(c => (c.slots || []).some(match) && !c.slots.some(x => x.memberId === mid));
+  for (let i = 0; i < days.length; i += 400) {
+    const b = fs.batch();
+    for (const c of days.slice(i, i + 400)) {
+      const next = { ...c, slots: c.slots.map(x => { if (!match(x)) return x; const { name: _, ...rest } = x; return { ...rest, memberId: mid }; }) };
+      delete next.syncAt;
+      b.set(db.doc(`classes/${c.id}`), stamped(`classes/${c.id}`, next));
+      if (S.classes.has(c.id)) S.classes.set(c.id, next);
+    }
+    await b.commit();
+  }
+  const rows = planRows(who);
+  if (rows.some(match)) savePlan(who, rows.map(x => { if (!match(x)) return x; const { name: _, ...rest } = x; return { ...rest, memberId: mid }; }));
+  return days.length;
+}
+function sheetLinkName(who, name) {
+  const hit = matchMember(name), t = classUnlinked(who).find(u => normTxt(u.name) === normTxt(name));
+  openSheet({
+    title: 'Vincula a una fitxa',
+    body: `<p style="margin-top:0"><b>${esc(name)}</b> surt a l’horari${t?.n ? ` en ${t.n} ${t.n === 1 ? 'classe' : 'classes'}` : ''} sense fitxa. En vincular-ho, canviarà a totes les classes i a l’horari fix.</p>
+      <label class="field"><span>Qui és?</span><select class="inp" id="ln-m"><option value="">Tria la persona</option>${memberOptions(hit.sure ? hit.hits[0].id : '')}</select></label>`,
+    foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="ln-go">Vincula</button>`,
+    onMount: el => {
+      el.querySelector('#ln-go').onclick = async e => {
+        const mid = el.querySelector('#ln-m').value;
+        if (!mid) { toast('Tria la persona'); return; }
+        e.currentTarget.disabled = true;
+        try { const n = await linkClassName(who, name, mid); closeSheet(); toast(`${n} ${n === 1 ? 'classe vinculada' : 'classes vinculades'}`); render(); }
+        catch { e.target.disabled = false; toast('No s’ha pogut desar. Comprova la connexió.'); }
+      };
     },
   });
 }
@@ -391,7 +615,7 @@ function answerClassReq(id, status) {
     for (const o of S.classReq.values()) if (o.id !== r.id && o.kind === 'take' && o.classId === r.classId && o.slotId === r.slotId && o.status === 'pending') saveClassReq({ ...o, status: 'rejected', ...reviewed });
   }
   saveClassReq({ ...r, status, reviewedAt: new Date().toISOString(), reviewedBy: S.email || '' });
-  toast(status === 'accepted' ? 'Acceptat' : status === 'cancelled' ? 'Avís retirat' : 'Rebutjat');
+  toast(status === 'accepted' ? (['late', 'absent'].includes(r.kind) ? 'Anotat' : 'Acceptat') : status === 'cancelled' ? 'Avís retirat' : 'Rebutjat');
   render();
 }
 
@@ -446,9 +670,18 @@ async function sheetStudent(mid) {
   const q = db.collection('classNotes').where('memberId', '==', mid);
   try { notes = (await (isAdmin() || mid === myId() ? q : q.where('teacher', '==', myEmail())).get()).docs.map(d => d.data()); }
   catch { notes = [...S.classNotes.values()].filter(n => n.memberId === mid); }
+  // Les notes privades, només per a qui porta la fitxa: una entrada per classe, amb la nota que veu l'alumne i la privada.
+  const privs = new Map();
+  if (edit) {
+    const qp = db.collection('classPriv').where('memberId', '==', mid);
+    try { for (const d of (await (isAdmin() ? qp : qp.where('teacher', '==', myEmail())).get()).docs) privs.set(d.id, d.data()); }
+    catch { for (const n of S.classPriv.values()) if (n.memberId === mid) privs.set(n.id, n); }
+  }
   if (!sheetClose) return;
-  notes.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
   for (const n of notes) NOTE_CACHE.set(n.id, n);
+  const known = new Set(notes.map(n => n.id));
+  for (const [k, p] of privs) if (!known.has(k)) notes.push({ id: k, date: p.date, text: '' });
+  notes.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
   rec.repertoire = (rec.repertoire || []).map(x => ({ ...x }));
   const hours = [...S.classPlan.values()].flatMap(p => (p.rows || []).filter(r => r.memberId === mid).map(r => `${capz(DAYS_CA[r.day])} ${r.time} amb ${teacherName(p.teacher || p.id) || V.Teacher}`));
   const repRows = () => rec.repertoire.length ? rec.repertoire.map(x => edit
@@ -479,7 +712,7 @@ async function sheetStudent(mid) {
       <div class="section-title" style="margin-top:14px"><h2 class="h2">Repertori</h2>${edit ? '<button type="button" class="btn btn-sm" id="stu-add">' + ICON.plus + 'Obra</button>' : ''}</div>
       <div id="stu-rep" style="display:grid;gap:8px"></div>
       <div class="section-title" style="margin-top:14px"><h2 class="h2">Notes de classe</h2><span class="eyebrow">${notes.length}</span></div>
-      ${notes.length ? `<ul class="mini-list" style="max-height:none">${notes.map(n => `<li style="display:grid;gap:4px"><span class="m mono">${esc(shortDate(n.date))}</span>${n.text ? `<span style="white-space:pre-wrap">${esc(n.text)}</span>` : ''}
+      ${notes.length ? `<ul class="mini-list" style="max-height:none">${notes.map(n => `<li style="display:grid;gap:4px"><span class="m mono">${esc(shortDate(n.date))}</span>${n.text ? `<span style="white-space:pre-wrap">${esc(n.text)}</span>` : ''}${privs.get(n.id)?.text ? `<span class="cl-priv" style="white-space:pre-wrap;font-size:var(--t-13)"><b>Privada</b> ${esc(privs.get(n.id).text)}</span>` : ''}
           ${n.file ? `<button class="btn btn-sm" style="justify-self:start" data-act="cl-rec" data-id="${esc(n.id)}">Escolta l’enregistrament</button>` : ''}</li>`).join('')}</ul>`
         : '<p class="muted" style="margin:0;font-size:var(--t-13)">Encara no hi ha notes.</p>'}
       ${edit ? '' : `<p class="muted" style="font-size:var(--t-13);margin-top:12px">Només ho veieu tu i el professorat de cant.</p>`}`,
