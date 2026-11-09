@@ -26,27 +26,30 @@ function installCard() {
     if (!pushSupported() || S.pushOn) return '';
     t = 'Activa les notificacions'; act = 'data-act="push-setup"';
   } else {
-    t = 'Posa l’app a la pantalla d’inici'; act = installPrompt ? 'data-act="install-go"' : 'data-act="install-how"';
+    t = 'Descarrega l’app al mòbil'; act = installPrompt ? 'data-act="install-go"' : 'data-act="install-how"';
   }
   return `<div class="install-card"><button class="install-go" ${act}><span class="todo-i"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 18.5h3"/></svg></span><span>${t}</span>${ICON.right}</button>
     <button class="icon-btn" data-act="install-hide" aria-label="Ara no">${ICON.close}</button></div>`;
 }
 /** Els passos per posar l'app a la pantalla d'inici en aquest mòbil (buit si el Chrome ho fa amb un botó). */
-function installSteps() {
+function installSteps(os = isiOS() ? 'ios' : 'android') {
   const inApp = /FBAN|FBAV|Instagram|WhatsApp|Line\//i.test(navigator.userAgent);
-  return isiOS()
+  return os === 'ios'
     ? [inApp ? 'Obre aquest enllaç amb el <b>Safari</b> (menú «···» › Obre al navegador).' : '', 'Toca <b>Comparteix</b> <span class="ios-share" aria-hidden="true"></span> a la barra del navegador.', 'Tria <b>Afegeix a la pantalla d’inici</b> i toca <b>Afegeix</b>.', 'Obre l’app des de la icona nova i activa les notificacions des de les teves inicials.'].filter(Boolean)
-    : installPrompt ? [] : ['Obre el menú <b>⋮</b> del Chrome.', 'Tria <b>Instal·la l’aplicació</b> (o <b>Afegeix a la pantalla d’inici</b>).', 'Obre l’app des de la icona nova.'];
+    : installPrompt && isAndroid() ? [] : ['Obre el menú <b>⋮</b> del Chrome.', 'Tria <b>Instal·la l’aplicació</b> (o <b>Afegeix a la pantalla d’inici</b>).', 'Obre l’app des de la icona nova.'];
 }
-const canInstall = () => (isiOS() || isAndroid()) && !installed() && !PREVIEW;
-/** La mateixa guia, des del menú del compte (encara que s'hagi tancat la targeta d'Inici). */
+const canInstall = () => !installed() && !PREVIEW;
+/** La mateixa guia, des del menú del compte (encara que s'hagi tancat la targeta d'Inici). A l'ordinador, els passos dels dos mòbils. */
 function sheetInstall() {
-  const steps = installSteps();
+  const phone = isiOS() || isAndroid();
+  const list = os => { const steps = installSteps(os); return steps.length ? `<ol class="install-steps">${steps.map(x => `<li>${x}</li>`).join('')}</ol>` : ''; };
   openSheet({
-    title: 'Instal·la l’app',
-    body: `<p style="margin-top:0">${isiOS() ? 'Al iPhone, posar l’app a la pantalla d’inici és l’única manera de rebre notificacions al mòbil.' : 'La tindràs com una app més, i s’obre més de pressa.'}</p>
-      ${steps.length ? `<ol class="install-steps">${steps.map(x => `<li>${x}</li>`).join('')}</ol>` : ''}`,
-    foot: installPrompt ? '<span class="spacer"></span><button class="btn btn-primary" data-act="install-go">Instal·la-la</button>' : '',
+    title: 'Descarrega l’app al mòbil',
+    body: phone
+      ? `<p style="margin-top:0">${isiOS() ? 'A l’iPhone, posar l’app a la pantalla d’inici és l’única manera de rebre notificacions al mòbil.' : 'La tindràs com una app més, i s’obre més de pressa.'}</p>${list(isiOS() ? 'ios' : 'android')}`
+      : `<p style="margin-top:0">Obre <b>${esc(location.host)}</b> al navegador del mòbil i entra-hi amb el teu compte. Després, segons el mòbil:</p>
+         <h3 class="install-os">iPhone</h3>${list('ios')}<h3 class="install-os">Android</h3>${list('android')}`,
+    foot: phone && installPrompt ? '<span class="spacer"></span><button class="btn btn-primary" data-act="install-go">Descarrega-la</button>' : '',
   });
 }
 /* ---------- Inici: el que tens per fer i el que ve ---------- */
