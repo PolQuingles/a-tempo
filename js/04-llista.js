@@ -180,9 +180,9 @@ function celebrateRoll(s, sec, quiet) {
   if (!quiet) toast(`Llista de ${SEC[sec].name.toLowerCase()} completa: ${pr.done} de ${pr.total}`);
   buzz([12, 70, 24]);
 }
-/* Vista compacta (opcional, la recorda cada mòbil): una fila per persona i cinc cercles de color en lloc de cinc botons amb text. */
+/* Vista compacta (per defecte; cada mòbil recorda si es canvia): una fila per persona i cinc cercles de color en lloc de cinc botons amb text. */
 const LS_COMPACT = 'atempo:llista-compacta';
-const rollCompact = () => lsGet(LS_COMPACT) === '1';
+const rollCompact = () => lsGet(LS_COMPACT) !== '0';
 const MARK_CODE = { P: 'P', R: 'R', FNJ: 'NJ', FJ: 'J', NP: 'NF' };
 function viewRollSection(cur, list, sec, pendingBySec) {
   const on = convoked(cur, sec);
@@ -209,7 +209,9 @@ function viewRollSection(cur, list, sec, pendingBySec) {
     return head + `<div class="empty"><h2 class="h2">${esc(SEC[sec].name)}: encara no hi ha ningú</h2><p>Afegeix els ${V.members} d’aquesta ${V.section} per poder passar llista.</p>
       ${canEdit() ? `<button class="btn btn-primary" data-act="member-bulk" data-sec="${sec}">Afegeix ${V.members}</button>` : ''}</div>`;
   }
-  const inRoll = all.filter(m => !isOut(cur, m));
+  // Qui ja ha avisat que no vindrà, al final: primer, la gent que cal mirar.
+  const away = m => absencesFor(cur.id, m.id).some(a => a.kind === 'absent');
+  const inRoll = all.filter(m => !isOut(cur, m) && !away(m)), told = all.filter(m => !isOut(cur, m) && away(m));
   const out = all.filter(m => isOut(cur, m));
   const leaders = all.filter(m => m.leader), leader = leaders[0];
   const c = countsFor(cur, all);
@@ -219,8 +221,8 @@ function viewRollSection(cur, list, sec, pendingBySec) {
     <span class="leader-r">${canMark(cur, sec) ? `<button class="btn btn-sm btn-ghost" data-act="roll-compact" aria-pressed="${rollCompact()}">${rollCompact() ? 'Vista detallada' : 'Vista compacta'}</button>` : ''}</span>
   </div>
   ${subLine(cur, sec, leader)}
-  <div class="tally" id="tally">${tallyInner(c, inRoll.some(m => !effMark(cur, m)))}</div>
-  <ul class="roster${rollCompact() ? ' compact' : ''}" id="roster">${inRoll.map(m => rowHtml(cur, m)).join('')}</ul>
+  <div class="tally" id="tally">${tallyInner(c, [...inRoll, ...told].some(m => !effMark(cur, m)))}</div>
+  <ul class="roster${rollCompact() ? ' compact' : ''}" id="roster">${inRoll.map(m => rowHtml(cur, m)).join('')}${told.length ? `<li class="roster-sep">Han avisat que no vindran</li>${told.map(m => rowHtml(cur, m)).join('')}` : ''}</ul>
   ${out.length ? `<details class="np-group" ${out.some(m => effMark(cur, m)?.s !== 'NP') ? 'open' : ''}>
       <summary><span>De baixa o no fan la producció (${out.length})</span>${ICON.chev}</summary>
       <ul class="roster${rollCompact() ? ' compact' : ''}" style="margin-top:0">${out.map(m => rowHtml(cur, m)).join('')}</ul>

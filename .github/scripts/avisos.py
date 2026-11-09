@@ -434,7 +434,7 @@ class Group:
                 changes.append((sid, s, f"Canvi al calendari: {what.lower()} del {day_label(was[0])} passa al {day_label(now[0])}{f' a les {now[1]}' if now[1] else ''}{f' · {now[3]}' if now[3] and now[3] != was[3] else ''}."))
             elif was[1] != now[1] or was[2] != now[2]:
                 changes.append((sid, s, f"Canvi d'hora: {what.lower()} del {day_label(now[0])} serà {f'a les {now[1]}' if now[1] else 'sense hora fixada'}{f'–{now[2]}' if now[1] and now[2] else ''}."))
-            elif was[3] != now[3] and now[3]:
+            elif was[3] and was[3] != now[3] and now[3]:   # omplir un lloc que encara no hi era no és cap canvi
                 changes.append((sid, s, f"Canvi de lloc: {what.lower()} del {day_label(now[0])} serà a {now[3]}."))
         for sid, was in prev.items():
             if sid not in cur and was[0] >= today:

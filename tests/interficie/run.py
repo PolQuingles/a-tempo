@@ -265,6 +265,42 @@ def main():
         check(page.evaluate("window.__marca === undefined"), "si en tornar-hi ja és un altre dia, l'app es recarrega sola")
         ctx.close()
 
+        print("Sessions alhora, copiar fitxes i plans, qui ha avisat i informe")
+        ctx, page, errors = open_app(browser, base, "pol", MOBILE)
+        r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {}, sh = () => document.querySelector('.sheet');
+          const p = [...S.productions.values()].find(x => (x.sessions || []).filter(k => k.date >= TODAY).length > 1);
+          sheetProduction(p.id); await s(300);
+          sh().querySelector('#pe-place').value = 'Sala Nova';
+          sh().querySelector('#pe-bulk').open = true;
+          sh().querySelector('#b-pick [data-k="all"]').click(); await s(50);
+          const n = sh().querySelectorAll('#b-list input:checked').length;
+          sh().querySelector('#b-place').value = 'Sala Nova'; sh().querySelector('#b-run').click(); await s(100);
+          sh().querySelector('#pe-save').click(); await s(300);
+          const up = S.productions.get(p.id).sessions.filter(k => k.date >= TODAY);
+          out.bulk = n === up.length && up.every(k => k.place === 'Sala Nova');
+          out.keeps = S.productions.get(p.id).place === 'Sala Nova';
+          sheetSession(null, p.id); await s(300); out.newPlace = sh().querySelector('#se-place').value === 'Sala Nova'; closeSheet(); await s(200);
+          const [a, b] = up;
+          updateSession(a.id, { info: { dress: 'Negre', steps: [{ time: '10:00', what: 'Trobada', where: '' }] }, plan: { items: [{ id: 'x1', kind: '', title: 'Escalfament' }], text: 'Llapis', after: '' } }); await s(200);
+          sheetSession(b.id); await s(300);
+          sh().querySelector('#se-copy').value = a.id; sh().querySelector('#se-copy').dispatchEvent(new Event('change')); await s(100);
+          out.copyInfo = sh().querySelector('#se-dress').value === 'Negre' && sh().querySelectorAll('#se-steps .step-row').length === 1; closeSheet(); await s(200);
+          sheetPlan(b.id); await s(300);
+          const before = sh().querySelectorAll('#pl-items .plan-row').length;
+          sh().querySelector('#pl-copy').value = a.id; sh().querySelector('#pl-copy').dispatchEvent(new Event('change')); await s(100);
+          out.copyPlan = sh().querySelectorAll('#pl-items .plan-row').length === before + 1; closeSheet(); await s(200);
+          const printed = []; window.print = () => printed.push(document.querySelector('#print-root').innerText);
+          applyRoute('assistencia'); ui.attArea = 'all'; render(); await s(200);
+          printStatsReport(); await s(200);
+          out.report = printed.length === 1 && /Informe d’assistència/.test(printed[0]) && /Per persona/.test(printed[0]);
+          window.dispatchEvent(new Event('afterprint'));
+          return out; }""")
+        for k, what in [("bulk", "es poden canviar unes quantes sessions alhora"), ("keeps", "la producció recorda el lloc habitual"), ("newPlace", "i les sessions noves ja el porten"),
+                        ("copyInfo", "es pot copiar la fitxa d'una altra sessió"), ("copyPlan", "i el pla d'assaig"), ("report", "l'informe d'assistència surt per imprimir")]:
+            check(r.get(k), what, str(r))
+        check(not errors, "sense errors a les sessions i l'informe", "; ".join(errors[:3]))
+        ctx.close()
+
         print("Passar llista sense que la pantalla salti")
         ctx, page, errors = open_app(browser, base, "pol", MOBILE)
         r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {}, v = document.querySelector('#view');
@@ -1235,7 +1271,7 @@ def main():
         print("Distribució: llista compacta, Més…, plantilla desplegable i avisar des de Properament")
         ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/assistencia/T")
         r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
-          lsSet(LS_COMPACT, null); render(); await s(200);
+          out.byDefault = rollCompact(); lsSet(LS_COMPACT, '0'); render(); await s(200);
           const h0 = document.querySelector('#roster .row').getBoundingClientRect().height;
           document.querySelector('[data-act="roll-compact"]').click(); await s(300);
           const rows = [...document.querySelectorAll('#roster.compact .row')];
@@ -1268,7 +1304,7 @@ def main():
           btn?.click(); await s(300);
           out.preset = !!row && !!document.querySelector(`.sheet #ab-sessions input[value="${row.dataset.sid}"]:checked`);
           closeSheet(); return out; }"""))
-        for k, label in [("compact", "passar llista té una vista compacta: una fila per persona i cinc cercles"),
+        for k, label in [("byDefault", "la llista compacta és la de sortida"), ("compact", "passar llista té una vista compacta: una fila per persona i cinc cercles"),
                          ("marks", "els cercles marquen igual que els botons"),
                          ("remembered", "el mòbil se'n recorda, i no s'eixampla la pantalla"),
                          ("back", "es pot tornar a la vista detallada"),

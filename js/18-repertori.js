@@ -445,11 +445,13 @@ function sheetPlan(sid) {
     el.querySelectorAll('#pl-items [data-f="work"], #pl-items [data-f="kind"]').forEach(x => x.onchange = () => { read(el); paint(el); });
     el.querySelectorAll('#pl-items .pickers .pick').forEach(b => b.onclick = () => b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true')));
   };
+  const planFrom = allSessions().filter(x => x.id !== sid && x.plan && (x.plan.items || []).length).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 40);
   const add = (el, kind) => { read(el); plan.items.push(kind === 'head' ? { id: uid('pi'), kind, time: '', title: '', who: '' } : kind === 'break' ? { id: uid('pi'), kind, time: '', mins: 15 } : { id: uid('pi'), kind: '', work: works.find(w => inProd.has(w.id))?.id || works[0]?.id || '', title: '', bars: '', who: '', note: '' }); paint(el); };
   openSheet({
     title: 'Pla d’assaig',
     wide: true,
     body: `<p style="margin-top:0"><b>${esc(longDate(s.date))}</b>${s.time ? ` · ${esc(timeRange(s))}` : ''} · ${esc(s.type || 'Assaig')}<br><span class="muted" style="font-size:var(--t-13)">El veuen tots els ${V.members} convocats, per preparar-ho; cadascú hi veu primer el que li toca. Qui falti sabrà què s’ha fet.</span></p>
+      ${planFrom.length ? `<label class="field" style="margin-bottom:12px"><span>Copia el pla d’una altra sessió</span><select class="inp" id="pl-copy"><option value="">Tria’n una…</option>${planFrom.map(x => `<option value="${esc(x.id)}">${esc(sessionLabel(x))}</option>`).join('')}</select><small>S’afegeix al final del que ja hi hagi.</small></label>` : ''}
       <div id="pl-items" style="display:grid;gap:12px"></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button type="button" class="btn btn-sm" id="pl-add">${ICON.plus}Obra</button><button type="button" class="btn btn-sm" id="pl-add-head">+ Bloc (parcial o tutti)</button><button type="button" class="btn btn-sm" id="pl-add-break">+ Pausa</button></div>
       <label class="field" style="margin-top:14px"><span>Indicacions (opcional)</span><textarea class="inp" id="pl-text" maxlength="800" style="min-height:60px" placeholder="p. ex. Porteu el llapis. Mirarem sobretot la pronunciació.">${esc(plan.text || '')}</textarea></label>
@@ -457,6 +459,16 @@ function sheetPlan(sid) {
     foot: `${planOf(s) ? '<button class="btn btn-danger-ghost" id="pl-del">Esborra el pla</button>' : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="pl-save">Desa</button>`,
     onMount: el => {
       paint(el);
+      el.querySelector('#pl-copy')?.addEventListener('change', e => {
+        const from = sessionById(e.target.value);
+        if (!from?.plan) return;
+        read(el);
+        plan.items.push(...clone(from.plan.items || []).map(it => ({ ...it, id: uid('pi') })));
+        const box = el.querySelector('#pl-text');
+        if (!box.value.trim() && from.plan.text) box.value = from.plan.text;
+        e.target.value = '';
+        paint(el); toast('Pla copiat. Revisa’l i desa.');
+      });
       el.querySelector('#pl-add').onclick = () => add(el, '');
       el.querySelector('#pl-add-head').onclick = () => add(el, 'head');
       el.querySelector('#pl-add-break').onclick = () => add(el, 'break');

@@ -25,7 +25,7 @@ function viewStats(inBoard) {
   const sub = scope.kind === 'range' ? `<p class="muted mono" style="margin:4px 0 0;font-size:var(--t-13)">${ddmm(scope.from)}/${scope.from.slice(0, 4)} – ${ddmm(scope.to)}/${scope.to.slice(0, 4)}</p>` : '';
   const tone = scope.kind === 'prod' ? ` prod-tone tinted" style="--ph:${prodHue(S.productions.get(scope.id))}` : '';
   const head = `<div class="page-head${inBoard ? ' in-board' : ''}${tone}"><div><div class="eyebrow">${scope.kind === 'prod' ? '<i class="pdot"></i>Producció' : 'Estadístiques'}</div>${title(esc(scope.name))}${sub}</div>
-    ${S.role === 'edit' ? '<button class="btn btn-sm" data-act="export-csv">Exporta CSV</button>' : ''}</div>`;
+    ${S.role === 'edit' ? '<span class="stats-exp"><button class="btn btn-sm" data-act="stats-report">Informe PDF</button><button class="btn btn-sm" data-act="export-csv">Exporta CSV</button></span>' : ''}</div>`;
   // Dins d'Assistència: una sola fila de filtres (període, producció i secció) sobre el títol.
   const selProd = `<label class="sel"><span class="sr">Producció</span><select data-pick="stats-prod">${prods.map(p => `<option value="${p.id}" ${p.id === scope.id ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select></label>`;
   const selSec = `<label class="sel"><span class="sr">${esc(V.Section)}</span><select data-pick="stats-sec"><option value="">${esc(capz(V.tot))}</option>${SECTIONS.map(x => `<option value="${x.id}" ${ui.statsSec === x.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>`;
