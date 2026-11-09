@@ -133,7 +133,7 @@ function viewJoin(hero) {
         <div class="jn-list" id="jn-list" role="group" aria-label="Noms">${joinListHtml()}</div>
         <button class="btn btn-ghost" data-act="jn-other" style="justify-self:start;padding-inline:0">No em trobo a la llista</button>`}
       <button class="btn btn-primary" data-act="jn-send" ${ready && !j.busy ? '' : 'disabled'}>${j.busy ? 'Enviant…' : 'Demana l’accés'}</button>
-      <p class="muted" style="font-size:calc(13px*var(--ts));margin:0">Entraràs amb <b>${esc(S.email)}</b>.</p>${other}
+      <p class="muted" style="font-size:var(--t-13);margin:0">Entraràs amb <b>${esc(S.email)}</b>.</p>${other}
     </div></section>`;
 }
 function mountJoin(v) {
@@ -195,7 +195,7 @@ async function sheetJoinLink(fresh) {
     body: `<p style="margin-top:0">Qui l’obri entra amb el seu compte de Google (o amb un altre correu), tria el seu nom de la llista i et demana l’accés. Tu l’aproves amb un toc, des d’Inici (a «Per fer»). Així no cal recollir els correus.</p>
       <div class="jn-qr" id="jn-qr" aria-label="Codi QR de l’enllaç"><span class="muted">Fent el QR…</span></div>
       <div class="linkbox" id="jn-url">${esc(url)}</div>
-      <p class="muted" style="font-size:calc(13px*var(--ts))">${left ? `A la llista per triar-s’hi hi ha les ${left} persones de la plantilla que encara no tenen accés.` : 'Tota la plantilla ja té accés: qui l’obri haurà de dir el seu nom.'} Si l’enllaç arriba a qui no toca, fes-ne un de nou: el d’ara deixarà de funcionar.</p>`,
+      <p class="muted" style="font-size:var(--t-13)">${left ? `A la llista per triar-s’hi hi ha les ${left} persones de la plantilla que encara no tenen accés.` : 'Tota la plantilla ja té accés: qui l’obri haurà de dir el seu nom.'} Si l’enllaç arriba a qui no toca, fes-ne un de nou: el d’ara deixarà de funcionar.</p>`,
     foot: `<button class="btn btn-danger-ghost" id="jn-off">Desactiva’l</button><button class="btn" id="jn-new">Fes-ne un de nou</button><span class="spacer"></span><button class="btn" id="jn-print">Imprimeix el QR</button><button class="btn btn-primary" id="jn-share">${navigator.share ? 'Comparteix' : 'Copia l’enllaç'}</button>`,
     onMount: el => {
       drawJoinQr(el.querySelector('#jn-qr'), url);

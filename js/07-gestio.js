@@ -96,7 +96,7 @@ function managePeople() {
     leader: `Cada ${V.leader} porta una ${V.section}: hi passa llista i en rep les absències.`,
     voice: `Porta les ${V.classes.toLowerCase()}: en fa el calendari i rep les absències i els canvis dels ${V.members}.`,
   }[role] || '';
-  return `${accessPanel()}${menu}<div class="sec-h" style="margin-top:4px"><span class="muted" style="font-size:calc(13px*var(--ts))">${esc(what)}</span>${add}</div>
+  return `${accessPanel()}${menu}<div class="sec-h" style="margin-top:4px"><span class="muted" style="font-size:var(--t-13)">${esc(what)}</span>${add}</div>
     ${list.length ? `<ul class="list">${list.map(personRow).join('')}</ul>`
       : `<div class="empty"><p>Encara no hi ha ningú amb el rol de ${esc(roleLabel(role).toLowerCase())}.${isAdmin() ? ' Afegeix-la amb «+ Persona»: el nom, el correu i el rol, tot d’una.' : ''}</p></div>`}`;
 }
@@ -114,7 +114,7 @@ function manageProductions() {
   const ms = choicesOn() ? membersOf(null) : [];
   const low = ms.filter(m => !choiceSummary(m.id).ok).length, silent = ms.filter(m => choiceSummary(m.id).none).length;
   const chPanel = choicesOn() ? `<div class="panel ch-panel"><span><b>Cadascú tria les produccions que fa</b><br><span class="muted">${ms.length - silent} de ${ms.length} han respost${low ? ` · <b class="bad">${low} per sota del ${choiceMin()}%</b>` : ''}</span></span><button class="btn btn-sm" data-act="choices-overview">Qui fa cada producció</button></div>` : '';
-  return `${chPanel}<div class="sec-h"><span class="muted" style="font-size:calc(13.5px*var(--ts))">${ps.length} produccions</span><span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" data-act="season-report">Memòria de la temporada</button><button class="btn btn-sm btn-primary" data-act="prod-new">+ Producció</button></span></div>
+  return `${chPanel}<div class="sec-h"><span class="muted" style="font-size:var(--t-13)">${ps.length} produccions</span><span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" data-act="season-report">Memòria de la temporada</button><button class="btn btn-sm btn-primary" data-act="prod-new">+ Producció</button></span></div>
     ${ps.length ? `<div class="only-narrow" style="display:grid;gap:10px">${ps.map(p => {
       const ss = allSessions(p.id);
       const shared = sharedTxt(ss);
@@ -152,7 +152,7 @@ function absenceCard(a, opts = {}) {
     <div class="a-h"><span><b>${esc(m?.name || fullName(a.memberName) || '—')}</b> <span class="muted">· ${esc(SEC[a.section]?.name || '')} · ${what}</span></span><span class="st-pill st-${a.status}">${label}</span></div>
     <div class="a-d">${dates.map(s => `<span>${wdShort(s.date)} ${ddmm(s.date)}</span>`).join('') || '<span>Sessió esborrada</span>'}</div>
     ${a.reason ? `<div class="a-r">${esc(a.reason)}</div>` : ''}
-    <div class="muted mono" style="font-size:calc(12px*var(--ts))">Enviat el ${a.createdAt ? (d => `${pad(d.getDate())}/${pad(d.getMonth() + 1)} a les ${pad(d.getHours())}:${pad(d.getMinutes())}`)(new Date(a.createdAt)) : '—'}</div>
+    <div class="muted mono" style="font-size:var(--t-12)">Enviat el ${a.createdAt ? (d => `${pad(d.getDate())}/${pad(d.getMonth() + 1)} a les ${pad(d.getHours())}:${pad(d.getMinutes())}`)(new Date(a.createdAt)) : '—'}</div>
     ${btns ? `<div class="a-b">${btns}</div>` : ''}
   </div>`;
 }
@@ -226,7 +226,7 @@ function sheetDeleteGroup() {
     body: `<p style="margin-top:0">S’esborraran per sempre la plantilla, les produccions, les llistes, els avisos, el tauler i els fitxers de <b>${esc(name)}</b>, i ningú no hi podrà tornar a entrar. No es pot desfer.</p>
       <p>Si en vols conservar alguna cosa, abans descarrega’n una còpia a Ajustos › Dades.</p>
       <label class="field"><span>Per confirmar-ho, escriu el nom de l’agrupació</span><input class="inp" id="dg-name" autocomplete="off" placeholder="${esc(name)}"></label>
-      <p class="muted" id="dg-status" style="font-size:calc(13px*var(--ts));margin:10px 0 0" aria-live="polite"></p>`,
+      <p class="muted" id="dg-status" style="font-size:var(--t-13);margin:10px 0 0" aria-live="polite"></p>`,
     foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-danger" id="dg-go" disabled>Esborra-ho tot</button>`,
     onMount: el => {
       const input = el.querySelector('#dg-name'), go = el.querySelector('#dg-go');
@@ -297,14 +297,14 @@ function manageConfig() {
   </div>
   ${cfgHead('seccions', `${esc(V.Sections)}`, `${SECTIONS.map(x => esc(x.short)).join(' · ')}`)}
   <div class="panel cfg-p"${cfgOpen('seccions') ? '' : ' hidden'} style="padding:14px;display:grid;gap:10px">
-    <p class="muted" style="margin:0;font-size:calc(13px*var(--ts))">Es passa llista per ${esc(V.sections)}. L’abreviatura surt als quadres de la llista i al calendari. No en pots treure cap que tingui gent assignada.</p>
+    <p class="muted" style="margin:0;font-size:var(--t-13)">Es passa llista per ${esc(V.sections)}. L’abreviatura surt als quadres de la llista i al calendari. No en pots treure cap que tingui gent assignada.</p>
     ${sectionsEditor('cfg', CFG_SECTIONS, lockedSections())}
-    <div id="cfg-secs-save" class="sec-save" ${CFG_DIRTY ? '' : 'hidden'}><span class="muted" style="font-size:calc(13px*var(--ts))">Canvis sense desar</span><span class="spacer"></span><button class="btn btn-sm btn-ghost" data-act="sections-undo">Desfés</button><button class="btn btn-sm btn-primary" data-act="sections-save">Desa</button></div>
+    <div id="cfg-secs-save" class="sec-save" ${CFG_DIRTY ? '' : 'hidden'}><span class="muted" style="font-size:var(--t-13)">Canvis sense desar</span><span class="spacer"></span><button class="btn btn-sm btn-ghost" data-act="sections-undo">Desfés</button><button class="btn btn-sm btn-primary" data-act="sections-save">Desa</button></div>
   </div>
   ${cfgHead('identitat', `Identitat visual`, `${brand.logo ? 'Logotip, color i nom curt' : 'Sense logotip · color i nom curt'}`)}
   <div class="panel cfg-p"${cfgOpen('identitat') ? '' : ' hidden'} style="padding:14px;display:grid;gap:14px">
     <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
-      ${brand.logo ? `<img class="logo-prev" src="${brand.logo}" alt="Logotip">` : '<span class="logo-prev" style="display:grid;place-items:center;color:var(--muted);font-size:calc(13px*var(--ts))">Sense logo</span>'}
+      ${brand.logo ? `<img class="logo-prev" src="${brand.logo}" alt="Logotip">` : '<span class="logo-prev" style="display:grid;place-items:center;color:var(--muted);font-size:var(--t-13)">Sense logo</span>'}
       <span style="display:flex;gap:6px;flex-wrap:wrap"><label class="btn btn-sm" for="logo-file">${brand.logo ? 'Canvia el logotip' : 'Puja el logotip'}</label>
       <input id="logo-file" type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" class="sr" data-bind="logo">
       ${brand.logo ? '<button class="btn btn-sm btn-danger-ghost" data-act="logo-remove">Treu-lo</button>' : ''}</span>
@@ -313,7 +313,7 @@ function manageConfig() {
       <label class="swatch" style="display:grid;place-items:center;background:var(--surface-2);cursor:pointer" title="Un altre color">+<input type="color" class="sr" data-bind="brand-color" value="${brand.accent || '#5A3577'}"></label></div></div>
     <label class="field"><span>Nom curt</span><input class="inp" id="cfg-short" type="text" maxlength="16" value="${esc(S.config.shortName || '')}" data-bind="cfg-short" placeholder="${esc(MARCA?.short || `p. ex. ${initials(S.config.name || NAME_EXAMPLES[kindOf()])}`)}">
       <small>És el nom que surt sota la icona quan algú afegeix l’app a la pantalla d’inici.</small></label>
-    <p class="muted" style="margin:0;font-size:calc(13px*var(--ts))">El logotip, el nom i el color es fan servir a la pantalla d’entrada i a la icona del mòbil. Si els canvies, s’hi actualitzen sols en unes hores.</p>
+    <p class="muted" style="margin:0;font-size:var(--t-13)">El logotip, el nom i el color es fan servir a la pantalla d’entrada i a la icona del mòbil. Si els canvies, s’hi actualitzen sols en unes hores.</p>
   </div>` : `${cfgHead('agrupacio', `Agrupació`, `${esc(S.config.name || '')} · ${esc(KINDS[kindOf()].label)}`)}
   <div class="panel cfg-p"${cfgOpen('agrupacio') ? '' : ' hidden'}><div class="setting"><div><div class="t">${esc(S.config.name || '')}</div>
     <div class="s">${esc(KINDS[kindOf()].label)} · ${SECTIONS.map(x => esc(x.name)).join(', ')}. El nom, el tipus, les ${esc(V.sections)} i la imatge de l’agrupació només els pot canviar un <b>Usuari Pro</b> que l’administri.</div></div></div></div>`}` : '';
@@ -321,20 +321,20 @@ function manageConfig() {
   <div class="cfg-list">
   ${adminBlocks}
   ${isAdmin() ? `${cfgHead('classes', `${esc(V.classes)}`, `${classesOn() ? `Activades${teacherSeats().length ? ` · ${teacherSeats().length} ${teacherSeats().length === 1 ? 'professor' : 'professors'} sense compte` : ''}` : 'Desactivades'}`)}
-  <div class="panel cfg-p"${cfgOpen('classes') ? '' : ' hidden'}><div class="toggle-row setting"><span><b>${classesOn() ? 'Activades' : 'Desactivades'}</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">${classesOn()
+  <div class="panel cfg-p"${cfgOpen('classes') ? '' : ' hidden'}><div class="toggle-row setting"><span><b>${classesOn() ? 'Activades' : 'Desactivades'}</b><br><span class="muted" style="font-size:var(--t-13)">${classesOn()
       ? `Hi ha una pestanya amb el calendari de les classes. El porta qui tingui el rol de ${esc(V.Teacher.toLowerCase())}; cada ${esc(V.member)} hi veu la seva hora, hi pot avisar d’un retard o d’una absència i demanar un canvi d’hora a un company.`
       : `Activa-les si l’agrupació fa classes individuals. Hi haurà una pestanya amb el calendari, que portarà qui tingui el rol de ${esc(V.Teacher.toLowerCase())}.`}</span></span>
       <label class="switch"><input type="checkbox" id="cfg-classes" ${classesOn() ? 'checked' : ''} data-bind="cfg-classes"><span></span></label></div>
     ${classesOn() ? `<div class="setting"><div><div class="t">Professorat sense compte</div><div class="s">Per posar el calendari d’un ${esc(V.Teacher.toLowerCase())} que encara no entra a l’app. Quan en tingui, dona-li accés amb el rol i passa-li els dies.</div></div>
       <button class="btn btn-sm" data-act="cl-seats">${teacherSeats().length ? `Són ${teacherSeats().length}` : 'Afegeix-ne'}</button></div>` : ''}</div>` : ''}
   ${isAdmin() ? `${cfgHead('docs', 'Documents', docsOn() ? `Es ${docItems().length === 1 ? 'demana' : 'demanen'} ${docItems().length}: ${esc(docItems().map(([, l]) => l).join(', '))}` : 'Desactivats')}
-  <div class="panel cfg-p"${cfgOpen('docs') ? '' : ' hidden'}><p class="muted" style="margin:2px 2px 8px;font-size:calc(13px*var(--ts))">Els que la secretaria demana a cada ${esc(V.member)} i apunta a la seva fitxa. Si no se’n demana cap, desapareixen de la plantilla.</p>
-    ${DOC_ITEMS.map(([k, l, d]) => `<div class="toggle-row setting"><span><b>${esc(l)}</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">${esc(d)}</span></span>
+  <div class="panel cfg-p"${cfgOpen('docs') ? '' : ' hidden'}><p class="muted" style="margin:2px 2px 8px;font-size:var(--t-13)">Els que la secretaria demana a cada ${esc(V.member)} i apunta a la seva fitxa. Si no se’n demana cap, desapareixen de la plantilla.</p>
+    ${DOC_ITEMS.map(([k, l, d]) => `<div class="toggle-row setting"><span><b>${esc(l)}</b><br><span class="muted" style="font-size:var(--t-13)">${esc(d)}</span></span>
       <label class="switch"><input type="checkbox" id="cfg-doc-${k}" ${docItems().some(([x]) => x === k) ? 'checked' : ''} data-bind="cfg-doc" data-k="${k}"><span></span></label></div>`).join('')}</div>` : ''}
   ${isAdmin() ? `${cfgHead('vestidor', 'Vestidor', wardOn() ? `Activat · ${esc(wardItems().map(x => x.name).join(', '))}` : 'Desactivat')}
   <div class="panel cfg-p"${cfgOpen('vestidor') ? '' : ' hidden'}>${wardConfigPanel()}</div>` : ''}
   ${isAdmin() ? `${cfgHead('quota', 'Quota', feesOn() ? `Activada${feeAmount() ? ` · ${euros(feeAmount())} per temporada` : ''}` : 'Desactivada')}
-  <div class="panel cfg-p"${cfgOpen('quota') ? '' : ' hidden'}><div class="toggle-row setting"><span><b>${feesOn() ? 'Activada' : 'Desactivada'}</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">${feesOn()
+  <div class="panel cfg-p"${cfgOpen('quota') ? '' : ' hidden'}><div class="toggle-row setting"><span><b>${feesOn() ? 'Activada' : 'Desactivada'}</b><br><span class="muted" style="font-size:var(--t-13)">${feesOn()
       ? `La secretaria i la gerència apunten qui ha pagat la quota de cada temporada, i cada ${esc(V.member)} veu la seva a «La meva fitxa».`
       : `Activa-la si l’agrupació cobra una quota: es podrà apuntar qui l’ha pagada, quan i com.`}</span></span>
       <label class="switch"><input type="checkbox" id="cfg-fees" ${feesOn() ? 'checked' : ''} data-bind="cfg-fees"><span></span></label></div>
@@ -342,18 +342,18 @@ function manageConfig() {
       <span style="display:flex;align-items:center;gap:6px"><input class="inp" id="cfg-fee-amount" type="number" min="0" step="1" inputmode="decimal" style="width:90px;text-align:right" value="${feeAmount() || ''}" data-bind="fee-amount"><b>€</b></span></div>` : ''}</div>` : ''}
   ${cfgHead('ics', `Calendari subscrit`, `${icsOn() ? 'Activat' : 'Desactivat'}`)}
   <div class="panel cfg-p"${cfgOpen('ics') ? '' : ' hidden'}>${isAdmin()
-    ? `<div class="toggle-row setting"><span><b>${icsOn() ? 'Activat' : 'Desactivat'}</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">${icsOn() ? 'Qui s’hi subscrigui tindrà les sessions a Google Calendar, Apple o Outlook, sempre al dia. L’adreça és pública però difícil d’endevinar, i no porta noms de persones.' : 'Activa’l perquè tothom pugui tenir les sessions a l’app de calendari del mòbil. Funciona al cap d’unes hores.'}</span></span>
+    ? `<div class="toggle-row setting"><span><b>${icsOn() ? 'Activat' : 'Desactivat'}</b><br><span class="muted" style="font-size:var(--t-13)">${icsOn() ? 'Qui s’hi subscrigui tindrà les sessions a Google Calendar, Apple o Outlook, sempre al dia. L’adreça és pública però difícil d’endevinar, i no porta noms de persones.' : 'Activa’l perquè tothom pugui tenir les sessions a l’app de calendari del mòbil. Funciona al cap d’unes hores.'}</span></span>
         <label class="switch"><input type="checkbox" id="cfg-ics" ${icsOn() ? 'checked' : ''} data-bind="cfg-ics"><span></span></label></div>`
     : `<div class="setting"><div><div class="t">${icsOn() ? 'Calendari al mòbil' : 'Desactivat'}</div><div class="s">${icsOn() ? 'S’actualitza sol cada poques hores. Funciona amb Google Calendar, Apple i Outlook.' : 'L’administració l’ha de fer públic a Ajustos.'}</div></div>${icsOn() ? '<button class="btn btn-sm" data-act="cal-subscribe">Com afegir-lo</button>' : ''}</div>`}
     ${isAdmin() && icsOn() ? '<div class="setting"><div><div class="t">Com s’hi subscriu cadascú</div><div class="s">Des del Calendari o des del seu compte (les inicials, a dalt a la dreta).</div></div><button class="btn btn-sm" data-act="cal-subscribe">Instruccions</button></div>' : ''}
   </div>
   ${isAdmin() ? `${cfgHead('cantaires', `Llistes i produccions`, `${attPrivate() ? 'Llistes privades' : 'Llistes visibles per a tothom'} · ${choicesOn() ? `cadascú tria (mínim ${choiceMin()}%)` : 'produccions per a tothom'}`)}
   <div class="panel cfg-p"${cfgOpen('cantaires') ? '' : ' hidden'}>
-    <div class="toggle-row setting"><span><b>Llistes d’assistència privades</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">${attPrivate()
+    <div class="toggle-row setting"><span><b>Llistes d’assistència privades</b><br><span class="muted" style="font-size:var(--t-13)">${attPrivate()
       ? `Cada ${esc(V.member)} només veu la seva assistència. Les llistes, les estadístiques i el risc de tothom només els veu l’equip.`
       : `Ara tothom pot veure les llistes, les estadístiques i el risc de tothom, només per llegir. Activa-ho perquè cadascú només vegi la seva.`}</span></span>
       <label class="switch"><input type="checkbox" id="cfg-private" ${attPrivate() ? 'checked' : ''} data-bind="cfg-private"><span></span></label></div>
-    <div class="toggle-row setting"><span><b>Cadascú tria les produccions que fa</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">${choicesOn()
+    <div class="toggle-row setting"><span><b>Cadascú tria les produccions que fa</b><br><span class="muted" style="font-size:var(--t-13)">${choicesOn()
       ? `Cada ${esc(V.member)} diu a «La meva fitxa» quines produccions de la temporada farà. On diu que no, no hi està convocat i no li compta l’assistència.`
       : `Ara tothom fa totes les produccions (menys les que li treu l’equip). Activa-ho si cadascú pot triar quines fa.`}</span></span>
       <label class="switch"><input type="checkbox" id="cfg-choice" ${choicesOn() ? 'checked' : ''} data-bind="cfg-choice"><span></span></label></div>

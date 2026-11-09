@@ -108,7 +108,7 @@ function classDayCard(c, past, inside) {
         <span><b>${esc(longDate(c.date))}</b>${c.cancelled ? ' <span class="st-pill st-rejected">Anul·lada</span>' : ''}${facts ? `<br><span class="m">${esc(facts)}</span>` : ''}</span>${edit}</div>`;
   return `<div class="cl-day ${c.cancelled ? 'off' : ''}">
     ${head}
-    ${slots.length ? slots.map(x => classSlotRow(c, x, past)).join('') : '<p class="muted" style="margin:6px 0 0;font-size:calc(13px*var(--ts))">Encara no hi ha hores posades.</p>'}
+    ${slots.length ? slots.map(x => classSlotRow(c, x, past)).join('') : '<p class="muted" style="margin:6px 0 0;font-size:var(--t-13)">Encara no hi ha hores posades.</p>'}
   </div>`;
 }
 function classTeachers() {
@@ -216,7 +216,7 @@ function classTeacherSpace(who, own) {
       <span class="cl-ini">${esc(teacherInitials(t.name))}</span>
       <span class="cl-h-t"><b>${esc(t.name)}</b><small>${esc(facts)}</small></span>
     </div>
-    ${teach ? `<div class="sec-h" style="margin-top:0"><span class="muted" style="font-size:calc(13px*var(--ts))">Les classes d’aquest ${esc(V.Teacher.toLowerCase())}.</span>
+    ${teach ? `<div class="sec-h" style="margin-top:0"><span class="muted" style="font-size:var(--t-13)">Les classes d’aquest ${esc(V.Teacher.toLowerCase())}.</span>
       <span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" data-act="cl-paste" data-k="${esc(who)}">Enganxa un horari</button><button class="btn btn-sm btn-primary" data-act="cl-new" data-k="${esc(who)}" data-date="${esc(ui.clDay)}">+ Dia</button></span></div>` : ''}
     <div class="seg3 cl-view" role="radiogroup" aria-label="Vista">${[['month', 'Mes'], ['week', 'Setmana']].map(([k, l]) => `<button type="button" role="radio" aria-checked="${(ui.clView || 'month') === k}" data-act="cl-view" data-k="${k}">${l}</button>`).join('')}</div>
     ${ui.clView === 'week' ? classWeekHtml(who) : `<div class="panel month">
@@ -224,11 +224,11 @@ function classTeacherSpace(who, own) {
       <div class="mweek" aria-hidden="true">${['dl', 'dt', 'dc', 'dj', 'dv', 'ds', 'dg'].map(d => `<span>${d}</span>`).join('')}</div>
       <div class="mgrid">${cells.join('')}</div>
       ${inMonth.length ? `<div class="mlegend"><span><i class="mk cl"></i>Dia de classe</span>${mid ? '<span><i class="mk cl mine"></i>Hi tens hora</span>' : ''}</div>`
-        : '<p class="muted" style="margin:10px 4px 0;font-size:calc(13px*var(--ts))">Aquest mes no hi ha classes.</p>'}
+        : '<p class="muted" style="margin:10px 4px 0;font-size:var(--t-13)">Aquest mes no hi ha classes.</p>'}
     </div>
     <div class="section-title" style="margin-top:18px"><h2 class="h2">${esc(longDate(ui.clDay))}</h2>${dayClasses.length ? `<span class="eyebrow">${esc(classDaySpan(dayClasses[0]))}</span>` : ''}</div>
     ${dayClasses.length ? `<div class="panel">${dayClasses.map(c => classDayCard(c, c.date < TODAY, true)).join('')}</div>`
-      : `<div class="panel" style="padding:14px;font-size:calc(13.5px*var(--ts));color:var(--muted)">Cap classe aquest dia.${teach ? ' Amb <b>+ Dia</b> en pots posar una.' : ''}</div>`}`}
+      : `<div class="panel" style="padding:14px;font-size:var(--t-13);color:var(--muted)">Cap classe aquest dia.${teach ? ' Amb <b>+ Dia</b> en pots posar una.' : ''}</div>`}`}
     ${soon.length ? `<div class="section-title" style="margin-top:18px"><h2 class="h2">Properes classes</h2><span class="eyebrow">${soon.length}</span></div>
       <div class="cl-next">${soon.map(c => {
         const mineSlot = mid ? classSlots(c).find(x => x.memberId === mid) : null;
@@ -236,7 +236,7 @@ function classTeacherSpace(who, own) {
         return `<button data-act="cl-day" data-date="${esc(c.date)}">
           <span class="d"><b>${d.getDate()}</b><small>${esc(fmtD(c.date, { month: 'short' }).replace('.', ''))}</small></span>
           <span class="i"><b>${esc(capz(fmtD(c.date, { weekday: 'long' })))}</b><small>${c.cancelled ? 'Anul·lada' : esc(classDaySpan(c))}${c.place ? ` · ${esc(c.place)}` : ''}</small></span>
-          <span class="${mineSlot && !c.cancelled ? 'mine mono' : 'muted mono'}" style="font-size:calc(13px*var(--ts))">${mineSlot && !c.cancelled ? esc(mineSlot.time) : ''}</span>
+          <span class="${mineSlot && !c.cancelled ? 'mine mono' : 'muted mono'}" style="font-size:var(--t-13)">${mineSlot && !c.cancelled ? esc(mineSlot.time) : ''}</span>
         </button>`;
       }).join('')}</div>` : ''}
     ${teach ? `<div class="panel" style="margin-top:14px">
@@ -271,8 +271,8 @@ function viewAllClasses(tabs = '') {
     const c = S.classes.get(r.classId), mySl = mySwapSlot(r);
     return `<div class="conv-card">
       <div class="a-h"><b>${esc(reqMemberName(r))}</b> busca algú per canviar l’hora</div>
-      <span class="muted" style="font-size:calc(13.5px*var(--ts))">${esc(longDate(c.date))} · té les <b>${esc(slotTime(c, r.slotId))}</b> i tu ${mySl && mySl.c.id !== c.id ? `el ${esc(longDate(mySl.c.date))} ` : ''}les <b>${esc(mySl ? mySl.x.time : '')}</b>. Només per aquella setmana.</span>
-      ${r.reason ? `<span style="font-size:calc(13px*var(--ts))">${esc(r.reason)}</span>` : ''}
+      <span class="muted" style="font-size:var(--t-13)">${esc(longDate(c.date))} · té les <b>${esc(slotTime(c, r.slotId))}</b> i tu ${mySl && mySl.c.id !== c.id ? `el ${esc(longDate(mySl.c.date))} ` : ''}les <b>${esc(mySl ? mySl.x.time : '')}</b>. Només per aquella setmana.</span>
+      ${r.reason ? `<span style="font-size:var(--t-13)">${esc(r.reason)}</span>` : ''}
       <span style="margin-top:6px"><button class="btn btn-sm btn-primary" data-act="cl-open-take" data-r="${esc(r.id)}">Me’l quedo</button></span>
     </div>`;
   };
@@ -280,14 +280,14 @@ function viewAllClasses(tabs = '') {
     const c = S.classes.get(r.classId);
     return `<div class="conv-card">
       <div class="a-h"><b>${esc(reqMemberName(r))}</b> et demana canviar l’hora</div>
-      <span class="muted" style="font-size:calc(13.5px*var(--ts))">${c ? esc(longDate(c.date)) : ''} · ell/a té les <b>${esc(slotTime(c, r.slotId))}</b> i tu ${swapWithClass(r) !== r.classId ? 'el ' : 'les '}<b>${esc(swapOther(r))}</b>. Només per aquella setmana.</span>
-      ${r.reason ? `<span style="font-size:calc(13px*var(--ts))">${esc(r.reason)}</span>` : ''}
+      <span class="muted" style="font-size:var(--t-13)">${c ? esc(longDate(c.date)) : ''} · ell/a té les <b>${esc(slotTime(c, r.slotId))}</b> i tu ${swapWithClass(r) !== r.classId ? 'el ' : 'les '}<b>${esc(swapOther(r))}</b>. Només per aquella setmana.</span>
+      ${r.reason ? `<span style="font-size:var(--t-13)">${esc(r.reason)}</span>` : ''}
       <span style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><button class="btn btn-sm btn-primary" data-act="cl-answer" data-r="${esc(r.id)}" data-v="accepted">Accepto el canvi</button><button class="btn btn-sm" data-act="cl-answer" data-r="${esc(r.id)}" data-v="rejected">Ara no puc</button></span>
     </div>`;
   };
   const pendCard = r => `<div class="conv-card">
       <div class="a-h">${classReqLine(r)}</div>
-      ${r.reason ? `<span style="font-size:calc(13px*var(--ts))">${esc(r.reason)}</span>` : ''}
+      ${r.reason ? `<span style="font-size:var(--t-13)">${esc(r.reason)}</span>` : ''}
       <span style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><button class="btn btn-sm btn-primary" data-act="cl-review" data-r="${esc(r.id)}" data-v="accepted">Vist</button><button class="btn btn-sm" data-act="cl-review" data-r="${esc(r.id)}" data-v="rejected">No pot ser</button></span>
     </div>`;
   const mineCard = r => `<li><span>${classReqLine(r)}<br><span class="m">${r.kind === 'swap' ? 'Esperant que respongui' : 'Esperant que ho vegi el professorat'}</span></span>
@@ -331,7 +331,7 @@ function viewClassRoll(tabs = '') {
   const pend = reqsForTeacher().filter(r => (S.classes.get(r.classId)?.teacher || '') === who);
   const pendCard = r => `<div class="conv-card">
       <div class="a-h">${classReqLine(r)}</div>
-      ${r.reason ? `<span style="font-size:calc(13px*var(--ts))">${esc(r.reason)}</span>` : ''}
+      ${r.reason ? `<span style="font-size:var(--t-13)">${esc(r.reason)}</span>` : ''}
       <span style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><button class="btn btn-sm btn-primary" data-act="cl-review" data-r="${esc(r.id)}" data-v="accepted">Vist</button><button class="btn btn-sm" data-act="cl-review" data-r="${esc(r.id)}" data-v="rejected">No pot ser</button></span>
     </div>`;
   const day = c => `<div class="section-title"><h2 class="h2">${c.date === TODAY ? 'Avui' : esc(capz(longDate(c.date)))}</h2><span class="eyebrow">${esc(classDaySpan(c))}</span></div>
@@ -350,7 +350,7 @@ function classNextList(list) {
   return `<div class="cl-next">${list.map(c => { const d = new Date(c.date + 'T12:00:00'), n = classSlots(c).filter(x => x.memberId).length; return `<button data-act="cl-roll-day" data-date="${esc(c.date)}">
     <span class="d"><b>${d.getDate()}</b><small>${esc(fmtD(c.date, { month: 'short' }).replace('.', ''))}</small></span>
     <span class="i"><b>${c.date === TODAY ? 'Avui' : esc(capz(fmtD(c.date, { weekday: 'long' })))}</b><small>${esc(classDaySpan(c))}${c.place ? ` · ${esc(c.place)}` : ''}</small></span>
-    <span class="muted mono" style="font-size:calc(13px*var(--ts))">${n === 1 ? '1 alumne' : `${n} alumnes`}</span></button>`; }).join('')}</div>`;
+    <span class="muted mono" style="font-size:var(--t-13)">${n === 1 ? '1 alumne' : `${n} alumnes`}</span></button>`; }).join('')}</div>`;
 }
 /** A Inici, amb el rol de professor de cant: les properes classes en lloc dels assajos. */
 function teacherSoonBlock() {
@@ -386,5 +386,5 @@ function viewStudents(tabs = '') {
         ${avatar(m)}<span class="stu-t"><b>${esc(fullName(m.name))}</b><small>${esc([SEC[m.section]?.name + (m.part ? ` ${m.part}` : ''), hours.join(', '), next ? `propera, ${shortDate(next)}` : ''].filter(Boolean).join(' · '))}</small></span>
         ${notes.get(m.id) ? `<span class="stu-n">${notes.get(m.id)} ${notes.get(m.id) === 1 ? 'nota' : 'notes'}</span>` : ''}${ICON.right}</button>`).join('')}</div>`
       : `<div class="empty">${staffSvg()}<p>Encara no tens cap alumne. Quan facis l’horari a <b>Calendari</b>, hi sortiran tots.</p></div>`}
-    <p class="muted" style="font-size:calc(13px*var(--ts));margin:10px 2px 0">A la fitxa de cadascú hi ha els objectius, el repertori que treballa i totes les notes i enregistraments de les classes.</p>`;
+    <p class="muted" style="font-size:var(--t-13);margin:10px 2px 0">A la fitxa de cadascú hi ha els objectius, el repertori que treballa i totes les notes i enregistraments de les classes.</p>`;
 }

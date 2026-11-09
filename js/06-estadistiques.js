@@ -22,7 +22,7 @@ function viewStats(inBoard) {
   const secChips = `<div class="chips" role="group" aria-label="${V.Section}" style="padding-bottom:4px">
     <button class="chip" aria-pressed="${!ui.statsSec}" data-act="stats-sec" data-sec="">${capz(V.tot)}</button>
     ${SECTIONS.map(x => `<button class="chip" aria-pressed="${ui.statsSec === x.id}" data-act="stats-sec" data-sec="${x.id}">${esc(x.name)}</button>`).join('')}</div>`;
-  const sub = scope.kind === 'range' ? `<p class="muted mono" style="margin:4px 0 0;font-size:calc(13px*var(--ts))">${ddmm(scope.from)}/${scope.from.slice(0, 4)} – ${ddmm(scope.to)}/${scope.to.slice(0, 4)}</p>` : '';
+  const sub = scope.kind === 'range' ? `<p class="muted mono" style="margin:4px 0 0;font-size:var(--t-13)">${ddmm(scope.from)}/${scope.from.slice(0, 4)} – ${ddmm(scope.to)}/${scope.to.slice(0, 4)}</p>` : '';
   const tone = scope.kind === 'prod' ? ` prod-tone tinted" style="--ph:${prodHue(S.productions.get(scope.id))}` : '';
   const head = `<div class="page-head${inBoard ? ' in-board' : ''}${tone}"><div><div class="eyebrow">${scope.kind === 'prod' ? '<i class="pdot"></i>Producció' : 'Estadístiques'}</div>${title(esc(scope.name))}${sub}</div>
     ${S.role === 'edit' ? '<button class="btn btn-sm" data-act="export-csv">Exporta CSV</button>' : ''}</div>`;
@@ -44,7 +44,7 @@ function viewStats(inBoard) {
     <div class="kpi"><div class="kpi-v">${minsKpi(t.min)}</div><div class="kpi-l">Retard acumulat · ${t.R} retards</div></div>
     <div class="kpi ${t.FNJ ? 'alert' : ''}"><div class="kpi-v">${t.FNJ}</div><div class="kpi-l">Faltes no justificades · ${t.FJ} just.</div></div>
   </div>
-  <p class="muted" style="font-size:calc(13px*var(--ts));margin:10px 2px 0">${st.counted.length} de ${st.all.length} ${st.all.length === 1 ? 'sessió' : 'sessions'} amb llista ${helpBtn('assist')}</p>
+  <p class="muted" style="font-size:var(--t-13);margin:10px 2px 0">${st.counted.length} de ${st.all.length} ${st.all.length === 1 ? 'sessió' : 'sessions'} amb llista ${helpBtn('assist')}</p>
   ${helpText('assist', 'L’assistència es compta en minuts: els minuts que cadascú ha estat a l’assaig dividits pels minuts que ha durat (si una sessió no té hora de final, compta dues hores). Un retard hi resta els minuts que s’ha fet tard; marxar abans d’hora, els minuts que s’ha perdut del final; i una falta, justificada o no, hi resta tota la sessió. No compten «no fa» ni les baixes.')}`;
 
   const dist = `<div class="panel" style="padding:14px;margin-top:14px">${stackBar(t)}<div class="legend">${ORDER.map(k => `<span><i class="i-${k}"></i>${STATUS[k].label} <b>${t[k]}</b></span>`).join('')}</div></div>`;
@@ -62,7 +62,7 @@ function viewStats(inBoard) {
     rule = `<div class="section-title"><h2 class="h2">Norma del ${minAttendance()}% ${helpBtn('norma')}</h2>${hasConcert ? `<button class="btn btn-sm" data-act="concert-list" data-pid="${scope.id}">${V.sh.list}</button>` : '<span class="eyebrow">assistència mínima</span>'}</div>
       <div class="panel">
         ${outL.length || riskL.length ? `<ul class="alerts">${outL.map(r => item(r, ruleMap.get(r.m.id))).join('')}${riskL.map(r => item(r, ruleMap.get(r.m.id))).join('')}</ul>`
-          : `<p style="margin:0;padding:14px;font-size:calc(13.5px*var(--ts))">Ara mateix tothom compleix la norma.</p>`}
+          : `<p style="margin:0;padding:14px;font-size:var(--t-13)">Ara mateix tothom compleix la norma.</p>`}
       </div>
       ${helpText('norma', `Es compta en minuts: el temps que s’ha estat a tots els assajos de la producció (no ${V.sh.els} ni les sessions «Altres») dividit pel temps que han durat. «En risc» vol dir que ara està per sota però encara hi pot arribar amb els assajos que queden.`)}`;
   }
@@ -173,11 +173,11 @@ function sheetRiskWrite(pid) {
   openSheet({
     title: 'Escriu als que no arriben',
     body: `<div class="kv">
-      <p class="muted" style="margin:0;font-size:calc(13px*var(--ts))">${esc(prod.name)} · cadascú rep un missatge privat amb les seves xifres. Pots canviar el text: {nom}, {percentatge}, {queden}, {maxim} i {minim} s’omplen per a cada persona.</p>
+      <p class="muted" style="margin:0;font-size:var(--t-13)">${esc(prod.name)} · cadascú rep un missatge privat amb les seves xifres. Pots canviar el text: {nom}, {percentatge}, {queden}, {maxim} i {minim} s’omplen per a cada persona.</p>
       ${groups.map(([k, l]) => `<div class="field"><span>${title[k]} · ${l.length}</span>
         <ul class="mini-list rw-list" style="max-height:none">${l.map(r => `<li><label class="cs-row"><input type="checkbox" value="${esc(r.m.id)}" checked><span><b>${esc(r.m.name)}</b> <span class="m">${esc(SEC[r.m.section].short)} · ${pct(r.rs.cur)}</span></span></label></li>`).join('')}</ul>
         <textarea class="inp" id="rw-${k}" maxlength="${THREAD_MAX}" style="min-height:110px">${esc(RISK_TEXT[k])}</textarea></div>`).join('')}
-      <p class="muted" id="rw-prev" style="margin:0;font-size:calc(13px*var(--ts))"></p>
+      <p class="muted" id="rw-prev" style="margin:0;font-size:var(--t-13)"></p>
     </div>`,
     foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="rw-send">Envia</button>`,
     onMount: el => {
@@ -225,7 +225,7 @@ function riskView() {
       <div class="panel prod-tone tinted" style="--ph:${prodHue(pr)}">${rows.length ? rows.map(({ m, rs }) => `<button class="risk-row" data-act="member-stats" data-mid="${m.id}">
           <span class="rn">${esc(m.name)}</span><span class="rule ${rs.status}">${rs.status === 'out' ? `${pct(rs.cur)} · no hi arriba` : `${pct(rs.cur)} · en risc`}</span>
           <span class="rm">${esc(SEC[m.section].name)} · ${minsText(rs.attM)} de ${minsText(rs.attM + rs.absM)} d’assaig · ${riskLine(rs)}</span></button>`).join('')
-        : '<p style="margin:0;padding:14px;font-size:calc(13.5px*var(--ts))">Tothom compleix la norma.</p>'}</div>`;
+        : '<p style="margin:0;padding:14px;font-size:var(--t-13)">Tothom compleix la norma.</p>'}</div>`;
   }).join('');
   const text = () => {
     const out = [`Seguiment de la norma del ${minAttendance()}%`];
@@ -244,11 +244,11 @@ function riskView() {
       <div class="kpi ${nOut ? 'alert' : ''}"><div class="kpi-v">${nOut}</div><div class="kpi-l">No poden fer ${V.sh.el}</div></div>
       <div class="kpi"><div class="kpi-v">${nRisk}</div><div class="kpi-l">Hi són a temps</div></div>
     </div>
-    <p class="muted" style="font-size:calc(13px*var(--ts));margin:10px 2px 0">Produccions en curs i properes ${helpBtn('risc')}</p>
+    <p class="muted" style="font-size:var(--t-13);margin:10px 2px 0">Produccions en curs i properes ${helpBtn('risc')}</p>
     ${helpText('risc', `Compten els assajos (no ${V.sh.els} ni les sessions «Altres») i no compten les baixes.`)}
     ${blocks}
     ${S.role === 'edit' ? `<div class="panel" style="padding:14px;margin-top:14px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
-      <span style="font-size:calc(13.5px*var(--ts))">Passa-ho a direcció o guarda-ho.</span>
+      <span style="font-size:var(--t-13)">Passa-ho a direcció o guarda-ho.</span>
       <button class="btn btn-sm" data-act="risk-copy">Copia el resum</button></div>` : ''}`;
 }
 
@@ -298,8 +298,8 @@ function sheetConcertDecide(pid, mid) {
   };
   openSheet({
     title: r.m.name,
-    body: `<p style="margin-top:0"><b>${stateLabel(r.state)}</b><br><span class="muted" style="font-size:calc(13.5px*var(--ts))">${esc(r.note)}</span></p>
-      ${r.forced ? `<p class="muted" style="font-size:calc(13px*var(--ts))">Ara està decidit a mà${r.why ? `: ${esc(r.why)}` : ''}.</p>` : ''}
+    body: `<p style="margin-top:0"><b>${stateLabel(r.state)}</b><br><span class="muted" style="font-size:var(--t-13)">${esc(r.note)}</span></p>
+      ${r.forced ? `<p class="muted" style="font-size:var(--t-13)">Ara està decidit a mà${r.why ? `: ${esc(r.why)}` : ''}.</p>` : ''}
       <label class="field"><span>Motiu (surt a la llista)</span><input class="inp" id="cd-why" type="text" maxlength="90" value="${esc(r.forced ? r.why : '')}" placeholder="p. ex. es va incorporar tard"></label>`,
     foot: `${r.forced ? '<button class="btn" id="cd-auto">Torna a l’automàtic</button>' : ''}<span class="spacer"></span>
       <button class="btn btn-danger-ghost" id="cd-no">No hi ${V.plays}</button><button class="btn btn-primary" id="cd-yes">Hi ${V.plays}</button>`,
@@ -335,7 +335,7 @@ function balanceHtml(bal) {
       <ul class="bal-parts">${b.parts.map(pt => `<li><span>${pt.label}</span><b>${pt.n}${pt.w ? `<i>+${pt.w}</i>` : ''}</b></li>`).join('')}</ul>
       ${b.gap ? `<span class="bal-note" title="Diferència entre primeres i segones">${b.gap}</span>` : ''}
     </div>`).join('')}</div>
-    <p class="muted" style="font-size:calc(13px*var(--ts));margin:8px 2px 0">«+» són els que encara hi són a temps. «1/2» ${V.plays} tant de primera com de segona. Si entre primeres i segones hi ha 3 o més de diferència, s’indica a sota.</p>`;
+    <p class="muted" style="font-size:var(--t-13);margin:8px 2px 0">«+» són els que encara hi són a temps. «1/2» ${V.plays} tant de primera com de segona. Si entre primeres i segones hi ha 3 o més de diferència, s’indica a sota.</p>`;
 }
 function sheetConcertList(pid) {
   const { prod, dates, rows } = concertRows(pid);
@@ -377,9 +377,9 @@ function sheetConcertList(pid) {
         <div class="kpi"><div class="kpi-v">${waiting.length}</div><div class="kpi-l">Hi són a temps</div></div>
         <div class="kpi ${outList.length ? 'alert' : ''}"><div class="kpi-v">${outList.length}</div><div class="kpi-l">Fora</div></div>
       </div>
-      <p class="muted" style="font-size:calc(13px*var(--ts));margin:10px 0 0">Feta amb la norma del ${minAttendance()}% sobre els assajos de la producció.${canEdit() ? ' Toca una persona per afegir-la o treure-la a mà, amb el motiu.' : ''}</p>
+      <p class="muted" style="font-size:var(--t-13);margin:10px 0 0">Feta amb la norma del ${minAttendance()}% sobre els assajos de la producció.${canEdit() ? ' Toca una persona per afegir-la o treure-la a mà, amb el motiu.' : ''}</p>
       ${balanceHtml(voiceBalance(rows))}
-      ${stamp ? `<p class="muted" style="font-size:calc(13px*var(--ts));margin:6px 0 0">Desada com a definitiva el ${(d => `${pad(d.getDate())}/${pad(d.getMonth() + 1)} a les ${pad(d.getHours())}:${pad(d.getMinutes())}`)(new Date(stamp))}${prod.concert.by ? ` per ${esc(prod.concert.by)}` : ''}.</p>` : ''}
+      ${stamp ? `<p class="muted" style="font-size:var(--t-13);margin:6px 0 0">Desada com a definitiva el ${(d => `${pad(d.getDate())}/${pad(d.getMonth() + 1)} a les ${pad(d.getHours())}:${pad(d.getMinutes())}`)(new Date(stamp))}${prod.concert.by ? ` per ${esc(prod.concert.by)}` : ''}.</p>` : ''}
       ${SECTIONS.map(block).join('')}`,
     foot: `${canEdit() ? '<button class="btn" id="cl-final">Marca com a definitiva</button>' : ''}<span class="spacer"></span><button class="btn btn-primary" id="cl-copy">Copia la llista</button>`,
     onMount: el => {
@@ -404,8 +404,8 @@ function ruleSentence(rs) {
   if (!rs) return '';
   const min = minAttendance();
   if (rs.status === 'ok') return `<span class="rsvp yes">Compleixes la norma del ${min}%</span>`;
-  if (rs.status === 'risk') return `<span class="rsvp none" style="background:var(--fj-soft);color:var(--fj-ink)">Per sota del ${min}%</span> <span class="muted" style="font-size:calc(13px*var(--ts))">Encara hi pots arribar: si vens a tot el que queda (${minsText(rs.remM)} d’assaig), arribaràs al ${pct(rs.best)}.</span>`;
-  return `<span class="rsvp no">No arribes al ${min}%</span> <span class="muted" style="font-size:calc(13px*var(--ts))">Parla amb el teu ${V.leader}.</span>`;
+  if (rs.status === 'risk') return `<span class="rsvp none" style="background:var(--fj-soft);color:var(--fj-ink)">Per sota del ${min}%</span> <span class="muted" style="font-size:var(--t-13)">Encara hi pots arribar: si vens a tot el que queda (${minsText(rs.remM)} d’assaig), arribaràs al ${pct(rs.best)}.</span>`;
+  return `<span class="rsvp no">No arribes al ${min}%</span> <span class="muted" style="font-size:var(--t-13)">Parla amb el teu ${V.leader}.</span>`;
 }
 /** «Encara pots perdre 1 h 50 min d’assaig abans del concert del 17 d’oct.»: els minuts que pot faltar (o arribar tard)
  *  i continuar arribant a la norma, que es compta en minuts. */
@@ -440,7 +440,7 @@ function myAttendanceCard(me, inTab) {
         <span class="att-facts"><b>${esc(facts[0])}</b>${facts.length > 1 ? `<small>${esc(facts.slice(1).join(' · '))}</small>` : ''}</span></div>
         <div class="dots" aria-label="Sessió a sessió">${dots}</div>
         ${normHint(me, prod.id) || `<div>${ruleSentence(rs)}</div>`}`
-      : `<span class="muted" style="font-size:calc(13.5px*var(--ts))">Encara no hi ha cap llista passada en aquesta producció.</span>`}
+      : `<span class="muted" style="font-size:var(--t-13)">Encara no hi ha cap llista passada en aquesta producció.</span>`}
       ${inTab ? '' : '<div class="att-acts"><button class="btn btn-sm btn-ghost" data-act="my-att">Totes les produccions</button><button class="btn btn-sm btn-ghost" data-act="absence-new">Avisa d’una absència</button></div>'}
     </div>`;
 }
@@ -470,7 +470,7 @@ function myAttSeason(me, skip, head = '') {
           <div class="kpi"><div class="kpi-v">${sc ? kpiPct(rate(sr)) : '—'}</div><div class="kpi-l">${esc(season.name)}${sc ? ` · ${esc(minsText(sr.mDone))} de ${esc(minsText(sr.mAll))}` : ''}</div></div>
           <div class="kpi"><div class="kpi-v">${minsKpi(sr ? sr.min : 0)}</div><div class="kpi-l">Retard acumulat</div></div>
         </div></details>
-      <p class="muted" style="font-size:calc(13px*var(--ts))">${attPrivate() ? `Només tu i l’equip ${V.del} veieu aquestes dades.` : `Tothom ${V.del} pot veure l’assistència de tothom; els teus avisos d’absència, només l’equip.`} Si hi ha algun error, parla amb el teu ${V.leader}.</p>`;
+      <p class="muted" style="font-size:var(--t-13)">${attPrivate() ? `Només tu i l’equip ${V.del} veieu aquestes dades.` : `Tothom ${V.del} pot veure l’assistència de tothom; els teus avisos d’absència, només l’equip.`} Si hi ha algun error, parla amb el teu ${V.leader}.</p>`;
 }
 /** Assistència, amb el rol de cantaire: només la teva. Avisar d'una absència o d'un retard, els avisos que has fet, com vas a
  *  la producció d'ara i a tota la temporada; i, si avui passes llista d'una corda (en funcions), el botó per fer-ho. */

@@ -72,8 +72,8 @@ function balanceBlock(s) {
       <em>${esc(b.x.short)}</em><b>${b.yes}</b><small>${b.min ? `mínim ${b.min}` : `de ${b.total}`}</small>
       <span>${[b.wait ? `${b.wait} sense resposta` : '', b.no ? `${b.no} no` : ''].filter(Boolean).join(' · ') || '&nbsp;'}</span></div>`).join('')}</div>
     ${warn.length ? `<p class="vb-warn">${warn.map(b => `A ${esc(b.x.name.toLowerCase())} ${b.min - b.yes === 1 ? 'hi falta 1 persona' : `hi falten ${b.min - b.yes} persones`}${b.lost ? ', i ja no hi arriben ni que responguin tots' : ''}`).join('. ')}.</p>`
-      : bal.some(b => b.min) ? '<p class="muted" style="font-size:calc(13px*var(--ts));margin:6px 2px 0">Totes les cordes arriben al mínim.</p>'
-      : `<p class="muted" style="font-size:calc(13px*var(--ts));margin:6px 2px 0">Pots posar el mínim de cada ${V.section} a Ajustos › Norma, i l’app avisarà si en falta.</p>`}`;
+      : bal.some(b => b.min) ? '<p class="muted" style="font-size:var(--t-13);margin:6px 2px 0">Totes les cordes arriben al mínim.</p>'
+      : `<p class="muted" style="font-size:var(--t-13);margin:6px 2px 0">Pots posar el mínim de cada ${V.section} a Ajustos › Norma, i l’app avisarà si en falta.</p>`}`;
 }
 /** Els concerts dels propers 45 dies on alguna corda queda curta (per a «Per fer»). */
 function shortConcerts() {
@@ -125,7 +125,7 @@ function seatingBlock(s) {
   return `<div class="section-title" style="margin-top:16px"><h2 class="h2">Col·locació</h2>${canProd() ? `<button class="btn btn-sm" data-act="seating-edit" data-sid="${s.id}">Edita-la</button>` : ''}</div>
     ${seat ? `<p class="seat-me">El teu lloc: <b>fila ${seat.row}</b>${seat.row === 1 ? ' (la de davant)' : ''}, <b>${seat.pos}${seat.pos === 1 ? 'r' : seat.pos === 2 ? 'n' : seat.pos === 3 ? 'r' : seat.pos === 4 ? 't' : 'è'}</b> des de l’esquerra de la direcció.</p>` : ''}
     ${seatingHtml(s, me)}
-    <p class="muted" style="font-size:calc(13px*var(--ts));margin:6px 2px 0">Vist des de la direcció: la fila 1 és la de davant.</p>`;
+    <p class="muted" style="font-size:var(--t-13);margin:6px 2px 0">Vist des de la direcció: la fila 1 és la de davant.</p>`;
 }
 function sheetSeating(sid) {
   const s = sessionById(sid);
@@ -149,9 +149,9 @@ function sheetSeating(sid) {
     el.querySelector('#st-grid').innerHTML = n ? `<div class="stage edit">${rows.slice().reverse().map((row, i) => {
       const r = rows.length - 1 - i;
       return `<div class="stage-row"><span class="stage-n">${r + 1}</span>${row.map((mid, c) => `<button type="button" class="seat-b${sel && sel.r === r && sel.c === c ? ' sel' : ''}" data-r="${r}" data-c="${c}" aria-label="Fila ${r + 1}, lloc ${c + 1}${mid ? `: ${esc(S.members.get(mid)?.name || '')}` : ', buit'}">${seatCell(mid)}</button>`).join('')}</div>`;
-    }).join('')}<div class="stage-front">Davant · direcció i públic</div></div>` : '<p class="muted" style="margin:0;font-size:calc(13px*var(--ts))">Tria quantes files i llocs vols, o col·loca’ls per cordes.</p>';
+    }).join('')}<div class="stage-front">Davant · direcció i públic</div></div>` : '<p class="muted" style="margin:0;font-size:var(--t-13)">Tria quantes files i llocs vols, o col·loca’ls per cordes.</p>';
     el.querySelector('#st-pool').innerHTML = pool.length ? pool.map(m => `<button type="button" class="chip sx${secIdx(m.section)}${sel && sel.pool === m.id ? ' sel' : ''}" data-pool="${m.id}">${esc(m.name)}</button>`).join('')
-      : `<span class="muted" style="font-size:calc(13px*var(--ts))">Tothom té lloc.</span>`;
+      : `<span class="muted" style="font-size:var(--t-13)">Tothom té lloc.</span>`;
     el.querySelector('#st-count').textContent = `${pl.size} de ${people.length} amb lloc`;
     el.querySelector('#st-rows').value = n || ''; el.querySelector('#st-w').value = w || '';
     el.querySelector('#st-clear-one').hidden = !(sel && sel.r != null && rows[sel.r][sel.c]);
@@ -171,7 +171,7 @@ function sheetSeating(sid) {
   openSheet({
     title: `Col·locació · ${s.type || V.sh.Show}`,
     wide: true,
-    body: `<p style="margin-top:0"><b>${esc(longDate(s.date))}</b> · ${esc(prodNames(s))}<br><span class="muted" style="font-size:calc(13px*var(--ts))">Toca un lloc i després un altre per canviar-los, o un nom de sota i després un lloc. Vist des de la direcció.</span></p>
+    body: `<p style="margin-top:0"><b>${esc(longDate(s.date))}</b> · ${esc(prodNames(s))}<br><span class="muted" style="font-size:var(--t-13)">Toca un lloc i després un altre per canviar-los, o un nom de sota i després un lloc. Vist des de la direcció.</span></p>
       <div class="st-tools">
         <label class="field"><span>Files</span><input class="inp" id="st-rows" type="number" min="1" max="10" inputmode="numeric"></label>
         <label class="field"><span>Llocs per fila</span><input class="inp" id="st-w" type="number" min="1" max="40" inputmode="numeric"></label>
@@ -236,13 +236,13 @@ async function sheetParticipants(sid) {
   const count = el => { el.querySelector('#pt-n').textContent = `${concertPeople(s, onlyYes).length} persones a la llista`; };
   openSheet({
     title: 'Llista de participants',
-    body: `<p style="margin-top:0"><b>${esc(title)}</b><br><span class="muted" style="font-size:calc(13.5px*var(--ts))">${esc(longDate(s.date))}${s.place ? ` · ${esc(s.place)}` : ''}</span></p>
+    body: `<p style="margin-top:0"><b>${esc(title)}</b><br><span class="muted" style="font-size:var(--t-13)">${esc(longDate(s.date))}${s.place ? ` · ${esc(s.place)}` : ''}</span></p>
       ${s.rsvp ? `<div class="field"><span>Qui hi surt</span><div class="pickers" id="pt-who">
         <button type="button" class="pick" data-k="yes" aria-pressed="true">Els que han confirmat</button>
         <button type="button" class="pick" data-k="all" aria-pressed="false">Tots menys els que no hi van</button></div></div>` : ''}
       <div class="field" style="margin-top:10px"><span>Columnes</span><div class="pickers" id="pt-cols">${partCols().filter(([k]) => k !== 'bus' || s.bus).map(([k, l]) => `<button type="button" class="pick" data-k="${k}" aria-pressed="${cols.has(k)}">${l}</button>`).join('')}</div>
         <small>El telèfon, la talla, el contacte d’emergència i les al·lèrgies els omple cadascú a «La meva fitxa». Per al teatre, l’assegurança o l’autocar.</small></div>
-      <p class="muted" id="pt-n" style="margin:12px 0 0;font-size:calc(13.5px*var(--ts))"></p>`,
+      <p class="muted" id="pt-n" style="margin:12px 0 0;font-size:var(--t-13)"></p>`,
     foot: `<span class="spacer"></span><button class="btn" id="pt-xls">Excel</button><button class="btn btn-primary" id="pt-pdf">PDF</button>`,
     onMount: el => {
       count(el);

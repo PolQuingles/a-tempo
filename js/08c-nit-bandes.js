@@ -488,7 +488,7 @@ function bandesPropsOpen(pid) {
     title: 'Obrir les propostes?',
     body: `<p style="margin-top:0">Abans de votar, tothom podrà proposar categories noves (fins a ${PROPS_MAX} cadascú) i dir quines li agraden. Tu tries quines hi entren; la votació s’obre després, quan la publiquis.</p>
       <label class="field"><span>Es pot proposar fins al (inclòs)</span><input class="inp" type="date" id="pp-until" value="${esc(until0)}"></label>
-      <div class="toggle-row"><span><b>Publica un anunci al tauler</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Amb el botó per proposar-ne. A qui té les notificacions activades li arriba un avís.</span></span><label class="switch"><input type="checkbox" id="pp-ann" checked><span></span></label></div>`,
+      <div class="toggle-row"><span><b>Publica un anunci al tauler</b><br><span class="muted" style="font-size:var(--t-13)">Amb el botó per proposar-ne. A qui té les notificacions activades li arriba un avís.</span></span><label class="switch"><input type="checkbox" id="pp-ann" checked><span></span></label></div>`,
     foot: '<span class="spacer"></span><button class="btn" data-act="sheet-close">Encara no</button><button class="btn btn-primary" id="pp-ok">Obre-les</button>',
     onMount: el => {
       el.querySelector('#pp-ok').onclick = () => {

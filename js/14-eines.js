@@ -25,7 +25,7 @@ function maybeWelcome() {
        <li><b>Tauler</b> · anuncis, partitures i àudios de la teva ${V.part}, i enquestes.</li></ul>`;
   openSheet({
     title: 'Com funciona',
-    body: body + `<p class="muted" style="font-size:calc(13px*var(--ts))">Consell: al navegador del mòbil, tria <b>Afegeix a la pantalla d’inici</b> i la tindràs com una app.</p>`,
+    body: body + `<p class="muted" style="font-size:var(--t-13)">Consell: al navegador del mòbil, tria <b>Afegeix a la pantalla d’inici</b> i la tindràs com una app.</p>`,
     foot: `${pushSupported() ? '<button class="btn" id="wc-push">Notificacions</button>' : ''}<span class="spacer"></span><button class="btn btn-primary" data-act="sheet-close">Entesos</button>`,
     onMount: el => { el.querySelector('#wc-push')?.addEventListener('click', () => { closeSheet(); sheetPush(); }); },
   });
@@ -82,7 +82,7 @@ function sheetWhoIn() {
         <ul class="mini-list" style="max-height:220px">${noAccount.map(m => `<li><span>${esc(m.name)}<br><span class="m">${SEC[m.section].name}</span></span><button class="btn btn-sm" data-act="staff-new" data-mid="${esc(m.id)}">Dona-li accés</button></li>`).join('')}</ul>` : ''}
       ${inApp.length ? `<div class="section-title" style="margin-top:16px"><h2 class="h2">Ja hi entren</h2></div>
         <ul class="mini-list" style="max-height:260px">${inApp.sort((a, b) => (b.lastSeen || '').localeCompare(a.lastSeen || '')).map(p => `<li><span>${esc(p.name || p.email)}<br><span class="m">${esc(rolesText(p))}${pushBy.get(p.email) ? ' · notificacions actives' : ''}</span></span><span class="m">${agoText(p.lastSeen)}</span></li>`).join('')}</ul>` : ''}
-      <p class="muted" style="font-size:calc(13px*var(--ts))">De ${roster.length} ${V.members} de la plantilla, ${roster.length - noAccount.length} tenen el correu donat d’alta. «Han entrat» vol dir que han obert l’app almenys un cop.</p>`,
+      <p class="muted" style="font-size:var(--t-13)">De ${roster.length} ${V.members} de la plantilla, ${roster.length - noAccount.length} tenen el correu donat d’alta. «Han entrat» vol dir que han obert l’app almenys un cop.</p>`,
     foot: never.length ? '<button class="btn" id="wi-all">Copia el missatge per al grup</button><button class="btn btn-primary" id="wi-mail">Convida’ls per correu</button>' : '',
     onMount: el => {
       el.querySelectorAll('[data-invite]').forEach(b => b.onclick = () => sheetInvite(S.staff.get(b.dataset.invite)));
@@ -237,7 +237,7 @@ function tasksBlock(s, compact) {
     return `<li><span><b>${esc(t.label)}</b>${canEdit() ? `<small>${who.length} de ${t.need || '?'}${who.length ? ` · ${esc(who.map(m => firstName(fullName(m.name))).join(', '))}` : ''}</small>` : t.need ? `<small>Calen ${t.need} persones</small>` : ''}</span>
       ${can ? `<button class="btn btn-sm ${on ? 'btn-primary' : ''}" data-act="rsvp-task" data-sid="${esc(s.id)}" data-k="${esc(t.id)}">${on ? 'Hi ets' : 'M’hi apunto'}</button>` : on ? '<span class="rsvp yes">Hi ets</span>' : ''}</li>`;
   }).join('');
-  return `${compact ? '<span class="todo-k" style="margin-top:6px">Voluntaris</span>' : '<div class="section-title" style="margin-top:14px"><h2 class="h2">Voluntaris</h2></div>'}<ul class="tasks">${rows}</ul>${me && !mine && !compact ? '<p class="muted" style="margin:6px 0 0;font-size:calc(13px*var(--ts))">Confirma que hi seràs per apuntar-t’hi.</p>' : ''}`;
+  return `${compact ? '<span class="todo-k" style="margin-top:6px">Voluntaris</span>' : '<div class="section-title" style="margin-top:14px"><h2 class="h2">Voluntaris</h2></div>'}<ul class="tasks">${rows}</ul>${me && !mine && !compact ? '<p class="muted" style="margin:6px 0 0;font-size:var(--t-13)">Confirma que hi seràs per apuntar-t’hi.</p>' : ''}`;
 }
 function sheetRsvpNo(sid) {
   openSheet({
@@ -334,7 +334,7 @@ async function sheetMyCalendar() {
       <h3>Android o Google Calendar</h3><p><a class="btn btn-sm btn-primary" href="https://calendar.google.com/calendar/r?cid=${encodeURIComponent(webcal)}" target="_blank" rel="noopener">Obre Google Calendar</a></p>
       <p>Si no funciona, a Google Calendar (web) ves a <b>Altres calendaris › + › Des d’un URL</b> i enganxa aquesta adreça:</p>
       <div class="linkbox">${esc(url)}</div>
-      <p class="muted" style="font-size:calc(13px*var(--ts))">És una adreça personal: no la comparteixis. ${classes ? 'Si ja tenies el calendari de les classes, el pots treure: aquest ja les porta. ' : ''}La primera vegada, i després de cada canvi, les sessions hi surten al cap d’unes hores.</p></div>`,
+      <p class="muted" style="font-size:var(--t-13)">És una adreça personal: no la comparteixis. ${classes ? 'Si ja tenies el calendari de les classes, el pots treure: aquest ja les porta. ' : ''}La primera vegada, i després de cada canvi, les sessions hi surten al cap d’unes hores.</p></div>`,
     foot: `${navigator.share ? '<button class="btn" id="mc-share">Comparteix…</button>' : ''}<span class="spacer"></span><button class="btn btn-primary" id="mc-copy">Copia l’adreça</button>`,
     onMount: el => {
       el.querySelector('#mc-copy').onclick = () => copyText(url, 'Adreça copiada');

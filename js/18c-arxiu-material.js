@@ -111,12 +111,12 @@ function sheetKit(sec0) {
   openSheet({
     title: 'Carpetes i etiquetes',
     wide: true,
-    body: `<p class="muted" style="margin:0 0 10px;font-size:calc(13.5px*var(--ts))">Tothom ha de tenir la carpeta i l’etiqueta ${V.del}. Quan algú la perd, se li trenca o és nou, marca-ho aquí i sabràs quantes en cal fer.</p>
+    body: `<p class="muted" style="margin:0 0 10px;font-size:var(--t-13)">Tothom ha de tenir la carpeta i l’etiqueta ${V.del}. Quan algú la perd, se li trenca o és nou, marca-ho aquí i sabràs quantes en cal fer.</p>
       <div class="chips" id="kt-sec" role="group" aria-label="${esc(V.Section)}">${SECTIONS.map(x => `<button class="chip" data-sec="${esc(x.id)}" aria-pressed="${x.id === sec}">${esc(x.name)}</button>`).join('')}</div>
       <div class="ax-kpis" id="kt-sum"></div>
       <div class="sw-bulk" id="kt-bulk"><button type="button" class="btn btn-sm" data-bulk="folder">Tothom té carpeta</button><button type="button" class="btn btn-sm" data-bulk="label">Tothom té etiqueta</button></div>
       <ul class="sw-list" id="kt-list"></ul>
-      <p class="muted" id="kt-note" style="margin:8px 2px 0;font-size:calc(13px*var(--ts))"></p>
+      <p class="muted" id="kt-note" style="margin:8px 2px 0;font-size:var(--t-13)"></p>
       <div id="kt-lack"></div>`,
     foot: `<button class="btn" data-act="arx-codes" data-sec="${esc(sec)}">Codis</button><span class="spacer"></span><button class="btn btn-primary" data-act="sheet-close">Fet</button>`,
     onMount: el => {
@@ -166,7 +166,7 @@ function sheetCodes(sec0, pid0) {
   openSheet({
     title: 'Codis d’arxiu',
     wide: true,
-    body: `<p class="muted" style="margin:0 0 10px;font-size:calc(13.5px*var(--ts))">Cada ${esc(V.member)} té un codi (S1, C4, T6…) que surt al costat del nom a les llistes de partitures. Un reforç, o algú que només durant una producció en porta un altre, el té en aquella producció: tria-la a sota.</p>
+    body: `<p class="muted" style="margin:0 0 10px;font-size:var(--t-13)">Cada ${esc(V.member)} té un codi (S1, C4, T6…) que surt al costat del nom a les llistes de partitures. Un reforç, o algú que només durant una producció en porta un altre, el té en aquella producció: tria-la a sota.</p>
       <label class="field"><span>Codis</span><select class="inp" id="cd-prod"><option value="">De sempre (tota la temporada)</option>${prods.map(p => `<option value="${esc(p.id)}" ${p.id === pid ? 'selected' : ''}>Només per a ${esc(p.name)}</option>`).join('')}</select></label>
       <div class="chips" id="cd-sec" role="group" aria-label="${esc(V.Section)}" style="margin-top:10px">${SECTIONS.map(x => `<button class="chip" data-sec="${esc(x.id)}" aria-pressed="${x.id === sec}">${esc(x.name)}</button>`).join('')}</div>
       <div class="sw-bulk" id="cd-guests" style="margin-top:10px" hidden><button type="button" class="btn btn-sm" id="cd-r">Dona codis R als reforços</button></div>

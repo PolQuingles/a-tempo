@@ -257,10 +257,10 @@ function managePlantilla() {
     const ms = membersOf(x.id, true).filter(m => pmMatch(m, f));
     if (f !== 'all' && !ms.length) return '';
     const active = ms.filter(m => m.active !== false).length;
-    return `<section data-group="${x.id}"><div class="sec-h"><h2 class="h2"><em>${esc(x.short)}</em>${esc(x.name)} <span class="mono muted" style="font-size:calc(13px*var(--ts));font-weight:400">${active}</span></h2>
+    return `<section data-group="${x.id}"><div class="sec-h"><h2 class="h2"><em>${esc(x.short)}</em>${esc(x.name)} <span class="mono muted" style="font-size:var(--t-13);font-weight:400">${active}</span></h2>
       ${f === 'all' ? `<button class="btn btn-sm btn-ghost" data-act="member-new" data-sec="${x.id}">Afegeix</button>` : ''}</div>
       ${ms.length ? `<div class="list pm-list">${ms.map(m => pmRow(m, f)).join('')}</div>`
-        : `<div class="panel" style="padding:14px;color:var(--muted);font-size:calc(13.5px*var(--ts))">Encara no hi ha ningú en aquesta ${V.section}.</div>`}</section>`;
+        : `<div class="panel" style="padding:14px;color:var(--muted);font-size:var(--t-13)">Encara no hi ha ningú en aquesta ${V.section}.</div>`}</section>`;
   }).join('');
   return `${onboardingPanel()}${plantillaSummary(all)}${chips}
     <div id="mlist">${findBox('#mlist', `Cerca un ${V.member}`)}${secs || '<div class="panel" style="padding:14px;color:var(--muted)">Ningú no hi correspon.</div>'}<div class="panel find-empty" hidden>Ningú amb aquest nom.</div></div>`;
