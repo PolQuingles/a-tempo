@@ -7,6 +7,41 @@ let sheetClose = null;
 /** Una finestra oberta des del menú del compte porta una fletxa per tornar-hi. Algunes es preparen abans d'obrir-se
  *  (les classes al calendari), per això el senyal dura uns segons i el gasta la primera finestra que s'obre. */
 const SHEET_BACK = { at: 0 };
+/** Al mòbil, la finestra es tanca arrossegant-la cap avall. Des de la capçalera sempre; des del contingut només si ja és a dalt
+ *  de tot i no és un formulari (que ningú no perdi el que escriu per un gest). */
+function sheetDrag(back) {
+  const sh = back.querySelector('.sheet'), body = back.querySelector('.sheet-b');
+  const form = !!body.querySelector('input:not([type=checkbox]):not([type=radio]), textarea, select');
+  let y0 = null, x0 = 0, t0 = 0, dy = 0, on = false;
+  sh.addEventListener('touchstart', e => {
+    y0 = null;
+    if (e.touches.length !== 1 || window.matchMedia('(min-width:700px)').matches) return;
+    if (body.contains(e.target) && (form || body.scrollTop > 0)) return;
+    y0 = e.touches[0].clientY; x0 = e.touches[0].clientX; t0 = Date.now(); dy = 0; on = false;
+  }, { passive: true });
+  sh.addEventListener('touchmove', e => {
+    if (y0 == null) return;
+    dy = e.touches[0].clientY - y0;
+    if (!on) {
+      if (dy < 0 || Math.abs(e.touches[0].clientX - x0) > Math.abs(dy)) { y0 = null; return; }
+      if (dy < 8) return;
+      on = true; sh.style.animation = 'none'; sh.style.transition = 'none';
+    }
+    e.preventDefault();
+    sh.style.transform = `translateY(${Math.max(0, dy)}px)`;
+  }, { passive: false });
+  const end = () => {
+    if (y0 == null) return;
+    y0 = null;
+    if (!on) return;
+    on = false;
+    sh.style.transition = 'transform .24s cubic-bezier(.2,.8,.2,1)';
+    if (dy > 120 || dy / (Date.now() - t0) > .7) { sh.style.transform = 'translateY(100%)'; setTimeout(closeSheet, 200); }
+    else sh.style.transform = '';
+  };
+  sh.addEventListener('touchend', end);
+  sh.addEventListener('touchcancel', end);
+}
 function openSheet({ title, body, foot = '', onMount = null, wide = false }) {
   const fromMenu = Date.now() - SHEET_BACK.at < 4000;
   SHEET_BACK.at = 0;
@@ -14,6 +49,7 @@ function openSheet({ title, body, foot = '', onMount = null, wide = false }) {
   const root = $('#sheet-root');
   root.innerHTML = `<div class="sheet-back" data-sheet-back>
     <div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(title)}" ${wide ? 'style="max-width:680px"' : ''}>
+      <div class="sheet-grab" aria-hidden="true"></div>
       <div class="sheet-h">${fromMenu ? `<button class="icon-btn sheet-up" data-act="account" aria-label="Torna a El teu compte">${ICON.left}</button>` : ''}<h2 class="h2">${esc(title)}</h2><button class="icon-btn" data-act="sheet-close" aria-label="Tanca">${ICON.close}</button></div>
       <div class="sheet-b">${body}</div>
       ${foot ? `<div class="sheet-f">${foot}</div>` : ''}
@@ -34,6 +70,7 @@ function openSheet({ title, body, foot = '', onMount = null, wide = false }) {
     else if (!e.shiftKey && at === z) { e.preventDefault(); a.focus(); }
   };
   document.addEventListener('keydown', onKey);
+  sheetDrag(back);
   document.body.style.overflow = 'hidden';
   sheetClose = () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = ''; root.innerHTML = ''; prevFocus?.focus?.({ preventScroll: true }); };
   const first = back.querySelector('.sheet-b input:not([type=checkbox]):not([type=file]), .sheet-b textarea');
@@ -210,7 +247,7 @@ function sheetSessionInfo(sid) {
   const text = [`${s.type || 'Assaig'} · ${prodNames(s)}`, `${longDate(s.date)}${s.time ? ` · ${timeRange(s)}` : ''}`, s.place ? `Lloc: ${s.place}` : '',
     ...INFO_FIELDS.filter(([k]) => s.info?.[k]).map(([k, l]) => `${l}: ${s.info[k]}`), infoSteps(s).length ? `Horari:\n${stepsText(s)}` : '', s.note || ''].filter(Boolean).join('\n');
   openSheet({
-    title: isShow(s) ? `Fitxa ${V.sh.del}` : `Fitxa · ${s.type || 'Sessió'}`,
+    title: s.type || 'Sessió',
     body: `${prod && prod.poster && isShow(s) ? `<button class="poster-banner" data-act="poster" data-pid="${esc(prod.id)}" aria-label="Cartell de ${esc(prod.name)}"><img src="${esc(prod.poster)}" alt=""></button>` : ''}<div class="prod-band prod-tone" style="--ph:${prodHue(prod)}"><h2 class="h2"><i class="pdot"></i>${esc(prodNames(s))}</h2><span class="eyebrow">${esc(s.type || 'Assaig')}</span></div>
       ${fitxaHtml(s)}
       ${s.note ? `<p class="fitxa-note">${esc(s.note)}</p>` : ''}

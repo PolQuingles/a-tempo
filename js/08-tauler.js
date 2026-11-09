@@ -160,7 +160,7 @@ function boardAnnouncements() {
   const card = a => annCard(a, true);
   markAnnSeen(active);
   loadAnnSeen(active);
-  return `${canBoard() ? `<div class="sec-h end" style="margin-top:6px"><button class="btn btn-sm btn-primary" data-act="ann-new">+ Anunci</button></div>` : ''}
+  return `${canBoard() ? `<div class="sec-h end" style="margin-top:6px"><button class="btn btn-sm btn-primary" data-act="ann-new">${ICON.plus}Anunci</button></div>` : ''}
     ${active.length ? `<div class="panel">${active.map(card).join('')}</div>` : `<div class="empty"><p>No hi ha anuncis.</p></div>`}
     ${canBoard() && expired.length ? `<details class="np-group"><summary><span>Caducats (${expired.length})</span>${ICON.chev}</summary><div class="panel">${expired.map(card).join('')}</div></details>` : ''}`;
 }
@@ -411,7 +411,7 @@ const choirDocs = () => [...(S.config.documents || [])]
 function boardDocuments() {
   const docs = choirDocs();
   const tools = canBoard()
-    ? `<div class="sec-h end" style="margin-top:6px"><button class="btn btn-sm btn-primary" data-act="doc-new">+ Document</button></div>`
+    ? `<div class="sec-h end" style="margin-top:6px"><button class="btn btn-sm btn-primary" data-act="doc-new">${ICON.plus}Document</button></div>`
     : '';
   const row = d => `<div class="mat"><span class="mat-k doc-${esc(d.kind)}">${DOC_KINDS[d.kind]?.[1] || 'Doc'}</span>
       <span class="mat-i">${itemLink(d, `data-act="file-open" data-src="doc" data-id="${esc(d.id)}"`)}<small>${[DOC_KINDS[d.kind]?.[0], d.note, fileNote(d)].filter(Boolean).map(esc).join(' · ')}</small></span>
@@ -498,6 +498,6 @@ function boardPolls() {
       ${p.description ? `<div class="ann-b">${linkify(p.description)}</div>` : ''}${meta}
       ${form}</div>`;
   };
-  return `${canBoard() ? '<div class="sec-h" style="margin-top:6px"><span></span><span style="display:flex;gap:8px"><button class="btn btn-sm" data-act="bandes-new">+ Bandes</button><button class="btn btn-sm btn-primary" data-act="poll-new">+ Enquesta</button></span></div>' : ''}
+  return `${canBoard() ? '<div class="sec-h" style="margin-top:6px"><span></span><span style="display:flex;gap:8px"><button class="btn btn-sm" data-act="bandes-new">' + ICON.plus + 'Bandes</button><button class="btn btn-sm btn-primary" data-act="poll-new">' + ICON.plus + 'Enquesta</button></span></div>' : ''}
     ${all.length ? `<div class="panel">${all.map(card).join('')}</div>` : '<div class="empty"><p>No hi ha enquestes.</p></div>'}`;
 }

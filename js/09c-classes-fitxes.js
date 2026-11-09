@@ -433,7 +433,7 @@ async function sheetStudent(mid) {
       <div class="section-title"><h2 class="h2">Objectius</h2></div>
       ${teach ? `<textarea class="inp" id="stu-goals" maxlength="1000" style="min-height:80px" placeholder="p. ex. Guanyar agilitat a la zona aguda. Treballar el suport a les frases llargues.">${esc(rec.goals || '')}</textarea>`
         : `<p style="white-space:pre-wrap;margin:0">${esc(rec.goals || '') || '<span class="muted">Encara no n’hi ha.</span>'}</p>`}
-      <div class="section-title" style="margin-top:14px"><h2 class="h2">Repertori</h2>${teach ? '<button type="button" class="btn btn-sm" id="stu-add">+ Obra</button>' : ''}</div>
+      <div class="section-title" style="margin-top:14px"><h2 class="h2">Repertori</h2>${teach ? '<button type="button" class="btn btn-sm" id="stu-add">' + ICON.plus + 'Obra</button>' : ''}</div>
       <div id="stu-rep" style="display:grid;gap:8px"></div>
       <div class="section-title" style="margin-top:14px"><h2 class="h2">Notes de classe</h2><span class="eyebrow">${notes.length}</span></div>
       ${notes.length ? `<ul class="mini-list" style="max-height:none">${notes.map(n => `<li style="display:grid;gap:4px"><span class="m mono">${esc(shortDate(n.date))}</span>${n.text ? `<span style="white-space:pre-wrap">${esc(n.text)}</span>` : ''}
