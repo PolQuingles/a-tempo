@@ -263,7 +263,7 @@ function managePlantilla() {
         : `<div class="panel" style="padding:14px;color:var(--muted);font-size:var(--t-13)">Encara no hi ha ningú en aquesta ${V.section}.</div>`}</section>`;
   }).join('');
   return `${onboardingPanel()}
-    <div id="mlist">${findBox('#mlist', `Cerca un ${V.member}`)}${chips}${secs || '<div class="panel" style="padding:14px;color:var(--muted)">Ningú no hi correspon.</div>'}<div class="panel find-empty" hidden>Ningú amb aquest nom.</div></div>
+    ${findBox('#mlist', `Cerca un ${V.member}`)}${chips}<div id="mlist">${secs || '<div class="panel" style="padding:14px;color:var(--muted)">Ningú no hi correspon.</div>'}<div class="panel find-empty" hidden>Ningú amb aquest nom.</div></div>
     ${plantillaSummary(all)}`;
 }
 

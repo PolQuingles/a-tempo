@@ -13,7 +13,7 @@ function viewCalendar() {
   const month = ui.calView === 'month';
   const head = `<div class="page-head"><h1 class="h1">Calendari</h1>
     <span style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="seg3" role="radiogroup" aria-label="Vista del calendari"><button type="button" role="radio" aria-checked="${!month}" data-act="cal-view" data-k="list">Llista</button><button type="button" role="radio" aria-checked="${month}" data-act="cal-view" data-k="month">Mes</button></span>
-    ${canProd() ? `<button class="btn btn-sm btn-primary" data-act="session-new" ${month && ui.calDay ? `data-date="${ui.calDay}"` : ''}>+ Sessió</button>` : ''}</span></div>
+    ${canProd() ? `<button class="btn btn-sm btn-primary" data-act="session-new" ${month && ui.calDay ? `data-date="${ui.calDay}"` : ''}>${ICON.plus}Sessió</button>` : ''}</span></div>
 `;
   // Subscriure's al calendari és al menú del compte; les sessions passades, amb un enllaç a dalt de la llista.
   if (!prods.length) return head + `<div class="empty">${staffSvg()}<h2 class="h2">Cap producció</h2><p>Les sessions s’organitzen per produccions.</p>${canProd() ? '<button class="btn btn-primary" data-act="prod-new">Nova producció</button>' : ''}</div>`;
@@ -145,7 +145,7 @@ function calRow(s, underProd, tone, named) {
   if (!attHidden() && hasBegun(s)) for (const x of SECTIONS) if (convoked(s, x.id) && hasData(s, x.id)) for (const m of membersOf(x.id)) { const mk = effMark(s, m); if (mk) countMark(c, s, mk); }
   const r = rate(c);
   const rv = s.rsvp && canEdit() ? rsvpCounts(s) : null;
-  const right = `<span class="cal-right">${marks ? `<span class="vmarks" aria-label="Llista per ${V.sections}">${marks}</span>` : ''}${r != null ? `<span class="cal-pct">${pct(r)}</span>` : rv ? `<span class="cal-badge" title="Confirmacions">${rv.yes}✓ ${rv.no}✗ ${rv.none}?</span>` : ''}</span>`;
+  const right = `<span class="cal-right">${marks ? `<span class="vmarks" aria-label="Llista per ${V.sections}">${marks}</span>` : ''}${r != null ? `<span class="cal-pct">${pct(r)}</span>` : rv ? `<span class="cal-badge" title="Confirmacions: ${rv.yes} sí, ${rv.no} no, ${rv.none} sense resposta">${rv.yes} sí · ${rv.no} no</span>` : ''}</span>`;
   const other = named ? [] : sessionProds(s).filter(id => id !== underProd).map(id => S.productions.get(id)?.name).filter(Boolean);
   const cls = [s.date === TODAY ? 'is-today' : '', s.date < TODAY ? 'is-past' : '', isShow(s) ? 'type-concert' : ''].join(' ');
   return `<li class="cal-row ${cls}${tone ? ' prod-tone' : ''}" data-date="${s.date}"${tone ? ` style="--ph:${prodHue(S.productions.get(s.prodId))}"` : ''}>

@@ -262,7 +262,7 @@ function viewBandes() {
   const from = tabsForRole().includes(ui.bandesFrom) ? ui.bandesFrom : 'avisos';
   const p = currentBandes();
   const head = `<div class="page-head"><div class="ph-back"><button class="nav-arrow" data-act="tab" data-tab="${from}" aria-label="Torna a ${esc(TAB_LABEL[from])}">${ICON.left}</button><div><div class="eyebrow">${p ? 'Les bandes' : 'Premis de l’agrupació'}</div><h1 class="h1">${esc(p ? p.title : 'Bandes')}</h1></div></div></div>`;
-  if (!p) return head + `<div class="empty"><p>Encara no hi ha cap votació de bandes.</p>${canBoard() ? '<button class="btn btn-primary" data-act="bandes-new">+ Bandes</button>' : ''}</div>`;
+  if (!p) return head + `<div class="empty"><p>Encara no hi ha cap votació de bandes.</p>${canBoard() ? '<button class="btn btn-primary" data-act="bandes-new">' + ICON.plus + 'Bandes</button>' : ''}</div>`;
   const ph = bandesPhase(p);
   const older = [...S.polls.values()].filter(q => isBandes(q) && q.id !== p.id && q.results).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
   return `${head}<div class="bn-page">

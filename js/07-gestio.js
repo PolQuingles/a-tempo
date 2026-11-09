@@ -44,7 +44,7 @@ function accessPanel() {
   return `<div class="panel access-panel">
     <div class="setting"><div><div class="t">${accs.length} de ${members.length} ${esc(V.members)} tenen accés${accs.length ? ` · ${entered} hi han entrat${never ? `, ${never} encara no` : ''}` : ''} ${helpBtn('acces')}</div>
       ${helpText('acces', `Afegeix cada persona un sol cop: el nom, el correu per entrar a l’app i què fa (si canta, també la ${esc(V.section)}). Si algú marxa, treu-li l’accés: el perd a l’instant, però no se n’esborra la fitxa ni les llistes.`)}</div></div>
-    <div class="access-acts"><button class="btn btn-sm btn-primary" data-act="staff-new" ${ROLE_KEYS.includes(ui.people) ? `data-role="${esc(ui.people)}"` : ''}>+ Persona</button>
+    <div class="access-acts"><button class="btn btn-sm btn-primary" data-act="staff-new" ${ROLE_KEYS.includes(ui.people) ? `data-role="${esc(ui.people)}"` : ''}>${ICON.plus}Persona</button>
       <button class="btn btn-sm btn-soft" data-act="join-link">Enllaç i QR per entrar</button>${joinRequests().length ? `<button class="btn btn-sm btn-soft" data-act="join-reqs">Peticions (${joinRequests().length})</button>` : ''}
       ${mailProblems().length ? `<button class="btn btn-sm btn-soft" data-act="mail-check">Revisa els accessos (${mailProblems().length})</button>` : ''}<button class="btn btn-sm" data-act="people-tools">Més…</button></div>
   </div>`;
@@ -87,7 +87,7 @@ function managePeople() {
       ${people.length ? `<ul class="list">${people.map(personRow).join('')}</ul>` : '<div class="empty"><p>Encara no hi ha ningú. Afegeix les persones una per una o enganxa’n una llista.</p></div>'}`;
   }
   const list = peopleWithRole(role);
-  const add = isAdmin() ? `<button class="btn btn-sm btn-primary" data-act="staff-new" data-role="${role}">+ Persona</button>` : '';
+  const add = isAdmin() ? `<button class="btn btn-sm btn-primary" data-act="staff-new" data-role="${role}">${ICON.plus}Persona</button>` : '';
   const what = {
     admin: 'Ho poden fer tot: donar accés, canviar dades i esborrar.',
     director: `Passa llista, publica anuncis i convocatòries i puja materials.`,
@@ -114,7 +114,7 @@ function manageProductions() {
   const ms = choicesOn() ? membersOf(null) : [];
   const low = ms.filter(m => !choiceSummary(m.id).ok).length, silent = ms.filter(m => choiceSummary(m.id).none).length;
   const chPanel = choicesOn() ? `<div class="panel ch-panel"><span><b>Cadascú tria les produccions que fa</b><br><span class="muted">${ms.length - silent} de ${ms.length} han respost${low ? ` · <b class="bad">${low} per sota del ${choiceMin()}%</b>` : ''}</span></span><button class="btn btn-sm" data-act="choices-overview">Qui fa cada producció</button></div>` : '';
-  return `${chPanel}<div class="sec-h end"><span style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end"><button class="btn btn-sm" data-act="season-report">Memòria de la temporada</button><button class="btn btn-sm btn-primary" data-act="prod-new">+ Producció</button></span></div>
+  return `${chPanel}<div class="sec-h end"><span style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end"><button class="btn btn-sm" data-act="season-report">Memòria de la temporada</button><button class="btn btn-sm btn-primary" data-act="prod-new">${ICON.plus}Producció</button></span></div>
     ${ps.length ? `<div class="only-narrow" style="display:grid;gap:10px">${ps.map(p => {
       const ss = allSessions(p.id);
       const shared = sharedTxt(ss);

@@ -32,7 +32,7 @@ function boardRepertoire() {
       ${prods.map(p => `<option value="${p.id}" ${prod && p.id === prod.id ? 'selected' : ''}>${esc(p.name)}${worksOf(p.id).length ? ` · ${worksOf(p.id).length}` : ''}</option>`).join('')}</select></label></div>`;
   const tools = canRepertoire()
     ? `<div class="sec-h end" style="margin-top:4px">
-        <span style="display:flex;gap:6px;flex-wrap:wrap">${prod ? '<button class="btn btn-sm" data-act="work-link">Enllaça’n una</button>' : ''}<button class="btn btn-sm btn-primary" data-act="work-new">+ Obra</button></span></div>`
+        <span style="display:flex;gap:6px;flex-wrap:wrap">${prod ? '<button class="btn btn-sm" data-act="work-link">Enllaça’n una</button>' : ''}<button class="btn btn-sm btn-primary" data-act="work-new">${ICON.plus}Obra</button></span></div>`
     : me ? `<div class="sec-h" style="margin-top:4px"><span class="muted" style="font-size:var(--t-13)">${onlyMine ? `Mostrant el material per a ${esc(SEC[me.section].name.toLowerCase())}${me.part ? ` ${esc(me.part)}` : ''}` : 'Mostrant tot el material'}</span><button class="btn btn-sm btn-ghost" data-act="mat-mine">${onlyMine ? 'Mostra-ho tot' : `Només la meva ${V.part}`}</button></div>` : '';
   const files = offlineCandidates(works, prod, onlyMine ? me : null);
   const saved = offlineSaved();
@@ -66,7 +66,7 @@ function boardMaterialsOf(prod, onlyMine, me) {
       <span class="mat-i">${itemLink(x, `data-act="file-open" data-src="mat" data-pid="${prod.id}" data-id="${x.id}"`)}<small>${[MAT_KINDS[x.kind], x.section ? esc(SEC[x.section].name) : capz(V.tot), x.part ? `${V.part} ${esc(x.part)}` : '', fileNote(x), x.file && offlineSaved().has(x.file.id) ? 'desat al mòbil' : ''].filter(Boolean).join(' · ')}</small></span>
       ${canRepertoire() ? `<button class="icon-btn" data-act="mat-edit" data-pid="${prod.id}" data-id="${x.id}" aria-label="Edita">${ICON.more}</button>` : ''}</div>`;
   if (!sorted.length && !canRepertoire()) return '';
-  return `<div class="section-title"><h2 class="h2">Altres materials</h2>${canRepertoire() ? '<button class="btn btn-sm" data-act="mat-new">+ Material</button>' : ''}</div>
+  return `<div class="section-title"><h2 class="h2">Altres materials</h2>${canRepertoire() ? '<button class="btn btn-sm" data-act="mat-new">' + ICON.plus + 'Material</button>' : ''}</div>
     ${sorted.length ? `<div class="panel prod-tone tinted" style="--ph:${prodHue(prod)}">${sorted.map(row).join('')}</div>` : '<p class="muted" style="font-size:var(--t-13);margin:0 2px">El programa, horaris, enllaços…</p>'}`;
 }
 function sheetWork(id) {
@@ -451,7 +451,7 @@ function sheetPlan(sid) {
     wide: true,
     body: `<p style="margin-top:0"><b>${esc(longDate(s.date))}</b>${s.time ? ` · ${esc(timeRange(s))}` : ''} · ${esc(s.type || 'Assaig')}<br><span class="muted" style="font-size:var(--t-13)">El veuen tots els ${V.members} convocats, per preparar-ho; cadascú hi veu primer el que li toca. Qui falti sabrà què s’ha fet.</span></p>
       <div id="pl-items" style="display:grid;gap:12px"></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button type="button" class="btn btn-sm" id="pl-add">+ Obra</button><button type="button" class="btn btn-sm" id="pl-add-head">+ Bloc (parcial o tutti)</button><button type="button" class="btn btn-sm" id="pl-add-break">+ Pausa</button></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button type="button" class="btn btn-sm" id="pl-add">${ICON.plus}Obra</button><button type="button" class="btn btn-sm" id="pl-add-head">+ Bloc (parcial o tutti)</button><button type="button" class="btn btn-sm" id="pl-add-break">+ Pausa</button></div>
       <label class="field" style="margin-top:14px"><span>Indicacions (opcional)</span><textarea class="inp" id="pl-text" maxlength="800" style="min-height:60px" placeholder="p. ex. Porteu el llapis. Mirarem sobretot la pronunciació.">${esc(plan.text || '')}</textarea></label>
       <label class="field" style="margin-top:10px"><span>Després de l’assaig: què s’hi ha fet (opcional)</span><textarea class="inp" id="pl-after" maxlength="1200" style="min-height:60px" placeholder="p. ex. Hem llegit el núm. 2 i el 4; del 8, del c. 30 al 45. Per a la setmana vinent, de memòria fins al 40.">${esc(plan.after || '')}</textarea></label>`,
     foot: `${planOf(s) ? '<button class="btn btn-danger-ghost" id="pl-del">Esborra el pla</button>' : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="pl-save">Desa</button>`,
