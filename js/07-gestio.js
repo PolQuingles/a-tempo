@@ -509,8 +509,8 @@ function sheetAccount() {
       : item(t, TAB_LABEL[t], `data-act="tab" data-tab="${t}"`)),
     [bandesMenuOn() && item('bandes', esc(galaName(currentBandes())), 'data-act="bandes-open"', bandesPending(currentBandes()) ? 1 : 0),
       (myId() || S.threads.size) && item('threads', 'Converses', 'data-act="acct-open" data-k="threads"', unreadThreads().length), open('week', 'Aquests dies'),
-      myId() && !PREVIEW && open('profile', 'La meva fitxa'), wardOn() && (myId() || wardStaff()) && item('wardrobe', 'Vestidor', 'data-act="ward-open"', myId() ? wardOf(myId()).filter(x => x.status === 'emprovar').length : 0), open('calendar', icsOn() ? 'Calendari al mòbil' : 'Exporta el calendari'), pushSupported() && open('push', 'Notificacions')],
-    [groupsVisible() && open('groups', 'Agrupacions'), open('theme', 'Aparença'), canInstall() && open('install', 'Instal·la l’app'), open('help', 'Com funciona'), open('privacy', 'Les teves dades')],
+      myId() && !PREVIEW && open('profile', 'La meva fitxa'), wardOn() && (myId() || wardStaff()) && item('wardrobe', 'Vestidor', 'data-act="ward-open"', myId() ? wardOf(myId()).filter(x => x.status === 'emprovar').length : 0), open('calendar', icsOn() ? 'Calendari al mòbil' : 'Exporta el calendari'), canInstall() && open('install', 'Descarrega l’app al mòbil'), pushSupported() && open('push', 'Notificacions')],
+    [groupsVisible() && open('groups', 'Agrupacions'), open('theme', 'Aparença'), open('help', 'Com funciona'), open('privacy', 'Les teves dades')],
   ].map(g => g.filter(Boolean)).filter(g => g.length);
   openSheet({
     title: 'El teu compte',

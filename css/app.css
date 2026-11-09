@@ -1887,6 +1887,7 @@ svg{stroke-linecap:round;stroke-linejoin:round}
 @keyframes done-tick{0%{transform:scale(.4);opacity:0}60%{transform:scale(1.25);opacity:1}100%{transform:scale(1)}}
 @media (prefers-reduced-motion:reduce){.secbar.done-pop,.secbar.done-pop #secbar-count svg{animation:none}}
 .install-steps{margin:0;padding-left:20px;display:grid;gap:8px;font-size:var(--t-15)}
+.install-os{margin:18px 0 8px;font-size:var(--t-15);font-weight:700}
 .cal-prod-h:has(.poster-th){align-items:center}
 /* Amb el text gran, els botons i els selectors es fan petits o salten de línia abans de sortir de la pantalla. */
 .seg3{max-width:100%}
