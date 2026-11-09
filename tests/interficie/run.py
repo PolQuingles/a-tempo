@@ -156,6 +156,10 @@ def main():
                 page.evaluate("t => setTextSize(t)", text)
             page.evaluate(DETECTOR)
             res = page.evaluate(DETECT)
+            if not text and w == 375:
+                fam = " ".join(page.evaluate("document.fonts.ready.then(() => [...document.fonts].filter(f => f.status === 'loaded').map(f => f.family))"))
+                check("Bodoni Moda" in fam and "Hanken Grotesk" in fam, "les lletres es carreguen des de l'app", str(fam))
+                check(page.evaluate("!performance.getEntriesByType('resource').some(r => /fonts\\.(googleapis|gstatic)\\.com/.test(r.name))"), "cap lletra es demana a Google")
             check(res["vistes"] >= 15, f"{w} px{' amb el text molt gran' if text else ''}: {res['vistes']} pantalles mirades")
             check(not res["problemes"], f"{w} px{' amb el text molt gran' if text else ''}: cap problema visual", "; ".join(res["problemes"][:6]))
             ctx.close()
