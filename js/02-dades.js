@@ -179,13 +179,18 @@ function take(col, map, d) {
   noteBase(path, data);
   map.set(d.id, col === 'members' ? normPersonName(data) : data);
 }
+// El mateix document, encara que Firestore en torni els camps en un altre ordre.
+const canon = v => Array.isArray(v) ? v.map(canon) : v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map(k => [k, canon(v[k])])) : v;
+const sameData = (a, b) => JSON.stringify(canon(a)) === JSON.stringify(canon(b));
 /** Una col·lecció gran: sencera o només el que ha canviat (vegeu a dalt). */
 function syncCol(col) {
   const def = BIG.get(col);
   if (SYNC.unsub[col]) SYNC.unsub[col]();
   const st = SYNC.st[col] = SYNC.st[col] || {};
-  let un = null, stop = false;
-  SYNC.unsub[col] = () => { stop = true; if (un) un(); };
+  let un = null, stop = false, painted = false;
+  // Els canvis propis tornen de la base de dades (primer des del mòbil i després des del servidor) iguals que ja són a la
+  // pantalla: si no hi ha res de nou, no es torna a pintar. Si no, un toc mentre es passa llista es podria perdre.
+  const finish = touched => { if (!touched && painted) return; painted = true; def.done(); };
   if (col === 'attendance') SYNC.cut = archCut();
   const full = !deltaOn() || !st.full || !st.max || Date.now() - st.full > FULL_EVERY || (st.epoch || '') !== epochOf(col);
   SYNC.mode[col] = full ? 'full' : 'delta';
@@ -197,6 +202,7 @@ function syncCol(col) {
       for (const d of snap.docs) take(col, next, d);
       for (const [id, v] of S[col]) if (!next.has(id) && isDirty(`${col}/${id}`) && queue.get(`${col}/${id}`)?.data !== null) next.set(id, v);
       for (const id of S[col].keys()) if (!next.has(id)) BASE.delete(`${col}/${id}`);
+      const touched = next.size !== S[col].size || snap.docChanges().some(ch => !sameData(S[col].get(ch.doc.id), next.get(ch.doc.id)));
       S[col] = next;
       if (!snap.metadata.fromCache) {
         if (SYNC.got[col] == null) SYNC.got[col] = snap.size;
@@ -205,7 +211,7 @@ function syncCol(col) {
         st.max = Math.max(st.max || 0, 1, ...snap.docs.map(syncMillis));
         syncSave();
       }
-      def.done();
+      finish(touched);
     }, def.err);
     return;
   }
@@ -220,19 +226,22 @@ function syncCol(col) {
     S[col] = next;
     const since = firebase.firestore.Timestamp.fromMillis(st.max);
     un = db.collection(col).where('syncAt', '>', since).onSnapshot({ includeMetadataChanges: true }, snap => {
+      let touched = false;
       for (const ch of snap.docChanges()) {
         // Ja no hi surt: o s'ha esborrat o l'ha desat una app antiga sense syncAt. Es mira quin dels dos. Si l'acabem de desar
         // nosaltres, és només l'instant en què l'hora del servidor encara no hi és: torna a sortir quan el servidor respon.
         if (ch.type === 'removed' && Date.now() - (SYNC.mine.get(`${col}/${ch.doc.id}`) || 0) < 120000) continue;
         if (ch.type === 'removed') { ch.doc.ref.get().then(d => { if (d.exists) take(col, S[col], d); else if (!isDirty(`${col}/${d.id}`)) { S[col].delete(d.id); BASE.delete(`${col}/${d.id}`); } scheduleRender(); }).catch(() => {}); continue; }
+        const before = S[col].get(ch.doc.id);
         take(col, S[col], ch.doc);
+        if (!sameData(before, S[col].get(ch.doc.id))) touched = true;
       }
       if (!snap.metadata.fromCache) {
         if (SYNC.got[col] == null) SYNC.got[col] = snap.size;
         st.max = Math.max(st.max || 0, ...snap.docs.map(syncMillis));
         syncSave();
       }
-      def.done();
+      finish(touched);
     }, () => { st.full = 0; syncCol(col); });
   })();
 }

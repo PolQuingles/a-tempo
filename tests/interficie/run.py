@@ -265,15 +265,28 @@ def main():
         check(page.evaluate("window.__marca === undefined"), "si en tornar-hi ja és un altre dia, l'app es recarrega sola")
         ctx.close()
 
+        print("Passar llista sense que la pantalla salti")
+        ctx, page, errors = open_app(browser, base, "pol", MOBILE)
+        r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {}, v = document.querySelector('#view');
+          applyRoute('calendari'); render(); await s(450);
+          const a = () => document.getAnimations().filter(x => x.animationName === 'viewIn').length;
+          out.same = (render(), await s(40), a()) === 0;
+          out.classOff = !v.classList.contains('view-in');
+          applyRoute('inici'); render(); await s(40); out.other = a() > 0;
+          return out; }""")
+        check(r["same"] and r["classOff"], "tornar a pintar la mateixa pantalla no repeteix l'animació d'entrada", str(r))
+        check(r["other"], "canviar de pantalla sí que l'anima", str(r))
+        check(page.evaluate("sameData({ a: 1, b: { c: [1, { d: 2, e: 3 }] } }, { b: { c: [1, { e: 3, d: 2 }] }, a: 1 }) && !sameData({ a: 1 }, { a: 2 }) && !sameData(undefined, { a: 1 })"), "dos documents iguals amb els camps en un altre ordre es reconeixen")
+        ctx.close()
+
         print("Instal·lar l'app")
         IPHONE = dict(MOBILE, user_agent="Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1")
         ctx, page, errors = open_app(browser, base, "singer", IPHONE)
-        check(page.locator(".install-card").count() == 1 and page.locator(".install-card").bounding_box()["height"] < 70, "a l'iPhone, Inici té una sola línia per posar l'app a la pantalla d'inici")
-        page.click('.install-card .install-go'); page.wait_for_timeout(400)
+        check(page.locator('.todo-row:has-text("Descarrega l’app al mòbil"), .todo-more:has-text("Descarrega l’app al mòbil")').count() == 1 and page.locator(".install-card").count() == 0, "a l'iPhone, descarregar l'app és a «Per fer»")
+        page.evaluate("document.querySelector('.todo-more')?.setAttribute('open', '')")
+        page.click('[data-act="install-how"]'); page.wait_for_timeout(400)
         check("Comparteix" in page.inner_text(".sheet"), "en tocar-la, explica com fer-ho")
         page.click('.sheet [data-act="sheet-close"]'); page.wait_for_timeout(400)
-        page.click('[data-act="install-hide"]'); page.wait_for_timeout(300)
-        check(page.locator(".install-card").count() == 0, "«Ara no» l'amaga")
         page.click("#acct-btn"); page.wait_for_timeout(300)
         menu = page.locator(".acct-t").all_inner_texts()
         check("Descarrega l’app al mòbil" in menu and menu.index("Descarrega l’app al mòbil") == next(i for i, t in enumerate(menu) if t.startswith(("Calendari", "Exporta"))) + 1, "al menú, la descàrrega surt just sota del calendari", str(menu))
@@ -283,7 +296,7 @@ def main():
         check(not errors, "sense errors a la guia d'instal·lació", "; ".join(errors[:3]))
         ctx.close()
         ctx, page, errors = open_app(browser, base, "pol", DESKTOP)
-        check(page.locator(".install-card").count() == 0, "a l'ordinador no surt")
+        check(page.locator(".install-card").count() == 0 and "Descarrega l’app" not in page.inner_text(".home, #view"), "a l'ordinador no surt a «Per fer»")
         page.click("#acct-btn"); page.wait_for_timeout(300)
         page.click('[data-act="acct-open"][data-k="install"]'); page.wait_for_timeout(400)
         t = page.inner_text(".sheet")
