@@ -121,7 +121,7 @@ function bandesPublish(pid) {
   const n = bandesPeople(p).length;
   openSheet({
     title: 'Publicar la votació?',
-    body: `<p style="margin-top:0">La podran votar <b>${n} persones</b>${p.closesAt ? ` fins al ${ddmm(p.closesAt)}` : ''}. A qui té les notificacions activades li arribarà un avís al mòbil.</p>
+    body: `<p style="margin-top:0">La podran votar <b>${n} persones</b>${p.closesAt ? ` fins al ${shortDate(p.closesAt)}` : ''}. A qui té les notificacions activades li arribarà un avís al mòbil.</p>
       <div class="toggle-row"><span><b>Publica també un anunci al tauler</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Amb la presentació, totes les categories i el botó per votar. L’avís al mòbil serà el de l’anunci.</span></span><label class="switch"><input type="checkbox" id="bp-ann" checked><span></span></label></div>
       <label class="field" id="bp-t-f"><span>Títol de l’anunci</span><input class="inp" id="bp-title" maxlength="90" value="${esc(p.title)}"></label>`,
     foot: '<span class="spacer"></span><button class="btn" data-act="sheet-close">Encara no</button><button class="btn btn-primary" id="bp-ok">Publica-la</button>',

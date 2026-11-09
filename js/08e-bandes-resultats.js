@@ -87,7 +87,7 @@ function sheetBandesResults(pid) {
   if (p.ballotsGone) {
     openSheet({
       title: `Resultats · ${p.title}`,
-      body: `<p style="margin-top:0">Les paperetes (qui va votar qui) es van esborrar el ${esc(ddmm(p.ballotsGone))}, un mes després de la Nit, perquè el vot és secret.</p>
+      body: `<p style="margin-top:0">Les paperetes (qui va votar qui) es van esborrar el ${esc(shortDate(p.ballotsGone))}, un mes després de la Nit, perquè el vot és secret.</p>
         <p class="m" style="margin-bottom:0">En queden el palmarès, quanta gent va votar i com es van repartir els vots de cada categoria, sense noms (a ${esc(galaName(p))}).</p>`,
       foot: '<span class="spacer"></span><button class="btn btn-primary" data-act="sheet-close">D’acord</button>',
     });
@@ -106,7 +106,7 @@ function sheetBandesResults(pid) {
   const open = t.cats.filter(x => x.open);
   const hl = bandesHighlights(t);
   const ph = bandesPhase(p);
-  const status = p.results ? `<p class="bd-ok">Palmarès publicat el ${ddmm(isoDate(new Date(p.resultsAt)))}: tothom el veu a ${esc(galaName(p))}.</p>`
+  const status = p.results ? `<p class="bd-ok">Palmarès publicat el ${shortDate(isoDate(new Date(p.resultsAt)))}: tothom el veu a ${esc(galaName(p))}.</p>`
     : open.length ? `<p class="bd-warn">${open.length === 1 ? 'Hi ha un empat' : `Hi ha ${open.length} empats`} per decidir: ${esc(open.map(x => x.cat.name).join(', '))}.</p>`
     : p.nominees ? `<p class="bd-ok">Finalistes publicats: es revelen ${esc(nomRange(p))}.</p>` : '';
   openSheet({

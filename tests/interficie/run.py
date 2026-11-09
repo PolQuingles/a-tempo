@@ -412,7 +412,7 @@ def main():
           document.querySelector('#toast-act').click(); await s(300);
           out.undone = S.announcements.has('n1');
           out.poster = !!document.querySelector('#view .poster-th img');
-          ui.tab = 'calendari'; render(); await s(200); out.posterCal = !!document.querySelector('.cal-prod-h .poster-th');
+          ui.tab = 'calendari'; ui.calProd = currentProductionId(); render(); await s(200); out.posterCal = !!document.querySelector('.cal-prod-h .poster-th'); ui.calProd = 'all';
           sheetSessionInfo('s6'); await s(300); out.posterConcert = !!document.querySelector('.sheet .poster-banner img'); closeSheet(); await s(200);
           setTextSize('molt'); await s(100);
           out.text = getComputedStyle(document.documentElement).getPropertyValue('--ts').trim() === '1.3' && localStorage.getItem('atempo:text') === 'molt';
@@ -1476,7 +1476,7 @@ def main():
         ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/calendari")
         r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
           const p = clone(S.productions.get('p1')); p.excluded = ['mS1']; saveProduction(p); await s(300);
-          ui.calProd = 'all'; ui.calView = 'list'; render(); await s(300);
+          ui.calProd = 'p1'; ui.calView = 'list'; render(); await s(300);
           const b = document.querySelector('[data-act="msg-new"][data-prod="p1"]'); out.btn = !!b; b.click(); await s(400);
           out.preset = document.querySelector('#mg-prod')?.value === 'p1';
           // (l'administrador també és cap de corda: la seva corda ja surt triada; primer «Tothom», després només sopranos)
@@ -1514,7 +1514,7 @@ def main():
             && document.querySelector('.quad[data-sec="S"] .q-bar span')?.style.width === '0%';
           ui.rollSec = 'S'; render(); await s(300);
           out.head = document.querySelector('.leader .mono')?.textContent.trim() === '0/2 marcats';
-          ui.tab = 'calendari'; ui.calProd = 'all'; ui.calView = 'list'; render(); await s(300);
+          ui.tab = 'calendari'; ui.calProd = currentProductionId(); ui.calView = 'list'; render(); await s(300);
           const h = document.querySelector('.cal-prod-h .cph-b'), t = h?.querySelector('.h2'), m = h?.querySelector('.cph-m');
           out.title = !!(t && m) && m.getBoundingClientRect().top >= t.getBoundingClientRect().bottom - 1
             && t.getBoundingClientRect().width >= h.getBoundingClientRect().width - 2;
@@ -1651,8 +1651,9 @@ def main():
           out.author = !('T' in doc.data());
           const d = n => { const x = new Date(); x.setDate(x.getDate() + n); return isoDate(x); };
           saveProduction({ id: 'p9', name: 'Un sol concert', sessions: [{ id: 's9', date: d(40), time: '19:00', end: '', type: 'Concert', place: '', note: '' }], excluded: [] });
-          applyRoute('calendari'); render(); await s(400);
+          applyRoute('calendari'); ui.calProd = 'p9'; render(); await s(400);
           out.one = [...document.querySelectorAll('.cph-m .mono')].some(x => x.textContent.trim() === '1 sessió') && ![...document.querySelectorAll('.cph-m .mono')].some(x => /^1 sessions/.test(x.textContent.trim()));
+          ui.calProd = 'all';
           // «Ha marxat abans», a la llista d'avui dels tenors (la corda que porta).
           applyRoute('inici'); render(); await s(300);
           document.querySelector('[data-act="home-roll"]').click(); await s(500);
@@ -1921,13 +1922,27 @@ def main():
           out.plan = plan.includes('Auditori') && !plan.includes('Aula 1 PP') && plan.includes('Tutti') && plan.includes('Mostra tot el pla');
           sheetWeek(); await s(300);
           const wk = document.querySelector('.sheet .week')?.innerText || '';
-          out.week = wk.includes('QUÈ FAREM') || wk.includes('Què farem');
+          out.week = (wk.includes('QUÈ FAREM') || wk.includes('Què farem')) && document.querySelector('.sheet')?.getAttribute('aria-label') === 'Aquests dies';
           out.weekPlan = wk.includes('Gloria');
+          closeSheet(); await s(200);
+          // L'agenda: amb «Totes», per dates i amb la producció de cada sessió.
+          ui.tab = 'calendari'; ui.calProd = 'all'; ui.calView = 'list'; render(); await s(300);
+          const ag = [...document.querySelectorAll('.cal-agenda .cal-row[data-date]')];
+          out.agenda = ag.length > 1 && ag.every((r, i) => !i || ag[i - 1].dataset.date <= r.dataset.date) && !document.querySelector('.cal-agenda .cal-prod-h')
+            && ag[0].querySelector('.cal-type').textContent === prodNames(sessionById(ag[0].querySelector('.cal-main').dataset.sid));
+          // Qui ja ha votat no llegeix «Encara no has votat».
+          const pl = { id: 'pb1', kind: 'bandes', title: 'B', cats: [{ id: 'k', name: 'K', win: 1 }], sections: [], out: [] }, vk = `pb1_${myId()}`;
+          S.polls.set('pb1', pl);
+          const pend = bandesCard(pl).includes('Encara no has votat');
+          S.pollVotes.set(vk, { picks: { k: [] }, n: 1 });
+          out.votedQuiet = pend && !bandesCard(pl).includes('Encara no has votat');
+          S.polls.delete('pb1'); S.pollVotes.delete(vk);
           return out; }""")
         for k, label in [("trip", "el cantaire respon les preguntes de la sortida"), ("diet", "el cantaire posa les seves al·lèrgies (amb el consentiment, i a part de la fitxa)"),
                          ("busAsked", "en confirmar un concert amb autocar, es pregunta com hi va"), ("bus", "i queda desat que va amb l'autocar"),
                          ("task", "el cantaire s'apunta de voluntari a carregar el material"), ("plan", "el cantaire veu el seu parcial (i pot veure tot el pla)"),
-                         ("week", "«La setmana» es pot obrir"), ("weekPlan", "«La setmana» porta el pla dels pròxims assajos")]:
+                         ("week", "«Aquests dies» es pot obrir"), ("weekPlan", "«La setmana» porta el pla dels pròxims assajos"),
+                         ("agenda", "el calendari amb «Totes» va per dates i diu la producció de cada sessió"), ("votedQuiet", "qui ja ha votat no llegeix «Encara no has votat»")]:
             check(r.get(k), label, str(r))
         check(not errors, "sense errors al cantaire", "; ".join(errors[:3]))
         switch_user(page, base, "pol")

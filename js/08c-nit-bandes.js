@@ -118,7 +118,7 @@ function bandesTick() {
 function bandesHero(p) {
   const ph = bandesPhase(p);
   const year = (p.galaAt || p.closesAt || TODAY).slice(0, 4);
-  const steps = [...(p.propUntil ? [['prop', 'Propostes', `fins al ${ddmm(p.propUntil)}`]] : []), ['vote', 'Votació', p.closesAt ? `fins al ${ddmm(p.closesAt)}` : ''], ['nom', 'Finalistes', nomRange(p)], ['gala', 'La Nit', p.galaAt ? ddmm(p.galaAt) : '']];
+  const steps = [...(p.propUntil ? [['prop', 'Propostes', `fins al ${shortDate(p.propUntil)}`]] : []), ['vote', 'Votació', p.closesAt ? `fins al ${shortDate(p.closesAt)}` : ''], ['nom', 'Finalistes', nomRange(p)], ['gala', 'La Nit', p.galaAt ? ddmm(p.galaAt) : '']];
   const at = BN_AT[ph] === 'end' ? steps.length : Math.max(0, steps.findIndex(([k]) => k === BN_AT[ph]));
   const when = p.galaAt ? [capz(longDate(p.galaAt)), p.galaTime ? `${p.galaTime} h` : ''].filter(Boolean) : [];
   const count = bandesCount(p);
@@ -159,7 +159,7 @@ function bandesInfo(p) {
   if (trip) {
     const me = myId(), mine = me ? signupOf(trip, me) : null, n = tripCounts(trip).yes.length, open = tripOpen(trip);
     const state = mine?.answer === 'yes' ? '<span class="rsvp yes">T’hi has apuntat</span>' : mine?.answer === 'no' ? '<span class="rsvp no">Has dit que no hi vas</span>' : '';
-    sign = `<div class="bn-sign"><div><b>${esc(trip.title)}</b><small>${!n ? 'Encara no s’hi ha apuntat ningú' : n === 1 ? 'Hi va 1 persona' : `Hi van ${n} persones`}${trip.deadline && open ? ` · inscripcions fins al ${ddmm(trip.deadline)}` : ''}${open ? '' : ' · inscripcions tancades'}</small></div>
+    sign = `<div class="bn-sign"><div><b>${esc(trip.title)}</b><small>${!n ? 'Encara no s’hi ha apuntat ningú' : n === 1 ? 'Hi va 1 persona' : `Hi van ${n} persones`}${trip.deadline && open ? ` · inscripcions fins al ${shortDate(trip.deadline)}` : ''}${open ? '' : ' · inscripcions tancades'}</small></div>
       <div class="bd-acts">${state}${open && me ? `<button class="btn btn-sm${mine?.answer === 'yes' ? '' : ' btn-primary'}" data-act="trip-yes" data-id="${esc(trip.id)}">${mine?.answer === 'yes' ? 'Canvia-ho' : 'M’hi apunto'}</button>${mine?.answer !== 'no' ? `<button class="btn btn-sm btn-ghost" data-act="trip-no" data-id="${esc(trip.id)}">No hi vaig</button>` : ''}` : ''}</div></div>`;
   }
   return `<section class="bn-info">
@@ -172,8 +172,8 @@ function bandesVoteBlock(p) {
   const mine = S.pollVotes.get(`${p.id}_${myId()}`), n = (p.cats || []).length, open = bandesPhase(p) === 'vote';
   if (!open && !mine) return '';
   const draft = !mine && open ? ballotDraft(p) : null;
-  const text = mine ? `Has votat ${mine.n || Object.keys(mine.picks || {}).length} de ${n} categories.${open && p.closesAt ? ` Pots canviar el vot fins al ${ddmm(p.closesAt)}.` : ''}`
-    : `${draft ? 'Ja l’has començada: el mòbil se’n recorda.' : 'Encara no has votat.'}${p.closesAt ? ` Tens temps fins al ${ddmm(p.closesAt)}.` : ''} El vot és secret.`;
+  const text = mine ? `Has votat ${mine.n || Object.keys(mine.picks || {}).length} de ${n} categories.${open && p.closesAt ? ` Pots canviar el vot fins al ${shortDate(p.closesAt)}.` : ''}`
+    : `${draft ? 'Ja l’has començada: el mòbil se’n recorda.' : 'Encara no has votat.'}${p.closesAt ? ` Tens temps fins al ${shortDate(p.closesAt)}.` : ''} El vot és secret.`;
   return `<section class="bn-card bn-vote"><div><h2 class="h2">La teva papereta</h2><p>${esc(text)}</p></div>
     ${open ? `<button class="btn ${mine ? '' : 'btn-primary'}" data-act="bandes-vote" data-id="${esc(p.id)}">${mine ? 'Canvia el vot' : draft ? 'Continua votant' : 'Vota'}</button>` : `<button class="btn" data-act="bandes-mine" data-id="${esc(p.id)}">Mira el teu vot</button>`}
     ${turnoutHtml(p)}</section>`;
@@ -238,10 +238,10 @@ function bandesTeamBlock(p) {
   const ph = bandesPhase(p), people = bandesPeople(p), voted = people.filter(m => S.pollVotes.get(`${p.id}_${m.id}`)).length;
   const b = (act, t, primary) => `<button class="btn btn-sm${primary ? ' btn-primary' : ''}" data-act="${act}" data-id="${esc(p.id)}">${t}</button>`;
   const status = ph === 'draft' ? 'És un esborrany: només el veu l’equip.'
-    : ph === 'prop' ? `S’hi recullen propostes de categories${p.propUntil ? ` fins al ${ddmm(p.propUntil)}` : ''} (${propsFor(p).length}). La votació encara no és oberta.`
+    : ph === 'prop' ? `S’hi recullen propostes de categories${p.propUntil ? ` fins al ${shortDate(p.propUntil)}` : ''} (${propsFor(p).length}). La votació encara no és oberta.`
     : ph === 'vote' ? `Han votat ${voted} de ${people.length}.`
     : ph === 'closed' ? `La votació s’ha tancat (han votat ${voted} de ${people.length}). Ara toca publicar els finalistes.`
-    : ph === 'done' ? `Palmarès publicat el ${ddmm(isoDate(new Date(p.resultsAt)))}.`
+    : ph === 'done' ? `Palmarès publicat el ${shortDate(isoDate(new Date(p.resultsAt)))}.`
     : `Finalistes publicats: es revelen ${nomRange(p)}.`;
   const acts = [
     ph === 'draft' && !p.propAt && b('bandes-props-open', 'Obre les propostes'),
@@ -290,11 +290,11 @@ function bandesHomeCard() {
   const today = ph === 'nom' && p.nominees ? nomReveal(p).shown.filter(x => x.date === TODAY) : [];
   const big = p.results ? 'Ja hi ha el palmarès' : days == null || days < 0 ? galaName(p) : days === 0 ? 'És avui!' : days === 1 ? 'És demà!' : `Falten ${days} dies`;
   const tn = ph === 'vote' ? turnoutSum(p, turnoutFor(p)) : null, voted = tn && tn.n ? ` · ja han votat ${tn.n} de ${tn.total}` : '';
-  const line = ph === 'prop' ? (propOpenNow(p) ? `Proposa categories fins al ${ddmm(p.propUntil)}` : 'Aviat, la votació')
-    : ph === 'vote' ? (bandesVoter(p) ? (mine ? `Ja has votat${voted}` : `Vota fins al ${ddmm(p.closesAt)}${voted}`) : `Votació oberta fins al ${ddmm(p.closesAt)}${voted}`)
+  const line = ph === 'prop' ? (propOpenNow(p) ? `Proposa categories fins al ${shortDate(p.propUntil)}` : 'Aviat, la votació')
+    : ph === 'vote' ? (bandesVoter(p) ? (mine ? `Ja has votat${voted}` : `Vota fins al ${shortDate(p.closesAt)}${voted}`) : `Votació oberta fins al ${shortDate(p.closesAt)}${voted}`)
     : today.length ? `Avui: finalistes de ${today.map(x => catQ(x.cat)).join(', ')}`
     : ph === 'nom' ? `Finalistes ${nomRange(p)}` : ph === 'done' ? 'Mira qui s’ha endut cada banda' : ph === 'gala' ? 'Ens veiem a la festa' : 'Aviat, els finalistes';
-  return `<button class="bn-home" data-act="bandes-open"><span class="bn-home-t"><small>${esc(galaName(p))}${p.galaAt ? ` · ${esc(ddmm(p.galaAt))}` : ''}</small><b>${esc(big)}</b><small>${esc(line)}</small></span>${ICON.go}</button>`;
+  return `<button class="bn-home" data-act="bandes-open"><span class="bn-home-t"><small>${esc(galaName(p))}${p.galaAt ? ` · ${esc(shortDate(p.galaAt))}` : ''}</small><b>${esc(big)}</b><small>${esc(line)}</small></span>${ICON.go}</button>`;
 }
 
 /* ---------- Quanta gent ha votat, per a tothom ---------- */
@@ -437,7 +437,7 @@ function bandesPropsBlock(p) {
         ${canBoard() && !x.taken ? `<button class="btn btn-sm" data-act="bandes-prop-take" data-id="${esc(x.id)}">Afegeix-la</button><button class="btn btn-sm btn-ghost" data-act="bandes-prop-drop" data-id="${esc(x.id)}">Descarta-la</button>` : ''}</div></li>`;
   };
   return `<section class="bn-card bn-props"><h2 class="h2">Proposa una categoria</h2>
-    <p class="m" style="margin:0">${open ? `Fins al ${ddmm(p.propUntil)}. Pots proposar-ne fins a ${PROPS_MAX} i dir quines t’agraden de les dels altres; l’equip triarà quines entren a la votació. Ningú no veu de qui és cada proposta.` : 'Les propostes ja s’han tancat: l’equip està triant quines entren a la votació.'}</p>
+    <p class="m" style="margin:0">${open ? `Fins al ${shortDate(p.propUntil)}. Pots proposar-ne fins a ${PROPS_MAX} i dir quines t’agraden de les dels altres; l’equip triarà quines entren a la votació. Ningú no veu de qui és cada proposta.` : 'Les propostes ja s’han tancat: l’equip està triant quines entren a la votació.'}</p>
     ${form}</section>
     ${list.length ? `<div class="section-title"><h2 class="h2">Les propostes</h2><span class="bn-n mono">${list.length}</span></div><ul class="bn-prop-l">${list.map(card).join('')}</ul>` : ''}`;
 }

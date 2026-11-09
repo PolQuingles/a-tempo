@@ -37,7 +37,7 @@ function boardTrips() {
     const rm = mine?.room && (t.rooms || []).find(x => x.id === mine.room);
     return `<article class="trip">
       <div class="ann-h"><h2 class="ann-t">${esc(t.title)}</h2>${canBoard() ? `<button class="icon-btn" data-act="trip-edit" data-id="${esc(t.id)}" aria-label="Edita la sortida">${ICON.more}</button>` : ''}</div>
-      <p class="trip-f"><b>${esc(capz(tripDates(t)))}</b>${t.place ? ` · ${esc(t.place)}` : ''}${t.deadline && tripOpen(t) ? ` · <span class="m">apunta’t abans del ${ddmm(t.deadline)}</span>` : t.closed ? ' · <span class="m">inscripcions tancades</span>' : ''}</p>
+      <p class="trip-f"><b>${esc(capz(tripDates(t)))}</b>${t.place ? ` · ${esc(t.place)}` : ''}${t.deadline && tripOpen(t) ? ` · <span class="m">apunta’t abans del ${shortDate(t.deadline)}</span>` : t.closed ? ' · <span class="m">inscripcions tancades</span>' : ''}</p>
       ${t.notes ? `<div class="ann-b">${linkify(t.notes)}</div>` : ''}
       ${c ? `<p class="trip-c"><b>${c.yes.length}</b> hi van · ${c.no.length} no · ${c.wait} sense resposta${(t.transports || []).length ? ` · transport ${Object.values(c.seats).reduce((a, b) => a + b, 0)}/${t.transports.reduce((a, x) => a + (+x.seats || 0), 0)}` : ''}${(t.rooms || []).length ? ` · llits ${Object.values(c.beds).reduce((a, b) => a + b, 0)}/${t.rooms.reduce((a, x) => a + (+x.beds || 0), 0)}` : ''}</p>` : ''}
       ${me && tripForMe(t, me) ? `<div class="trip-me">${mine ? `<span class="rsvp ${mine.answer}">${mine.answer === 'yes' ? 'Hi vas' : 'No hi vas'}</span>${tr ? ` <span class="m">· ${esc(tr.name)}</span>` : ''}${rm ? ` <span class="m">· habitació ${esc(rm.name)}</span>` : ''}${tripAnswersText(t, mine) ? `<br><span class="m">${esc(tripAnswersText(t, mine))}</span>` : ''}${mine.note ? `<br><span class="m">${esc(mine.note)}</span>` : ''}` : '<span class="rsvp none">Encara no has respost</span>'}
@@ -255,7 +255,7 @@ async function sheetMyProfile() {
       <fieldset class="fieldset"><legend>Consentiments</legend>
         <div class="field"><span>Drets d’imatge: puc sortir a les fotos i els vídeos ${esc(V.del)}</span><div class="pickers" id="pf-img">${[['yes', 'Sí'], ['no', 'No']].map(([v, t]) => `<button type="button" class="pick" data-k="${v}" aria-pressed="${p.imageOk === v}">${t}</button>`).join('')}</div></div>
         <div class="toggle-row"><span><b>Protecció de dades</b><br><span class="muted" style="font-size:calc(13px*var(--ts))">Accepto que ${esc(ofName())} tracti les meves dades per organitzar l’activitat.</span></span><label class="switch"><input type="checkbox" id="pf-data" ${p.dataOk === 'yes' ? 'checked' : ''}><span></span></label></div>
-        ${p.consentAt ? `<small class="muted">Respost el ${esc(ddmm(p.consentAt.slice(0, 10)))}.</small>` : ''}
+        ${p.consentAt ? `<small class="muted">Respost el ${esc(shortDate(p.consentAt.slice(0, 10)))}.</small>` : ''}
       </fieldset>
       <div id="pf-mine"></div>
     </div>`,

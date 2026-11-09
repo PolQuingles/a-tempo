@@ -101,7 +101,7 @@ function sheetKit(sec0) {
     // Qui no en té: la llista per encarregar-ne o fer-ne de noves.
     const lack = KIT_ITEMS.map(([k, l]) => ({ k, l, list: ms.filter(m => kitOf(m, k) === 'no') })).filter(x => x.list.length);
     el.querySelector('#kt-lack').innerHTML = lack.map(({ k, l, list }) => `<div class="section-title"><h2 class="h2">Sense ${esc(l.toLowerCase())} (${list.length})</h2><button class="btn btn-sm btn-ghost" data-copy="${k}">Copia la llista</button></div>
-      <ul class="mini-list" style="max-height:none">${list.map(m => `<li><span>${codeTag(m, curGuestProd(m))}<b>${esc(m.name)}</b>${kitAt(m, k) ? ` <span class="m">· des del ${esc(ddmm(isoDate(new Date(kitAt(m, k)))))}</span>` : ''}</span></li>`).join('')}</ul>`).join('');
+      <ul class="mini-list" style="max-height:none">${list.map(m => `<li><span>${codeTag(m, curGuestProd(m))}<b>${esc(m.name)}</b>${kitAt(m, k) ? ` <span class="m">· des del ${esc(shortDate(isoDate(new Date(kitAt(m, k)))))}</span>` : ''}</span></li>`).join('')}</ul>`).join('');
     el.querySelectorAll('#kt-lack [data-copy]').forEach(b => b.onclick = () => {
       const { l, list } = lack.find(x => x.k === b.dataset.copy);
       copyText(`Sense ${l.toLowerCase()} · ${SEC[sec].name}\n${list.map(m => `- ${codeName(m, curGuestProd(m))}`).join('\n')}`, 'Llista copiada');

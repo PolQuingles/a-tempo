@@ -48,6 +48,19 @@
         ]
       },
       {
+        "source": "/@(|index.html)",
+        "headers": [
+          {
+            "key": "Content-Security-Policy",
+            "value": "frame-ancestors 'none'"
+          },
+          {
+            "key": "X-Frame-Options",
+            "value": "DENY"
+          }
+        ]
+      },
+      {
         "source": "/@(index.html|sw.js|app.webmanifest|manifest.webmanifest|marca.json)",
         "headers": [
           {

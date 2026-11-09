@@ -110,7 +110,8 @@ const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
 function currentTheme() { try { return localStorage.getItem(LS_THEME) || ''; } catch { return ''; } }
 const isDark = () => { const t = document.documentElement.getAttribute('data-theme'); return t ? t === 'dark' : darkQuery.matches; };
 function updateThemeColor() {
-  const bar = isDark() ? '#131016' : (MARCA?.bg || S.config.brand?.accent || '#4C2582');
+  // La barra del mòbil es fon amb la pàgina: del color del fons.
+  const bar = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || (isDark() ? '#131016' : '#F6F4F8');
   $('meta[name="theme-color"]')?.setAttribute('content', bar);
 }
 function setTheme(t) {

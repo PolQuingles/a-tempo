@@ -98,7 +98,7 @@ function annCard(a, board) {
       ${long ? `<button class="btn btn-sm btn-ghost ann-more" data-act="ann-read" data-id="${esc(a.id)}">Llegeix-lo sencer</button>` : ''}
       ${attachList(a.files, 'ann-file', a.id)}
       <div class="ann-m">${a.pinned ? '<span class="pin">Fixat</span>' : ''}<span>${esc(fullName(a.author))}</span><span class="mono">${a.createdAt ? ddmm(a.createdAt.slice(0, 10)) : ''}</span>
-        ${a.sections?.length ? `<span>Per a: ${esc(a.sections.map(x => SEC[x].name).join(', '))}</span>` : ''}${a.until ? `<span>Fins al ${ddmm(a.until)}</span>` : ''}</div>
+        ${a.sections?.length ? `<span>Per a: ${esc(a.sections.map(x => SEC[x].name).join(', '))}</span>` : ''}${a.until ? `<span>Fins al ${shortDate(a.until)}</span>` : ''}</div>
       ${canReply(a.by) || bandesAnnActs(a) ? `<div class="ann-acts">${bandesAnnActs(a)}${canReply(a.by) ? `<button class="btn btn-sm" data-act="reply" data-ref="ann:${esc(a.id)}">Respon a ${esc(firstName(fullName(a.author)) || 'l’equip')}</button>` : ''}</div>` : ''}
       ${board && canBoard() && (!a.until || a.until >= TODAY) ? annSeenLine(a) : ''}
     </article>`;
@@ -475,7 +475,7 @@ function boardPolls() {
   const card = p => {
     if (isBandes(p)) return bandesCard(p);
     const closed = p.closed || (p.closesAt && p.closesAt < TODAY);
-    const meta = `<div class="ann-m">${closed ? '<span class="st-pill st-rejected">Tancada</span>' : '<span class="st-pill st-accepted">Oberta</span>'}${p.closesAt ? `<span>Fins al ${ddmm(p.closesAt)}</span>` : ''}${p.sections?.length ? `<span>Per a: ${esc(p.sections.map(x => SEC[x].name).join(', '))}</span>` : ''}<span>${p.multi ? 'Pots triar-ne diverses' : 'Una opció'}</span></div>`;
+    const meta = `<div class="ann-m">${closed ? '<span class="st-pill st-rejected">Tancada</span>' : '<span class="st-pill st-accepted">Oberta</span>'}${p.closesAt ? `<span>Fins al ${shortDate(p.closesAt)}</span>` : ''}${p.sections?.length ? `<span>Per a: ${esc(p.sections.map(x => SEC[x].name).join(', '))}</span>` : ''}<span>${p.multi ? 'Pots triar-ne diverses' : 'Una opció'}</span></div>`;
     // Per respondre-hi: qui porta el tauler i també canta (la comissió de festes, part de l'equip) ho fa des del desplegable
     // de sota dels resultats.
     const canVote = !!myId() && !closed;

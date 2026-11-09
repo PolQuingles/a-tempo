@@ -119,13 +119,13 @@ function todoItems() {
     for (const s of conv) out.push({ icon: 'conv', conv: s, n: 1 });
     if (choicesPending(me.id)) { const s = choiceSummary(me.id); out.push({ icon: 'conv', t: 'Digues quines produccions faràs', s: `${s.none} de ${s.total} per dir · cal fer-ne com a mínim el ${s.min}%`, btn: 'Tria-les', act: `data-act="choice-open" data-mid="${esc(me.id)}"`, n: 1 }); }
     for (const p of openPolls().filter(p => isBandes(p) && !S.pollVotes.get(`${p.id}_${me.id}`) && bandesPeople(p).some(m => m.id === me.id)))
-      out.push({ icon: 'poll', t: `Vota: ${esc(p.title)}`, s: p.closesAt ? `Fins al ${ddmm(p.closesAt)} · vot secret` : 'Vot secret', btn: 'Vota', act: `data-act="bandes-vote" data-id="${esc(p.id)}"`, n: 1 });
+      out.push({ icon: 'poll', t: `Vota: ${esc(p.title)}`, s: p.closesAt ? `Fins al ${shortDate(p.closesAt)} · vot secret` : 'Vot secret', btn: 'Vota', act: `data-act="bandes-vote" data-id="${esc(p.id)}"`, n: 1 });
     const polls = openPolls().filter(p => !isBandes(p) && forMySection(p) && !S.pollVotes.get(`${p.id}_${me.id}`));
     if (polls.length) out.push({ icon: 'poll', t: `${polls.length === 1 ? '1 enquesta' : `${polls.length} enquestes`} per respondre`, s: esc(polls[0].title || ''), btn: 'Respon', act: 'data-act="board-polls"', n: polls.length });
   }
   // Les bandes: quan es tanca la votació, l'equip n'ha de publicar els finalistes.
   if (canBoard()) for (const p of [...S.polls.values()].filter(p => isBandes(p) && bandesPhase(p) === 'closed'))
-    out.push({ icon: 'bandes', t: `${esc(p.title)}: s’ha tancat la votació`, s: p.galaAt ? `Publica els finalistes, que es revelaran fins al ${ddmm(p.galaAt)}` : 'Publica els finalistes', btn: 'Publica’ls', act: `data-act="bandes-nominate" data-id="${esc(p.id)}"`, n: 1 });
+    out.push({ icon: 'bandes', t: `${esc(p.title)}: s’ha tancat la votació`, s: p.galaAt ? `Publica els finalistes, que es revelaran fins al ${shortDate(p.galaAt)}` : 'Publica els finalistes', btn: 'Publica’ls', act: `data-act="bandes-nominate" data-id="${esc(p.id)}"`, n: 1 });
   // No hi va ser: què s'hi va treballar (el pla de l'assaig on va faltar).
   const missed = missedPlan(me);
   if (missed) out.push({ icon: 'plan', t: `Què es va fer el ${esc(shortDate(missed.date))}`, s: `No hi vas ser: mira el pla ${esc(missed.type ? `de l’${missed.type.toLowerCase()}` : 'de l’assaig')}`, btn: 'Mira-ho', act: `data-act="session-info" data-sid="${esc(missed.id)}"`, n: 0 });
@@ -136,7 +136,7 @@ function todoItems() {
   out.push(...rollTodos());
   const th = unreadThreads();
   if (th.length) out.push({ icon: 'thread', t: `${th.length === 1 ? '1 conversa' : `${th.length} converses`} amb resposta nova`, s: esc(th.map(threadWho).slice(0, 2).join(', ')), btn: 'Llegeix', act: th.length === 1 ? `data-act="thread" data-id="${esc(th[0].id)}"` : 'data-act="threads"', n: th.length });
-  for (const t of tripsToAnswer()) out.push({ icon: 'trip', t: `${esc(t.title)}: t’hi apuntes?`, s: `${esc(capz(tripDates(t)))}${t.deadline ? ` · fins al ${ddmm(t.deadline)}` : ''}`, btn: 'Respon', act: 'data-act="board-trips"', n: 1 });
+  for (const t of tripsToAnswer()) out.push({ icon: 'trip', t: `${esc(t.title)}: t’hi apuntes?`, s: `${esc(capz(tripDates(t)))}${t.deadline ? ` · fins al ${shortDate(t.deadline)}` : ''}`, btn: 'Respon', act: 'data-act="board-trips"', n: 1 });
   for (const { s, short } of shortConcerts()) out.push({ icon: 'voices', t: `${esc(capz(V.sh.show))} del ${esc(shortDate(s.date))}: ${short.map(b => `${b.min - b.yes === 1 ? 'falta' : 'falten'} ${b.min - b.yes} ${esc(b.x.name.toLowerCase())}`).join(' i ')}`, s: `${esc(short.map(b => `${b.x.name}: ${b.yes} de ${b.min}`).join(' · '))}`, btn: 'Mira-ho', act: `data-act="session-info" data-sid="${esc(s.id)}"`, n: 0 });
   const news = unreadAnnouncements();
   if (news.length) out.push({ icon: 'ann', t: `${news.length === 1 ? '1 anunci nou' : `${news.length} anuncis nous`}`, s: esc(news[0].title || ''), btn: 'Llegeix', act: 'data-act="board-news"', n: news.length });
@@ -152,7 +152,7 @@ function convCard(s, me) {
     <div class="a-h" style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><b>${longDate(s.date)}</b>${a ? `<span class="rsvp ${a.answer}">${a.answer === 'yes' ? 'Hi seràs' : 'No hi seràs'}</span>` : '<span class="rsvp none">Confirma-ho</span>'}</div>
     <span class="muted" style="font-size:calc(13.5px*var(--ts))">${esc(s.type)}${s.time ? ` · ${esc(timeRange(s))}` : ''}${s.place ? ` · ${esc(s.place)}` : ''} · ${esc(prodNames(s))}</span>
     ${s.note ? `<span style="font-size:calc(13px*var(--ts));color:var(--accent)">${esc(s.note)}</span>` : ''}
-    ${s.rsvpBy ? `<span class="muted mono" style="font-size:calc(13px*var(--ts))">Respon abans del ${ddmm(s.rsvpBy)}</span>` : ''}
+    ${s.rsvpBy ? `<span class="muted mono" style="font-size:calc(13px*var(--ts))">Respon abans del ${shortDate(s.rsvpBy)}</span>` : ''}
     ${hasInfo(s) ? fitxaChip(s) : ''}
     <div class="c-a"><button class="btn btn-sm ${a?.answer === 'yes' ? 'btn-primary' : ''}" data-act="rsvp-yes" data-sid="${s.id}">Hi seré</button>
       <button class="btn btn-sm ${a?.answer === 'no' ? 'btn-danger' : ''}" data-act="rsvp-no" data-sid="${s.id}">No hi podré anar</button></div>
@@ -220,7 +220,7 @@ function sessionActs(s, me, big) {
     acts = [acts, ask, a ? `<span class="rsvp ${a.answer}">${a.answer === 'yes' ? 'Hi seràs' : 'No hi seràs'}</span><button class="btn btn-sm btn-ghost" data-act="${a.answer === 'yes' ? 'rsvp-no' : 'rsvp-yes'}" data-sid="${s.id}">${a.answer === 'yes' ? 'Ja no hi puc anar' : 'Sí que hi seré'}</button>` : '',
       mine ? `<span class="st-pill st-${mine.status}">${mine.kind === 'late' ? 'Has avisat que arribaràs tard' : 'Has avisat que no hi vas'}</span>`
         // Avisar amb temps: a la targeta de dalt; a les altres sessions, des de la seva fitxa (en tocar-ne la fila).
-        : big && !s.rsvp ? `<button class="btn btn-sm" data-act="absence-new" data-sid="${esc(s.id)}">No hi puc anar o arribaré tard</button>` : ''].filter(Boolean).join('');
+        : big && !s.rsvp ? `<button class="btn btn-sm" data-act="absence-new" data-sid="${esc(s.id)}">Avisa d’una absència o retard</button>` : ''].filter(Boolean).join('');
   }
   return { acts, conv };
 }
@@ -239,7 +239,7 @@ function sessionHeads(s) {
   }
   if (attAreas().includes('all')) {
     const parts = SECTIONS.filter(x => convoked(s, x.id)).map(x => [x, who(x.id)]).filter(([, ms]) => ms.length)
-      .map(([x, ms]) => `${esc(x.short)} ${ms.filter(m => !away(m)).length}/${ms.length}`);
+      .map(([x, ms]) => `<span class="nb">${esc(x.short)} ${ms.filter(m => !away(m)).length}/${ms.length}</span>`);
     if (parts.length) out.push(`<span class="next-m" title="Qui hi ha de ser, menys qui ha avisat que no hi va">Previsió: <b class="num">${parts.join(' · ')}</b></span>`);
   }
   return out.join('');
@@ -266,7 +266,7 @@ function nextCard(s, me) {
         ${s.time ? `<span class="next-time num">${esc(timeRange(s))}</span>` : ''}
         ${place ? `<span class="next-m">${place}</span>` : ''}
         ${s.info?.call ? `<span class="next-m">Convocatòria a les <b class="num">${esc(s.info.call)}</b></span>` : ''}
-        ${s.rsvp && s.rsvpBy && me && !S.rsvp.get(`${s.id}_${me.id}`) ? `<span class="next-m">Respon abans del ${ddmm(s.rsvpBy)}</span>` : ''}
+        ${s.rsvp && s.rsvpBy && me && !S.rsvp.get(`${s.id}_${me.id}`) ? `<span class="next-m">Respon abans del ${shortDate(s.rsvpBy)}</span>` : ''}
         ${out ? `<span class="next-m">${esc(onLeave(me, s.date) ? 'Estàs de baixa' : 'No fas aquesta producció')}</span>` : ''}
         ${sessionHeads(s)}
       </div>
@@ -281,7 +281,7 @@ function nextCard(s, me) {
 /* ---------- Properament ---------- */
 // Sota la targeta de dalt, en files curtes i per ordre: el que queda d'avui, la propera classe, les sessions dels set dies que
 // vénen i, si són més enllà, el proper assaig i el proper concert. Cada fila és com les del calendari: la data a l'esquerra i, a
-// la dreta, què és i on; en tocar-la s'obre la fitxa de la sessió (amb «No hi puc anar o arribaré tard»).
+// la dreta, què és i on; en tocar-la s'obre la fitxa de la sessió (amb «Avisa d’una absència o retard»).
 const dayLabel = d => d === TODAY ? 'Avui' : d === addDays(TODAY, 1) ? 'Demà' : '';
 const daysTo = d => Math.round((parseISO(d).getTime() - parseISO(TODAY).getTime()) / 864e5);
 const monthShort = d => fmtD(d, { month: 'short' }).replace(/^d[e’']\s*/, '');
@@ -352,9 +352,9 @@ function soonBlock(me, feat) {
   const shown = new Set([...ahead.map(s => s.id), feat?.id]);
   if (me) for (const s of openConvocations(me).filter(s => S.rsvp.get(`${s.id}_${me.id}`) && !shown.has(s.id) && s.date > TODAY)) rows.push({ key: `${s.date} ${s.time || ''}`, html: sessionSoon(s, me, 'Convocatòria') });
   rows.sort((a, b) => a.key.localeCompare(b.key));
-  if (!rows.length && feat) return `<div class="section-title"><h2 class="h2">Properament</h2><button class="btn btn-sm" data-act="week">La setmana</button></div>
+  if (!rows.length && feat) return `<div class="section-title"><h2 class="h2">Properament</h2><button class="btn btn-sm" data-act="week">Aquests dies</button></div>
     <p class="soon-none">No hi ha res més programat de moment.</p>`;
-  return `<div class="section-title"><h2 class="h2">Properament</h2><button class="btn btn-sm" data-act="week">La setmana</button></div>
+  return `<div class="section-title"><h2 class="h2">Properament</h2><button class="btn btn-sm" data-act="week">Aquests dies</button></div>
     ${rows.length ? `<ul class="soon-list">${rows.map(r => r.html).join('')}</ul>` : '<div class="todo-done"><span><b>Res a la vista</b><small>No tens cap assaig ni concert programat.</small></span></div>'}`;
 }
 /** Les absències i retards que ha avisat (del darrer mes o de sessions que encara han de venir). Si no n'hi ha cap, no surt
@@ -435,7 +435,7 @@ function viewHome() {
     </div>`;
 }
 
-/* ---------- La setmana ---------- */
+/* ---------- Aquests dies (la setmana passada i els deu dies que vénen) ---------- */
 // El que abans era el correu setmanal, fet sol amb el que ja hi ha a l'app: què es va fer els últims set dies (el pla de cada
 // assaig i «què s'hi va fer»), què ve els pròxims deu (hores, aules, horari del dia i pla, només el que toca a cadascú), què cal
 // respondre i què hi ha de nou al tauler. Si la direcció omple el pla de cada assaig, ningú no ha d'escriure res més.
@@ -470,9 +470,9 @@ function weekSession(s, d, past) {
 function weekHtml(d) {
   const block = (t, body) => body ? `<div class="section-title"><h2 class="h2">${t}</h2></div>${body}` : '';
   const ask = [
-    ...d.conv.map(s => `<li><span><b>${esc(s.type)} del ${esc(shortDate(s.date))}</b><small>${d.sec ? 'Confirma si hi seràs' : `Convocatòria${s.rsvpBy ? ` · fins al ${ddmm(s.rsvpBy)}` : ''}`}</small></span></li>`),
-    ...d.polls.map(p => `<li><span><b>${esc(p.title)}</b><small>${isBandes(p) ? 'Votació' : 'Enquesta'}${p.closesAt ? ` · fins al ${ddmm(p.closesAt)}` : ''}</small></span></li>`),
-    ...d.trips.map(t => `<li><span><b>${esc(t.title)}</b><small>Sortida · ${esc(tripDates(t))}${t.deadline ? ` · respon fins al ${ddmm(t.deadline)}` : ''}</small></span></li>`),
+    ...d.conv.map(s => `<li><span><b>${esc(s.type)} del ${esc(shortDate(s.date))}</b><small>${d.sec ? 'Confirma si hi seràs' : `Convocatòria${s.rsvpBy ? ` · fins al ${shortDate(s.rsvpBy)}` : ''}`}</small></span></li>`),
+    ...d.polls.map(p => `<li><span><b>${esc(p.title)}</b><small>${isBandes(p) ? 'Votació' : 'Enquesta'}${p.closesAt ? ` · fins al ${shortDate(p.closesAt)}` : ''}</small></span></li>`),
+    ...d.trips.map(t => `<li><span><b>${esc(t.title)}</b><small>Sortida · ${esc(tripDates(t))}${t.deadline ? ` · respon fins al ${shortDate(t.deadline)}` : ''}</small></span></li>`),
   ];
   return `<p class="muted" style="margin:0 0 6px;font-size:calc(13px*var(--ts))">${esc(capz(shortDate(addDays(TODAY, -7))))} – ${esc(shortDate(addDays(TODAY, 10)))}${d.sec ? ` · el que toca a ${esc(SEC[d.sec].name.toLowerCase())}` : ''}</p>
     ${block('Què farem', d.next.length ? d.next.map(s => weekSession(s, d, false)).join('') : '<p class="m">No hi ha cap sessió els pròxims deu dies.</p>')}
@@ -483,7 +483,7 @@ function weekHtml(d) {
 }
 function weekText(d) {
   const line = s => `${longDate(s.date)} · ${s.type || 'Assaig'}${s.time ? ` · ${timeRange(s)}` : ''}${s.place ? ` · ${s.place}` : ''}`;
-  return [`LA SETMANA · ${S.config.shortName || S.config.name || ''}`, '',
+  return [`AQUESTS DIES · ${S.config.shortName || S.config.name || ''}`, '',
     'QUÈ FAREM', ...d.next.flatMap(s => [line(s), ...(stepsText(s) ? [stepsText(s)] : []), ...(planOf(s) ? [planText(s)] : []), '']),
     ...(d.past.length ? ['QUÈ VAM FER', ...d.past.flatMap(s => [line(s), ...(planOf(s) ? [s.plan.after || planText(s)] : []), ''])] : []),
     `Tot a l’app: ${appUrl()}`].join('\n');
@@ -491,13 +491,13 @@ function weekText(d) {
 function sheetWeek() {
   const d = weekData();
   openSheet({
-    title: 'La setmana',
+    title: 'Aquests dies',
     wide: true,
     body: `<div class="week">${weekHtml(d)}</div>`,
     foot: `<button class="btn" id="wk-print">Imprimeix</button><span class="spacer"></span><button class="btn btn-primary" id="wk-copy">Copia-la</button>`,
     onMount: el => {
-      el.querySelector('#wk-copy').onclick = () => copyText(weekText(d), 'Setmana copiada');
-      el.querySelector('#wk-print').onclick = () => printDoc('La setmana', `<div class="week">${weekHtml(d)}</div>`);
+      el.querySelector('#wk-copy').onclick = () => copyText(weekText(d), 'Copiat');
+      el.querySelector('#wk-print').onclick = () => printDoc('Aquests dies', `<div class="week">${weekHtml(d)}</div>`);
     },
   });
 }

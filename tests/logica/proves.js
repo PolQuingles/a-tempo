@@ -392,6 +392,30 @@ prova('norma: una sessió compartida compta per a totes dues produccions', () =>
   igual(ruleStatus('q', S.members.get('a')).att + ruleStatus('q', S.members.get('a')).abs, 2, 'Q compta la compartida');
   igual(ruleStatus('p', S.members.get('a')).status, 'out', 'P només en té una');
 });
+prova('les produccions per triar: en curs, properes i, al final, les acabades', () => {
+  escenari({ members: [], productions: [
+    { id: 'vella', name: 'V', start: D(-90), end: D(-60), sessions: [] }, { id: 'recent', name: 'R', start: D(-30), end: D(-5), sessions: [] },
+    { id: 'ara', name: 'A', start: D(-3), end: D(20), sessions: [] }, { id: 've', name: 'P', start: D(10), end: D(40), sessions: [] }], attendance: {} });
+  igual(productionsByNow().map(p => p.id), ['ara', 've', 'recent', 'vella'], 'l’ordre per triar');
+  igual(productionsSorted().map(p => p.id), ['vella', 'recent', 'ara', 've'], 'els colors segueixen per data d’inici');
+});
+
+prova('quantes sessions són compartides: tant les pròpies com les d’una altra producció', () => {
+  escenari({ members: [], productions: [
+    { id: 'p', name: 'P', sessions: [{ id: 's1', date: D(1), alsoIn: ['q'] }, { id: 's2', date: D(2) }] },
+    { id: 'q', name: 'Q', sessions: [{ id: 's3', date: D(3), alsoIn: ['p'] }] }], attendance: {} });
+  igual(sharedTxt(allSessions('p')), '2 compartides', 'a P, la seva i la de Q');
+  igual(sharedTxt(allSessions('q')), '2 compartides', 'a Q, també');
+  igual(sharedTxt([sessionById('s2')]), '', 'cap');
+  igual(sharedTxt([sessionById('s1')]), '1 compartida', 'en singular');
+});
+
+prova('minuts en xifres grans: hores i minuts, amb les unitats petites', () => {
+  igual(minsKpi(678), '11<small>h</small> 18<small>min</small>');
+  igual(minsKpi(45), '45<small>min</small>');
+  igual(minsKpi(120), '2<small>h</small>');
+});
+
 prova('una sessió compartida es reparteix: un assaig de 2 h de dues produccions compta 1 h a cada una', () => {
   escenari({
     members: [{ id: 'a', name: 'A', section: 'B' }],
