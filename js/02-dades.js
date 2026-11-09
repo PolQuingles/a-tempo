@@ -328,6 +328,8 @@ function subscribe() {
     if (S.memberId) db.collection('classNotes').where('memberId', '==', S.memberId).onSnapshot(snap => { asStudent = new Map(snap.docs.map(d => [d.id, d.data()])); mergeNotes(); }, () => {});
   }
   else db.collection('classNotes').where('memberId', '==', S.memberId || '-').onSnapshot(onCol('classNotes'), () => markLoaded('classNotes'));
+  // Les notes privades: només el professorat, cadascú les seves; l'administració, les recents.
+  if (teachCl) (hasRole(S.me, 'admin') ? db.collection('classPriv').where('date', '>=', CLASS_FROM) : db.collection('classPriv').where('teacher', '==', S.email || '-')).onSnapshot(onCol('classPriv'), () => {});
   // Tots els avisos de les classes, el professorat i l'administració; la resta, els seus i els canvis oberts.
   if (teachCl) db.collection('classReq').onSnapshot(onCol('classReq'), e => { markLoaded('classReq'); noteDenied('classReq', e); });
   else {

@@ -8,7 +8,7 @@ const ADMIN_ONLY = new Set(['retention', 'join-link', 'join-reqs', 'join-approve
 // La identitat de l'agrupació i esborrar-la: només un Usuari Pro que l'administri.
 const PRO_ONLY = new Set(['brand-color', 'logo-remove', 'kind-set', 'group-delete', 'sections-save', 'sections-undo']);
 // El calendari de les classes: només el professorat de cant i l'administració.
-const CLASS_ONLY = new Set(['cl-new', 'cl-edit', 'cl-review', 'cl-paste', 'cl-plan', 'cl-note', 'cl-mark', 'cl-stats', 'cl-cancel-day']);
+const CLASS_ONLY = new Set(['cl-new', 'cl-edit', 'cl-review', 'cl-paste', 'cl-plan', 'cl-note', 'cl-mark', 'cl-stats', 'cl-cancel-day', 'cl-move', 'cl-clashes', 'cl-clash-ok', 'cl-link']);
 const EDIT_ONLY = new Set(['prod-roll', 'mark', 'min', 'early', 'early-open', 'mark-rest', 'session-new', 'sub-set', 'ann-new', 'ann-edit', 'poll-new', 'poll-edit', 'poll-results', 'poll-remind', 'bandes-new', 'bandes-edit', 'bandes-publish', 'bandes-results', 'bandes-nominate', 'bandes-gala', 'bandes-props-open', 'bandes-props-close', 'bandes-prop-take', 'bandes-prop-drop', 'rsvp-remind', 'doc-new', 'doc-edit', 'share-app', 'staff-bulk', 'preview-on', 'who-in', 'mail-check', 'concert-list', 'concert-toggle', 'session-edit', 'member-edit', 'member-new', 'member-bulk', 'prod-new', 'prod-edit',
   'wipe-demo', 'wipe-all', 'load-demo', 'export-json', 'abs-accept', 'abs-reject', 'abs-delete', 'manage',
   'roster-export', 'docs-copy-noimg',
@@ -45,6 +45,10 @@ const actions = {
   'cl-day': el => { ui.clDay = el.dataset.date; render(); },
   'cl-seats': () => sheetTeacherSeats(),
   'cl-note': el => sheetClassNote(el.dataset.c, el.dataset.s),
+  'cl-move': el => sheetClassMove(el.dataset.c, el.dataset.s, el.dataset.k === 'clash' ? sheetClassClashes : null),
+  'cl-clashes': () => sheetClassClashes(),
+  'cl-clash-ok': el => acceptClash(el.dataset.c, el.dataset.s, el.dataset.k),
+  'cl-link': el => sheetLinkName(el.dataset.k, el.dataset.n),
   'cl-mark': el => markClass(el.dataset.c, el.dataset.s, el.dataset.v),
   'cl-stats': () => sheetClassStats(false),
   'cl-open-take': el => takeOpenSwap(el.dataset.r),

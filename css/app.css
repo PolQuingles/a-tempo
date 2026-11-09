@@ -158,6 +158,23 @@ input,select,textarea{font:inherit;color:var(--ink)}
 .cl-marks{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;flex-basis:100%;margin-left:58px}
 .cl-marks .opt{min-height:34px;font-size:var(--t-11);gap:2px}
 .cl-note{display:block;margin-top:3px;font-size:var(--t-13);color:var(--ink-2);white-space:pre-wrap}
+.cl-priv{color:var(--muted)}
+.cl-priv b{font-size:var(--t-12);font-weight:700;margin-right:4px}
+.rec-box{display:grid;gap:8px;margin-bottom:8px}
+.rec-box .btn{justify-self:start}
+.rec-live{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:var(--r-sm);background:var(--surface-2)}
+.rec-live .btn{justify-self:auto}
+.rec-box audio{width:100%}
+.rec-dot{display:inline-block;width:10px;height:10px;margin-right:8px;border-radius:50%;background:var(--fnj)}
+.rec-live .rec-dot{margin-right:0}
+.rec-dot.on{animation:pulse 1.2s ease-in-out infinite}
+.clash-day+.clash-day{margin-top:16px}
+.clash-d{margin:0 0 4px;font-size:var(--t-15);font-weight:700}
+.clash-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line)}
+.clash-t{font-weight:700;min-width:48px}
+.clash-w{flex:1 1 160px;min-width:0;display:grid;gap:2px}
+.clash-w small{font-size:var(--t-13);color:var(--muted)}
+.clash-a{display:flex;gap:6px}
 .tab svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .tab[aria-current="page"]{color:var(--accent)}
 .tab[aria-current="page"] .tab-ico{background:var(--accent-soft)}

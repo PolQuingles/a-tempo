@@ -127,6 +127,7 @@ async function runRetention(p) {
   const cls = new Set(p.classes);
   for (const r of S.classReq.values()) if (cls.has(r.classId)) del.push(`classReq/${r.id}`);
   for (const n of S.classNotes.values()) if (cls.has(n.classId)) del.push(`classNotes/${n.id}`);
+  for (const n of S.classPriv.values()) if (cls.has(n.classId)) del.push(`classPriv/${n.id}`);
   for (let i = 0; i < del.length; i += 400) {
     const b = fs.batch();
     for (const path of del.slice(i, i + 400)) b.delete(db.doc(path));

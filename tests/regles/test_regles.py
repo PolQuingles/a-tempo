@@ -473,7 +473,7 @@ expect("N24b però no a nom d'un altre professor", commit([upd(f"cors/{F}/classF
 expect("N25 l'alumne l'escolta", get(f"cors/{F}/classFiles/f1_0", T["singer"]), True)
 expect("N26 un altre cantaire l'escolta", get(f"cors/{F}/classFiles/f1_0", T["pau"]), False)
 expect("N27 l'alumne en puja un", commit([upd(f"cors/{F}/classFiles/f2_0", {"i": 0, "of": 1, "memberId": "m1"})], T["singer"]), False)
-for col in ["works", "trips", "tripSignups", "profiles", "students", "classFiles"]:
+for col in ["works", "trips", "tripSignups", "profiles", "students", "classFiles", "classPriv"]:
     expect(f"N28 el compte de servei llegeix {col}", lst(f"cors/{F}/{col}", T["service"]), True)
 
 print("O. Missatges, notes de seguiment i secretaria")
@@ -968,6 +968,15 @@ expect("AA8q però amb el seu dia de classe, sí", commit([upd(f"cors/{F}/studen
 expect("AA8r i ja la pot llegir", get(f"cors/{F}/students/m7", T["prof2"]), True)
 expect("AA8s una fitxa que encara no existeix, el professorat ho pot saber", get(f"cors/{F}/students/ningu", T["prof"]), "404")
 expect("AA8t un cantaire, no", get(f"cors/{F}/students/ningu", T["singer"]), False)
+# Les notes privades del professor: l'alumne no les veu.
+seed(f"cors/{F}/classPriv/c1_s1", {"id": "c1_s1", "classId": "c1", "slotId": "s1", "memberId": "m1", "teacher": "prof@exemple.cat", "date": "2026-09-22", "text": "Privada"})
+expect("AA8u el professor llegeix la seva nota privada", get(f"cors/{F}/classPriv/c1_s1", T["prof"]), True)
+expect("AA8v l'alumne no", get(f"cors/{F}/classPriv/c1_s1", T["singer"]), False)
+expect("AA8w ni buscant-la", qry(f"cors/{F}", "classPriv", [("memberId", "EQUAL", "m1")], T["singer"]), False)
+expect("AA8x ni un altre professor", get(f"cors/{F}/classPriv/c1_s1", T["prof2"]), False)
+expect("AA8y l'alumne no n'escriu", commit([upd(f"cors/{F}/classPriv/c1_s2", {"memberId": "m1", "teacher": "prof@exemple.cat", "text": "X"})], T["singer"]), False)
+expect("AA8z el professor en crea amb el seu nom", commit([upd(f"cors/{F}/classPriv/c1_s3", {"memberId": "m3", "teacher": "prof@exemple.cat", "text": "X"})], T["prof"]), True)
+expect("AA8za però no amb el d'un altre", commit([upd(f"cors/{F}/classPriv/c1_s4", {"memberId": "m3", "teacher": "prof2@exemple.cat", "text": "X"})], T["prof"]), False)
 # El calendari personal: la clau, només de cadascú.
 expect("AA9 el cantaire es fa la clau del seu calendari", commit([upd(f"cors/{F}/calKeys/m1", {"memberId": "m1", "token": "K" * 32, "at": now})], T["singer"]), True)
 expect("AA9b no la d'un altre", commit([upd(f"cors/{F}/calKeys/m2", {"memberId": "m2", "token": "K" * 32, "at": now})], T["singer"]), False)

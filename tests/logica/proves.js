@@ -760,6 +760,29 @@ prova('classes: les peticions velles deixen de sortir', () => {
   S.classes = keep;
 });
 
+prova('classes: on es pot moure una classe', () => {
+  const keep = new Map(S.classes);
+  const a = { id: 'a', time: '17:00', mins: 40, memberId: 'm1' }, b = { id: 'b', time: '17:40', mins: 40, memberId: 'm2' }, f = { id: 'f', time: '18:20', mins: 40, memberId: '' };
+  const c = { id: 'c1', date: D(2), teacher: 'p', slots: [a, b, f] };
+  S.classes = new Map([['c1', c], ['c2', { id: 'c2', date: D(3), teacher: 'p', cancelled: true, slots: [] }], ['c3', { id: 'c3', date: D(4), teacher: 'p', slots: [{ id: 'z', time: '10:00', mins: 40, memberId: 'm1' }] }]]);
+  cert(/ja hi ha/.test(moveCheck(c, a, D(2), '17:40', 40).error), 'una hora ocupada');
+  igual(moveCheck(c, a, D(2), '18:20', 40).fill.id, 'f', 'una hora lliure s’ocupa');
+  cert(/anul·lat/.test(moveCheck(c, a, D(3), '10:00', 40).error), 'un dia anul·lat');
+  cert(/ja hi té classe/.test(moveCheck(c, a, D(4), '12:00', 40).error), 'si aquell dia ja hi té classe');
+  cert(/venir/.test(moveCheck(c, a, D(-1), '12:00', 40).error), 'el passat no');
+  const nou = moveCheck(c, a, D(6), '12:00', 40);
+  cert(!nou.error && !nou.target, 'un dia sense classes');
+  cert(canMoveSlot(c, a) && !canMoveSlot(c, { ...a, mark: 'P' }) && !canMoveSlot(c, { ...a, swapped: true }) && !canMoveSlot({ ...c, date: D(-1) }, a), 'què es pot moure');
+  S.classes = keep;
+});
+prova('classes: els noms sense fitxa surten un sol cop', () => {
+  const keep = new Map(S.classes);
+  S.classes = new Map([['c1', { id: 'c1', date: D(1), teacher: 'p', slots: [{ id: 'a', time: '17:00', name: 'Ona Nova', memberId: '' }] }], ['c2', { id: 'c2', date: D(8), teacher: 'p', slots: [{ id: 'b', time: '17:00', name: 'ona  nova', memberId: '' }, { id: 'c', time: '18:00', memberId: 'm1' }] }]]);
+  const out = classUnlinked('p');
+  igual(out.length, 1, 'una sola persona'); igual(out[0].n, 2, 'dues classes');
+  S.classes = keep;
+});
+
 /** Executa totes les proves: { ok, fail, lines }. */
 function runProves() {
   const lines = [];

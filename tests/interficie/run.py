@@ -983,6 +983,64 @@ def main():
         check(r["day"] and r["week"], "un cantaire no veu les marques d'assistència dels companys", str(r))
         ctx.close()
 
+        print("Classes: gravar, notes privades, moure, avisos, alumnes, noms sense fitxa i coincidències")
+        ctx, page, errors = open_app(browser, base, "prof", MOBILE, "#/classes")
+        r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {}, sh = () => document.querySelector('.sheet');
+          class MR { constructor(st, o) { this.mimeType = o.mimeType || 'audio/webm'; this.state = 'inactive'; } static isTypeSupported(t) { return t === 'audio/webm'; }
+            start() { this.state = 'recording'; this.ondataavailable({ data: new Blob(['xxxxx'], { type: 'audio/webm' }) }); } stop() { this.state = 'inactive'; this.onstop(); } }
+          window.MediaRecorder = MR; Object.defineProperty(navigator, 'mediaDevices', { value: { getUserMedia: async () => ({ getTracks: () => [{ stop() {} }] }) }, configurable: true });
+          const who = S.email, days = classDays(who), c0 = days[0];
+          saveClassDay({ ...c0, date: TODAY }); await s(300);
+          const c = S.classes.get(c0.id), sl = c.slots.find(x => x.memberId), nid = `${c.id}_${sl.id}`;
+          sheetClassNote(c.id, sl.id); await s(300);
+          sh().querySelector('#cn-rec-go').click(); await s(300);
+          out.recLocks = sh().querySelector('#cn-save').disabled && (closeSheet(), !!sh());
+          sh().querySelector('#cn-rec-stop').click(); await s(300);
+          out.recDone = /webm/.test(sh().querySelector('#cn-drop .dz-t').textContent) && !sh().querySelector('#cn-save').disabled;
+          sh().querySelector('#cn-text').value = 'Pública'; sh().querySelector('#cn-priv').value = 'Secreta'; sh().querySelector('#cn-save').click(); await s(800);
+          out.saved = !!S.classNotes.get(nid)?.file && S.classPriv.get(nid)?.text === 'Secreta' && !/Secreta/.test(JSON.stringify(S.classNotes.get(nid)));
+          ui.tab = 'classes'; ui.clTab = 'llista'; render(); await s(300); out.privShown = /Privada Secreta/.test(document.querySelector('#view').innerText);
+          const fut = S.classes.get(days[2].id), x = fut.slots.find(k => k.memberId), target = addDays(fut.date, 3);
+          sheetClassMove(fut.id, x.id); await s(300);
+          sh().querySelector('#mv-date').value = target; sh().querySelector('#mv-time').value = '11:00'; sh().querySelector('#mv-go').click(); await s(400);
+          const dst = classDays(who).find(k => k.date === target);
+          out.moved = !S.classes.get(fut.id).slots.find(k => k.id === x.id).memberId && dst?.slots[0].memberId === x.memberId && /passa a/.test(dst?.changes[0].b);
+          const d1 = days[1], s1 = d1.slots.find(k => k.memberId), fr = d1.slots.find(k => !k.memberId && !k.name);
+          saveClassReq({ id: 'ab1', kind: 'absent', status: 'pending', classId: d1.id, slotId: s1.id, memberId: s1.memberId, memberName: 'A', createdAt: new Date().toISOString() });
+          saveClassReq({ id: 'tk1', kind: 'take', status: 'pending', classId: d1.id, slotId: fr.id, memberId: x.memberId, memberName: 'B', createdAt: new Date().toISOString() });
+          ui.clTab = 'llista'; render(); await s(300);
+          const cards = [...document.querySelectorAll('#view .conv-card')].map(e => e.innerText);
+          out.buttons = cards.some(t => /Entesos/.test(t) && /Mou la classe/.test(t) && !/No pot ser/.test(t)) && cards.some(t => /Dona-li l’hora/.test(t) && /Ara no/.test(t));
+          ui.clTab = 'alumnes'; render(); await s(300); out.students = /Última classe/.test(document.querySelector('.stu-row')?.innerText || '');
+          saveClassDay({ ...fut, slots: S.classes.get(fut.id).slots.map(k => !k.memberId ? { ...k, name: 'Ona Nova' } : k) }); await s(300);
+          ui.clTab = 'alumnes'; render(); await s(300); out.unlinked = !!document.querySelector('#view [data-act="cl-link"]');
+          const mem = [...S.members.values()].find(k => !S.classes.get(fut.id).slots.some(z => z.memberId === k.id));
+          sheetLinkName(who, 'Ona Nova'); await s(300); sh().querySelector('#ln-m').value = mem.id; sh().querySelector('#ln-go').click(); await s(500);
+          out.linked = classUnlinked(who).length === 0 && S.classes.get(fut.id).slots.some(z => z.memberId === mem.id);
+          return out; }""")
+        for k, what in [("recLocks", "mentre es grava, la finestra no es tanca ni es pot desar"), ("recDone", "en aturar-se, la gravació queda a punt per pujar"), ("saved", "la nota privada es desa a part de la que veu l'alumne"),
+                        ("privShown", "el professor la veu a la classe"), ("moved", "moure una classe: l'hora queda lliure, la classe va a l'altre dia i s'avisa"),
+                        ("buttons", "una absència té «Entesos» i una hora lliure es dona o no"), ("students", "a Alumnes hi ha l'última classe"),
+                        ("unlinked", "els noms sense fitxa surten a Alumnes"), ("linked", "vincular un nom canvia totes les classes")]:
+            check(r.get(k), what, str(r))
+        check(not errors, "sense errors a les millores de classes", "; ".join(errors[:3]))
+        ctx.close()
+        ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/classes")
+        r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {}, sh = () => document.querySelector('.sheet');
+          const c = classDays().find(k => k.date > TODAY && !k.cancelled && k.slots.some(x => x.memberId)), x = c.slots.find(k => k.memberId), prod = [...S.productions.values()][0];
+          prod.sessions = [...(prod.sessions || []), { id: 'sx1', date: c.date, time: x.time, end: '23:00', type: 'Assaig', status: 'published' }];
+          if (typeof invalidateSessions === 'function') invalidateSessions();
+          const n = classClashList().length; out.found = n > 0;
+          ui.tab = 'classes'; ui.clTab = 'totes'; ui.clWho = null; render(); await s(300); out.banner = /coincideix/.test(document.querySelector('#view').innerText);
+          sheetClassClashes(); await s(300);
+          sh().querySelector('[data-act="cl-clash-ok"]').click(); await s(400);
+          out.left = classClashList().length === n - 1;
+          return out; }""")
+        check(r["found"] and r["banner"], "les coincidències amb assajos surten en una sola llista", str(r))
+        check(r["left"], "«Deixa-la» la treu de la llista", str(r))
+        check(not errors, "sense errors a les coincidències", "; ".join(errors[:3]))
+        ctx.close()
+
         print("Canvis d'hora de classe entre els dos dies i a unes quantes persones")
         ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/classes")
         r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms));

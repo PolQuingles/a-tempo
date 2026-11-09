@@ -129,6 +129,7 @@ function keepSlotIds(slots, prev) {
     const [o] = old.splice(i, 1);
     x.id = o.id; x.linked = true;
     if (o.mark) { x.mark = o.mark; if (o.markFor) x.markFor = o.markFor; }
+    if (o.clashOk) x.clashOk = o.clashOk;
   };
   for (const x of slots) link(x, o => same(o, x) && o.time === x.time);
   for (const x of slots) if (!x.linked && (x.memberId || x.name)) link(x, o => same(o, x));
