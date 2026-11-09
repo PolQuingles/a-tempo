@@ -69,7 +69,8 @@
           if (r.left < W && !hidden(e) && e.children.length < 6) add(label, 'SURT DE LA PANTALLA', e, ` (${Math.round(r.left)}–${Math.round(r.right)} de ${W})`);
         }
         // Contingut més ample que la caixa.
-        if (e.clientWidth && e.scrollWidth > e.clientWidth + 2 && !['input', 'textarea', 'select'].includes(tag)) {
+        // (Una zona tàctil feta amb ::after és invisible: no vessa res.)
+        if (e.clientWidth && e.scrollWidth > e.clientWidth + 2 && !['input', 'textarea', 'select'].includes(tag) && getComputedStyle(e, '::after').position !== 'absolute') {
           const ox = cs.overflowX;
           if (ox === 'visible') spill.push([e, 'VESSA DE LA CAIXA', ` (${e.scrollWidth} > ${e.clientWidth})`]);
           else if ((ox === 'hidden' || ox === 'clip') && cs.textOverflow !== 'ellipsis') spill.push([e, 'TEXT TALLAT (ample)', ` (${e.scrollWidth} > ${e.clientWidth})`]);
