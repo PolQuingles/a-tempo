@@ -695,10 +695,6 @@ class Group:
                 self.deliver(f"absnew:{aid}:{did}", d, body, f"absnew-{aid}")
 
     # ---------- Classes de cant ----------
-    def teachers(self):
-        """Els correus que porten les classes: professorat de cant i administració."""
-        return {e for e, p in self.people.items() if roles_of(p) & {"voice", "admin"}}
-
     def to_emails(self, emails):
         for did, d in self.targets("classes"):
             if d.get("email") in emails:
@@ -713,11 +709,18 @@ class Group:
         reqs = dict(r.query(self.base, "classReq", [("createdAt", ">=", fresh)]))
         reqs.update(r.query(self.base, "classReq", [("reviewedAt", ">=", fresh)]))
         off = r.query(self.base, "classes", [("cancelledAt", ">=", fresh)])
-        if not reqs and not off:
+        changed = r.query(self.base, "classes", [("changedAt", ">=", fresh)])
+        if not reqs and not off and not changed:
             return
         days = r.list(f"{self.base}/classes")
         members = self.members()
-        teachers = self.teachers()
+        admins = {e for e, p in self.people.items() if "admin" in roles_of(p)}
+
+        def staff_of(req):
+            """Qui ha de rebre l'avís: el professor d'aquella classe; si encara no té compte, l'administració."""
+            teacher = (days.get(req.get("classId") or "") or {}).get("teacher") or ""
+            return {teacher} if "@" in teacher else admins
+
         name = lambda mid: dades.full_name((members.get(mid or "") or {}).get("name")) or "Algú"
 
         def when(req):
@@ -759,6 +762,25 @@ class Group:
             for did, d in self.targets("classes", member_ids=who):
                 self.deliver(f"cls:off:{cid}:{day.get('cancelledAt')}:{did}", d, body, f"cls-{cid}")
 
+        # Una hora que canvia, un dia que s'esborra o que es recupera: s'avisa qui hi surt. El text el deixa escrit l'app (changes).
+        # Si a la mateixa persona li canvien unes quantes classes (un horari nou), rep un sol avís.
+        touched = {}
+        for cid, day in sorted(changed.items()):
+            for ch in day.get("changes") or []:
+                if ch.get("m") and ch.get("b"):
+                    h = hashlib.sha1(ch["b"].encode()).hexdigest()[:10]
+                    touched.setdefault(ch["m"], []).append((f"{cid}:{(day.get('changedAt') or '')[:10]}:{h}", ch["b"]))
+        for mid, items in sorted(touched.items()):
+            for did, d in self.targets("classes", member_ids={mid}):
+                todo = [(f"cls:chg:{k}:{did}", b) for k, b in items if f"cls:chg:{k}:{did}" not in self.sent]
+                if not todo:
+                    continue
+                body = todo[0][1] if len(todo) == 1 else f"Han canviat {len(todo)} de les teves classes. Mira-ho a l'app."
+                self.deliver(todo[0][0], d, body, f"cls-chg-{mid}")
+                if todo[0][0] in self.sent:
+                    for k, _ in todo[1:]:
+                        self.sent[k] = self.sent[todo[0][0]]
+
         for rid, req in sorted(reqs.items()):
             kind, status = req.get("kind"), req.get("status")
             who, mate = name(req.get("memberId")), name(req.get("withMemberId"))
@@ -775,7 +797,7 @@ class Group:
                     body = f"{who} demana canviar l'hora de {when(req)} a {', '.join(name(m) for m in req['to'])}."
                 else:
                     body = f"{who} busca algú per canviar l'hora de {when(req)}."
-                for did, d in self.to_emails(teachers):
+                for did, d in self.to_emails(staff_of(req)):
                     self.deliver(f"cls:{rid}:{status}:{did}", d, body, f"cls-{rid}")
                 if kind == "swap" and req.get("withMemberId"):
                     msg = f"{who} et demana canviar l'hora de {when(req)}: tens les {other_time(req)}. Respon-hi des de l'app."
@@ -791,7 +813,7 @@ class Group:
                 continue
             if status == "cancelled":
                 body = f"{who} ha retirat l'avís de {when(req)}."
-                for did, d in self.to_emails(teachers):
+                for did, d in self.to_emails(staff_of(req)):
                     self.deliver(f"cls:{rid}:{status}:{did}", d, body, f"cls-{rid}")
                 continue
             done = status == "accepted"
@@ -807,7 +829,7 @@ class Group:
             for did, d in self.targets("classes", member_ids={req.get("memberId")}):
                 self.deliver(f"cls:{rid}:{status}:{did}", d, body, f"cls-{rid}")
             if teach_body:
-                for did, d in self.to_emails(teachers):
+                for did, d in self.to_emails(staff_of(req)):
                     self.deliver(f"cls:{rid}:{status}:t:{did}", d, teach_body, f"cls-{rid}")
 
     # ---------- Caps de corda o de secció ----------

@@ -934,6 +934,55 @@ def main():
         check(not errors, "sense errors amb els rols sumats", "; ".join(errors[:3]))
         ctx.close()
 
+        print("Classes: horaris que no trenquen res, hores lliures, mesos antics i privacitat")
+        ctx, page, errors = open_app(browser, base, "prof", MOBILE, "#/classes")
+        r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          const who = S.email, [c, c2, c3] = classDays(who), [a, b] = c.slots.filter(x => x.memberId), nid = `${c.id}_${a.id}`;
+          const rowsOf = d => d.slots.map(x => ({ name: '', day: new Date(d.date + 'T12:00:00').getDay(), from: parseTime(x.time), mins: x.mins || 30, memberId: x.memberId || '' }));
+          S.classNotes.set(nid, { id: nid, classId: c.id, slotId: a.id, memberId: a.memberId, teacher: who, date: c.date, text: 'Nota' });
+          saveClassReq({ id: 'zswap', kind: 'swap', status: 'accepted', classId: c.id, slotId: a.id, withSlotId: b.id, memberId: a.memberId, withMemberId: b.memberId });
+          saveClassDay({ ...c2, cancelled: true, cancelledAt: new Date().toISOString() }); await s(400);
+          await writeClassDays([c.date, c2.date], [...rowsOf(c), ...rowsOf(c2)], who, {}); await s(400);
+          const nc = S.classes.get(c.id);
+          out.note = nc.slots.some(x => classNoteFor(nc.id, x.id)); out.swap = classSlots(nc).some(x => x.swapped); out.cancelled = !!S.classes.get(c2.id).cancelled;
+          const count = (await db.collection('classes').where('teacher', '==', who).get()).docs.length;
+          await writeClassDays([c.date], rowsOf(c), who, {}); await s(300);
+          out.noDup = (await db.collection('classes').where('teacher', '==', who).get()).docs.length === count;
+          const free = S.classes.get(c3.id), f = free.slots.find(x => !x.memberId && !x.name), [m1, m2] = [...S.members.keys()];
+          saveClassReq({ id: 't1', kind: 'take', status: 'pending', classId: free.id, slotId: f.id, memberId: m1, memberName: 'A', createdAt: '2026-01-01' });
+          saveClassReq({ id: 't2', kind: 'take', status: 'pending', classId: free.id, slotId: f.id, memberId: m2, memberName: 'B', createdAt: '2026-01-02' });
+          answerClassReq('t1', 'accepted'); await s(200);
+          out.taken = S.classes.get(free.id).slots.find(x => x.id === f.id).memberId === m1 && S.classReq.get('t2').status === 'rejected';
+          saveClassReq({ id: 'old', kind: 'absent', status: 'pending', classId: 'ja-no-hi-es', slotId: 'x', memberId: m1, memberName: 'A', createdAt: '2026-01-01' });
+          out.stale = !reqsForTeacher().some(r => r.id === 'old');
+          const c0 = classDays('pfneus')[0], sl = c0.slots.find(x => x.memberId);
+          saveClassReq({ id: 'alie', kind: 'absent', status: 'pending', classId: c0.id, slotId: sl.id, memberId: sl.memberId, memberName: 'A', createdAt: '2026-01-01' });
+          out.notMine = !reqsForTeacher().some(r => r.id === 'alie');
+          saveClassDay({ ...c0, slots: c0.slots.map(x => x.id === sl.id ? { ...x, mark: 'FNJ', markFor: x.memberId } : x) }); await s(400);
+          sheetClassStats(false); await s(600); out.stats = !document.querySelector('.sheet').innerText.includes(S.members.get(sl.memberId).name); closeSheet(); await s(300);
+          const old = addDays(TODAY, -120);
+          await db.doc('classes/antic').set({ id: 'antic', date: old, teacher: who, slots: [] });
+          ui.tab = 'calendari'; ui.clMonth = old.slice(0, 7); ui.clDay = null; render(); await s(800);
+          out.oldMonth = S.classes.has('antic') && !/Aquest mes no hi ha classes/.test(document.querySelector('#view').innerText);
+          return out; }""")
+        for k, what in [("note", "en regenerar, la nota continua lligada a la seva classe"), ("swap", "i el canvi d'hora acceptat es manté"), ("cancelled", "i el dia anul·lat continua anul·lat"),
+                        ("noDup", "regenerar no duplica dies"), ("taken", "si dues persones demanen la mateixa hora, la segona no trepitja la primera"),
+                        ("stale", "una petició sense dia deixa de sortir"), ("notMine", "els avisos d'un altre professor no surten"),
+                        ("stats", "l'assistència del curs només té els alumnes propis"), ("oldMonth", "els mesos antics es carreguen en obrir-los")]:
+            check(r.get(k), what, str(r))
+        check(not errors, "sense errors a les classes", "; ".join(errors[:3]))
+        ctx.close()
+        ctx, page, errors = open_app(browser, base, "singer", MOBILE, "#/classes")
+        r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
+          const c = classDays('prof@exemple.cat').find(k => k.slots.filter(x => x.memberId).length > 1), other = c.slots.find(x => x.memberId && x.memberId !== myId());
+          S.classes.set(c.id, { ...c, date: TODAY, slots: c.slots.map(x => x.id === other.id ? { ...x, mark: 'FNJ', markFor: x.memberId } : x) });
+          ui.clWho = 'prof@exemple.cat'; ui.clMonth = TODAY.slice(0, 7); ui.clDay = TODAY; ui.tab = 'classes'; render(); await s(300);
+          out.day = !document.querySelector('#view .cl-mk.FNJ');
+          ui.clView = 'week'; render(); await s(300); out.week = !document.querySelector('#view .cl-mk.FNJ'); ui.clView = 'month';
+          return out; }""")
+        check(r["day"] and r["week"], "un cantaire no veu les marques d'assistència dels companys", str(r))
+        ctx.close()
+
         print("Canvis d'hora de classe entre els dos dies i a unes quantes persones")
         ctx, page, errors = open_app(browser, base, "pol", MOBILE, "#/classes")
         r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms));

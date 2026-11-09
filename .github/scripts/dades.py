@@ -43,6 +43,29 @@ def kind(cfg):
     return cfg.get("kind") if cfg.get("kind") in KINDS else "cor"
 
 
+def class_slots(day, reqs):
+    """Les hores d'un dia de classe amb els canvis d'hora acceptats ja aplicats (com classSlots a l'app)."""
+    slots = [dict(x) for x in day.get("slots") or []]
+    by = {x.get("id"): x for x in slots}
+    cid = day.get("id")
+    for r in (reqs or {}).values():
+        if r.get("kind") != "swap" or r.get("status") != "accepted":
+            continue
+        other = r.get("withClassId") or r.get("classId")
+        if cid not in (r.get("classId"), other):
+            continue
+        a, b = by.get(r.get("slotId")), by.get(r.get("withSlotId"))
+        if other == r.get("classId"):
+            if a and b:
+                a["memberId"], b["memberId"] = b.get("memberId"), a.get("memberId")
+        elif r.get("classId") == cid:
+            if a and r.get("withMemberId"):
+                a["memberId"] = r["withMemberId"]
+        elif b:
+            b["memberId"] = r.get("memberId")
+    return slots
+
+
 def sections(cfg):
     """{id: name} de les seccions de l'agrupació, en ordre."""
     own = [x for x in (cfg.get("sections") or []) if isinstance(x, dict) and x.get("id")]

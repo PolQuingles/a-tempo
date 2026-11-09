@@ -110,10 +110,35 @@ function countClashes(dates, rows) {
   }
   return n;
 }
+/** Tots els dies que ja té aquest professor/a, per data (també els que no es tenen carregats). */
+async function classDaysByDate(teacher) {
+  const out = new Map();
+  for (const d of (await db.collection('classes').where('teacher', '==', teacher).get()).docs) { const c = d.data(); if (!c.deleted) out.set(c.date, { ...c, id: c.id || d.id }); }
+  for (const c of S.classes.values()) if ((c.teacher || '') === teacher) out.set(c.date, c);
+  return out;
+}
+/** Un horari no toca els dies anul·lats, els canviats a mà ni els que ja han passat. */
+const keptDay = c => !!c && (!!c.cancelled || !!c.edited || c.date < TODAY);
+/** Les hores d'un dia que ja existia conserven el seu id, perquè les notes i els canvis d'hora hi segueixin lligats, i la marca d'assistència. */
+function keepSlotIds(slots, prev) {
+  const old = [...(prev?.slots || [])];
+  const same = (o, x) => (o.memberId || '') === (x.memberId || '') && (o.name || '') === (x.name || '');
+  const link = (x, test) => {
+    const i = old.findIndex(test);
+    if (i < 0) return;
+    const [o] = old.splice(i, 1);
+    x.id = o.id; x.linked = true;
+    if (o.mark) { x.mark = o.mark; if (o.markFor) x.markFor = o.markFor; }
+  };
+  for (const x of slots) link(x, o => same(o, x) && o.time === x.time);
+  for (const x of slots) if (!x.linked && (x.memberId || x.name)) link(x, o => same(o, x));
+  for (const x of slots) delete x.linked;
+  return slots;
+}
 /** Escriu un dia de classe per data, amb les hores que toquen aquell dia de la setmana. */
-async function writeClassDays(dates, rows, teacher, places = {}) {
+async function writeClassDays(dates, rows, teacher, places = {}, known = null) {
   const at = new Date().toISOString();
-  const older = new Map([...S.classes.values()].filter(c => (c.teacher || '') === teacher).map(c => [c.date, c]));
+  const older = known || await classDaysByDate(teacher);
   let done = 0;
   for (let i = 0; i < dates.length; i += 100) {
     const b = fs.batch();
@@ -123,10 +148,11 @@ async function writeClassDays(dates, rows, teacher, places = {}) {
         .map(r => ({ id: uid('sl'), time: hhmm(r.from), mins: r.mins, memberId: r.memberId || '', ...(r.memberId ? {} : { name: r.name || '' }) }));
       if (!slots.length) continue;
       const prev = older.get(date);
-      // L'aula és la d'aquell dia de la setmana a l'horari; si no n'hi ha, i el dia ja hi era, se'n manté el lloc, la nota i les marques d'assistència que ja s'hi hagin posat.
-      const keep = new Map((prev?.slots || []).filter(x => x.mark).map(x => [`${x.time}_${x.memberId}`, x]));
-      for (const x of slots) { const old = keep.get(`${x.time}_${x.memberId}`); if (old) { x.mark = old.mark; if (old.markFor) x.markFor = old.markFor; } }
-      const rec = { id: prev?.id || uid('cl'), date, place: places[day] || prev?.place || '', note: prev?.note || '', teacher, teacherName: teacherName(teacher) || '', slots, at, by: S.email || '' };
+      if (keptDay(prev)) continue;
+      // L'aula és la d'aquell dia de la setmana a l'horari; si no n'hi ha, i el dia ja hi era, se'n manté el lloc i la nota.
+      keepSlotIds(slots, prev);
+      const base = { id: prev?.id || uid('cl'), date, place: places[day] || prev?.place || '', note: prev?.note || '', teacher, teacherName: teacherName(teacher) || '', slots, at, by: S.email || '' };
+      const rec = prev ? { ...base, ...changeFields(prev, base) } : base;
       b.set(db.doc(`classes/${rec.id}`), stamped(`classes/${rec.id}`, rec));
       S.classes.set(rec.id, rec);
       done++;
@@ -141,6 +167,7 @@ const placeFields = (days, value) => days.length ? `<div class="field" style="ma
       <input class="inp" type="text" maxlength="40" data-place="${d}" value="${esc(value(d))}" placeholder="p. ex. Aula 2 · Petit Palau" style="flex:1;min-width:0"></label>`).join('')}</div>
     <small>Es posa a cada dia de classe i queda desada amb l’horari.</small></div>` : '';
 const planRows = who => ((S.classPlan.get(who) || {}).rows || []);
+const keptText = n => n ? `<br><br>${n === 1 ? '1 dia es deixa' : `${n} dies es deixen`} tal com ${n === 1 ? 'està' : 'estan'}: anul·lats, canviats a mà o ja passats.` : '';
 
 function sheetClassPaste(preset) {
   const teachers = teacherOptions();
@@ -193,10 +220,13 @@ function sheetClassPaste(preset) {
         if (!dates.length) { toast('Tria un període que tingui aquests dies de la setmana'); return; }
         const who = el.querySelector('#cp-who')?.value || mine;
         const clashes = countClashes(dates, rows);
-        if (!await confirmSheet('Crear el calendari?', `Es crearan <b>${dates.length} dies de classe</b>, del ${ddmm(dates[0])} al ${ddmm(dates[dates.length - 1])}, amb ${rows.length} hores cada setmana. Els dies que ja hi hagi d’aquest ${esc(V.Teacher.toLowerCase())} es reescriuran.${clashes ? `<br><br><b>Atenció:</b> ${clashes} ${clashes === 1 ? 'hora coincideix' : 'hores coincideixen'} amb un assaig o un concert. Les marcarà al calendari perquè les puguis moure.` : ''}`, 'Crea-les')) return;
+        let known;
+        try { known = await classDaysByDate(who); } catch { toast('No s’han pogut llegir els dies que ja hi ha. Comprova la connexió.'); return; }
+        const kept = dates.filter(d => keptDay(known.get(d))).length;
+        if (!await confirmSheet('Crear el calendari?', `Es crearan o actualitzaran <b>${dates.length - kept} dies de classe</b>, entre el ${ddmm(dates[0])} i el ${ddmm(dates[dates.length - 1])}, amb ${rows.length} hores cada setmana. Es mantenen les notes, les assistències i els canvis d’hora.${keptText(kept)}${clashes ? `<br><br><b>Atenció:</b> ${clashes} ${clashes === 1 ? 'hora coincideix' : 'hores coincideixen'} amb un assaig o un concert. Les marcarà al calendari perquè les puguis moure.` : ''}`, 'Crea-les')) return;
         try {
           const pl = Object.fromEntries(parsed.days.map(d => [d, String(placeOf(el, d)).trim()]).filter(([, v]) => v));
-          const done = await writeClassDays(dates, rows, who, pl);
+          const done = await writeClassDays(dates, rows, who, pl, known);
           if (el.querySelector('#cp-plan').checked) savePlan(who, rows.map(r => ({ id: uid('pl'), day: r.day, time: hhmm(r.from), mins: r.mins, memberId: r.memberId || '', ...(r.memberId ? {} : { name: r.name || '' }) })), pl);
           closeSheet(); toast(`${done} dies de classe creats`); render();
         } catch { toast('No s’han pogut desar. Comprova la connexió.'); render(); }
@@ -249,7 +279,7 @@ function sheetClassPlan(who) {
         <label class="field"><span>Fins al</span><input class="inp" id="pl-to" type="date" value="${esc(season.to || TODAY)}"></label>
       </div>
       <label class="field" style="margin-top:10px"><span>Dies sense classe</span><input class="inp" id="pl-skip" type="text" placeholder="12/10, 8/12"></label>
-      <p class="muted" style="font-size:var(--t-13);margin:10px 0 0">Els dies que ja hi hagi es reescriuran, però s’hi manté l’assistència ja marcada.</p>`,
+      <p class="muted" style="font-size:var(--t-13);margin:10px 0 0">Els dies que ja hi hagi s’actualitzaran i mantindran les notes, les assistències i els canvis d’hora. Els anul·lats, els canviats a mà i els que ja han passat no es toquen.</p>`,
     foot: `<button class="btn" id="pl-gen">Genera els dies</button><span class="spacer"></span><button class="btn" data-act="sheet-close">Tanca</button><button class="btn btn-primary" id="pl-save">Desa l’horari</button>`,
     onMount: el => {
       paint(el);
@@ -264,8 +294,11 @@ function sheetClassPlan(who) {
         const dates = classDates(el.querySelector('#pl-from').value, el.querySelector('#pl-to').value, [...new Set(list.map(r => r.day))], el.querySelector('#pl-skip').value);
         if (!dates.length) { toast('Tria un període que tingui aquests dies de la setmana'); return; }
         const clashes = countClashes(dates, list);
-        if (!await confirmSheet('Generar els dies?', `Es crearan <b>${dates.length} dies de classe</b>, del ${ddmm(dates[0])} al ${ddmm(dates[dates.length - 1])}, amb ${list.length} hores cada setmana.${clashes ? `<br><br><b>Atenció:</b> ${clashes} ${clashes === 1 ? 'hora coincideix' : 'hores coincideixen'} amb un assaig o un concert.` : ''}`, 'Genera-los')) return;
-        try { const done = await writeClassDays(dates, list, who, rec.places); closeSheet(); toast(`${done} dies de classe creats`); render(); }
+        let known;
+        try { known = await classDaysByDate(who); } catch { toast('No s’han pogut llegir els dies que ja hi ha. Comprova la connexió.'); return; }
+        const kept = dates.filter(d => keptDay(known.get(d))).length;
+        if (!await confirmSheet('Generar els dies?', `Es crearan o actualitzaran <b>${dates.length - kept} dies de classe</b>, entre el ${ddmm(dates[0])} i el ${ddmm(dates[dates.length - 1])}, amb ${list.length} hores cada setmana.${keptText(kept)}${clashes ? `<br><br><b>Atenció:</b> ${clashes} ${clashes === 1 ? 'hora coincideix' : 'hores coincideixen'} amb un assaig o un concert.` : ''}`, 'Genera-los')) return;
+        try { const done = await writeClassDays(dates, list, who, rec.places, known); closeSheet(); toast(`${done} dies de classe creats`); render(); }
         catch { toast('No s’han pogut desar. Comprova la connexió.'); }
       };
     },
@@ -280,12 +313,13 @@ function classWeekHtml(who) {
   const dates = weekDates(start);
   const mid = myId();
   const days = classDays(who).filter(c => dates.includes(c.date)).sort((a, b) => a.date.localeCompare(b.date));
+  const weekState = needClassMonth(dates[0].slice(0, 7)) || needClassMonth(dates[6].slice(0, 7));
   const title = `Del ${shortDate(dates[0])} al ${shortDate(dates[6])}`;
   return `<div class="panel month">
       <div class="mnav"><button class="nav-arrow" data-act="cl-week" data-dir="-1" aria-label="Setmana anterior">${ICON.left}</button><h2 class="h2">${esc(title)}</h2><button class="nav-arrow" data-act="cl-week" data-dir="1" aria-label="Setmana següent">${ICON.right}</button></div>
       ${days.length ? days.map(c => `<div class="wk-day${c.cancelled ? ' off' : ''}"><div class="wk-h"><b>${esc(capz(fmtD(c.date, { weekday: 'long', day: 'numeric' })))}</b>${c.place ? ` <span class="m">· ${esc(c.place)}</span>` : ''}${c.cancelled ? ' <span class="st-pill st-rejected">Anul·lada</span>' : ''}</div>
-        ${classSlots(c).map(x => { const m = S.members.get(x.memberId); return `<div class="wk-slot${mid && x.memberId === mid ? ' me' : ''}"><span class="mono">${esc(x.time || '')}</span><span>${m ? esc(m.name) : x.name ? esc(x.name) : '<span class="cl-free">lliure</span>'}</span>${x.mark ? `<span class="cl-mk ${x.mark}">${esc(STATUS[x.mark].short)}</span>` : ''}</div>`; }).join('')}</div>`).join('')
-        : '<p class="muted" style="margin:10px 4px 0;font-size:var(--t-13)">Aquesta setmana no hi ha classes.</p>'}
+        ${classSlots(c).map(x => { const m = S.members.get(x.memberId); return `<div class="wk-slot${mid && x.memberId === mid ? ' me' : ''}"><span class="mono">${esc(x.time || '')}</span><span>${m ? esc(m.name) : x.name ? esc(x.name) : '<span class="cl-free">lliure</span>'}</span>${x.mark && (ownsClass(c) || (mid && x.memberId === mid)) ? `<span class="cl-mk ${x.mark}">${esc(STATUS[x.mark].short)}</span>` : ''}</div>`; }).join('')}</div>`).join('')
+        : `<p class="muted" style="margin:10px 4px 0;font-size:var(--t-13)">${weekState === 'loading' ? 'Carregant aquesta setmana…' : weekState === 'error' ? 'No s’ha pogut carregar aquesta setmana. Comprova la connexió.' : 'Aquesta setmana no hi ha classes.'}</p>`}
     </div>
     <div class="sec-h" style="margin-top:10px"><span class="muted" style="font-size:var(--t-13)">Per penjar a la porta de l’aula o per enviar.</span>
       <span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" data-act="cl-print-week" data-k="${esc(who)}">Imprimeix la setmana</button>${planRows(who).length ? `<button class="btn btn-sm" data-act="cl-print-plan" data-k="${esc(who)}">Imprimeix l’horari fix</button>` : ''}</span></div>`;

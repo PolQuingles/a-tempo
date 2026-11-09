@@ -18,7 +18,9 @@ const COLS = ['members', 'productions', 'attendance'];
 const CLASS_COLS = ['classes', 'classReq', 'classPlan', 'classNotes'];
 const CLASS_MARKS = ['P', 'R', 'FJ', 'FNJ'];
 // Fins on enrere es llegeixen els dies de classe.
-const CLASS_FROM = new Date(Date.now() - 14 * 86400000).toISOString().slice(0, 10);
+// Els dies de classe que es tenen carregats: dos mesos enrere i els que vénen. Els mesos anteriors es baixen quan algú els obre (needClassMonth).
+const CLASS_FROM = new Date(Date.now() - 60 * 86400000).toISOString().slice(0, 10);
+const CLASS_MONTHS = new Map();   // 'aaaa-mm' -> 'loading' | 'done' | 'error'
 
 /* ================= Agrupacions: tipus, seccions i paraules ================= */
 // L'app serveix per a cors, orquestres, bandes i altres agrupacions. El tipus decideix les paraules
@@ -400,8 +402,12 @@ const slotReqs = (c, slot) => [...S.classReq.values()]
     && (r.kind === 'swap' ? (r.classId === c.id && r.slotId === slot.id) || (swapWithClass(r) === c.id && r.withSlotId === slot.id)
       : r.classId === c.id && r.memberId === slot.memberId))
   .sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
-const reqsToAnswer = () => { const id = myId(); return id ? [...S.classReq.values()].filter(r => r.kind === 'swap' && r.status === 'pending' && r.withMemberId === id) : []; };
-const reqsForTeacher = () => [...S.classReq.values()].filter(r => r.status === 'pending' && r.kind !== 'swap');
+/** Encara té sentit respondre-hi: el dia hi és, no s'ha anul·lat i no ha passat. Les peticions velles deixen de sortir. */
+const reqOpen = r => [r.classId, swapWithClass(r)].every(id => { const c = S.classes.get(id); return classLive(c) && c.date >= TODAY; });
+/** Aquest dia de classe és meu: el professor que el fa, o l'administració. La resta del professorat no en veu les marques ni els avisos. */
+const ownsClass = c => teachesClasses() && (isAdmin() || (!!c && c.teacher === myEmail()));
+const reqsToAnswer = () => { const id = myId(); return id ? [...S.classReq.values()].filter(r => r.kind === 'swap' && r.status === 'pending' && r.withMemberId === id && reqOpen(r)) : []; };
+const reqsForTeacher = () => [...S.classReq.values()].filter(r => r.status === 'pending' && r.kind !== 'swap' && reqOpen(r) && ownsClass(S.classes.get(r.classId)));
 /** The member this account really is (from the account record or a personal link), if any. */
 const myId = () => { const id = PREVIEW ? PREVIEW.memberId : S.memberId; return id && S.members.has(id) ? id : null; };
 const subKey = (sid, sec) => `${sid}_${sec}`;

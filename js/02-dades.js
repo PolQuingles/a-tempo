@@ -175,7 +175,7 @@ function take(col, map, d) {
   const path = `${col}/${d.id}`;
   if (isDirty(path)) { if (S[col].has(d.id)) map.set(d.id, S[col].get(d.id)); return; }
   const { syncAt, ...data } = d.data();
-  if (col === 'classes' && (data.deleted || (data.date || '') < CLASS_FROM)) { map.delete(d.id); return; }
+  if (col === 'classes' && (data.deleted || ((data.date || '') < CLASS_FROM && !CLASS_MONTHS.has((data.date || '').slice(0, 7))))) { map.delete(d.id); return; }
   noteBase(path, data);
   map.set(d.id, col === 'members' ? normPersonName(data) : data);
 }
