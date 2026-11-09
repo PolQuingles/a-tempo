@@ -966,7 +966,7 @@ expect("AA8o ni en treu l'altre professor", commit([upd(f"cors/{F}/students/m7",
 expect("AA8p ni hi posa una altra persona", commit([upd(f"cors/{F}/students/m7", {"teachers": ["prof@exemple.cat", "x@exemple.cat"], "viaClass": "cj1"}, ["teachers", "viaClass"])], T["prof2"]), False)
 expect("AA8q però amb el seu dia de classe, sí", commit([upd(f"cors/{F}/students/m7", {"teachers": both, "viaClass": "cj1", "at": "x", "by": "y"}, JOIN)], T["prof2"]), True)
 expect("AA8r i ja la pot llegir", get(f"cors/{F}/students/m7", T["prof2"]), True)
-expect("AA8s una fitxa que encara no existeix, el professorat ho pot saber", get(f"cors/{F}/students/ningu", T["prof"]), True)
+expect("AA8s una fitxa que encara no existeix, el professorat ho pot saber", get(f"cors/{F}/students/ningu", T["prof"]), "404")
 expect("AA8t un cantaire, no", get(f"cors/{F}/students/ningu", T["singer"]), False)
 # El calendari personal: la clau, només de cadascú.
 expect("AA9 el cantaire es fa la clau del seu calendari", commit([upd(f"cors/{F}/calKeys/m1", {"memberId": "m1", "token": "K" * 32, "at": now})], T["singer"]), True)
