@@ -498,6 +498,6 @@ function boardPolls() {
       ${p.description ? `<div class="ann-b">${linkify(p.description)}</div>` : ''}${meta}
       ${form}</div>`;
   };
-  return `${canBoard() ? '<div class="sec-h" style="margin-top:6px"><span class="muted" style="font-size:var(--t-13)">Per saber quan pot venir la gent.</span><span style="display:flex;gap:6px"><button class="btn btn-sm" data-act="bandes-new">+ Bandes</button><button class="btn btn-sm btn-primary" data-act="poll-new">+ Enquesta</button></span></div>' : ''}
+  return `${canBoard() ? '<div class="sec-h" style="margin-top:6px"><span></span><span style="display:flex;gap:8px"><button class="btn btn-sm" data-act="bandes-new">+ Bandes</button><button class="btn btn-sm btn-primary" data-act="poll-new">+ Enquesta</button></span></div>' : ''}
     ${all.length ? `<div class="panel">${all.map(card).join('')}</div>` : '<div class="empty"><p>No hi ha enquestes.</p></div>'}`;
 }

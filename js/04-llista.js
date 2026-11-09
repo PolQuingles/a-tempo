@@ -9,10 +9,9 @@ function sessionNav(cur, list, compact) {
   return `<div class="session prod-tone ${compact ? 'compact' : ''}" style="--ph:${prodHue(prod)}">
       <button class="nav-arrow" data-act="sess-step" data-dir="-1" ${idx <= 0 ? 'disabled' : ''} aria-label="Sessió anterior">${ICON.left}</button>
       <button class="session-main" data-act="sess-pick" aria-label="Canvia de sessió">
-        <span class="session-prod"><i class="pdot"></i>${esc(prodNames(cur))}</span>
+        <span class="session-prod"><i class="pdot"></i>${esc(prodNames(cur))}${cur.date === TODAY ? '<em>Avui</em>' : ''}</span>
         <span class="session-date">${compact ? capz(fmtD(cur.date, { weekday: 'long', day: 'numeric', month: 'short' })) : longDate(cur.date)}</span>
-        <span class="session-meta">${esc(cur.type || 'Assaig')}${cur.time ? ` · <span class="mono">${esc(timeRange(cur))}</span>` : ''}${cur.place ? ` · ${esc(cur.place)}` : ''}
-          ${cur.date === TODAY ? '<span class="badge">Avui</span>' : ''}</span>
+        <span class="session-meta">${esc(cur.type || 'Assaig')}${cur.time ? ` · <span class="mono">${esc(timeRange(cur))}</span>` : ''}${cur.place ? ` · ${esc(cur.place)}` : ''}</span>
         ${cur.note ? `<span class="session-note">${esc(cur.note)}</span>` : ''}
       </button>
       <button class="nav-arrow" data-act="sess-step" data-dir="1" ${idx >= list.length - 1 ? 'disabled' : ''} aria-label="Sessió següent">${ICON.right}</button>
@@ -217,7 +216,7 @@ function viewRollSection(cur, list, sec, pendingBySec) {
   return head + pendHtml + `
   <div class="leader">
     <span>${V.Leader}: <b>${leaders.length ? leaders.map(m => esc(m.name)).join(' i ') : '—'}</b></span>
-    <span class="leader-r"><span class="mono">${pr.done}/${pr.total} marcats</span>${canMark(cur, sec) ? `<button class="btn btn-sm btn-ghost" data-act="roll-compact" aria-pressed="${rollCompact()}">${rollCompact() ? 'Vista detallada' : 'Vista compacta'}</button>` : ''}</span>
+    <span class="leader-r">${canMark(cur, sec) ? `<button class="btn btn-sm btn-ghost" data-act="roll-compact" aria-pressed="${rollCompact()}">${rollCompact() ? 'Vista detallada' : 'Vista compacta'}</button>` : ''}</span>
   </div>
   ${subLine(cur, sec, leader)}
   <div class="tally" id="tally">${tallyInner(c, inRoll.some(m => !effMark(cur, m)))}</div>
@@ -227,6 +226,7 @@ function viewRollSection(cur, list, sec, pendingBySec) {
       <ul class="roster${rollCompact() ? ' compact' : ''}" style="margin-top:0">${out.map(m => rowHtml(cur, m)).join('')}</ul>
     </details>` : ''}
   ${rollOneSec() ? '' : `<button class="btn" data-act="close-sec" style="display:flex;margin:18px auto 0">Torna a totes les ${V.sections}</button>`}
+  ${subQuiet(cur, sec, leader)}
   ${canMark(cur, sec) ? '<p class="muted" style="font-size:var(--t-13);text-align:center;margin-top:12px">Toca l’estat marcat una altra vegada per desmarcar-lo.</p>' : ''}`;
 }
 function subLine(cur, sec, leader) {
@@ -235,7 +235,14 @@ function subLine(cur, sec, leader) {
   if (!canEdit() || cur.date < TODAY) return '';
   const lm = leader && effMark(cur, leader);
   const away = lm && ['FJ', 'FNJ', 'NP'].includes(lm.s);
-  return `<div class="sub-line ${away ? 'sub-hint' : ''}" style="${away ? '' : 'background:transparent;padding:0 2px'}"><span>${away ? `${capz(V.leader)} no hi és.` : ''}</span><button class="btn btn-sm ${away ? 'btn-primary' : 'btn-ghost'}" data-act="sub-set" data-sid="${cur.id}" data-sec="${sec}">${away ? 'Tria qui passa llista' : 'Substitut per avui'}</button></div>`;
+  if (!away) return '';
+  return `<div class="sub-line sub-hint"><span>${capz(V.leader)} no hi és.</span><button class="btn btn-sm btn-primary" data-act="sub-set" data-sid="${cur.id}" data-sec="${sec}">Tria qui passa llista</button></div>`;
+}
+/** Quan tot va bé, triar un substitut queda al final de la llista: a dalt, el primer és la gent. */
+function subQuiet(cur, sec, leader) {
+  const lm = leader && effMark(cur, leader);
+  if (!canEdit() || cur.date < TODAY || subFor(cur.id, sec) || (lm && ['FJ', 'FNJ', 'NP'].includes(lm.s))) return '';
+  return `<div class="roll-foot"><button class="btn btn-sm btn-ghost" data-act="sub-set" data-sid="${cur.id}" data-sec="${sec}">Substitut per avui</button></div>`;
 }
 function countsFor(session, members) {
   const c = { ...emptyCounts(), none: 0 };
@@ -243,12 +250,12 @@ function countsFor(session, members) {
   return c;
 }
 function tallyInner(c, pendingInRoll) {
-  const legend = ORDER.map(k => `<span><i class="i-${k}"></i>${STATUS[k].short} <b>${c[k]}</b></span>`).join('')
+  const legend = ORDER.filter(k => c[k]).map(k => `<span><i class="i-${k}"></i>${STATUS[k].short} <b>${c[k]}</b></span>`).join('')
     + (c.none ? `<span><i class="i-none"></i>Pendents <b>${c.none}</b></span>` : '');
   return `${stackBar(c)}
     <div class="legend">${legend}</div>
     <div class="tally-foot">
-      <span class="progress-txt">${c.min ? `Retard acumulat <b>${c.min}′</b>` : (c.R ? 'Retards sense minuts' : 'Sense retards')}${c.left ? ` · ${c.left === 1 ? 'n’ha marxat 1' : `n’han marxat ${c.left}`} abans (<b>${c.leftMin}′</b>)` : ''}</span>
+      <span class="progress-txt">${c.min ? `Retard acumulat <b>${c.min}′</b>` : (c.R ? 'Retards sense minuts' : '')}${c.left ? ` · ${c.left === 1 ? 'n’ha marxat 1' : `n’han marxat ${c.left}`} abans (<b>${c.leftMin}′</b>)` : ''}</span>
       <span style="display:flex;gap:8px;flex-wrap:wrap">
         ${S.role === 'edit' ? '<button class="btn btn-sm" data-act="summary">Resum</button>' : ''}
         ${canMark(sessionById(ui.sessionId), ui.rollSec || ui.section) ? `<button class="btn btn-sm btn-primary" data-act="mark-rest" ${pendingInRoll ? '' : 'disabled'}>Resta com a presents</button>` : ''}

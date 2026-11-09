@@ -24,6 +24,7 @@ function sheetProduction(pid) {
     title: existing ? 'Edita la producció' : 'Nova producció', wide: true,
     body: `<div class="kv">
       <label class="field"><span>Nom</span><input class="inp" id="pe-name" type="text" maxlength="60" value="${esc(d.name)}" placeholder="p. ex. Concert de Nadal 2026"></label>
+      <label class="field"><span>Nom curt (opcional)</span><input class="inp" id="pe-short" type="text" maxlength="24" value="${esc(d.short || '')}" placeholder="p. ex. Nadal"><small>Surt a Inici i al calendari, on el nom sencer no hi cap.</small></label>
       <div class="field"><span>Color al calendari</span><div class="pickers" id="pe-hue">${PROD_HUES.map(h => `<button type="button" class="hue-pick prod-tone" style="--ph:${h}" data-hue="${h}" aria-pressed="${prodHue(d) === h}" aria-label="Color ${h}"></button>`).join('')}</div></div>
       <div class="field"><span>Cartell</span><div class="poster-edit"><span id="pe-poster">${d.poster ? `<span class="poster-th"><img src="${esc(d.poster)}" alt=""></span>` : '<span class="poster-th empty">Cap</span>'}</span>
         <span style="display:flex;gap:6px;flex-wrap:wrap"><label class="btn btn-sm" for="pe-poster-f">${d.poster ? 'Canvia’l' : 'Tria una imatge'}</label><input id="pe-poster-f" type="file" accept="image/*" class="sr">
@@ -115,6 +116,7 @@ function sheetProduction(pid) {
         const name = el.querySelector('#pe-name').value.trim();
         if (!name) { toast('Posa un nom a la producció'); return; }
         d.name = name;
+        d.short = el.querySelector('#pe-short').value.trim();
         d.start = el.querySelector('#pe-start').value || (d.sessions[0]?.date ?? TODAY);
         d.end = el.querySelector('#pe-end').value;
         d.excluded = $$('[data-ex][aria-pressed="true"]', el).map(b => b.dataset.ex);

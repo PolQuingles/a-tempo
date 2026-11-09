@@ -819,7 +819,7 @@ def main():
           const subs = q => [...document.querySelectorAll(q)].map(b => b.dataset.k).join(',');
           out.noPicker = !document.querySelector('.lp-opt, .lens-bar') && !document.querySelector('.tabs').hidden;
           out.polTabs = tabs() === 'avisos,llista,calendari,tauler,classes' && moreTabs().join() === 'gestio';
-          out.homeLine = /Administració/.test(document.querySelector('.me-line')?.textContent || '') && /Cap de corda/.test(document.querySelector('.me-line')?.textContent || '');
+          out.homeLine = !document.querySelector('.home-head .me-line');
           out.homeBoth = !!document.querySelector('.h-next [data-act="home-roll"]') && !!document.querySelector('.h-next [data-act="absence-new"]');
           document.querySelector('#acct-btn').click(); await s(300);
           const g = document.querySelector('.acct-item[data-act="manage"]');
@@ -886,7 +886,7 @@ def main():
           return out; }"""))
         for k, label in [("noPicker", "en obrir l'app no es tria cap rol"),
                          ("polTabs", "l'administració que porta una corda i fa classes: cinc pestanyes, i Gestió al menú del compte"),
-                         ("homeLine", "a Inici, sota el nom, la corda i els rols de feina"),
+                         ("homeLine", "a Inici, sota el nom, cap llista de càrrecs"),
                          ("homeBoth", "la sessió d'avui porta «Passa llista» i «No hi puc anar» alhora"),
                          ("menuGestio", "el menú del compte té Gestió (i ja no hi ha «Canvia de rol»)"),
                          ("gestioAll", "Gestió de l'administració: Personal, Produccions i Ajustos, amb la fletxa per tornar"),
@@ -1220,9 +1220,9 @@ def main():
           // L'administració (que també porta els tenors) mira tot el cor.
           ui.attArea = 'all'; ui.statsSec = ''; render(); await s(300);
           // 1. Una baixa (Jan Pons, que té una falta) ja no surt a la norma de les estadístiques, i qui hi és sí.
-          out.beforeNorm = /Jan Pons/.test(txt('.alerts'));
+          out.beforeNorm = /Jan Pons/.test(txt('.ru-list'));
           saveMember({ ...S.members.get('mT3'), active: false }); render(); await s(300);
-          out.norm = !/Jan Pons/.test(txt('.alerts')) && /Clara Vila/.test(txt('.alerts'));
+          out.norm = !/Jan Pons/.test(txt('.ru-list')) && /Clara Vila/.test(txt('.ru-list'));
           // 3. Els comptadors de Personal només compten la plantilla en actiu i els seus comptes.
           ensureStaff(); for (let i = 0; i < 25 && !accountFor('mT1'); i++) await s(200);
           applyRoute('gestio/personal'); render(); await s(300);
@@ -1534,7 +1534,7 @@ def main():
           out.quad = document.querySelector('.quad[data-sec="S"] .q-c')?.textContent.trim() === '0/2'
             && document.querySelector('.quad[data-sec="S"] .q-bar span')?.style.width === '0%';
           ui.rollSec = 'S'; render(); await s(300);
-          out.head = document.querySelector('.leader .mono')?.textContent.trim() === '0/2 marcats';
+          out.head = document.querySelector('#secbar-count')?.textContent.trim() === '0/2';
           ui.tab = 'calendari'; ui.calProd = currentProductionId(); ui.calView = 'list'; render(); await s(300);
           const h = document.querySelector('.cal-prod-h .cph-b'), t = h?.querySelector('.h2'), m = h?.querySelector('.cph-m');
           out.title = !!(t && m) && m.getBoundingClientRect().top >= t.getBoundingClientRect().bottom - 1

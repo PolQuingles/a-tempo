@@ -263,8 +263,7 @@ function nextCard(s, me) {
       <div class="next-b">
         <span class="next-k"><i class="pdot"></i>${esc(kind)}${n > 1 ? `<span class="soon-count">d’aquí a ${n} dies</span>` : ''}</span>
         <h2 class="next-t">${esc(prodNames(s))}</h2>
-        ${s.time ? `<span class="next-time num">${esc(timeRange(s))}</span>` : ''}
-        ${place ? `<span class="next-m">${place}</span>` : ''}
+        ${s.time || place ? `<span class="next-when">${s.time ? `<span class="next-time num">${esc(timeRange(s))}</span>` : ''}${s.time && place ? '<span class="sep">·</span>' : ''}${place}</span>` : ''}
         ${s.info?.call ? `<span class="next-m">Convocatòria a les <b class="num">${esc(s.info.call)}</b></span>` : ''}
         ${s.rsvp && s.rsvpBy && me && !S.rsvp.get(`${s.id}_${me.id}`) ? `<span class="next-m">Respon abans del ${shortDate(s.rsvpBy)}</span>` : ''}
         ${out ? `<span class="next-m">${esc(onLeave(me, s.date) ? 'Estàs de baixa' : 'No fas aquesta producció')}</span>` : ''}
@@ -415,10 +414,7 @@ function viewHome() {
   const name = me ? me.name : (ME()?.name || S.userName || '');
   const first = name.includes(',') ? name.split(',').pop().trim() : name.split(' ')[0];
   const lv = me ? leaveText(me) : '';
-  // Sota el nom: la corda i, si en té, els rols de feina (cap de corda, arxiver, administració…).
-  const work = rolesOf(ME()).filter(r => r !== 'singer').map(roleLabel).join(' · ');
-  const who = me ? `${esc(SEC[me.section].name)}${me.part ? ` ${esc(me.part)}` : ''}${lv ? ` · ${lv}` : ''}${work ? ` · ${esc(work)}` : ''}` : (ME() ? esc(rolesText(ME())) : '');
-  const head = `<div class="page-head home-head"><div><div class="eyebrow">${esc(longDate(TODAY))}</div><h1 class="h1">Hola${first ? `, ${esc(first)}` : ''}</h1>${who ? `<div class="me-line">${who}</div>` : ''}</div></div>`;
+  const head = `<div class="page-head home-head"><div><div class="eyebrow">${esc(longDate(TODAY))}</div><h1 class="h1">Hola${first ? `, ${esc(first)}` : ''}</h1>${lv ? `<div class="me-line">${lv}</div>` : ''}</div></div>`;
   if (!me && !canEdit() && myMemberId()) return head + `<div class="empty">${staffSvg()}<h2 class="h2">Compte sense fitxa</h2><p>El teu correu encara no està vinculat a cap fitxa de la plantilla. Demana-ho a l’administració ${V.del}.</p></div>`;
   // Al mòbil, una columna: la propera sessió, Per fer, Properament i els missatges. A l'ordinador, dues: a l'esquerra la propera
   // sessió, el que cal fer i el que ve; a la dreta els missatges. L'assistència i els avisos de cadascú són a Assistència.
@@ -427,11 +423,10 @@ function viewHome() {
   const msgs = messagesBlock();
   return `${head}
     ${roleHomeCards()}
-    ${bandesHomeCard()}
-    ${installCard()}
+    ${bandesHomeCard(false)}
     <div class="home">
       <div class="home-a">${feat ? `<section class="h-next">${nextCard(feat, me)}</section>` : ''}<section class="h-todo">${todoBlock(me, feat)}</section><section class="h-soon">${teacher ? teacherSoonBlock() : soonBlock(me, feat)}</section></div>
-      <div class="home-b">${msgs ? `<section class="h-msgs">${msgs}</section>` : ''}</div>
+      <div class="home-b">${msgs ? `<section class="h-msgs">${msgs}</section>` : ''}${bandesHomeCard(true)}${installCard()}</div>
     </div>`;
 }
 

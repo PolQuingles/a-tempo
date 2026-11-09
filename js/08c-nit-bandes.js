@@ -283,7 +283,8 @@ function viewBandes() {
   </div>`;
 }
 /** A Inici: la Nit que s'acosta, i què toca ara (votar, els finalistes d'avui, el palmarès). */
-function bandesHomeCard() {
+/** A Inici: a dalt, en gran, si falta fer-hi alguna cosa o la festa és a tocar (mini = false); si no, una línia discreta a sota. */
+function bandesHomeCard(mini) {
   const p = currentBandes();
   if (!p || (p.draft && !p.propOpen) || !bandesSeason(p)) return '';
   const ph = bandesPhase(p), days = p.galaAt ? dayDiff(TODAY, p.galaAt) : null, mine = myId() && S.pollVotes.get(`${p.id}_${myId()}`);
@@ -294,7 +295,9 @@ function bandesHomeCard() {
     : ph === 'vote' ? (bandesVoter(p) ? (mine ? `Ja has votat${voted}` : `Vota fins al ${shortDate(p.closesAt)}${voted}`) : `Votació oberta fins al ${shortDate(p.closesAt)}${voted}`)
     : today.length ? `Avui: finalistes de ${today.map(x => catQ(x.cat)).join(', ')}`
     : ph === 'nom' ? `Finalistes ${nomRange(p)}` : ph === 'done' ? 'Mira qui s’ha endut cada banda' : ph === 'gala' ? 'Ens veiem a la festa' : 'Aviat, els finalistes';
-  return `<button class="bn-home" data-act="bandes-open"><span class="bn-home-t"><small>${esc(galaName(p))}${p.galaAt ? ` · ${esc(shortDate(p.galaAt))}` : ''}</small><b>${esc(big)}</b><small>${esc(line)}</small></span>${ICON.go}</button>`;
+  const urgent = (ph === 'vote' && bandesVoter(p) && !mine) || (ph === 'prop' && propOpenNow(p)) || !!today.length || ph === 'done' || (days != null && days >= 0 && days <= 14);
+  if (urgent === !!mini) return '';
+  return `<button class="bn-home${mini ? ' mini' : ''}" data-act="bandes-open"><span class="bn-home-t"><small>${esc(galaName(p))}${p.galaAt ? ` · ${esc(shortDate(p.galaAt))}` : ''}</small><b>${esc(big)}</b><small>${esc(line)}</small></span>${ICON.go}</button>`;
 }
 
 /* ---------- Quanta gent ha votat, per a tothom ---------- */

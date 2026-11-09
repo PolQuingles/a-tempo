@@ -58,10 +58,11 @@ function viewStats(inBoard) {
     const outL = st.rows.filter(r => ruleMap.get(r.m.id)?.status === 'out');
     const riskL = st.rows.filter(r => ruleMap.get(r.m.id)?.status === 'risk');
     const hasConcert = st.all.some(isShow);
-    const item = (r, rs) => `<li><span><b>${esc(r.m.name)}</b> <span class="muted">· ${esc(SEC[r.m.section].name)} · ${pct(rs.cur)}${rs.status === 'risk' ? ` (pot arribar al ${pct(rs.best)})` : ''}</span></span><button class="rule ${rs.status}" data-act="member-stats" data-mid="${r.m.id}">${rs.status === 'out' ? `No pot fer ${V.sh.el}` : 'En risc'}</button></li>`;
+    // Una línia per persona: la barra plena és on és ara; la clara, fins on pot arribar amb els assajos que queden.
+    const item = (r, rs) => `<li class="ru ${rs.status}"><button data-act="member-stats" data-mid="${r.m.id}" aria-label="${esc(`${r.m.name}: ${pct(rs.cur)}, ${rs.status === 'out' ? `no pot fer ${V.sh.el}` : `en risc, pot arribar al ${pct(rs.best)}`}`)}"><span class="ru-n"><b>${esc(r.m.name)}</b><small>${esc(SEC[r.m.section].name)}</small></span><span class="ru-b"><i class="best" style="width:${Math.round(rs.best * 100)}%"></i><i style="width:${Math.round(rs.cur * 100)}%"></i><u style="left:${minAttendance()}%"></u></span><span class="ru-p num">${pct(rs.cur)}</span></button></li>`;
     rule = `<div class="section-title"><h2 class="h2">Norma del ${minAttendance()}% ${helpBtn('norma')}</h2>${hasConcert ? `<button class="btn btn-sm" data-act="concert-list" data-pid="${scope.id}">${V.sh.list}</button>` : '<span class="eyebrow">assistència mínima</span>'}</div>
       <div class="panel">
-        ${outL.length || riskL.length ? `<ul class="alerts">${outL.map(r => item(r, ruleMap.get(r.m.id))).join('')}${riskL.map(r => item(r, ruleMap.get(r.m.id))).join('')}</ul>`
+        ${outL.length || riskL.length ? `<ul class="ru-list">${outL.length ? `<li class="ru-h">No poden fer ${V.sh.el} · ${outL.length}</li>` : ''}${outL.map(r => item(r, ruleMap.get(r.m.id))).join('')}${riskL.length ? `<li class="ru-h">En risc · ${riskL.length}</li>` : ''}${riskL.map(r => item(r, ruleMap.get(r.m.id))).join('')}</ul>`
           : `<p style="margin:0;padding:14px;font-size:var(--t-13)">Ara mateix tothom compleix la norma.</p>`}
       </div>
       ${helpText('norma', `Es compta en minuts: el temps que s’ha estat a tots els assajos de la producció (no ${V.sh.els} ni les sessions «Altres») dividit pel temps que han durat. «En risc» vol dir que ara està per sota però encara hi pot arribar amb els assajos que queden.`)}`;
