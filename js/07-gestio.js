@@ -114,7 +114,7 @@ function manageProductions() {
   const ms = choicesOn() ? membersOf(null) : [];
   const low = ms.filter(m => !choiceSummary(m.id).ok).length, silent = ms.filter(m => choiceSummary(m.id).none).length;
   const chPanel = choicesOn() ? `<div class="panel ch-panel"><span><b>Cadascú tria les produccions que fa</b><br><span class="muted">${ms.length - silent} de ${ms.length} han respost${low ? ` · <b class="bad">${low} per sota del ${choiceMin()}%</b>` : ''}</span></span><button class="btn btn-sm" data-act="choices-overview">Qui fa cada producció</button></div>` : '';
-  return `${chPanel}<div class="sec-h"><span class="muted" style="font-size:var(--t-13)">${ps.length} produccions</span><span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" data-act="season-report">Memòria de la temporada</button><button class="btn btn-sm btn-primary" data-act="prod-new">+ Producció</button></span></div>
+  return `${chPanel}<div class="sec-h end"><span style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end"><button class="btn btn-sm" data-act="season-report">Memòria de la temporada</button><button class="btn btn-sm btn-primary" data-act="prod-new">+ Producció</button></span></div>
     ${ps.length ? `<div class="only-narrow" style="display:grid;gap:10px">${ps.map(p => {
       const ss = allSessions(p.id);
       const shared = sharedTxt(ss);
@@ -122,7 +122,7 @@ function manageProductions() {
       const status = p.end && p.end < TODAY ? 'Acabada' : p.start > TODAY ? 'Propera' : 'En curs';
       return `<div class="panel prod-card prod-tone tinted" style="--ph:${prodHue(p)}"><button data-act="prod-edit" data-pid="${p.id}" style="width:100%;text-align:left">
         <div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><h2 class="h2"><i class="pdot"></i>${esc(p.name)}</h2><span class="badge ${status === 'En curs' ? '' : 'soft'}">${status}</span></div>
-        <div class="prod-meta"><span>${p.start ? shortDate(p.start) : '?'} – ${p.end ? shortDate(p.end) : '?'}</span><span><b>${ss.length}</b> ${ss.length === 1 ? 'sessió' : 'sessions'}${shared ? ` (${shared})` : ''} · <b>${past}</b> ${past === 1 ? 'feta' : 'fetes'}</span><span><b>${(p.excluded || []).length}</b> no la fan</span></div>
+        <div class="prod-meta"><span>${p.start ? shortDate(p.start) : '?'} – ${p.end ? shortDate(p.end) : '?'}</span><span><b>${ss.length}</b> ${ss.length === 1 ? 'sessió' : 'sessions'}${shared ? ` (${shared})` : ''} · <b>${past}</b> ${past === 1 ? 'feta' : 'fetes'}</span>${(p.excluded || []).length ? `<span><b>${(p.excluded || []).length}</b> no la fan</span>` : ''}</div>
       </button></div>`;
     }).join('')}</div>
     <div class="only-wide table-wrap"><table class="dtable"><thead><tr><th>Producció</th><th>Dates</th><th class="n">Sessions</th><th class="n">Fetes</th><th class="n">No la fan</th><th>Estat</th></tr></thead><tbody>

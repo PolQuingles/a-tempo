@@ -193,6 +193,7 @@ h1,h2,h3{margin:0;text-wrap:balance}
 .session{display:grid;grid-template-columns:40px 1fr 40px;align-items:center;gap:4px}
 .session-main{text-align:center;padding:8px 4px;border-radius:var(--r-md);min-width:0}
 .session-main:hover{background:var(--surface-2)}
+.session-prod em{font-style:normal;color:var(--sig-ink);margin-left:8px}
 .session-prod{display:block;font-size:var(--t-12);font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .session-date{display:block;font-family:var(--f-display);font-weight:600;font-size:var(--t-24);line-height:1.12;letter-spacing:-.01em;margin-block:2px}
 .session-meta{display:flex;justify-content:center;align-items:center;gap:8px;flex-wrap:wrap;font-size:var(--t-13);color:var(--muted)}
@@ -211,7 +212,8 @@ h1,h2,h3{margin:0;text-wrap:balance}
 .voice .done{position:absolute;top:5px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--p)}
 .voice.off{opacity:.45}
 
-.leader{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:var(--t-13);color:var(--muted);margin-block:16px 8px;flex-wrap:wrap}
+.leader{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:var(--t-13);color:var(--muted);margin-block:8px;flex-wrap:wrap}
+.roll-foot{display:flex;justify-content:center;margin-top:12px}
 .leader b{color:var(--ink);font-weight:600}
 
 .tally{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:12px}
@@ -303,7 +305,7 @@ details.poll-mine[open] summary .chev{transform:rotate(180deg)}
 .cal-date small{font-family:var(--f-mono);font-size:var(--t-12);color:var(--muted);margin-top:3px;text-transform:lowercase}
 .cal-info{min-width:0}
 .cal-type{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-weight:600;font-size:var(--t-15);line-height:1.3;overflow-wrap:anywhere}
-.cal-past-link{display:block;margin:0 2px 12px}
+.cal-past-link{display:block;margin:0 2px 12px;color:var(--muted);text-decoration:none}
 .cal-type em{font-style:normal;font-family:var(--f-mono);font-weight:400;font-size:var(--t-13);color:var(--muted);margin-left:4px}
 .cal-place{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:var(--t-13);line-height:1.35;color:var(--muted);overflow:hidden;overflow-wrap:anywhere}
 .cal-place .mono{font-size:var(--t-13);color:var(--ink-2)}
@@ -440,6 +442,7 @@ details.poll-mine[open] summary .chev{transform:rotate(180deg)}
 .home .h-todo > .section-title:first-child{margin-top:8px}
 .home-head{padding-bottom:8px}
 .home-head .me-line{margin-top:4px}
+.home-head{padding-bottom:12px}
 .soon-list{list-style:none;margin:0;padding:0;background:var(--surface);border-radius:var(--r-lg);overflow:hidden}
 .soon-row{display:grid;grid-template-columns:44px minmax(0,1fr);gap:12px;padding:13px 16px 13px 12px;border-top:1px solid var(--line)}
 .soon-row:first-child{border-top:0}
@@ -759,6 +762,21 @@ input[type=date].inp,input[type=time].inp{min-width:0;width:100%}
 [hidden]{display:none!important}
 .risk-row{display:grid;width:100%;text-align:left;grid-template-columns:1fr auto;gap:8px 12px;align-items:center;padding:11px 16px;border-bottom:1px solid var(--line)}
 .risk-row:last-child{border-bottom:0}
+/* La norma, una línia per persona: el nom, on és ara, fins on pot arribar i la marca del mínim. */
+.ru-list{list-style:none;margin:0;padding:4px 0}
+.ru-h{padding:12px 16px 4px;font-size:var(--t-12);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.ru > button{display:grid;grid-template-columns:minmax(0,1fr) 72px 40px;align-items:center;gap:12px;width:100%;min-height:48px;padding:8px 16px;text-align:left;color:var(--ink)}
+.ru > button:hover{background:var(--surface-2)}
+.ru-n{display:grid;min-width:0}
+.ru-n b{font-weight:600;font-size:var(--t-15);line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ru-n small{font-size:var(--t-12);color:var(--muted)}
+.ru-b{position:relative;display:block;height:6px;border-radius:3px;background:var(--surface-2)}
+.ru-b i{position:absolute;inset:0 auto 0 0;border-radius:3px;background:var(--fj)}
+.ru-b i.best{background:color-mix(in srgb, var(--fj) 30%, var(--surface-2))}
+.ru.out .ru-b i{background:var(--fnj)}
+.ru.out .ru-b i.best{background:color-mix(in srgb, var(--fnj) 25%, var(--surface-2))}
+.ru-b u{position:absolute;top:-3px;bottom:-3px;width:1.5px;background:var(--ink-2)}
+.ru-p{font-size:var(--t-13);font-weight:600;text-align:right}
 .risk-row .rn{font-weight:600}
 .risk-row .rm{grid-column:1/-1;font-size:var(--t-13);color:var(--muted)}
 .elig{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;padding:11px 16px;border-bottom:1px solid var(--line);text-align:left}
@@ -890,8 +908,8 @@ details.fitxa-edit[open] summary .chev{transform:rotate(180deg)}
 button.mday:hover{background:var(--surface-2)}
 .mnum{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;font-size:var(--t-15);font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
 .mday.past .mnum{color:var(--muted)}
-.mday.today .mnum{background:var(--accent-fill);color:var(--accent-fill-ink)}
-.mday.sel{background:var(--accent-soft);box-shadow:inset 0 0 0 1.5px var(--accent)}
+.mday.today .mnum{color:var(--sig-ink);font-weight:700;box-shadow:inset 0 0 0 1.5px var(--sig)}
+.mday.sel{background:var(--surface-2)}
 .mmarks{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:2px;max-width:100%}
 .mk{display:block;width:13px;height:5px;border-radius:3px;background:var(--pdot)}
 .mk.concert{height:7px;width:13px;box-shadow:0 0 0 1.5px var(--ink)}
@@ -1246,6 +1264,10 @@ button.mday:hover{background:var(--surface-2)}
 .bn-home-t b{font-family:var(--f-display);font-weight:600;font-size:var(--t-24);line-height:1.1;color:#F2D58A}
 .bn-home svg{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-width:2}
 .bn-home:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.bn-home.mini{margin:24px 0 0;padding:12px 16px;border:1px solid var(--edge);background:var(--surface);box-shadow:var(--shadow-1);color:var(--muted)}
+.bn-home.mini .bn-home-t small{color:var(--muted)}
+.bn-home.mini .bn-home-t small:last-child{display:none}
+.bn-home.mini .bn-home-t b{font-size:var(--t-17);color:var(--ink)}
 .bn-vote .bn-turn{grid-column:1 / -1}
 .bn-turn{display:grid;gap:6px}
 .bn-turn p{margin:0;font-size:var(--t-15);color:var(--ink-2)}
@@ -1983,7 +2005,7 @@ svg{stroke-linecap:round;stroke-linejoin:round}
 .ws{display:inline-flex;align-items:center;gap:8px;font-size:var(--t-13);color:var(--ink-2)}
 .ws .pav{width:22px;height:22px;font-size:var(--t-11)}
 /* Properament: el compte enrere, el lloc amb mapa i el dia del concert */
-.soon-count{display:inline-block;margin-left:8px;padding:0 7px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-weight:700;font-size:var(--t-12)}
+.soon-count{display:inline-block;margin-left:8px;color:var(--accent);font-weight:600;font-size:var(--t-12)}
 .map-link{color:inherit;text-decoration:underline;text-decoration-color:var(--accent-line);text-underline-offset:3px}
 .map-link::after{content:"";display:inline-block;width:.8em;height:.8em;margin-left:3px;vertical-align:-1px;background:currentColor;opacity:.7;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0113 0c0 5.4-6.5 11-6.5 11z'/%3E%3Ccircle cx='12' cy='10' r='2.4'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0113 0c0 5.4-6.5 11-6.5 11z'/%3E%3Ccircle cx='12' cy='10' r='2.4'/%3E%3C/svg%3E") center/contain no-repeat}
 .concert-day{display:grid;gap:12px;padding:16px;background:var(--surface)}
@@ -2031,28 +2053,31 @@ svg{stroke-linecap:round;stroke-linejoin:round}
 .msgs-none-a{display:flex;gap:16px}
 .msgs-none .btn{padding:0 2px;border-color:transparent;background:transparent;color:var(--accent)}
 .h-next{order:0}.h-todo{order:1}.h-soon{order:2}.h-msgs{order:5}
+.home .bn-home.mini{order:7}.home .install-card{order:8}
 .home section > .section-title:first-child{margin-top:32px}
 .home .home-a > section:first-child > .section-title:first-child{margin-top:8px}
 .h-next{margin-top:8px}
 /* La propera sessió, en gran: la data a l'esquerra, què és i on a la dreta i, a sota, el que s'hi pot fer. */
-.next-card{position:relative;display:grid;gap:12px;padding:16px 16px 16px 16px;border-radius:var(--r-lg);background:var(--surface);overflow:hidden}
+.next-card{position:relative;display:grid;gap:12px;padding:20px 16px 16px;border-radius:var(--r-lg);background:var(--surface);overflow:hidden}
 .next-top{display:grid;grid-template-columns:50px minmax(0,1fr);gap:16px;align-items:start}
 .next-top:has(> .poster-th){grid-template-columns:50px minmax(0,1fr) auto}
 .next-d{display:flex;flex-direction:column;align-items:center;line-height:1;padding-top:1px}
 .next-d b{font-family:var(--f-display);font-weight:600;font-size:var(--t-44);letter-spacing:-.02em;font-variant-numeric:lining-nums;margin:3px 0 4px}
 .next-d small{font-size:var(--t-12);font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
-.next-d small em{font-style:normal;color:var(--accent)}
+.next-d small em{font-style:normal;color:var(--sig-ink)}
 .next-b{display:grid;gap:5px;min-width:0}
 .next-k{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;font-size:var(--t-12);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--pink)}
 .next-k .pdot{width:8px;height:8px;border-radius:2px}
 .next-k em{font-style:normal;color:var(--accent);margin-right:6px}
 .next-k .soon-count{margin-left:0;letter-spacing:.02em;text-transform:none}
 .next-t{font-family:var(--f-display);font-weight:600;font-size:var(--t-24);line-height:1.12;letter-spacing:-.01em;text-wrap:balance;overflow-wrap:anywhere}
-.next-time{font-size:var(--t-15);font-weight:600;color:var(--ink);letter-spacing:.005em}
+.next-when{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 6px;font-size:var(--t-15);color:var(--ink-2)}
+.next-when .sep{color:var(--line-strong)}
+.next-time{font-weight:600;color:var(--ink);letter-spacing:.005em}
 .next-m{font-size:var(--t-15);color:var(--ink-2)}
 .next-m b{font-weight:700;color:var(--ink)}
 .next-m .sep{margin:0 7px;color:var(--line-strong)}
-.next-card .poster-th{width:52px;height:70px}
+.next-card .poster-th{width:56px;height:76px}
 .next-note{margin:0;padding:12px 12px;border-radius:var(--r-md);background:var(--surface-2);font-size:var(--t-13);color:var(--ink);line-height:1.45}
 .next-card .plan-chip{margin:0}
 .next-a{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding-top:12px;border-top:1px solid var(--line)}
@@ -2060,6 +2085,8 @@ svg{stroke-linecap:round;stroke-linejoin:round}
 .next-fx{margin-left:auto;padding-inline:8px 2px;gap:2px}
 .next-fx svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .next-a .bus-q,.next-card .tasks{width:100%}
+/* Si ja hi ha una acció principal, l'altra és un enllaç: un sol botó ple per targeta. */
+.next-a .btn-primary ~ .btn:not(.btn-primary):not(.next-fx){border-color:transparent;background:none;color:var(--accent);padding-inline:8px}
 /* El dia del concert: la mateixa targeta, amb el cartell gran a dalt. */
 .concert-day.next-card{gap:12px;padding:16px 16px 16px 16px;background:var(--surface)}
 .concert-day .cd-b{gap:8px}

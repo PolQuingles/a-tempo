@@ -8,7 +8,7 @@ function viewCalendar() {
   if (ui.calProd !== 'all' && !S.productions.has(ui.calProd)) ui.calProd = 'all';
   const chips = `<div class="chips" role="group" aria-label="Filtra per producció">
     <button class="chip" aria-pressed="${ui.calProd === 'all'}" data-act="cal-prod" data-id="all">Totes</button>
-    ${prods.map(p => `<button class="chip" aria-pressed="${ui.calProd === p.id}" data-act="cal-prod" data-id="${p.id}"><i class="pdot prod-tone" style="--ph:${prodHue(p)}"></i>${esc(p.name)}</button>`).join('')}
+    ${prods.map(p => `<button class="chip" aria-pressed="${ui.calProd === p.id}" data-act="cal-prod" data-id="${p.id}"><i class="pdot prod-tone" style="--ph:${prodHue(p)}"></i>${esc(prodShort(p))}</button>`).join('')}
   </div>`;
   const month = ui.calView === 'month';
   const head = `<div class="page-head"><h1 class="h1">Calendari</h1>

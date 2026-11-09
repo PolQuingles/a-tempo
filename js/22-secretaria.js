@@ -262,8 +262,9 @@ function managePlantilla() {
       ${ms.length ? `<div class="list pm-list">${ms.map(m => pmRow(m, f)).join('')}</div>`
         : `<div class="panel" style="padding:14px;color:var(--muted);font-size:var(--t-13)">Encara no hi ha ningú en aquesta ${V.section}.</div>`}</section>`;
   }).join('');
-  return `${onboardingPanel()}${plantillaSummary(all)}${chips}
-    <div id="mlist">${findBox('#mlist', `Cerca un ${V.member}`)}${secs || '<div class="panel" style="padding:14px;color:var(--muted)">Ningú no hi correspon.</div>'}<div class="panel find-empty" hidden>Ningú amb aquest nom.</div></div>`;
+  return `${onboardingPanel()}
+    ${findBox('#mlist', `Cerca un ${V.member}`)}${chips}<div id="mlist">${secs || '<div class="panel" style="padding:14px;color:var(--muted)">Ningú no hi correspon.</div>'}<div class="panel find-empty" hidden>Ningú amb aquest nom.</div></div>
+    ${plantillaSummary(all)}`;
 }
 
 /* ---------- La plantilla a Excel ---------- */

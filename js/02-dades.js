@@ -438,7 +438,9 @@ function sessionById(id) {
   return null;
 }
 const sessionProds = s => [s.prodId, ...(s.alsoIn || [])];
-const prodNames = s => sessionProds(s).map(id => S.productions.get(id)?.name).filter(Boolean).join(' + ');
+/** El nom curt, si en té: per a les llistes, on el nom sencer ompliria la fila. */
+const prodShort = p => p?.short || p?.name || '';
+const prodNames = s => sessionProds(s).map(id => prodShort(S.productions.get(id))).filter(Boolean).join(' + ');
 const attKey = (sid, sec) => `${sid}_${sec}`;
 /** La llista d'una sessió i secció: la viva o, si és d'un trimestre arxivat, la de l'arxiu. */
 const attDoc = (sid, sec) => S.attendance.get(attKey(sid, sec)) || ARCH.docs.get(attKey(sid, sec));
