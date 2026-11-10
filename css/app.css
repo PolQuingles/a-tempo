@@ -2109,8 +2109,8 @@ svg{stroke-linecap:round;stroke-linejoin:round}
 .h-next{margin-top:8px}
 /* La propera sessió, en gran: la data a l'esquerra, què és i on a la dreta i, a sota, el que s'hi pot fer. */
 .next-card{position:relative;display:grid;gap:12px;padding:20px 16px 16px;border-radius:var(--r-lg);background:var(--surface);overflow:hidden}
-.next-top{display:grid;grid-template-columns:50px minmax(0,1fr);gap:16px;align-items:start}
-.next-top:has(> .poster-th){grid-template-columns:50px minmax(0,1fr) auto}
+.next-top{display:grid;grid-template-columns:calc(50px * var(--ts)) minmax(0,1fr);gap:16px;align-items:start}
+.next-top:has(> .poster-th){grid-template-columns:calc(50px * var(--ts)) minmax(0,1fr) auto}
 .next-d{display:flex;flex-direction:column;align-items:center;line-height:1;padding-top:1px}
 .next-d b{font-family:var(--f-display);font-weight:600;font-size:var(--t-44);letter-spacing:-.02em;font-variant-numeric:lining-nums;margin:3px 0 4px}
 .next-d small{font-size:var(--t-12);font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}

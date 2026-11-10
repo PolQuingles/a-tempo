@@ -502,7 +502,7 @@ function studentNextCard() {
   const { next } = studentClassFacts(mid);
   if (!next) return '';
   const { c, x } = next;
-  const n = Math.round((parseISO(c.date) - parseISO(TODAY)) / 864e5);
+  const n = Math.round((parseISO(c.date).getTime() - parseISO(TODAY).getTime()) / 864e5);
   const lbl = dayLabel(c.date);
   const end = x.time ? hhmm((parseTime(x.time) ?? 0) + (+x.mins || 30)) : '';
   const rq = slotReqs(c, x);
