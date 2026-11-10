@@ -1126,6 +1126,62 @@ expect("AF3 ni toca res més de la votació", commit([upd(f"cors/{F}/polls/bg1",
 expect("AF3b ni hi escriu cap vot", commit([upd(f"cors/{F}/pollVotes/bg1_m1", {"pollId": "bg1", "memberId": "m1", "picks": {}})], T["service"]), False)
 expect("AF3c ni esborra res més", commit([dele(f"cors/{F}/members/m1")], T["service"]), False)
 
+print("AG. El quadern de cant: el que hi escriuen l'alumne i el seu professorat")
+seed(f"cors/{F}/students/m1", {"memberId": "m1", "goals": "Aguts", "repertoire": [], "teachers": ["prof@exemple.cat"]})
+L = f"cors/{F}/students/m1/log"
+
+
+def log(i, by, **k):
+    return {"id": i, "memberId": "m1", "kind": "note", "text": "He practicat", "date": "2026-11-10", "by": by, "at": now, **k}
+
+
+expect("AG1 l'alumne hi escriu una nota", commit([upd(f"{L}/q1", log("q1", "singer@exemple.cat"))], T["singer"]), True)
+expect("AG1b i una pregunta", commit([upd(f"{L}/q2", log("q2", "singer@exemple.cat", kind="q"))], T["singer"]), True)
+expect("AG1c però no al quadern d'un altre", commit([upd(f"cors/{F}/students/m3/log/q3", {**log("q3", "singer@exemple.cat"), "memberId": "m3"})], T["singer"]), False)
+expect("AG1d ni a nom d'una altra persona", commit([upd(f"{L}/q4", log("q4", "prof@exemple.cat"))], T["singer"]), False)
+expect("AG1e ni amb un altre id", commit([upd(f"{L}/q5", log("q6", "singer@exemple.cat"))], T["singer"]), False)
+expect("AG1f ni d'un tipus que no hi és", commit([upd(f"{L}/q7", log("q7", "singer@exemple.cat", kind="x"))], T["singer"]), False)
+expect("AG1g ni amb la resposta ja posada", commit([upd(f"{L}/q8", log("q8", "singer@exemple.cat", reply={"text": "Bé", "by": "singer@exemple.cat"}))], T["singer"]), False)
+expect("AG2 el seu professor el llegeix", lst(L, T["prof"]), True)
+expect("AG2b un altre professor, no", lst(L, T["prof2"]), False)
+expect("AG2c ni un altre cantaire", get(f"{L}/q1", T["pau"]), False)
+expect("AG2d l'alumne, sí", lst(L, T["singer"]), True)
+expect("AG3 el professor hi respon", commit([upd(f"{L}/q2", {"reply": {"text": "Respira al c. 11", "by": "prof@exemple.cat", "name": "Berta", "at": now}}, ["reply"])], T["prof"]), True)
+expect("AG3b però no a nom d'un altre", commit([upd(f"{L}/q2", {"reply": {"text": "X", "by": "prof2@exemple.cat"}}, ["reply"])], T["prof"]), False)
+expect("AG3c ni li canvia el text", commit([upd(f"{L}/q2", {"text": "Res"}, ["text"])], T["prof"]), False)
+expect("AG3d l'alumne no es respon ell mateix", commit([upd(f"{L}/q1", {"reply": {"text": "X", "by": "singer@exemple.cat"}}, ["reply"])], T["singer"]), False)
+expect("AG3e però canvia el que ha escrit", commit([upd(f"{L}/q1", {"text": "He practicat molt", "edited": now}, ["text", "edited"])], T["singer"]), True)
+expect("AG3f sense treure'n la resposta", commit([upd(f"{L}/q2", {"text": "X"}, ["text", "reply"])], T["singer"]), False)
+expect("AG4 el professor hi deixa material", commit([upd(f"{L}/t1", log("t1", "prof@exemple.cat", t=True))], T["prof"]), True)
+expect("AG4b l'alumne no l'esborra", commit([dele(f"{L}/t1")], T["singer"]), False)
+expect("AG4c però sí el que ha escrit ell", commit([dele(f"{L}/q1")], T["singer"]), True)
+expect("AG4d un altre professor no hi escriu", commit([upd(f"{L}/t2", log("t2", "prof2@exemple.cat"))], T["prof2"]), False)
+# La fitxa: l'alumne hi posa obres i els seus objectius, però no els del professorat ni qui el porta.
+expect("AG5 l'alumne hi afegeix una obra", commit([upd(f"cors/{F}/students/m1", {"repertoire": [{"id": "r1", "title": "Caro mio ben", "status": "nova"}], "at": now, "by": "singer@exemple.cat"}, ["repertoire", "at", "by"])], T["singer"]), True)
+expect("AG5b i els seus objectius", commit([upd(f"cors/{F}/students/m1", {"myGoals": "Cantar sense por"}, ["myGoals"])], T["singer"]), True)
+expect("AG5c i que hi ha afegit alguna cosa", commit([upd(f"cors/{F}/students/m1", {"fresh": {"at": now, "kind": "q", "by": "singer@exemple.cat"}}, ["fresh"])], T["singer"]), True)
+expect("AG5d però no els objectius del professor", commit([upd(f"cors/{F}/students/m1", {"goals": "Res"}, ["goals"])], T["singer"]), False)
+expect("AG5e ni qui el porta", commit([upd(f"cors/{F}/students/m1", {"teachers": ["prof@exemple.cat", "prof2@exemple.cat"]}, ["teachers"])], T["singer"]), False)
+expect("AG5f ni que el professor ho ha vist", commit([upd(f"cors/{F}/students/m1", {"seen": {"x": now}}, ["seen"])], T["singer"]), False)
+expect("AG5g el professor sí que ho apunta", commit([upd(f"cors/{F}/students/m1", {"seen": {"prof_exemple_cat": now}}, ["seen"])], T["prof"]), True)
+NEW = {"memberId": "m3", "goals": "", "repertoire": [], "teachers": ["prof@exemple.cat"], "at": now, "by": "pau@exemple.cat"}
+expect("AG6 l'alumne no comença la fitxa amb objectius del professor", commit([upd(f"cors/{F}/students/m3", {**NEW, "goals": "Aguts"})], T["pau"]), False)
+expect("AG6b ni la d'un altre", commit([upd(f"cors/{F}/students/m1x", {**NEW, "memberId": "m1x"})], T["pau"]), False)
+expect("AG6c però la seva, sí", commit([upd(f"cors/{F}/students/m3", NEW)], T["pau"]), True)
+expect("AG6d i el seu professor ja la llegeix", get(f"cors/{F}/students/m3", T["prof"]), True)
+expect("AG7 el professor troba les fitxes dels seus alumnes d'una consulta", qry(f"cors/{F}", "students", [("teachers", "ARRAY_CONTAINS", "prof@exemple.cat")], T["prof"]), True)
+expect("AG7b però no les pot llistar totes", lst(f"cors/{F}/students", T["prof"]), False)
+expect("AG7c ni les d'un altre professor", qry(f"cors/{F}", "students", [("teachers", "ARRAY_CONTAINS", "prof@exemple.cat")], T["prof2"]), False)
+# Les gravacions que l'alumne puja al seu quadern.
+expect("AG8 l'alumne puja una gravació al seu quadern", commit([upd(f"cors/{F}/classFiles/g1_0", {"i": 0, "of": 1, "memberId": "m1", "own": True})], T["singer"]), True)
+expect("AG8b el seu professor l'escolta", get(f"cors/{F}/classFiles/g1_0", T["prof"]), True)
+expect("AG8c un altre professor, no", get(f"cors/{F}/classFiles/g1_0", T["prof2"]), False)
+expect("AG8d ni un altre cantaire", get(f"cors/{F}/classFiles/g1_0", T["pau"]), False)
+expect("AG8e l'alumne no en puja a nom d'un professor", commit([upd(f"cors/{F}/classFiles/g2_0", {"i": 0, "of": 1, "memberId": "m1", "own": True, "teacher": "prof@exemple.cat"})], T["singer"]), False)
+expect("AG8f ni al quadern d'un altre", commit([upd(f"cors/{F}/classFiles/g3_0", {"i": 0, "of": 1, "memberId": "m3", "own": True})], T["singer"]), False)
+expect("AG8g esborra la seva", commit([dele(f"cors/{F}/classFiles/g1_0")], T["singer"]), True)
+expect("AG8h però no un enregistrament del professor", commit([dele(f"cors/{F}/classFiles/f1_0")], T["singer"]), False)
+
 print()
 print(f"{PASSES} correctes · {len(FAILS)} errors")
 sys.exit(1 if FAILS else 0)

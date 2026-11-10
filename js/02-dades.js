@@ -339,6 +339,22 @@ function subscribe() {
   else db.collection('classNotes').where('memberId', '==', S.memberId || '-').onSnapshot(onCol('classNotes'), () => markLoaded('classNotes'));
   // Les notes privades: només el professorat, cadascú les seves; l'administració, les recents.
   if (teachCl) (hasRole(S.me, 'admin') ? db.collection('classPriv').where('date', '>=', CLASS_FROM) : db.collection('classPriv').where('teacher', '==', S.email || '-')).onSnapshot(onCol('classPriv'), () => {});
+  // La fitxa de cant (vegeu 09d-classes-quadern): la meva i el meu quadern; al professorat, les fitxes dels seus alumnes
+  // (una per alumne, per saber què treballa i si hi ha afegit res). El quadern d'un altre es llegeix quan se n'obre la fitxa.
+  {
+    let asStudent = new Map(), asTeacher = new Map();
+    const mergeStu = () => { S.students = new Map([...asTeacher, ...asStudent]); if (S.ready) scheduleRender(); };
+    if (S.memberId) {
+      db.doc(`students/${S.memberId}`).onSnapshot(d => { asStudent = d.exists ? new Map([[S.memberId, d.data()]]) : new Map(); mergeStu(); }, () => {});
+      db.collection(`students/${S.memberId}/log`).onSnapshot(snap => {
+        for (const [id, x] of S.classLog) if (x.memberId === S.memberId) S.classLog.delete(id);
+        for (const d of snap.docs) S.classLog.set(d.id, d.data());
+        if (S.ready) scheduleRender();
+      }, () => {});
+    }
+    if (teachCl) (hasRole(S.me, 'admin') ? db.collection('students') : db.collection('students').where('teachers', 'array-contains', S.email || '-'))
+      .onSnapshot(snap => { asTeacher = new Map(snap.docs.map(d => [d.id, d.data()])); mergeStu(); }, e => noteDenied('students', e));
+  }
   // Tots els avisos de les classes, el professorat i l'administració; la resta, els seus i els canvis oberts.
   if (teachCl) db.collection('classReq').onSnapshot(onCol('classReq'), e => { markLoaded('classReq'); noteDenied('classReq', e); });
   else {

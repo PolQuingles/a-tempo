@@ -40,7 +40,7 @@ function sheetTeacherSeats() {
 // parla: la cancel·lació d'eco i el control de volum destrossen una veu cantada.
 const REC_TYPES = ['audio/mp4;codecs=mp4a.40.2', 'audio/mp4', 'audio/webm;codecs=opus', 'audio/webm'];
 const canRecord = () => !!(navigator.mediaDevices?.getUserMedia && window.MediaRecorder);
-async function startRecording({ name, onTick, onDone }) {
+async function startRecording({ name, onTick, onDone, maxMs = 0 }) {
   const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
   const type = REC_TYPES.find(t => MediaRecorder.isTypeSupported(t)) || '';
   const mr = new MediaRecorder(stream, { ...(type ? { mimeType: type } : {}), audioBitsPerSecond: 48000 });
@@ -48,7 +48,8 @@ async function startRecording({ name, onTick, onDone }) {
   let size = 0, dropped = false, full = false, wake = null;
   // Que la pantalla no s'apagui: amb el mòbil bloquejat, el navegador talla el micròfon.
   try { wake = await navigator.wakeLock?.request('screen'); } catch {}
-  const tick = setInterval(() => onTick(Date.now() - t0, size), 1000);
+  // Com a molt maxMs (les gravacions del quadern): s'atura sola i es desa com si s'hagués omplert.
+  const tick = setInterval(() => { const ms = Date.now() - t0; onTick(ms, size); if (maxMs && ms >= maxMs && mr.state === 'recording') { full = true; mr.stop(); } }, 1000);
   const release = () => { clearInterval(tick); stream.getTracks().forEach(t => t.stop()); try { wake?.release(); } catch {} };
   mr.ondataavailable = e => {
     if (!e.data || !e.data.size) return;
@@ -148,15 +149,17 @@ function sheetClassNote(classId, slotId) {
         const base = { id, classId, slotId, memberId: slot.memberId || '', teacher: noteTeacher(c), date: c.date, at: new Date().toISOString(), by: S.email || '' };
         if (priv) { const r = { ...base, text: priv }; S.classPriv.set(id, r); persist('classPriv', id, r, 10); }
         else if (exPriv) { S.classPriv.delete(id); persist('classPriv', id, null, 10); }
-        if (!text && !file) { if (ex) { S.classNotes.delete(id); persist('classNotes', id, null, 10); } closeSheet(); if (priv) toast('Nota desada'); render(); return; }
+        if (!text && !file) { if (ex) { S.classNotes.delete(id); persist('classNotes', id, null, 10); } STU_CTX.at = 0; closeSheet(); if (priv) toast('Nota desada'); render(); return; }
         const rec2 = { ...base, text, ...(file ? { file } : {}) };
         S.classNotes.set(id, rec2); persist('classNotes', id, rec2, 10);
+        STU_CTX.at = 0;   // la fitxa de l'alumne, si s'obre, ja ha de dur la nota nova
         closeSheet(); toast(picked ? 'Nota i enregistrament desats' : 'Nota desada'); render();
       };
       el.querySelector('#cn-del')?.addEventListener('click', () => {
         if (ex?.file) deleteFile(ex.file);
         if (ex) { S.classNotes.delete(id); persist('classNotes', id, null, 10); }
         if (exPriv) { S.classPriv.delete(id); persist('classPriv', id, null, 10); }
+        STU_CTX.at = 0;
         closeSheet(); toast('Nota esborrada'); render();
       });
     },
@@ -619,10 +622,7 @@ function answerClassReq(id, status) {
   render();
 }
 
-/* ---------- Fitxa de cada alumne ---------- */
-// students/<membre> = { memberId, goals, repertoire: [{ id, title, composer, status }], at, by }. La fa el professorat i la
-// veu l'alumne; hi surten també totes les notes de classe i els enregistraments (classNotes amb «file»).
-const STUDENT_STATUS = { nova: 'Per començar', treballant: 'Treballant-la', apunt: 'A punt' };
+/* ---------- Fitxa de cada alumne: qui la porta (la fitxa i el quadern són a 09d-classes-quadern.js) ---------- */
 /** De quin professor són les notes i els enregistraments d'una classe (teacher): cada professor només veu els dels seus alumnes.
  *  Els del professorat que encara no entra a l'app (una clau que no és un correu) només els veu l'administració. */
 const noteTeacher = c => c.teacher || (isAdmin() ? '' : myEmail());
@@ -645,91 +645,4 @@ async function joinStudent(mid) {
     await db.doc(`students/${mid}`).update({ teachers: firebase.firestore.FieldValue.arrayUnion(me), viaClass: c.id, at: new Date().toISOString(), by: S.email || '' });
     return true;
   } catch { return false; }
-}
-async function sheetStudent(mid) {
-  const m = S.members.get(mid);
-  const teach = teachesClasses();
-  if (!m || (!teach && mid !== myId())) return;
-  openSheet({ title: m.name, wide: true, body: '<p class="muted u-m-0">Carregant la fitxa…</p>' });
-  let rec = { goals: '', repertoire: [] }, notes = [], loaded = 'ok';
-  const loadRec = async () => { const d = await db.doc(`students/${mid}`).get(); if (d.exists) rec = { ...rec, ...d.data() }; };
-  try { await loadRec(); }
-  catch (e) {
-    loaded = e && e.code === 'permission-denied' ? 'denied' : 'failed';
-    if (loaded === 'denied' && await joinStudent(mid)) { try { await loadRec(); loaded = 'ok'; } catch { loaded = 'failed'; } }
-  }
-  if (!sheetClose) return;
-  // Sense haver llegit la fitxa no s'ensenya un formulari buit: en desar-lo s'esborraria el que hi hagués.
-  if (loaded !== 'ok') {
-    openSheet({ title: m.name, body: `<p class="u-m-0">${loaded === 'denied' ? `Aquesta fitxa la porta un altre ${esc(V.Teacher.toLowerCase())}. Quan ${esc(firstName(m.name))} tingui classe amb tu, la podràs obrir.` : 'No s’ha pogut carregar la fitxa. Comprova la connexió i torna-ho a provar.'}</p>` });
-    return;
-  }
-  // La pròpia fitxa sempre es llegeix com a alumne, encara que qui l'obri sigui de l'equip.
-  const edit = teach && mid !== myId();
-  // Un professor només llegeix les notes de les seves classes (vegeu les regles); l'administració i l'alumne, totes.
-  const q = db.collection('classNotes').where('memberId', '==', mid);
-  try { notes = (await (isAdmin() || mid === myId() ? q : q.where('teacher', '==', myEmail())).get()).docs.map(d => d.data()); }
-  catch { notes = [...S.classNotes.values()].filter(n => n.memberId === mid); }
-  // Les notes privades, només per a qui porta la fitxa: una entrada per classe, amb la nota que veu l'alumne i la privada.
-  const privs = new Map();
-  if (edit) {
-    const qp = db.collection('classPriv').where('memberId', '==', mid);
-    try { for (const d of (await (isAdmin() ? qp : qp.where('teacher', '==', myEmail())).get()).docs) privs.set(d.id, d.data()); }
-    catch { for (const n of S.classPriv.values()) if (n.memberId === mid) privs.set(n.id, n); }
-  }
-  if (!sheetClose) return;
-  for (const n of notes) NOTE_CACHE.set(n.id, n);
-  const known = new Set(notes.map(n => n.id));
-  for (const [k, p] of privs) if (!known.has(k)) notes.push({ id: k, date: p.date, text: '' });
-  notes.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-  rec.repertoire = (rec.repertoire || []).map(x => ({ ...x }));
-  const hours = [...S.classPlan.values()].flatMap(p => (p.rows || []).filter(r => r.memberId === mid).map(r => `${capz(DAYS_CA[r.day])} ${r.time} amb ${teacherName(p.teacher || p.id) || V.Teacher}`));
-  const repRows = () => rec.repertoire.length ? rec.repertoire.map(x => edit
-    ? `<div class="sec-row st-rep u-d-flex u-gap-6 u-ai-center u-fw-wrap" data-id="${esc(x.id)}">
-        <input class="inp u-flex-2-1-150 u-minw-0" data-f="title" maxlength="80" value="${esc(x.title)}" placeholder="Obra">
-        <input class="inp u-flex-1-1-110 u-minw-0" data-f="composer" maxlength="50" value="${esc(x.composer || '')}" placeholder="Compositor">
-        <select class="inp u-flex-1-1-120" data-f="status">${Object.entries(STUDENT_STATUS).map(([k, l]) => `<option value="${k}" ${x.status === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
-        <button type="button" class="icon-btn" data-rm="${esc(x.id)}" aria-label="Treu-la">${ICON.close}</button></div>`
-    : `<li><span><b>${esc(x.title)}</b>${x.composer ? ` · ${esc(x.composer)}` : ''}</span><span class="st-pill ${x.status === 'apunt' ? 'st-accepted' : 'st-pending'}">${STUDENT_STATUS[x.status] || ''}</span></li>`).join('')
-    : `<p class="muted u-m-0 u-fs-t-13">${edit ? 'Encara no n’hi ha. Afegeix les obres que treballa.' : 'Encara no hi ha repertori.'}</p>`;
-  const read = el => {
-    if (!edit) return;
-    rec.goals = el.querySelector('#stu-goals').value.trim();
-    el.querySelectorAll('.st-rep').forEach(row => { const x = rec.repertoire.find(z => z.id === row.dataset.id); if (x) for (const f of ['title', 'composer', 'status']) x[f] = row.querySelector(`[data-f="${f}"]`).value.trim(); });
-  };
-  const paint = el => {
-    const box = el.querySelector('#stu-rep');
-    box.innerHTML = edit ? repRows() : (rec.repertoire.length ? `<ul class="mini-list u-maxh-none">${repRows()}</ul>` : repRows());
-    box.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { read(el); rec.repertoire = rec.repertoire.filter(x => x.id !== b.dataset.rm); paint(el); });
-  };
-  openSheet({
-    title: m.name,
-    wide: true,
-    body: `<p class="u-mt-0"><span class="muted u-fs-t-13">${esc(SEC[m.section].name)}${hours.length ? ` · ${esc(hours.join(' · '))}` : ''}</span></p>
-      <div class="section-title"><h2 class="h2">Objectius</h2></div>
-      ${edit ? `<textarea class="inp u-minh-80" id="stu-goals" maxlength="1000" placeholder="p. ex. Guanyar agilitat a la zona aguda. Treballar el suport a les frases llargues.">${esc(rec.goals || '')}</textarea>`
-        : `<p class="u-ws-pre-wrap u-m-0">${esc(rec.goals || '') || '<span class="muted">Encara no n’hi ha.</span>'}</p>`}
-      <div class="section-title u-mt-14"><h2 class="h2">Repertori</h2>${edit ? '<button type="button" class="btn btn-sm" id="stu-add">' + ICON.plus + 'Obra</button>' : ''}</div>
-      <div id="stu-rep" class="u-d-grid u-gap-8"></div>
-      <div class="section-title u-mt-14"><h2 class="h2">Notes de classe</h2><span class="eyebrow">${notes.length}</span></div>
-      ${notes.length ? `<ul class="mini-list u-maxh-none">${notes.map(n => `<li class="u-d-grid u-gap-4"><span class="m mono">${esc(shortDate(n.date))}</span>${n.text ? `<span class="u-ws-pre-wrap">${esc(n.text)}</span>` : ''}${privs.get(n.id)?.text ? `<span class="cl-priv u-ws-pre-wrap u-fs-t-13"><b>Privada</b> ${esc(privs.get(n.id).text)}</span>` : ''}
-          ${n.file ? `<button class="btn btn-sm u-js-start" data-act="cl-rec" data-id="${esc(n.id)}">Escolta l’enregistrament</button>` : ''}</li>`).join('')}</ul>`
-        : '<p class="muted u-m-0 u-fs-t-13">Encara no hi ha notes.</p>'}
-      ${edit ? '' : `<p class="muted u-fs-t-13 u-mt-12">Només ho veieu tu i el professorat de cant.</p>`}`,
-    foot: edit ? `<span class="spacer"></span><button class="btn" data-act="sheet-close">Tanca</button><button class="btn btn-primary" id="stu-save">Desa</button>` : '',
-    onMount: el => {
-      paint(el);
-      el.querySelector('#stu-add')?.addEventListener('click', () => { read(el); rec.repertoire.push({ id: uid('sr'), title: '', composer: '', status: 'treballant' }); paint(el); });
-      el.querySelector('#stu-save')?.addEventListener('click', async () => {
-        read(el);
-        const out = { memberId: mid, goals: rec.goals || '', repertoire: rec.repertoire.filter(x => x.title), teachers: studentTeachers(mid, rec.teachers), at: new Date().toISOString(), by: S.email || '' };
-        try { await db.doc(`students/${mid}`).set(out); closeSheet(); toast('Fitxa desada'); }
-        catch { toast('No s’ha pogut desar. Comprova la connexió.'); }
-      });
-    },
-  });
-}
-function openRecording(id) {
-  const n = NOTE_CACHE.get(id) || S.classNotes.get(id);
-  if (n?.file) sheetOpenFile(n.file, `Classe del ${shortDate(n.date)}`);
 }

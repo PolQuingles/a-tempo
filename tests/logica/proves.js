@@ -782,6 +782,25 @@ prova('classes: els noms sense fitxa surten un sol cop', () => {
   igual(out.length, 1, 'una sola persona'); igual(out[0].n, 2, 'dues classes');
   S.classes = keep;
 });
+prova('classes: el quadern avisa el seu professorat i ho ordena tot per dates', () => {
+  const keep = { students: S.students, log: S.classLog, notes: S.classNotes, email: S.email };
+  S.email = 'p@x.cat';
+  const at = '2026-11-10T10:00:00.000Z';
+  S.students = new Map([['m1', { memberId: 'm1', teachers: ['p@x.cat'], fresh: { at, kind: 'q', by: 'a@x.cat' } }],
+    ['m2', { memberId: 'm2', teachers: ['altre@x.cat'], fresh: { at, kind: 'rec', by: 'b@x.cat' } }],
+    ['m3', { memberId: 'm3', teachers: ['p@x.cat'], fresh: { at, kind: 'rec', by: 'c@x.cat' }, seen: { [seenKey('p@x.cat')]: '2026-11-10T11:00:00.000Z' } }]]);
+  igual(stuNews('m1')?.kind, 'q', 'el seu alumne té una pregunta nova');
+  igual(stuNews('m2'), null, 'el d’un altre professor no li surt');
+  igual(stuNews('m3'), null, 'el que ja ha vist, tampoc');
+  igual(freshText(stuNews('m1')), 'Té una pregunta per a la classe', 'i diu què és');
+  S.classNotes = new Map([['c1_a', { id: 'c1_a', classId: 'c1', slotId: 'a', memberId: 'm1', teacher: 'p@x.cat', date: '2026-11-03', text: 'Vocalitzacions' }]]);
+  S.classLog = new Map([['l1', { id: 'l1', memberId: 'm1', kind: 'note', text: 'He practicat', date: '2026-11-05', by: 'a@x.cat', at }],
+    ['l2', { id: 'l2', memberId: 'm9', kind: 'note', text: 'D’un altre', date: '2026-11-06', by: 'z@x.cat', at }]]);
+  const e = quadernEntries('m1');
+  igual(e.map(x => x.id), ['l1', 'c1_a'], 'només les seves, de la més nova a la més vella');
+  cert(e[1].mineNote && e[1].src === 'class', 'la nota de classe és del professor que la mira');
+  S.students = keep.students; S.classLog = keep.log; S.classNotes = keep.notes; S.email = keep.email;
+});
 
 /** Executa totes les proves: { ok, fail, lines }. */
 function runProves() {
