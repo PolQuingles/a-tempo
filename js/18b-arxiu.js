@@ -104,7 +104,7 @@ function archivePanel(prod, works) {
   const n = k => st.filter(x => x === k).length;
   const bits = [[n('todo'), 'a repartir'], [n('given'), n('given') === 1 ? 'repartida' : 'repartides'], [n('returned'), n('returned') === 1 ? 'retornada' : 'retornades']].filter(([k]) => k).map(([k, l]) => `${k} ${l}`);
   return `<div class="panel arx-panel"><span><b>Arxiu de partitures</b>${sec ? ` · ${esc(SEC[sec].name)}` : ''}<br><span class="muted">${bits.join(' · ') || 'Cap obra'}</span></span>
-    <span style="display:flex;gap:6px;flex-wrap:wrap">${myArchSection() ? `<button class="btn btn-sm" data-act="msg-new" data-pid="${esc(prod.id)}">Avisa la ${esc(V.section)}</button>` : ''}<button class="btn btn-sm" data-act="archive" data-pid="${esc(prod.id)}">Estadístiques de l’arxiu</button></span></div>`;
+    <span class="u-d-flex u-gap-6 u-fw-wrap">${myArchSection() ? `<button class="btn btn-sm" data-act="msg-new" data-pid="${esc(prod.id)}">Avisa la ${esc(V.section)}</button>` : ''}<button class="btn btn-sm" data-act="archive" data-pid="${esc(prod.id)}">Estadístiques de l’arxiu</button></span></div>`;
 }
 /** El missatge que proposa «Avisa la corda» a l'arxiver: recordar que cal tornar les partitures de la producció. */
 function scoreReminder(pid) {
@@ -119,7 +119,7 @@ function scoreBox(pid, w) {
   if (seesArchive()) {
     const sec = archiveSec() && !canEdit() ? archiveSec() : '';
     const x = scoreSummary(pid, w.id, sec);
-    return `<div class="section-title" style="margin-top:14px"><h2 class="h2">Partitures en paper</h2>${scorePill(pid, w)}</div>
+    return `<div class="section-title u-mt-14"><h2 class="h2">Partitures en paper</h2>${scorePill(pid, w)}</div>
       <div class="panel arx-panel"><span class="muted">${esc(prod?.name || '')}${sec ? ` · ${esc(SEC[sec].name)}` : ''}: ${x.given} de ${x.n} repartides · ${x.returned} ${x.returned === 1 ? 'retornada' : 'retornades'}</span>
         <button class="btn btn-sm btn-primary" data-act="score-work" data-pid="${esc(pid)}" data-id="${esc(w.id)}">Reparteix o recull</button></div>`;
   }
@@ -127,8 +127,8 @@ function scoreBox(pid, w) {
   if (!me) return '';
   const s = scoreOf(pid, w.id, me), out = prodOut(pid)(me);
   if (out && !s) return '';
-  return `<div class="section-title" style="margin-top:14px"><h2 class="h2">La teva partitura</h2>${scorePill(pid, w)}</div>
-    <p class="muted" style="margin:0 2px;font-size:var(--t-13)">${out && s === 'given' ? `Ja no fas ${esc(prod?.name || 'aquesta producció')}, però tens la partitura: torna-la a l’arxiver de la teva ${esc(V.section)}.` : s === 'given' ? `La tens tu. En acabar ${esc(prod?.name || 'la producció')}, torna-la a l’arxiver de la teva ${esc(V.section)}.` : s === 'returned' ? 'Ja l’has tornada a l’arxiu. Gràcies!' : `Encara no te l’han donada: te la donarà l’arxiver de la teva ${esc(V.section)}.`}</p>`;
+  return `<div class="section-title u-mt-14"><h2 class="h2">La teva partitura</h2>${scorePill(pid, w)}</div>
+    <p class="muted u-m-0-2 u-fs-t-13">${out && s === 'given' ? `Ja no fas ${esc(prod?.name || 'aquesta producció')}, però tens la partitura: torna-la a l’arxiver de la teva ${esc(V.section)}.` : s === 'given' ? `La tens tu. En acabar ${esc(prod?.name || 'la producció')}, torna-la a l’arxiver de la teva ${esc(V.section)}.` : s === 'returned' ? 'Ja l’has tornada a l’arxiu. Gràcies!' : `Encara no te l’han donada: te la donarà l’arxiver de la teva ${esc(V.section)}.`}</p>`;
 }
 
 /* ---------- Repartir i recollir una obra ---------- */
@@ -149,7 +149,7 @@ function sheetScoreWork(pid, wid, sec0) {
         const s = scoreOf(pid, wid, m), at = SCORE_STEPS.indexOf(s), note = outNote(out, s);
         return `<tr class="sw-row${note ? ' sw-out' : ''}" data-mid="${esc(m.id)}"><th scope="row" class="sw-n">${codeTag(m, pid)}${esc(m.name)}${guestOf(pid, m.id) ? ' <span class="tag">Reforç</span>' : ''}${note ? `<small class="sc-out">${esc(note)}</small>` : ''}</th>
           ${SCORE_STATES.map(([k, l], i) => `<td class="sw-c"><button type="button" data-k="${k}" class="${i <= at ? `on st-${SCORE_CLS[s]}` : ''}" aria-pressed="${i === at}" aria-label="${esc(`${m.name}: ${l}`)}" ${can ? '' : 'disabled'}></button></td>`).join('')}</tr>`;
-      }).join('')}</tbody></table>` : `<p class="muted" style="padding:12px;margin:0">Ningú d’aquesta ${esc(V.section)} fa la producció.</p>`;
+      }).join('')}</tbody></table>` : `<p class="muted u-p-12 u-m-0">Ningú d’aquesta ${esc(V.section)} fa la producció.</p>`;
     el.querySelectorAll('.sw-row').forEach(r => r.querySelectorAll('button[data-k]').forEach(b => b.onclick = () => {
       const m = S.members.get(r.dataset.mid);
       if (!m || !canScores(m.section)) return;
@@ -164,12 +164,12 @@ function sheetScoreWork(pid, wid, sec0) {
   openSheet({
     title: w.title,
     wide: true,
-    body: `<p class="muted" style="margin:0 0 10px;font-size:var(--t-13)">${esc(prod.name)} · cada partitura porta el nom de qui la canta. Marca-la quan la donis i quan te la tornin.</p>
+    body: `<p class="muted u-m-0-0-10 u-fs-t-13">${esc(prod.name)} · cada partitura porta el nom de qui la canta. Marca-la quan la donis i quan te la tornin.</p>
       <div class="chips" id="sw-sec" role="group" aria-label="${esc(V.Section)}">${SECTIONS.map(x => `<button class="chip" data-sec="${esc(x.id)}" aria-pressed="${x.id === sec}">${esc(x.name)}</button>`).join('')}</div>
       <div class="sw-sum" id="sw-sum"></div>
       <div class="sw-bulk" id="sw-bulk"><button type="button" class="btn btn-sm" data-bulk="given">Totes repartides</button><button type="button" class="btn btn-sm" data-bulk="returned">Totes retornades</button></div>
       <div class="sw-wrap" id="sw-list"></div>
-      <p class="muted" id="sw-note" style="margin:8px 2px 0;font-size:var(--t-13)"></p>`,
+      <p class="muted u-m-8-2-0 u-fs-t-13" id="sw-note"></p>`,
     foot: `<button class="btn" data-act="archive" data-pid="${esc(pid)}">Tot l’arxiu</button><span class="spacer"></span><button class="btn btn-primary" data-act="sheet-close">Fet</button>`,
     onMount: el => {
       el.querySelectorAll('#sw-sec .chip').forEach(b => b.onclick = () => { sec = b.dataset.sec; paint(el); });
@@ -227,9 +227,9 @@ function sheetArchive(pid) {
       <div class="section-title"><h2 class="h2">Obra per obra</h2></div>
       <ul class="ax-works">${works.map(w => { const x = scoreSummary(pid, w.id, sec); return `<li><button data-act="score-work" data-pid="${esc(pid)}" data-id="${esc(w.id)}" data-sec="${esc(sec || archiveSec() || '')}">
         <span class="ax-w"><b>${esc(w.title)}</b><small>${x.given} de ${x.n} repartides · ${x.returned} ${x.returned === 1 ? 'retornada' : 'retornades'}</small></span>${sumPill(x, false)}</button></li>`; }).join('')}</ul>
-      ${toBack.length ? `<div class="section-title"><h2 class="h2">Ja no fan la producció</h2><button class="btn btn-sm btn-ghost" id="ax-cp-back">Copia la llista</button></div><ul class="mini-list" style="max-height:none">${who(toBack)}</ul>` : ''}
-      ${toGive.length ? `<div class="section-title"><h2 class="h2">Falten per repartir</h2><button class="btn btn-sm btn-ghost" id="ax-cp-give">Copia la llista</button></div><ul class="mini-list" style="max-height:none">${who(toGive)}</ul>` : ''}
-      ${toReturn.length ? `<div class="section-title"><h2 class="h2">${ended ? 'Falten per retornar' : 'Les tenen ara'}</h2><button class="btn btn-sm btn-ghost" id="ax-cp-ret">Copia la llista</button></div><ul class="mini-list" style="max-height:none">${who(toReturn)}</ul>` : ''}
+      ${toBack.length ? `<div class="section-title"><h2 class="h2">Ja no fan la producció</h2><button class="btn btn-sm btn-ghost" id="ax-cp-back">Copia la llista</button></div><ul class="mini-list u-maxh-none">${who(toBack)}</ul>` : ''}
+      ${toGive.length ? `<div class="section-title"><h2 class="h2">Falten per repartir</h2><button class="btn btn-sm btn-ghost" id="ax-cp-give">Copia la llista</button></div><ul class="mini-list u-maxh-none">${who(toGive)}</ul>` : ''}
+      ${toReturn.length ? `<div class="section-title"><h2 class="h2">${ended ? 'Falten per retornar' : 'Les tenen ara'}</h2><button class="btn btn-sm btn-ghost" id="ax-cp-ret">Copia la llista</button></div><ul class="mini-list u-maxh-none">${who(toReturn)}</ul>` : ''}
       <div class="section-title"><h2 class="h2">Qui té què</h2><span class="ax-legend"><i class="pend"></i>A repartir <i class="given"></i>Repartida <i class="returned"></i>Retornada</span></div>
       <div class="table-wrap"><table class="dtable ax-table"><thead><tr><th>${esc(V.Member)}</th>${works.map(w => `<th title="${esc(w.title)}">${esc(w.title)}</th>`).join('')}</tr></thead>
         <tbody>${ms.map(m => `<tr><td>${codeTag(m, pid)}<b>${esc(m.name)}</b> <span class="m">${esc(SEC[m.section].short)}</span>${noteOf(m) ? `<small class="sc-out">${esc(capz(noteOf(m)))}</small>` : ''}</td>${cells.get(m.id).map((s, i) => s === 'na' ? `<td class="ax-c na" title="${esc(works[i].title)}: no la fa">—</td>` : `<td class="ax-c ${SCORE_CLS[s]}" title="${esc(works[i].title)}: ${scoreLabel(s)}">${s === 'returned' ? '↩' : s === 'given' ? '✓' : '·'}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
@@ -240,7 +240,7 @@ function sheetArchive(pid) {
   openSheet({
     title: 'Arxiu de partitures',
     wide: true,
-    body: `<p class="muted" style="margin:0 0 10px;font-size:var(--t-13)">${esc(prod.name)} · ${works.length} ${works.length === 1 ? 'obra' : 'obres'}</p>
+    body: `<p class="muted u-m-0-0-10 u-fs-t-13">${esc(prod.name)} · ${works.length} ${works.length === 1 ? 'obra' : 'obres'}</p>
       <div class="chips" id="ax-sec" role="group" aria-label="${esc(V.Section)}"><button class="chip" data-sec="" aria-pressed="${!sec}">${esc(capz(V.tot))}</button>${SECTIONS.map(x => `<button class="chip" data-sec="${esc(x.id)}" aria-pressed="${x.id === sec}">${esc(x.name)}</button>`).join('')}</div>
       <div id="ax-body"></div>`,
     foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Tanca</button>`,

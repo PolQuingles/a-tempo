@@ -9,7 +9,7 @@ function memberOptions(selected) {
 function sheetWhoAmI(then) {
   openSheet({
     title: 'Qui ets?',
-    body: `<p style="margin-top:0">Tria el teu nom. Aquest mòbil el recordarà per a la propera vegada.</p>
+    body: `<p class="u-mt-0">Tria el teu nom. Aquest mòbil el recordarà per a la propera vegada.</p>
       <label class="field"><span>Nom</span><select class="inp" id="who-sel"><option value="">—</option>${memberOptions(myMemberId())}</select></label>`,
     foot: `<button class="btn btn-primary" id="who-ok">Desa</button>`,
     onMount: el => {
@@ -36,22 +36,22 @@ function sheetAbsence(presetSid) {
   openSheet({
     title: 'Avís d’absència',
     body: `<div class="kv">
-      ${singer ? `<p style="margin:0">De part de <b>${esc(S.members.get(memberId).name)}</b><br><span class="muted" style="font-size:var(--t-13)">Avisa’n amb temps: el teu ${V.leader} ho veurà i, si ho accepta, la falta quedarà justificada.</span></p>`
+      ${singer ? `<p class="u-m-0">De part de <b>${esc(S.members.get(memberId).name)}</b><br><span class="muted u-fs-t-13">Avisa’n amb temps: el teu ${V.leader} ho veurà i, si ho accepta, la falta quedarà justificada.</span></p>`
         : `<label class="field"><span>${V.Member}</span><select class="inp" id="ab-member"><option value="">—</option>${memberOptions('')}</select></label>`}
       <div class="field"><span>Què passa?</span><div class="pickers" id="ab-kind">
         <button type="button" class="pick" data-k="absent" aria-pressed="true">No hi podré anar</button>
         <button type="button" class="pick" data-k="late" aria-pressed="false">Arribaré tard</button></div></div>
-      <label class="field" id="ab-min-f" hidden><span>Minuts de retard aproximats</span><input class="inp" id="ab-min" type="number" inputmode="numeric" min="1" max="240" style="width:120px"></label>
+      <label class="field" id="ab-min-f" hidden><span>Minuts de retard aproximats</span><input class="inp u-w-120" id="ab-min" type="number" inputmode="numeric" min="1" max="240"></label>
       <div class="field"><span>Quins dies?</span><div id="ab-sessions"></div></div>
-      <label class="field"><span>Motiu</span><textarea class="inp" id="ab-reason" maxlength="200" style="min-height:80px" placeholder="p. ex. Examen a la universitat"></textarea></label>
+      <label class="field"><span>Motiu</span><textarea class="inp u-minh-80" id="ab-reason" maxlength="200" placeholder="p. ex. Examen a la universitat"></textarea></label>
     </div>`,
     foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="ab-send">${singer ? 'Envia l’avís' : 'Desa l’avís'}</button>`,
     onMount: el => {
       const drawSessions = () => {
         const box = el.querySelector('#ab-sessions');
-        if (!memberId) { box.innerHTML = '<span class="muted" style="font-size:var(--t-13)">Tria primer qui és.</span>'; return; }
+        if (!memberId) { box.innerHTML = '<span class="muted u-fs-t-13">Tria primer qui és.</span>'; return; }
         const list = sessionsFor(memberId);
-        if (!list.length) { box.innerHTML = '<span class="muted" style="font-size:var(--t-13)">No hi ha sessions properes.</span>'; return; }
+        if (!list.length) { box.innerHTML = '<span class="muted u-fs-t-13">No hi ha sessions properes.</span>'; return; }
         let month = '', html = '<ul class="checklist">';
         for (const s of list) {
           const mo = s.date.slice(0, 7);

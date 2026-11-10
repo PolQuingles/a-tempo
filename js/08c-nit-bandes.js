@@ -198,7 +198,7 @@ function bandesNomBlock(p) {
     return `<li class="bn-nom${x.date === TODAY ? ' today' : ''}${sealed ? ' sealed' : ''}"><div class="bn-nom-h"><span class="bn-date">${x.date === TODAY ? 'Avui es revelen' : esc(shortDate(x.date))}</span><h3>${esc(x.cat.name)}</h3>${x.cat.pair ? '<span class="tag">Parella</span>' : x.cat.sec ? `<span class="tag">${esc(SEC[x.cat.sec]?.name || x.cat.sec)}</span>` : ''}</div>
     ${x.cat.desc ? `<p class="bn-desc">${esc(x.cat.desc)}</p>` : ''}
     ${sealed ? `<button class="bn-seal" data-act="bandes-envelope" data-id="${esc(p.id)}" data-cat="${esc(x.cat.id)}"><svg class="bn-seal-i" viewBox="0 0 48 36" aria-hidden="true"><rect x="1.5" y="1.5" width="45" height="33" rx="4"/><path d="M2.5 4l21.5 17L45.5 4"/><circle cx="24" cy="21" r="5.5"/></svg><span><b>Obre el sobre</b><small>${x.keys.length} finalistes</small></span></button>` : ''}
-    ${x.keys.length ? `<ul class="bn-fin">${x.keys.map((k, j) => `<li style="--d:${j * 110}ms">${bnWho(k)}</li>`).join('')}</ul>` : '<p class="m" style="margin:0">Ningú no hi va rebre vots.</p>'}</li>`;
+    ${x.keys.length ? `<ul class="bn-fin">${x.keys.map((k, j) => `<li style="--d:${j * 110}ms">${bnWho(k)}</li>`).join('')}</ul>` : '<p class="m u-m-0">Ningú no hi va rebre vots.</p>'}</li>`;
   };
   return `<div class="section-title"><h2 class="h2">Finalistes</h2><span class="bn-n mono">${shown.length}/${shown.length + next.length}</span></div>
     ${mine.length ? `<p class="bn-me"><b>Ets finalista</b> a ${esc(mine.map(x => catQ(x.cat)).join(', '))}. Ens veiem a la Nit!</p>` : ''}
@@ -219,7 +219,7 @@ function bandesPalmPage(p) {
   const mine = me ? list.filter(c => res[c.id].some(k => keyIds(k).includes(me))) : [];
   const rec = bandesRecord(p);
   return `<div class="section-title"><h2 class="h2">Palmarès</h2><span class="bn-n mono">${list.length} ${list.length === 1 ? 'banda' : 'bandes'}</span></div>
-    ${mine.length ? `<div class="bd-mine bn-mine"><p style="margin:0"><b>${mine.length === 1 ? 'T’has endut una banda' : `T’has endut ${mine.length} bandes`}:</b> ${esc(mine.map(c => c.name).join(', '))}. Enhorabona!</p>
+    ${mine.length ? `<div class="bd-mine bn-mine"><p class="u-m-0"><b>${mine.length === 1 ? 'T’has endut una banda' : `T’has endut ${mine.length} bandes`}:</b> ${esc(mine.map(c => c.name).join(', '))}. Enhorabona!</p>
       <button class="btn btn-sm" data-act="bandes-my-diploma" data-id="${esc(p.id)}">${mine.length === 1 ? 'El teu diploma' : 'Els teus diplomes'}</button></div>` : ''}
     ${rec ? `<p class="bn-rec"><span>Rècord de la Nit</span> ${esc(rec.ids.map(id => fullName(S.members.get(id)?.name || '')).filter(Boolean).join(' i '))}, amb ${rec.n} bandes</p>` : ''}
     <ol class="bn-palm">${list.map(c => {
@@ -254,7 +254,7 @@ function bandesTeamBlock(p) {
     ph === 'vote' && b('poll-remind', 'Recorda-ho'),
     b('bandes-edit', 'Edita'),
   ].filter(Boolean);
-  return `<section class="bn-card bn-team"><h2 class="h3">Per a l’equip</h2><p class="m" style="margin:0">${esc(status)}</p>
+  return `<section class="bn-card bn-team"><h2 class="h3">Per a l’equip</h2><p class="m u-m-0">${esc(status)}</p>
     ${ph === 'vote' ? `<span class="bd-bar"><span style="width:${people.length ? voted / people.length * 100 : 0}%"></span></span>` : ''}
     <div class="bd-acts">${acts.join('')}</div></section>`;
 }
@@ -273,7 +273,7 @@ function viewBandes() {
     ${ph === 'vote' ? bandesVoteBlock(p) : ''}
     ${ph === 'done' ? bandesPalmPage(p) : ''}
     ${['nom', 'gala', 'after'].includes(ph) || (ph === 'done' && !p.results) ? bandesNomBlock(p) : ''}
-    ${ph === 'closed' ? `<section class="bn-card"><p style="margin:0">La votació s’ha tancat. Aviat es revelaran els finalistes de cada categoria${p.galaAt ? `, un dia rere l’altre fins a la Nit` : ''}.</p></section>` : ''}
+    ${ph === 'closed' ? `<section class="bn-card"><p class="u-m-0">La votació s’ha tancat. Aviat es revelaran els finalistes de cada categoria${p.galaAt ? `, un dia rere l’altre fins a la Nit` : ''}.</p></section>` : ''}
     ${tallyOn(p) ? bandesMineBlock(p) : ''}
     ${['closed', 'nom', 'gala', 'after'].includes(ph) ? bandesVoteBlock(p) : ''}
     ${tallyOn(p) ? bandesMuteBlock(p) : ''}
@@ -426,11 +426,11 @@ function propsFor(p) {
 function bandesPropsBlock(p) {
   const me = myId(), open = propOpenNow(p), list = propsFor(p).sort((a, b) => (b.likes || []).length - (a.likes || []).length || (a.at || '').localeCompare(b.at || ''));
   const mine = list.filter(x => x.by === me).length;
-  const form = open && me ? (mine >= PROPS_MAX ? `<p class="m" style="margin:0">Ja n’has proposat ${PROPS_MAX}: és el màxim.</p>` : `<div class="bn-prop-f">
+  const form = open && me ? (mine >= PROPS_MAX ? `<p class="m u-m-0">Ja n’has proposat ${PROPS_MAX}: és el màxim.</p>` : `<div class="bn-prop-f">
       <label class="field"><span>Nom de la categoria</span><input class="inp" id="pr-name" maxlength="60" placeholder="p. ex. Rei o reina del karaoke"></label>
-      <label class="field"><span>Qui s’ho mereix</span><textarea class="inp" id="pr-desc" maxlength="300" style="min-height:64px" placeholder="Aquelles persones que…"></textarea></label>
+      <label class="field"><span>Qui s’ho mereix</span><textarea class="inp u-minh-64" id="pr-desc" maxlength="300" placeholder="Aquelles persones que…"></textarea></label>
       <div class="toggle-row"><span><b>És de parella</b></span><label class="switch"><input type="checkbox" id="pr-pair"><span></span></label></div>
-      <button class="btn btn-primary" data-act="bandes-propose" data-id="${esc(p.id)}" style="justify-self:start">Proposa-la</button></div>`) : '';
+      <button class="btn btn-primary u-js-start" data-act="bandes-propose" data-id="${esc(p.id)}">Proposa-la</button></div>`) : '';
   const card = x => {
     const liked = (x.likes || []).includes(me), n = (x.likes || []).length;
     return `<li class="bn-prop"><div><b>${esc(x.name)}</b>${x.pair ? ' <span class="tag">Parella</span>' : ''}${x.taken ? ' <span class="st-pill st-accepted">Hi entra</span>' : ''}${x.by === me ? ' <span class="st-pill st-pending">La teva</span>' : ''}</div>
@@ -440,7 +440,7 @@ function bandesPropsBlock(p) {
         ${canBoard() && !x.taken ? `<button class="btn btn-sm" data-act="bandes-prop-take" data-id="${esc(x.id)}">Afegeix-la</button><button class="btn btn-sm btn-ghost" data-act="bandes-prop-drop" data-id="${esc(x.id)}">Descarta-la</button>` : ''}</div></li>`;
   };
   return `<section class="bn-card bn-props"><h2 class="h2">Proposa una categoria</h2>
-    <p class="m" style="margin:0">${open ? `Fins al ${shortDate(p.propUntil)}. Pots proposar-ne fins a ${PROPS_MAX} i dir quines t’agraden de les dels altres; l’equip triarà quines entren a la votació. Ningú no veu de qui és cada proposta.` : 'Les propostes ja s’han tancat: l’equip està triant quines entren a la votació.'}</p>
+    <p class="m u-m-0">${open ? `Fins al ${shortDate(p.propUntil)}. Pots proposar-ne fins a ${PROPS_MAX} i dir quines t’agraden de les dels altres; l’equip triarà quines entren a la votació. Ningú no veu de qui és cada proposta.` : 'Les propostes ja s’han tancat: l’equip està triant quines entren a la votació.'}</p>
     ${form}</section>
     ${list.length ? `<div class="section-title"><h2 class="h2">Les propostes</h2><span class="bn-n mono">${list.length}</span></div><ul class="bn-prop-l">${list.map(card).join('')}</ul>` : ''}`;
 }
@@ -489,9 +489,9 @@ function bandesPropsOpen(pid) {
   const until0 = p.propUntil || addDays(TODAY, 7);
   openSheet({
     title: 'Obrir les propostes?',
-    body: `<p style="margin-top:0">Abans de votar, tothom podrà proposar categories noves (fins a ${PROPS_MAX} cadascú) i dir quines li agraden. Tu tries quines hi entren; la votació s’obre després, quan la publiquis.</p>
+    body: `<p class="u-mt-0">Abans de votar, tothom podrà proposar categories noves (fins a ${PROPS_MAX} cadascú) i dir quines li agraden. Tu tries quines hi entren; la votació s’obre després, quan la publiquis.</p>
       <label class="field"><span>Es pot proposar fins al (inclòs)</span><input class="inp" type="date" id="pp-until" value="${esc(until0)}"></label>
-      <div class="toggle-row"><span><b>Publica un anunci al tauler</b><br><span class="muted" style="font-size:var(--t-13)">Amb el botó per proposar-ne. A qui té les notificacions activades li arriba un avís.</span></span><label class="switch"><input type="checkbox" id="pp-ann" checked><span></span></label></div>`,
+      <div class="toggle-row"><span><b>Publica un anunci al tauler</b><br><span class="muted u-fs-t-13">Amb el botó per proposar-ne. A qui té les notificacions activades li arriba un avís.</span></span><label class="switch"><input type="checkbox" id="pp-ann" checked><span></span></label></div>`,
     foot: '<span class="spacer"></span><button class="btn" data-act="sheet-close">Encara no</button><button class="btn btn-primary" id="pp-ok">Obre-les</button>',
     onMount: el => {
       el.querySelector('#pp-ok').onclick = () => {

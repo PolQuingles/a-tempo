@@ -221,11 +221,11 @@ function sheetProdChoice(mid) {
   openSheet({
     title: mine ? 'Les produccions que faràs' : `Produccions · ${m.name}`,
     wide: true,
-    body: prods.length ? `<p style="margin-top:0">${mine ? 'Digues quines produccions faràs aquesta temporada.' : `Les produccions que farà ${esc(fullName(m.name))} aquesta temporada.`} Cal fer-ne com a mínim el <b>${choiceMin()}%</b>. ${mine ? 'On diguis que no, no et comptarà l’assistència ni et sortiran les convocatòries.' : 'On digui que no, no hi està convocat.'}</p>
+    body: prods.length ? `<p class="u-mt-0">${mine ? 'Digues quines produccions faràs aquesta temporada.' : `Les produccions que farà ${esc(fullName(m.name))} aquesta temporada.`} Cal fer-ne com a mínim el <b>${choiceMin()}%</b>. ${mine ? 'On diguis que no, no et comptarà l’assistència ni et sortiran les convocatòries.' : 'On digui que no, no hi està convocat.'}</p>
       <div class="ch-sum" id="ch-sum" aria-live="polite"></div>
       <ul class="ch-list">${prods.map(row).join('')}</ul>
-      ${mine ? '<p class="muted" style="font-size:var(--t-13);margin:10px 2px 0">Quan una producció ja ha començat, per canviar-ho parla amb l’equip.</p>' : ''}`
-      : '<p style="margin:0">Aquesta temporada encara no hi ha produccions per triar.</p>',
+      ${mine ? '<p class="muted u-fs-t-13 u-m-10-2-0">Quan una producció ja ha començat, per canviar-ho parla amb l’equip.</p>' : ''}`
+      : '<p class="u-m-0">Aquesta temporada encara no hi ha produccions per triar.</p>',
     foot: prods.length ? `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="ch-save">Desa</button>` : '',
     onMount: el => {
       const paint = () => {
@@ -265,12 +265,12 @@ function sheetChoicesOverview() {
   openSheet({
     title: 'Qui fa cada producció',
     wide: true,
-    body: `<p style="margin-top:0">Cada ${esc(V.member)} diu quines produccions farà des de «La meva fitxa». Mínim: <b>${choiceMin()}%</b> de les produccions de la temporada.</p>
+    body: `<p class="u-mt-0">Cada ${esc(V.member)} diu quines produccions farà des de «La meva fitxa». Mínim: <b>${choiceMin()}%</b> de les produccions de la temporada.</p>
       <div class="ch-kpis"><span><b>${ms.length - silent.length}</b> de ${ms.length} han respost</span><span class="${low.length ? 'bad' : ''}"><b>${low.length}</b> per sota del mínim</span></div>
       ${prods.map(p => { const yes = ms.filter(m => choiceShown(m.id, p) === 'yes').length, no = ms.filter(m => choiceShown(m.id, p) === 'no').length;
         return `<div class="ch-prod prod-tone" style="--ph:${prodHue(p)}"><i class="pdot"></i><b>${esc(p.name)}</b><span class="m"><b>${yes}</b> la fan · <b>${no}</b> no · ${ms.length - yes - no} sense dir-ho</span></div>`; }).join('')}
-      ${low.length ? `<div class="section-title" style="margin-top:14px"><h2 class="h2">Per sota del mínim</h2></div><ul class="mini-list" style="max-height:none">${low.map(({ m, s }) => `<li><span><b>${esc(m.name)}</b><br><span class="m">${esc(SEC[m.section].name)} · en fa ${s.yes + s.none} de ${s.total}</span></span><button class="btn btn-sm" data-act="choice-open" data-mid="${esc(m.id)}">Mira-ho</button></li>`).join('')}</ul>` : ''}
-      <div class="table-wrap" style="margin-top:14px"><table class="dtable ch-table"><thead><tr><th>${esc(V.Member)}</th>${prods.map(p => `<th title="${esc(p.name)}">${esc(p.name.split(' · ')[0])}</th>`).join('')}<th>%</th></tr></thead>
+      ${low.length ? `<div class="section-title u-mt-14"><h2 class="h2">Per sota del mínim</h2></div><ul class="mini-list u-maxh-none">${low.map(({ m, s }) => `<li><span><b>${esc(m.name)}</b><br><span class="m">${esc(SEC[m.section].name)} · en fa ${s.yes + s.none} de ${s.total}</span></span><button class="btn btn-sm" data-act="choice-open" data-mid="${esc(m.id)}">Mira-ho</button></li>`).join('')}</ul>` : ''}
+      <div class="table-wrap u-mt-14"><table class="dtable ch-table"><thead><tr><th>${esc(V.Member)}</th>${prods.map(p => `<th title="${esc(p.name)}">${esc(p.name.split(' · ')[0])}</th>`).join('')}<th>%</th></tr></thead>
         <tbody>${ms.map(m => { const s = choiceSummary(m.id); return `<tr data-act="choice-open" data-mid="${esc(m.id)}"><td><b>${esc(m.name)}</b></td>${prods.map(p => cell(m, p)).join('')}<td class="n ${s.ok ? '' : 'bad'}">${s.pct == null ? '—' : pct(s.pct)}</td></tr>`; }).join('')}</tbody></table></div>`,
     foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Tanca</button>`,
   });

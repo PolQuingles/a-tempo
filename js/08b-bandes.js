@@ -171,7 +171,7 @@ function bandesCard(p) {
   let board = '';
   if (canBoard()) {
     const voted = people.filter(m => S.pollVotes.get(`${p.id}_${m.id}`)).length;
-    board = `${p.draft ? `<p class="m" style="margin:0">${p.propOpen ? 'S’hi recullen propostes de categories: la votació encara no és oberta.' : 'Només la veu l’equip. Quan la publiquis, rebran la notificació i la podran votar.'}</p>` : `<div class="bd-part"><div class="bd-part-h"><span>Han votat <b class="mono">${voted}</b> de ${people.length}</span><span class="mono">${pct(people.length ? voted / people.length : null)}</span></div><span class="bd-bar"><span style="width:${people.length ? voted / people.length * 100 : 0}%"></span></span></div>`}
+    board = `${p.draft ? `<p class="m u-m-0">${p.propOpen ? 'S’hi recullen propostes de categories: la votació encara no és oberta.' : 'Només la veu l’equip. Quan la publiquis, rebran la notificació i la podran votar.'}</p>` : `<div class="bd-part"><div class="bd-part-h"><span>Han votat <b class="mono">${voted}</b> de ${people.length}</span><span class="mono">${pct(people.length ? voted / people.length : null)}</span></div><span class="bd-bar"><span style="width:${people.length ? voted / people.length * 100 : 0}%"></span></span></div>`}
       <div class="c-a bd-acts">${p.draft ? `<button class="btn btn-sm btn-primary" data-act="bandes-publish" data-id="${esc(p.id)}">Publica-la</button><button class="btn btn-sm" data-act="bandes-edit" data-id="${esc(p.id)}">Edita-la</button>` : `<button class="btn btn-sm" data-act="bandes-results" data-id="${esc(p.id)}">Resultats</button><button class="btn btn-sm" data-act="poll-results" data-id="${esc(p.id)}">Qui ha votat</button>${closed ? '' : `<button class="btn btn-sm" data-act="poll-remind" data-id="${esc(p.id)}">Recorda-ho</button>`}`}</div>`;
   }
   return `<div class="poll bandes" data-poll="${esc(p.id)}">
@@ -299,8 +299,8 @@ function sheetBallot(pid) {
     const f = filledCount(), all = cats.map((c, i) => [c, i]), blank = all.filter(([c]) => !filled(c)), done = all.filter(([c]) => filled(c));
     const row = ([c, i]) => `<li><button type="button" data-bb="go" data-i="${i}"><span><b>${esc(c.name)}</b><small class="${filled(c) ? '' : 'blank'}">${got(c).length ? esc(pickText(c)) : 'En blanc'}</small></span><span class="bb-ch">${filled(c) ? 'Canvia' : 'Vota'}${ICON.go}</span></button></li>`;
     const group = (t, l) => l.length ? `${blank.length && done.length ? `<p class="bb-g">${t} <span class="mono">(${l.length})</span></p>` : ''}<ul class="bb-rev">${l.map(row).join('')}</ul>` : '';
-    return `<p class="eyebrow" style="margin:0">${sent ? 'El teu vot' : 'Revisa el teu vot'}</p>
-      <p style="margin:6px 0 12px">Has votat <b class="mono">${f}</b> de ${n} ${n === 1 ? 'categoria' : 'categories'}. ${sent
+    return `<p class="eyebrow u-m-0">${sent ? 'El teu vot' : 'Revisa el teu vot'}</p>
+      <p class="u-m-6-0-12">Has votat <b class="mono">${f}</b> de ${n} ${n === 1 ? 'categoria' : 'categories'}. ${sent
         ? `Toca’n una per canviar-la: els canvis es desen sols, ${until}.`
         : `${blank.length ? `${blank.length === 1 ? 'Una queda' : `${blank.length} queden`} en blanc. ` : ''}Toca’n una per canviar-la. Un cop enviat, el podràs canviar ${until}.`}</p>
       ${group('En blanc', blank)}${group('Votades', done)}`;
@@ -416,7 +416,7 @@ function sheetMyBallot(pid) {
   const cats = p.cats || [], l = c => v.picks?.[c.id] || [], f = cats.filter(c => l(c).length).length;
   openSheet({
     title: 'El teu vot',
-    body: `<p style="margin:0 0 12px">${esc(p.title)}: has votat <b class="mono">${f}</b> de ${cats.length} ${cats.length === 1 ? 'categoria' : 'categories'}. <span class="muted">Només ho veus tu. Un mes després de la Nit, les paperetes s’esborren.</span></p>
+    body: `<p class="u-m-0-0-12">${esc(p.title)}: has votat <b class="mono">${f}</b> de ${cats.length} ${cats.length === 1 ? 'categoria' : 'categories'}. <span class="muted">Només ho veus tu. Un mes després de la Nit, les paperetes s’esborren.</span></p>
       <ul class="bb-rev bb-ro">${cats.map(c => `<li><b>${esc(c.name)}</b><small class="${l(c).length ? '' : 'blank'}">${l(c).length ? esc(l(c).map(bdName).join(c.pair ? ' i ' : ' · ')) : 'En blanc'}</small></li>`).join('')}</ul>`,
     foot: '<span class="spacer"></span><button class="btn btn-primary" data-act="sheet-close">Tanca</button>',
   });

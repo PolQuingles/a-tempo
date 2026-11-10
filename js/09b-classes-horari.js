@@ -163,9 +163,9 @@ async function writeClassDays(dates, rows, teacher, places = {}, known = null) {
   return done;
 }
 /** Un camp «Aula» per a cada dia de la setmana que té classes. */
-const placeFields = (days, value) => days.length ? `<div class="field" style="margin-top:12px"><span>Aula de cada dia</span>
-    <div style="display:grid;gap:6px">${days.map(d => `<label style="display:flex;gap:8px;align-items:center"><span style="width:84px;flex:none;font-size:var(--t-13)">${esc(capz(DAYS_CA[d]))}</span>
-      <input class="inp" type="text" maxlength="40" data-place="${d}" value="${esc(value(d))}" placeholder="p. ex. Aula 2 · Petit Palau" style="flex:1;min-width:0"></label>`).join('')}</div>
+const placeFields = (days, value) => days.length ? `<div class="field u-mt-12"><span>Aula de cada dia</span>
+    <div class="u-d-grid u-gap-6">${days.map(d => `<label class="u-d-flex u-gap-8 u-ai-center"><span class="u-w-84 u-flex-none u-fs-t-13">${esc(capz(DAYS_CA[d]))}</span>
+      <input class="inp u-flex-1 u-minw-0" type="text" maxlength="40" data-place="${d}" value="${esc(value(d))}" placeholder="p. ex. Aula 2 · Petit Palau"></label>`).join('')}</div>
     <small>Es posa a cada dia de classe i queda desada amb l’horari.</small></div>` : '';
 const planRows = who => ((S.classPlan.get(who) || {}).rows || []);
 const keptText = n => n ? `<br><br>${n === 1 ? '1 dia es deixa' : `${n} dies es deixen`} tal com ${n === 1 ? 'està' : 'estan'}: anul·lats, canviats a mà o ja passats.` : '';
@@ -182,13 +182,13 @@ function sheetClassPaste(preset) {
   const placeOf = (el, d) => places[d] ?? parsed.places?.[d] ?? planPlaces(whoNow(el))[d] ?? '';
   const draw = el => {
     const box = el.querySelector('#cp-prev');
-    if (!parsed.rows.length) { box.innerHTML = '<span class="muted" style="font-size:var(--t-13)">Enganxa la graella i prem «Comprova».</span>'; return; }
+    if (!parsed.rows.length) { box.innerHTML = '<span class="muted u-fs-t-13">Enganxa la graella i prem «Comprova».</span>'; return; }
     const dates = plannedDates(el);
     const perDay = parsed.days.map(d => `${DAYS_CA[d]}: ${parsed.rows.filter(r => r.day === d).length} classes`).join(' · ');
-    box.innerHTML = `<p style="margin:0 0 8px;font-size:var(--t-13)"><b>${parsed.rows.length}</b> hores per setmana (${esc(perDay)}) · es crearan <b>${dates.length}</b> dies de classe</p>
-      <ul class="mini-list" style="max-height:280px">${parsed.rows.map((r, i) => `<li><span>${esc(DAY_SHORT[r.day])} ${esc(hhmm(r.from))}–${esc(hhmm(r.to))}<br><span class="m">${esc(r.name)}</span></span>
-        <select class="inp" data-row="${i}" style="max-width:52%"><option value="">— sense fitxa —</option>${memberOptions(r.memberId || (r.sure ? r.hits[0].id : ''))}</select></li>`).join('')}</ul>
-      ${parsed.rows.some(r => !r.sure) ? '<p class="muted" style="font-size:var(--t-13);margin:8px 0 0">Comprova els noms que l’app no ha sabut lligar: tria’ls a la llista.</p>' : ''}
+    box.innerHTML = `<p class="u-m-0-0-8 u-fs-t-13"><b>${parsed.rows.length}</b> hores per setmana (${esc(perDay)}) · es crearan <b>${dates.length}</b> dies de classe</p>
+      <ul class="mini-list u-maxh-280">${parsed.rows.map((r, i) => `<li><span>${esc(DAY_SHORT[r.day])} ${esc(hhmm(r.from))}–${esc(hhmm(r.to))}<br><span class="m">${esc(r.name)}</span></span>
+        <select class="inp u-maxw-52pc" data-row="${i}"><option value="">— sense fitxa —</option>${memberOptions(r.memberId || (r.sure ? r.hits[0].id : ''))}</select></li>`).join('')}</ul>
+      ${parsed.rows.some(r => !r.sure) ? '<p class="muted u-fs-t-13 u-m-8-0-0">Comprova els noms que l’app no ha sabut lligar: tria’ls a la llista.</p>' : ''}
       ${placeFields(parsed.days, d => placeOf(el, d))}`;
     box.querySelectorAll('[data-row]').forEach(sel => sel.onchange = () => { parsed.rows[+sel.dataset.row].memberId = sel.value; });
     box.querySelectorAll('[data-place]').forEach(inp => inp.oninput = () => { places[inp.dataset.place] = inp.value; });
@@ -197,18 +197,18 @@ function sheetClassPaste(preset) {
   openSheet({
     title: 'Enganxa un horari',
     wide: true,
-    body: `<p style="margin-top:0">Copia la graella del full de càlcul (dies de la setmana a dalt i, a sota, cada alumne amb l’hora d’inici i la de final) i enganxa-la aquí. També serveix la llista del WhatsApp: «Dilluns — Tarda Aula 2» i, a sota, «15:00 – 15:40 Nom Cognom». L’app crearà un dia de classe per cada setmana.</p>
-      <label class="field"><span>Graella</span><textarea class="inp" id="cp-text" style="min-height:130px" placeholder="Dilluns&#9;&#9;&#9;Dimecres&#10;Anna García&#9;15'00h&#9;15'40h&#9;Martina Mata&#9;16'20h&#9;17'00h"></textarea></label>
-      <div class="row3" style="margin-top:10px">
+    body: `<p class="u-mt-0">Copia la graella del full de càlcul (dies de la setmana a dalt i, a sota, cada alumne amb l’hora d’inici i la de final) i enganxa-la aquí. També serveix la llista del WhatsApp: «Dilluns — Tarda Aula 2» i, a sota, «15:00 – 15:40 Nom Cognom». L’app crearà un dia de classe per cada setmana.</p>
+      <label class="field"><span>Graella</span><textarea class="inp u-minh-130" id="cp-text" placeholder="Dilluns&#9;&#9;&#9;Dimecres&#10;Anna García&#9;15'00h&#9;15'40h&#9;Martina Mata&#9;16'20h&#9;17'00h"></textarea></label>
+      <div class="row3 u-mt-10">
         <label class="field"><span>Des del</span><input class="inp" id="cp-from" type="date" value="${TODAY}"></label>
         <label class="field"><span>Fins al</span><input class="inp" id="cp-to" type="date" value="${esc(season.to || TODAY)}"></label>
       </div>
-      <label class="field" style="margin-top:10px"><span>Dies sense classe</span><input class="inp" id="cp-skip" type="text" placeholder="12/10, 8/12, 26/12">
+      <label class="field u-mt-10"><span>Dies sense classe</span><input class="inp" id="cp-skip" type="text" placeholder="12/10, 8/12, 26/12">
         <small>Festius i vacances, separats per comes.</small></label>
-      <label class="toggle-row setting" style="margin-top:10px;padding:10px 0"><span><b>Desa-ho com a horari fix</b><br><span class="muted" style="font-size:var(--t-13)">Així, la propera vegada no caldrà tornar a enganxar la graella: només dir les dates.</span></span>
+      <label class="toggle-row setting u-mt-10 u-p-10-0"><span><b>Desa-ho com a horari fix</b><br><span class="muted u-fs-t-13">Així, la propera vegada no caldrà tornar a enganxar la graella: només dir les dates.</span></span>
         <span class="switch"><input type="checkbox" id="cp-plan" checked><span></span></span></label>
-      ${teachers.length ? `<label class="field" style="margin-top:10px"><span>${esc(V.Teacher)}</span><select class="inp" id="cp-who">${teachers.map(t => `<option value="${esc(t.key)}" ${t.key === mine ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></label>` : ''}
-      <div id="cp-prev" style="margin-top:12px"></div>`,
+      ${teachers.length ? `<label class="field u-mt-10"><span>${esc(V.Teacher)}</span><select class="inp" id="cp-who">${teachers.map(t => `<option value="${esc(t.key)}" ${t.key === mine ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></label>` : ''}
+      <div id="cp-prev" class="u-mt-12"></div>`,
     foot: `<button class="btn" id="cp-check">Comprova</button><span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="cp-go">Crea el calendari</button>`,
     onMount: el => {
       el.querySelector('#cp-check').onclick = () => { parsed = parseSchedule(el.querySelector('#cp-text').value, new Date(el.querySelector('#cp-from').value + 'T12:00:00').getDay()); draw(el); };
@@ -240,13 +240,13 @@ function sheetClassPlan(who) {
   const rec = { rows: planRows(who).map(r => ({ ...r })), places: planPlaces(who) };
   const season = seasonCfg().season;
   const planDays = () => [...new Set(rec.rows.map(r => +r.day))].sort();
-  const rows = () => rec.rows.length ? rec.rows.map((r, i) => `<div class="sec-row" data-i="${i}" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-      <select class="inp" data-f="day" style="width:110px">${DAYS_CA.map((d, k) => `<option value="${k}" ${+r.day === k ? 'selected' : ''}>${capz(d)}</option>`).join('')}</select>
-      <input class="inp" type="time" value="${esc(r.time || '')}" data-f="time" style="width:105px">
-      <input class="inp" type="number" min="5" max="120" step="5" value="${+r.mins || 30}" data-f="mins" style="width:72px" aria-label="Minuts">
-      <select class="inp" data-f="member" style="flex:1;min-width:130px"><option value="">— lliure —</option>${memberOptions(r.memberId || '')}</select>
+  const rows = () => rec.rows.length ? rec.rows.map((r, i) => `<div class="sec-row u-d-flex u-gap-6 u-ai-center u-fw-wrap" data-i="${i}">
+      <select class="inp u-w-110" data-f="day">${DAYS_CA.map((d, k) => `<option value="${k}" ${+r.day === k ? 'selected' : ''}>${capz(d)}</option>`).join('')}</select>
+      <input class="inp u-w-105" type="time" value="${esc(r.time || '')}" data-f="time">
+      <input class="inp u-w-72" type="number" min="5" max="120" step="5" value="${+r.mins || 30}" data-f="mins" aria-label="Minuts">
+      <select class="inp u-flex-1 u-minw-130" data-f="member"><option value="">— lliure —</option>${memberOptions(r.memberId || '')}</select>
       <button type="button" class="icon-btn" data-rm="${i}" aria-label="Treu aquesta hora">${ICON.close}</button>
-    </div>`).join('') : '<p class="muted" style="margin:0;font-size:var(--t-13)">Encara no hi ha cap hora fixa. Afegeix-ne o enganxa la graella del full de càlcul.</p>';
+    </div>`).join('') : '<p class="muted u-m-0 u-fs-t-13">Encara no hi ha cap hora fixa. Afegeix-ne o enganxa la graella del full de càlcul.</p>';
   const read = el => {
     el.querySelectorAll('#pl-rows .sec-row').forEach(row => {
       const r = rec.rows[+row.dataset.i];
@@ -269,18 +269,18 @@ function sheetClassPlan(who) {
   openSheet({
     title: `Horari fix${teacherName(who) ? ` · ${teacherName(who)}` : ''}`,
     wide: true,
-    body: `<p style="margin-top:0">L’hora de cada setmana de cada ${esc(V.member)}. Serveix per generar tots els dies d’un període sense haver de posar-los un per un. Els canvis d’un dia concret es fan al calendari i no toquen aquest horari.</p>
-      ${opts.length > 1 ? `<label class="field" style="margin-bottom:12px"><span>${esc(V.Teacher)}</span><select class="inp" id="pl-who">${opts.map(t => `<option value="${esc(t.key)}" ${t.key === who ? 'selected' : ''}>${esc(t.name)}${planRows(t.key).length ? ` · ${planRows(t.key).length} hores` : ''}</option>`).join('')}</select></label>` : ''}
-      <div id="pl-rows" style="display:grid;gap:8px">${rows()}</div>
-      <button type="button" class="btn btn-sm" id="pl-add" style="margin-top:10px">+ Afegeix una hora</button>
+    body: `<p class="u-mt-0">L’hora de cada setmana de cada ${esc(V.member)}. Serveix per generar tots els dies d’un període sense haver de posar-los un per un. Els canvis d’un dia concret es fan al calendari i no toquen aquest horari.</p>
+      ${opts.length > 1 ? `<label class="field u-mb-12"><span>${esc(V.Teacher)}</span><select class="inp" id="pl-who">${opts.map(t => `<option value="${esc(t.key)}" ${t.key === who ? 'selected' : ''}>${esc(t.name)}${planRows(t.key).length ? ` · ${planRows(t.key).length} hores` : ''}</option>`).join('')}</select></label>` : ''}
+      <div id="pl-rows" class="u-d-grid u-gap-8">${rows()}</div>
+      <button type="button" class="btn btn-sm u-mt-10" id="pl-add">+ Afegeix una hora</button>
       <div id="pl-places"></div>
-      <div class="sec-h" style="margin-top:18px"><h2 class="h2">Genera els dies</h2></div>
+      <div class="sec-h u-mt-18"><h2 class="h2">Genera els dies</h2></div>
       <div class="row3">
         <label class="field"><span>Des del</span><input class="inp" id="pl-from" type="date" value="${TODAY}"></label>
         <label class="field"><span>Fins al</span><input class="inp" id="pl-to" type="date" value="${esc(season.to || TODAY)}"></label>
       </div>
-      <label class="field" style="margin-top:10px"><span>Dies sense classe</span><input class="inp" id="pl-skip" type="text" placeholder="12/10, 8/12"></label>
-      <p class="muted" style="font-size:var(--t-13);margin:10px 0 0">Els dies que ja hi hagi s’actualitzaran i mantindran les notes, les assistències i els canvis d’hora. Els anul·lats, els canviats a mà i els que ja han passat no es toquen.</p>`,
+      <label class="field u-mt-10"><span>Dies sense classe</span><input class="inp" id="pl-skip" type="text" placeholder="12/10, 8/12"></label>
+      <p class="muted u-fs-t-13 u-m-10-0-0">Els dies que ja hi hagi s’actualitzaran i mantindran les notes, les assistències i els canvis d’hora. Els anul·lats, els canviats a mà i els que ja han passat no es toquen.</p>`,
     foot: `<button class="btn" id="pl-gen">Genera els dies</button><span class="spacer"></span><button class="btn" data-act="sheet-close">Tanca</button><button class="btn btn-primary" id="pl-save">Desa l’horari</button>`,
     onMount: el => {
       paint(el);
@@ -320,10 +320,10 @@ function classWeekHtml(who) {
       <div class="mnav"><button class="nav-arrow" data-act="cl-week" data-dir="-1" aria-label="Setmana anterior">${ICON.left}</button><h2 class="h2">${esc(title)}</h2><button class="nav-arrow" data-act="cl-week" data-dir="1" aria-label="Setmana següent">${ICON.right}</button></div>
       ${days.length ? days.map(c => `<div class="wk-day${c.cancelled ? ' off' : ''}"><div class="wk-h"><b>${esc(capz(fmtD(c.date, { weekday: 'long', day: 'numeric' })))}</b>${c.place ? ` <span class="m">· ${esc(c.place)}</span>` : ''}${c.cancelled ? ' <span class="st-pill st-rejected">Anul·lada</span>' : ''}</div>
         ${classSlots(c).map(x => { const m = S.members.get(x.memberId); return `<div class="wk-slot${mid && x.memberId === mid ? ' me' : ''}"><span class="mono">${esc(x.time || '')}</span><span>${m ? esc(m.name) : x.name ? esc(x.name) : '<span class="cl-free">lliure</span>'}</span>${x.mark && (ownsClass(c) || (mid && x.memberId === mid)) ? `<span class="cl-mk ${x.mark}">${esc(STATUS[x.mark].short)}</span>` : ''}</div>`; }).join('')}</div>`).join('')
-        : `<p class="muted" style="margin:10px 4px 0;font-size:var(--t-13)">${weekState === 'loading' ? 'Carregant aquesta setmana…' : weekState === 'error' ? 'No s’ha pogut carregar aquesta setmana. Comprova la connexió.' : 'Aquesta setmana no hi ha classes.'}</p>`}
+        : `<p class="muted u-m-10-4-0 u-fs-t-13">${weekState === 'loading' ? 'Carregant aquesta setmana…' : weekState === 'error' ? 'No s’ha pogut carregar aquesta setmana. Comprova la connexió.' : 'Aquesta setmana no hi ha classes.'}</p>`}
     </div>
-    <div class="sec-h" style="margin-top:10px"><span class="muted" style="font-size:var(--t-13)">Per penjar a la porta de l’aula o per enviar.</span>
-      <span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" data-act="cl-print-week" data-k="${esc(who)}">Imprimeix la setmana</button>${planRows(who).length ? `<button class="btn btn-sm" data-act="cl-print-plan" data-k="${esc(who)}">Imprimeix l’horari fix</button>` : ''}</span></div>`;
+    <div class="sec-h u-mt-10"><span class="muted u-fs-t-13">Per penjar a la porta de l’aula o per enviar.</span>
+      <span class="u-d-flex u-gap-6 u-fw-wrap"><button class="btn btn-sm" data-act="cl-print-week" data-k="${esc(who)}">Imprimeix la setmana</button>${planRows(who).length ? `<button class="btn btn-sm" data-act="cl-print-plan" data-k="${esc(who)}">Imprimeix l’horari fix</button>` : ''}</span></div>`;
 }
 /** Una graella: una columna per dia i una fila per hora. cols = [{ label, sub, cells: { hora: text } }]. */
 function timetableHtml(cols) {

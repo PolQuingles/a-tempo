@@ -139,8 +139,8 @@ function setTextSize(k) {
 const textPicker = () => `<div class="seg3" role="radiogroup" aria-label="Mida del text">${[['', 'Normal'], ['gran', 'Gran'], ['molt', 'Molt gran']].map(([k, l]) => `<button type="button" role="radio" aria-checked="${currentText() === k}" data-act="text-size" data-k="${k}">${l}</button>`).join('')}</div>`;
 /** Aparença, des del menú del compte: el tema i la mida del text. */
 function sheetTheme() {
-  openSheet({ title: 'Aparença', body: `<p style="margin-top:0">Tria com vols veure l’app en aquest aparell. L’automàtica segueix el mode clar o fosc del mòbil.</p>${themePicker()}
-    <div class="section-title" style="margin-top:18px"><h2 class="h2">Mida del text</h2></div>
+  openSheet({ title: 'Aparença', body: `<p class="u-mt-0">Tria com vols veure l’app en aquest aparell. L’automàtica segueix el mode clar o fosc del mòbil.</p>${themePicker()}
+    <div class="section-title u-mt-18"><h2 class="h2">Mida del text</h2></div>
     ${textPicker()}
     <p class="text-demo">Assaig general dijous a les 20:30. Porteu la partitura i el llapis.</p>` });
 }
@@ -244,7 +244,7 @@ function render() {
         ${GBTN}
         <div class="or">o bé</div>
         ${MBTN}
-        <p class="muted" style="font-size:var(--t-13);margin:0">Músics, cantaires, direcció i equip entreu pel mateix lloc.</p>
+        <p class="muted u-fs-t-13 u-m-0">Músics, cantaires, direcció i equip entreu pel mateix lloc.</p>
       </div>
       <p class="entry-foot">Si l’has obert des del WhatsApp i no et deixa entrar, obre l’enllaç amb el <b>Safari</b> o el <b>Chrome</b> (menú «···» › Obre al navegador).</p>
       <p class="entry-foot"><button class="linkish" data-act="privacy">Com es tracten les teves dades</button></p>
@@ -255,7 +255,7 @@ function render() {
     v.innerHTML = `<section class="entry">${hero()}
       <div class="login-card"><h2 class="h2">Aquest correu encara no és a cap agrupació</h2>
         <p><b>${esc(S.email || '')}</b> no és a la llista de cap agrupació. Si en formes part, demana a l’administració que t’hi afegeixi amb aquest correu, o entra amb un altre compte.</p>
-        <button class="btn btn-ghost" data-act="sign-out" style="justify-self:center">Prova amb un altre compte</button>
+        <button class="btn btn-ghost u-js-center" data-act="sign-out">Prova amb un altre compte</button>
       </div>
       ${S.pro ? newGroup('Com a Usuari Pro, pots crear una agrupació nova.') : ''}
     </section>`;

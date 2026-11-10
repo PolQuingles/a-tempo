@@ -70,14 +70,14 @@ function bandesCatHtml(x, p) {
   return `<section class="bd-cr" id="bd-c-${esc(c.id)}"><div class="bd-cr-h"><h3>${esc(c.name)}</h3><span class="m">${esc(catKind(c))} · ${w === 1 ? '1 banda' : `${w} bandes`} · ${x.ballots} ${x.ballots === 1 ? 'papereta' : 'paperetes'}${x.blank ? ` · ${x.blank} en blanc` : ''}</span></div>
     ${tie}
     ${rows.length ? `${bandesDonut(x)}<p class="bd-fin"><b>${p.nominees ? 'Finalistes' : 'Finalistes, si es publiquessin ara'}:</b> ${esc(fin.map(keyName).join(', '))}</p>
-      ${rows.length > 5 ? `<details class="np-group"><summary><span>Tots els vots (${rows.length})</span>${ICON.chev}</summary><ol class="bd-rank">${rows.map(row).join('')}</ol></details>` : ''}` : '<p class="m" style="margin:0">Encara no hi ha cap vot.</p>'}</section>`;
+      ${rows.length > 5 ? `<details class="np-group"><summary><span>Tots els vots (${rows.length})</span>${ICON.chev}</summary><ol class="bd-rank">${rows.map(row).join('')}</ol></details>` : ''}` : '<p class="m u-m-0">Encara no hi ha cap vot.</p>'}</section>`;
 }
 /** Qui ha rebut més vots, sumant totes les categories. */
 function bandesTopPeople(t) {
   const top = [...t.people].sort((a, b) => b.votes - a.votes || bdName(a.id).localeCompare(bdName(b.id), 'ca')).slice(0, 8);
   if (!top.length) return '';
   const max = top[0].votes || 1;
-  return `<div class="eyebrow" style="margin:16px 0 6px">Qui ha rebut més vots</div>
+  return `<div class="eyebrow u-m-16-0-6">Qui ha rebut més vots</div>
     <div class="bd-top">${top.map(x => `<div class="bar-row"><span class="lbl"><span>${esc(bdName(x.id))}</span></span><span class="bd-bar"><span style="width:${x.votes / max * 100}%"></span></span><span class="val">${x.votes}</span></div>`).join('')}</div>
     <p class="m bd-note">Sumant totes les categories; les de parella compten per a totes dues persones.</p>`;
 }
@@ -87,8 +87,8 @@ function sheetBandesResults(pid) {
   if (p.ballotsGone) {
     openSheet({
       title: `Resultats · ${p.title}`,
-      body: `<p style="margin-top:0">Les paperetes (qui va votar qui) es van esborrar el ${esc(shortDate(p.ballotsGone))}, un mes després de la Nit, perquè el vot és secret.</p>
-        <p class="m" style="margin-bottom:0">En queden el palmarès, quanta gent va votar i com es van repartir els vots de cada categoria, sense noms (a ${esc(galaName(p))}).</p>`,
+      body: `<p class="u-mt-0">Les paperetes (qui va votar qui) es van esborrar el ${esc(shortDate(p.ballotsGone))}, un mes després de la Nit, perquè el vot és secret.</p>
+        <p class="m u-mb-0">En queden el palmarès, quanta gent va votar i com es van repartir els vots de cada categoria, sense noms (a ${esc(galaName(p))}).</p>`,
       foot: '<span class="spacer"></span><button class="btn btn-primary" data-act="sheet-close">D’acord</button>',
     });
     return;
@@ -96,7 +96,7 @@ function sheetBandesResults(pid) {
   if (!pollClosed(p) && !BD_PEEK.has(pid)) {
     openSheet({
       title: 'Resultats',
-      body: `<p style="margin-top:0"><b>La votació encara és oberta.</b> El recompte pot canviar fins al final${p.closesAt ? ` (${ddmm(p.closesAt)})` : ''}. Si vols que sigui una sorpresa també per a tu, espera’t a tancar-la.</p>`,
+      body: `<p class="u-mt-0"><b>La votació encara és oberta.</b> El recompte pot canviar fins al final${p.closesAt ? ` (${ddmm(p.closesAt)})` : ''}. Si vols que sigui una sorpresa també per a tu, espera’t a tancar-la.</p>`,
       foot: '<span class="spacer"></span><button class="btn" data-act="sheet-close">M’espero</button><button class="btn btn-primary" id="br-peek">Mira’ls igualment</button>',
       onMount: el => { el.querySelector('#br-peek').onclick = () => { BD_PEEK.add(pid); sheetBandesResults(pid); }; },
     });
@@ -119,12 +119,12 @@ function sheetBandesResults(pid) {
         <div><b class="mono">${t.filled.toFixed(1).replace('.', ',')}</b><span>categories per papereta</span></div>
       </div>
       ${status}
-      <div class="eyebrow" style="margin:16px 0 6px">Participació per ${esc(V.section)}</div>
+      <div class="eyebrow u-m-16-0-6">Participació per ${esc(V.section)}</div>
       <div class="bd-secs-l">${t.bySec.map(x => `<div class="bar-row"><span class="lbl"><em>${esc(SEC[x.sec]?.short || x.sec)}</em><span>${esc(SEC[x.sec]?.name || x.sec)}</span></span><span class="bd-bar"><span style="width:${x.n / x.total * 100}%"></span></span><span class="val">${x.n}/${x.total}</span></div>`).join('')}</div>
       ${bandesDays(t.days)}
-      ${hl.length ? `<div class="eyebrow" style="margin:16px 0 6px">El que diuen els números</div><ul class="bd-hl">${hl.map(([k, v, s]) => `<li><span class="k">${esc(k)}</span><b>${esc(v)}</b><small>${esc(s)}</small></li>`).join('')}</ul>` : ''}
+      ${hl.length ? `<div class="eyebrow u-m-16-0-6">El que diuen els números</div><ul class="bd-hl">${hl.map(([k, v, s]) => `<li><span class="k">${esc(k)}</span><b>${esc(v)}</b><small>${esc(s)}</small></li>`).join('')}</ul>` : ''}
       ${bandesTopPeople(t)}
-      <div class="eyebrow" style="margin:18px 0 6px">Categoria per categoria</div>
+      <div class="eyebrow u-m-18-0-6">Categoria per categoria</div>
       <div class="chips bd-idx">${t.cats.map(x => `<button type="button" class="chip" data-go="bd-c-${esc(x.cat.id)}">${esc(x.cat.name)}</button>`).join('')}</div>
       ${t.cats.map(x => bandesCatHtml(x, p)).join('')}
     </div>`,
@@ -179,9 +179,9 @@ function bandesWhoVoted(p) {
     const ms = bdSorted(people.filter(m => m.section === x.id));
     if (!ms.length) return '';
     const done = ms.filter(m => S.pollVotes.get(`${p.id}_${m.id}`)).length;
-    return `<div class="eyebrow" style="margin:14px 0 4px">${esc(x.name)} · ${done}/${ms.length}</div><ul class="mini-list" style="max-height:none">${ms.map(m => { const v = S.pollVotes.get(`${p.id}_${m.id}`); return `<li><span>${esc(m.name)}</span><span class="rsvp ${v ? 'yes' : 'none'}">${v ? 'Ha votat' : '—'}</span></li>`; }).join('')}</ul>`;
+    return `<div class="eyebrow u-m-14-0-4">${esc(x.name)} · ${done}/${ms.length}</div><ul class="mini-list u-maxh-none">${ms.map(m => { const v = S.pollVotes.get(`${p.id}_${m.id}`); return `<li><span>${esc(m.name)}</span><span class="rsvp ${v ? 'yes' : 'none'}">${v ? 'Ha votat' : '—'}</span></li>`; }).join('')}</ul>`;
   };
-  openSheet({ title: p.title, body: `<p class="m" style="margin-top:0">Només surt qui ha votat, no què ha votat.</p>${SECTIONS.map(block).join('')}` });
+  openSheet({ title: p.title, body: `<p class="m u-mt-0">Només surt qui ha votat, no què ha votat.</p>${SECTIONS.map(block).join('')}` });
 }
 
 /* ---------- La gala: per anunciar-les una a una, en una pantalla gran ---------- */

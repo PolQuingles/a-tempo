@@ -13,19 +13,19 @@ function maybeWelcome() {
   const me = S.members.get(myMemberId());
   const first = me ? firstName(me.name) : '';
   const body = canEdit()
-    ? `<p style="margin-top:0">Hola${first ? `, ${esc(first)}` : ''}. Des d’aquí passaràs llista i gestionaràs ${esc(S.config.name || V.el)}.</p>
+    ? `<p class="u-mt-0">Hola${first ? `, ${esc(first)}` : ''}. Des d’aquí passaràs llista i gestionaràs ${esc(S.config.name || V.el)}.</p>
        <ul class="welcome"><li><b>Inici</b> · el que tens per fer (absències per acceptar, llistes per acabar…) i la sessió d’avui.</li>
        <li><b>Assistència</b> · toca el quadre de la teva ${V.section} i marca cadascú; també hi ha les estadístiques i la norma.</li>
        <li><b>Calendari</b> · totes les sessions, per produccions.</li>
        <li><b>Tauler</b> · anuncis, partitures, documents i enquestes.</li>
        <li><b>El teu compte</b> · les teves inicials, a dalt a la dreta: la <b>Gestió</b> (personal, produccions i ajustos), notificacions, calendari, aparença i agrupacions.</li></ul>`
-    : `<p style="margin-top:0">Hola${first ? `, ${esc(first)}` : ''}. Benvingut/da a l’app ${esc(ofName())}.</p>
+    : `<p class="u-mt-0">Hola${first ? `, ${esc(first)}` : ''}. Benvingut/da a l’app ${esc(ofName())}.</p>
        <ul class="welcome"><li><b>Inici</b> · el que tens per fer (convocatòries, enquestes), la sessió d’avui, la teva assistència i les teves absències.</li>
        <li><b>Assistència</b> i <b>Calendari</b> · ho pots consultar tot, però no canviar-hi res.</li>
        <li><b>Tauler</b> · anuncis, partitures i àudios de la teva ${V.part}, i enquestes.</li></ul>`;
   openSheet({
     title: 'Com funciona',
-    body: body + `<p class="muted" style="font-size:var(--t-13)">Consell: al navegador del mòbil, tria <b>Afegeix a la pantalla d’inici</b> i la tindràs com una app.</p>`,
+    body: body + `<p class="muted u-fs-t-13">Consell: al navegador del mòbil, tria <b>Afegeix a la pantalla d’inici</b> i la tindràs com una app.</p>`,
     foot: `${pushSupported() ? '<button class="btn" id="wc-push">Notificacions</button>' : ''}<span class="spacer"></span><button class="btn btn-primary" data-act="sheet-close">Entesos</button>`,
     onMount: el => { el.querySelector('#wc-push')?.addEventListener('click', () => { closeSheet(); sheetPush(); }); },
   });
@@ -71,18 +71,18 @@ function sheetWhoIn() {
   openSheet({
     title: 'Qui ha entrat i qui no',
     wide: true,
-    body: `<div class="kpis" style="grid-template-columns:repeat(3,1fr)">
+    body: `<div class="kpis u-gtc-repeat-3-1fr">
         <div class="kpi"><div class="kpi-v">${inApp.length}</div><div class="kpi-l">Han entrat</div></div>
         <div class="kpi ${never.length ? 'alert' : ''}"><div class="kpi-v">${never.length}</div><div class="kpi-l">Encara no</div></div>
         <div class="kpi"><div class="kpi-v">${noAccount.length}</div><div class="kpi-l">Sense accés</div></div>
       </div>
-      ${never.length ? `<div class="section-title" style="margin-top:16px"><h2 class="h2">Tenen accés però no han entrat</h2></div>
-        <ul class="mini-list remind-list" style="max-height:none">${never.map(row).join('')}</ul>` : ''}
-      ${noAccount.length ? `<div class="section-title" style="margin-top:16px"><h2 class="h2">${V.Members} sense accés</h2><span class="eyebrow">falta el correu</span></div>
-        <ul class="mini-list" style="max-height:220px">${noAccount.map(m => `<li><span>${esc(m.name)}<br><span class="m">${SEC[m.section].name}</span></span><button class="btn btn-sm" data-act="staff-new" data-mid="${esc(m.id)}">Dona-li accés</button></li>`).join('')}</ul>` : ''}
-      ${inApp.length ? `<div class="section-title" style="margin-top:16px"><h2 class="h2">Ja hi entren</h2></div>
-        <ul class="mini-list" style="max-height:260px">${inApp.sort((a, b) => (b.lastSeen || '').localeCompare(a.lastSeen || '')).map(p => `<li><span>${esc(p.name || p.email)}<br><span class="m">${esc(rolesText(p))}${pushBy.get(p.email) ? ' · notificacions actives' : ''}</span></span><span class="m">${agoText(p.lastSeen)}</span></li>`).join('')}</ul>` : ''}
-      <p class="muted" style="font-size:var(--t-13)">De ${roster.length} ${V.members} de la plantilla, ${roster.length - noAccount.length} tenen el correu donat d’alta. «Han entrat» vol dir que han obert l’app almenys un cop.</p>`,
+      ${never.length ? `<div class="section-title u-mt-16"><h2 class="h2">Tenen accés però no han entrat</h2></div>
+        <ul class="mini-list remind-list u-maxh-none">${never.map(row).join('')}</ul>` : ''}
+      ${noAccount.length ? `<div class="section-title u-mt-16"><h2 class="h2">${V.Members} sense accés</h2><span class="eyebrow">falta el correu</span></div>
+        <ul class="mini-list u-maxh-220">${noAccount.map(m => `<li><span>${esc(m.name)}<br><span class="m">${SEC[m.section].name}</span></span><button class="btn btn-sm" data-act="staff-new" data-mid="${esc(m.id)}">Dona-li accés</button></li>`).join('')}</ul>` : ''}
+      ${inApp.length ? `<div class="section-title u-mt-16"><h2 class="h2">Ja hi entren</h2></div>
+        <ul class="mini-list u-maxh-260">${inApp.sort((a, b) => (b.lastSeen || '').localeCompare(a.lastSeen || '')).map(p => `<li><span>${esc(p.name || p.email)}<br><span class="m">${esc(rolesText(p))}${pushBy.get(p.email) ? ' · notificacions actives' : ''}</span></span><span class="m">${agoText(p.lastSeen)}</span></li>`).join('')}</ul>` : ''}
+      <p class="muted u-fs-t-13">De ${roster.length} ${V.members} de la plantilla, ${roster.length - noAccount.length} tenen el correu donat d’alta. «Han entrat» vol dir que han obert l’app almenys un cop.</p>`,
     foot: never.length ? '<button class="btn" id="wi-all">Copia el missatge per al grup</button><button class="btn btn-primary" id="wi-mail">Convida’ls per correu</button>' : '',
     onMount: el => {
       el.querySelectorAll('[data-invite]').forEach(b => b.onclick = () => sheetInvite(S.staff.get(b.dataset.invite)));
@@ -149,15 +149,15 @@ function sheetMailCheck() {
     title: 'Revisió dels accessos',
     wide: true,
     body: probs.length || noAccount.length
-      ? `${probs.length ? `<div class="section-title" style="margin-top:0"><h2 class="h2">Per revisar</h2><span class="eyebrow">${probs.length}</span></div>
-          <ul class="mini-list" style="max-height:none">${probs.map(x => `<li><span>${esc(x.name || x.email)}${x.email ? `<br><span class="m mono">${esc(x.email)}</span>` : ''}</span>
-            <span style="display:flex;gap:6px;align-items:center"><span class="m" style="text-align:right">${esc(x.text)}</span>${x.kind === 'unlinked'
+      ? `${probs.length ? `<div class="section-title u-mt-0"><h2 class="h2">Per revisar</h2><span class="eyebrow">${probs.length}</span></div>
+          <ul class="mini-list u-maxh-none">${probs.map(x => `<li><span>${esc(x.name || x.email)}${x.email ? `<br><span class="m mono">${esc(x.email)}</span>` : ''}</span>
+            <span class="u-d-flex u-gap-6 u-ai-center"><span class="m u-ta-right">${esc(x.text)}</span>${x.kind === 'unlinked'
               ? `<button class="btn btn-sm btn-primary" data-act="staff-link" data-email="${esc(x.email)}" data-mid="${esc(x.mid)}">Vincula</button>`
               : x.kind === 'leader' ? `<button class="btn btn-sm" data-act="member-edit" data-mid="${esc(x.mid)}">Obre</button>`
               : `<button class="btn btn-sm" data-act="staff-edit" data-email="${esc(x.email)}">Obre</button>`}</span></li>`).join('')}</ul>` : ''}
          ${noAccount.length ? `<div class="section-title"><h2 class="h2">${V.Members} sense correu</h2><span class="eyebrow">${noAccount.length} de ${roster.length}</span></div>
-          <ul class="mini-list" style="max-height:260px">${noAccount.map(m => `<li><span>${esc(m.name)}</span><span class="m">${SEC[m.section].name}</span></li>`).join('')}</ul>` : ''}`
-      : `<p style="margin:0">Tot correcte: no hi ha cap correu estrany i tots els ${V.members} tenen accés.</p>`,
+          <ul class="mini-list u-maxh-260">${noAccount.map(m => `<li><span>${esc(m.name)}</span><span class="m">${SEC[m.section].name}</span></li>`).join('')}</ul>` : ''}`
+      : `<p class="u-m-0">Tot correcte: no hi ha cap correu estrany i tots els ${V.members} tenen accés.</p>`,
     foot: noAccount.length ? `<span class="spacer"></span><button class="btn" id="mc-copy">Copia els que falten</button><button class="btn btn-primary" data-act="staff-bulk">Enganxa una llista</button>` : '',
     onMount: el => {
       el.querySelector('#mc-copy')?.addEventListener('click', () => copyText(noAccount.map(m => m.name).join('\n'), 'Noms copiats'));
@@ -180,7 +180,7 @@ function sheetSub(sid, sec) {
   const ms = membersOf(sec).filter(m => !isOut(s, m) && !m.leader);
   openSheet({
     title: `Qui passa llista · ${SEC[sec].name}`,
-    body: `<p style="margin-top:0">${longDate(s.date)} · ${esc(s.type)}. La persona triada podrà passar llista d’aquesta ${V.section} <b>només aquest dia</b>, entrant a l’app amb el seu correu.</p>
+    body: `<p class="u-mt-0">${longDate(s.date)} · ${esc(s.type)}. La persona triada podrà passar llista d’aquesta ${V.section} <b>només aquest dia</b>, entrant a l’app amb el seu correu.</p>
       <label class="field"><span>Substitut</span><select class="inp" id="sub-m"><option value="">—</option>${ms.map(m => `<option value="${m.id}" ${cur?.memberId === m.id ? 'selected' : ''}>${esc(m.name)}${!S.staffReady || accountFor(m.id) ? '' : ' (encara sense accés)'}</option>`).join('')}</select></label>`,
     foot: `${cur ? '<button class="btn btn-danger-ghost" id="sub-del">Treu el substitut</button>' : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="sub-save">Desa</button>`,
     onMount: el => {
@@ -237,12 +237,12 @@ function tasksBlock(s, compact) {
     return `<li><span><b>${esc(t.label)}</b>${canEdit() ? `<small>${who.length} de ${t.need || '?'}${who.length ? ` · ${esc(who.map(m => firstName(fullName(m.name))).join(', '))}` : ''}</small>` : t.need ? `<small>Calen ${t.need} persones</small>` : ''}</span>
       ${can ? `<button class="btn btn-sm ${on ? 'btn-primary' : ''}" data-act="rsvp-task" data-sid="${esc(s.id)}" data-k="${esc(t.id)}">${on ? 'Hi ets' : 'M’hi apunto'}</button>` : on ? '<span class="rsvp yes">Hi ets</span>' : ''}</li>`;
   }).join('');
-  return `${compact ? '<span class="todo-k" style="margin-top:6px">Voluntaris</span>' : '<div class="section-title" style="margin-top:14px"><h2 class="h2">Voluntaris</h2></div>'}<ul class="tasks">${rows}</ul>${me && !mine && !compact ? '<p class="muted" style="margin:6px 0 0;font-size:var(--t-13)">Confirma que hi seràs per apuntar-t’hi.</p>' : ''}`;
+  return `${compact ? '<span class="todo-k u-mt-6">Voluntaris</span>' : '<div class="section-title u-mt-14"><h2 class="h2">Voluntaris</h2></div>'}<ul class="tasks">${rows}</ul>${me && !mine && !compact ? '<p class="muted u-m-6-0-0 u-fs-t-13">Confirma que hi seràs per apuntar-t’hi.</p>' : ''}`;
 }
 function sheetRsvpNo(sid) {
   openSheet({
     title: 'No hi podràs anar',
-    body: `<label class="field"><span>Motiu (opcional)</span><textarea class="inp" id="rn-note" maxlength="160" style="min-height:80px"></textarea></label>`,
+    body: `<label class="field"><span>Motiu (opcional)</span><textarea class="inp u-minh-80" id="rn-note" maxlength="160"></textarea></label>`,
     foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-danger" id="rn-ok">Envia</button>`,
     onMount: el => { el.querySelector('#rn-ok').onclick = () => { const n = el.querySelector('#rn-note').value.trim(); closeSheet(); rsvpAnswer(sid, 'no', n); }; },
   });
@@ -254,7 +254,7 @@ function sheetRsvpList(sid) {
     const ms = membersOf(x.id).filter(m => !isOut(s, m));
     const extra = a => [s.bus && a?.answer === 'yes' ? (a.transport === 'bus' ? 'Autocar' : a.transport === 'own' ? 'Pel seu compte' : 'Autocar?') : '', ...(a?.tasks || []).map(t => (s.tasks || []).find(x => x.id === t)?.label).filter(Boolean)].filter(Boolean).join(' · ');
     const row = m => { const a = S.rsvp.get(`${sid}_${m.id}`); return `<li><span>${esc(m.name)}${extra(a) ? `<br><span class="m">${esc(extra(a))}</span>` : ''}${a?.note ? `<br><span class="m">${esc(a.note)}</span>` : ''}</span><span class="rsvp ${a ? a.answer : 'none'}">${a ? (a.answer === 'yes' ? 'Sí' : 'No') : '—'}</span></li>`; };
-    return `<div class="eyebrow" style="margin:14px 0 4px">${x.name}</div><ul class="mini-list" style="max-height:none">${ms.map(row).join('')}</ul>`;
+    return `<div class="eyebrow u-m-14-0-4">${x.name}</div><ul class="mini-list u-maxh-none">${ms.map(row).join('')}</ul>`;
   };
   openSheet({ title: `Confirmacions · ${shortDate(s.date)}`, body: SECTIONS.filter(x => convoked(s, x.id)).map(block).join('') });
 }
@@ -292,12 +292,12 @@ function sheetCalendar() {
   openSheet({
     title: 'Calendari al mòbil',
     body: `<div class="manual">${on ? `
-      <p style="margin-top:0">Subscriu-te al calendari ${esc(ofName())} i tindràs tots els assajos i ${V.sh.els} a la teva app de calendari, amb l’hora i el lloc. Si canvia alguna cosa, s’actualitza sol (pot trigar unes hores). L’horari del dia, el punt de trobada i el que cal portar són a l’app o al teu calendari personal (a sota).</p>
+      <p class="u-mt-0">Subscriu-te al calendari ${esc(ofName())} i tindràs tots els assajos i ${V.sh.els} a la teva app de calendari, amb l’hora i el lloc. Si canvia alguna cosa, s’actualitza sol (pot trigar unes hores). L’horari del dia, el punt de trobada i el que cal portar són a l’app o al teu calendari personal (a sota).</p>
       <h3>iPhone, iPad o Mac</h3><p><a class="btn btn-sm btn-primary" href="${webcal}">Subscriu-t’hi</a></p>
       <h3>Android o Google Calendar</h3><p><a class="btn btn-sm btn-primary" href="https://calendar.google.com/calendar/r?cid=${encodeURIComponent(webcal)}" target="_blank" rel="noopener">Obre Google Calendar</a></p>
       <p>Si no funciona, a Google Calendar (web) ves a <b>Altres calendaris › + › Des d’un URL</b> i enganxa aquesta adreça:</p>
       <div class="linkbox">${esc(https)}</div>
-      <h3>Només un cop</h3>` : `<p style="margin-top:0">Aquesta agrupació no té el calendari subscrit activat${isAdmin() ? ': el pots activar a Gestió › Ajustos' : ''}.</p>`}
+      <h3>Només un cop</h3>` : `<p class="u-mt-0">Aquesta agrupació no té el calendari subscrit activat${isAdmin() ? ': el pots activar a Gestió › Ajustos' : ''}.</p>`}
       <p>${on ? 'També' : 'Mentrestant'} pots descarregar el calendari ${me ? 'amb les sessions on estàs convocat/da' : 'actual'} i importar-lo (no s’actualitzarà sol).</p>
       ${myId() ? `<h3>El teu calendari, amb tots els detalls</h3><p>Només les sessions on et toca anar, amb l’horari del dia, el punt de trobada i el que cal portar${classesOn() && inClasses() ? ', i les teves classes' : ''}. És una adreça només per a tu.</p>
       <p><button class="btn btn-sm btn-primary" data-act="my-cal">Fes-te el teu calendari</button></p>` : ''}
@@ -329,12 +329,12 @@ async function sheetMyCalendar() {
   const classes = classesOn() && inClasses();
   openSheet({
     title: 'El teu calendari',
-    body: `<div class="manual"><p style="margin-top:0">Aquesta adreça porta <b>només les teves sessions</b>, amb l’horari del dia, el punt de trobada i el que cal portar${classes ? ', i les teves classes' : ''}. Si t’hi subscrius, s’actualitza sol cada poques hores.</p>
+    body: `<div class="manual"><p class="u-mt-0">Aquesta adreça porta <b>només les teves sessions</b>, amb l’horari del dia, el punt de trobada i el que cal portar${classes ? ', i les teves classes' : ''}. Si t’hi subscrius, s’actualitza sol cada poques hores.</p>
       <h3>iPhone, iPad o Mac</h3><p><a class="btn btn-sm btn-primary" href="${esc(webcal)}">Subscriu-t’hi</a></p>
       <h3>Android o Google Calendar</h3><p><a class="btn btn-sm btn-primary" href="https://calendar.google.com/calendar/r?cid=${encodeURIComponent(webcal)}" target="_blank" rel="noopener">Obre Google Calendar</a></p>
       <p>Si no funciona, a Google Calendar (web) ves a <b>Altres calendaris › + › Des d’un URL</b> i enganxa aquesta adreça:</p>
       <div class="linkbox">${esc(url)}</div>
-      <p class="muted" style="font-size:var(--t-13)">És una adreça personal: no la comparteixis. ${classes ? 'Si ja tenies el calendari de les classes, el pots treure: aquest ja les porta. ' : ''}La primera vegada, i després de cada canvi, les sessions hi surten al cap d’unes hores.</p></div>`,
+      <p class="muted u-fs-t-13">És una adreça personal: no la comparteixis. ${classes ? 'Si ja tenies el calendari de les classes, el pots treure: aquest ja les porta. ' : ''}La primera vegada, i després de cada canvi, les sessions hi surten al cap d’unes hores.</p></div>`,
     foot: `${navigator.share ? '<button class="btn" id="mc-share">Comparteix…</button>' : ''}<span class="spacer"></span><button class="btn btn-primary" id="mc-copy">Copia l’adreça</button>`,
     onMount: el => {
       el.querySelector('#mc-copy').onclick = () => copyText(url, 'Adreça copiada');
@@ -420,7 +420,7 @@ function sheetSearch() {
         const q = inp.value.trim();
         const res = searchAll(q);
         box.innerHTML = q.length < 2 ? '<p class="sr-hint">Escriu com a mínim dues lletres. També pots buscar una data, com ara «12/10».</p>'
-          : res.length ? res.map(g => `<div class="sr-g"><h3>${esc(g.group)}</h3><div class="sr-list">${g.items.map(x => `<button class="sr-i" ${x.act}><b>${searchMark(x.t, q)}</b>${x.s ? `<small>${esc(x.s)}</small>` : ''}</button>`).join('')}</div>${g.more ? `<p class="sr-hint" style="margin-top:4px">I ${g.more} més: afina la cerca.</p>` : ''}</div>`).join('')
+          : res.length ? res.map(g => `<div class="sr-g"><h3>${esc(g.group)}</h3><div class="sr-list">${g.items.map(x => `<button class="sr-i" ${x.act}><b>${searchMark(x.t, q)}</b>${x.s ? `<small>${esc(x.s)}</small>` : ''}</button>`).join('')}</div>${g.more ? `<p class="sr-hint u-mt-4">I ${g.more} més: afina la cerca.</p>` : ''}</div>`).join('')
           : `<p class="sr-hint">No s’ha trobat res amb «${esc(q)}».</p>`;
       };
       inp.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(draw, 120); });

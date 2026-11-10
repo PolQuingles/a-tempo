@@ -265,10 +265,10 @@ const actions = {
   'sync-info': () => openSheet({
     title: 'Estat de les dades',
     body: S.mode === 'shared'
-      ? `<p style="margin-top:0">${canEdit() ? 'Les llistes es desen automàticament i es comparteixen en temps real amb la resta de l’equip.' : 'Tens accés de <b>només lectura</b>: veus les llistes, el calendari i les estadístiques al moment, però no pots canviar res. Al teu espai sí que pots avisar d’absències i confirmar convocatòries.'}</p>
-         <p style="margin-top:0">Si et quedes sense cobertura, pots continuar passant llista: els canvis s’envien sols quan torni la connexió.</p>
-         <p class="muted" style="margin-bottom:0">${!navigator.onLine ? 'Ara mateix no hi ha connexió.' : pendingWrites() ? `Desant ${pendingWrites()} canvis…` : 'Tots els canvis estan desats.'}</p>`
-      : `<p style="margin:0">Encara no hi ha cap cor connectat en aquest dispositiu.</p>`,
+      ? `<p class="u-mt-0">${canEdit() ? 'Les llistes es desen automàticament i es comparteixen en temps real amb la resta de l’equip.' : 'Tens accés de <b>només lectura</b>: veus les llistes, el calendari i les estadístiques al moment, però no pots canviar res. Al teu espai sí que pots avisar d’absències i confirmar convocatòries.'}</p>
+         <p class="u-mt-0">Si et quedes sense cobertura, pots continuar passant llista: els canvis s’envien sols quan torni la connexió.</p>
+         <p class="muted u-mb-0">${!navigator.onLine ? 'Ara mateix no hi ha connexió.' : pendingWrites() ? `Desant ${pendingWrites()} canvis…` : 'Tots els canvis estan desats.'}</p>`
+      : `<p class="u-m-0">Encara no hi ha cap cor connectat en aquest dispositiu.</p>`,
     foot: S.mode === 'shared' && canEdit() ? '<button class="btn btn-primary" data-act="manage" data-k="config">Ajustos</button>' : '',
   }),
   'open-sec': el => { ui.rollSec = ui.section = el.dataset.sec; saveUI(); render(); window.scrollTo({ top: 0 }); },

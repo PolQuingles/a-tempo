@@ -75,8 +75,8 @@ function sheetMemberDocs(mid) {
     return `<fieldset class="fieldset doc-f" data-k="${k}"><legend>${esc(l)}</legend>
       <small class="muted">${esc(hint)}${self ? ` · Ho ha dit ell/a mateix/a a l’app${self.at ? ` el ${ddmm(self.at.slice(0, 10))}` : ''}: <b>${self.v === 'yes' ? 'sí' : 'no'}</b>` : ''}</small>
       <div class="pickers">${[['yes', 'Sí'], ['no', 'No'], ['', 'Pendent']].map(([v, t]) => `<button type="button" class="pick" data-v="${v}" aria-pressed="${(d.v || '') === v}">${t}</button>`).join('')}</div>
-      <label class="field"><span>Data</span><input class="inp" type="date" data-f="at" value="${esc((d.at || '').slice(0, 10))}" style="max-width:180px"></label>
-      ${d.file ? `<div class="rec-cur" data-cur><span>${esc(d.file.name)} · ${fmtSize(d.file.size)}</span><span style="display:flex;gap:6px"><button type="button" class="btn btn-sm" data-open>Obre</button><button type="button" class="btn btn-sm btn-ghost" data-drop>Treu-lo</button></span></div>` : ''}
+      <label class="field"><span>Data</span><input class="inp u-maxw-180" type="date" data-f="at" value="${esc((d.at || '').slice(0, 10))}"></label>
+      ${d.file ? `<div class="rec-cur" data-cur><span>${esc(d.file.name)} · ${fmtSize(d.file.size)}</span><span class="u-d-flex u-gap-6"><button type="button" class="btn btn-sm" data-open>Obre</button><button type="button" class="btn btn-sm btn-ghost" data-drop>Treu-lo</button></span></div>` : ''}
       <label class="dropzone" for="dc-file-${k}"><input id="dc-file-${k}" type="file" accept="application/pdf,image/*" class="sr" data-file>
         <span class="dz-t">${d.file ? 'Canvia el document signat' : 'Puja el document signat (opcional)'}</span><span class="dz-s">PDF o foto, fins a 20 MB. Només el veuen l’equip i ${esc(firstName(m.name))}.</span></label>
     </fieldset>`;
@@ -257,13 +257,13 @@ function managePlantilla() {
     const ms = membersOf(x.id, true).filter(m => pmMatch(m, f));
     if (f !== 'all' && !ms.length) return '';
     const active = ms.filter(m => m.active !== false).length;
-    return `<section data-group="${x.id}"><div class="sec-h"><h2 class="h2"><em>${esc(x.short)}</em>${esc(x.name)} <span class="mono muted" style="font-size:var(--t-13);font-weight:400">${active}</span></h2>
+    return `<section data-group="${x.id}"><div class="sec-h"><h2 class="h2"><em>${esc(x.short)}</em>${esc(x.name)} <span class="mono muted u-fs-t-13 u-fwt-400">${active}</span></h2>
       ${f === 'all' ? `<button class="btn btn-sm btn-ghost" data-act="member-new" data-sec="${x.id}">Afegeix</button>` : ''}</div>
       ${ms.length ? `<div class="list pm-list">${ms.map(m => pmRow(m, f)).join('')}</div>`
-        : `<div class="panel" style="padding:14px;color:var(--muted);font-size:var(--t-13)">Encara no hi ha ningú en aquesta ${V.section}.</div>`}</section>`;
+        : `<div class="panel u-p-14 u-c-muted u-fs-t-13">Encara no hi ha ningú en aquesta ${V.section}.</div>`}</section>`;
   }).join('');
   return `${onboardingPanel()}
-    ${findBox('#mlist', `Cerca un ${V.member}`)}${chips}<div id="mlist">${secs || '<div class="panel" style="padding:14px;color:var(--muted)">Ningú no hi correspon.</div>'}<div class="panel find-empty" hidden>Ningú amb aquest nom.</div></div>
+    ${findBox('#mlist', `Cerca un ${V.member}`)}${chips}<div id="mlist">${secs || '<div class="panel u-p-14 u-c-muted">Ningú no hi correspon.</div>'}<div class="panel find-empty" hidden>Ningú amb aquest nom.</div></div>
     ${plantillaSummary(all)}`;
 }
 

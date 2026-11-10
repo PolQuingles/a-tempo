@@ -80,8 +80,8 @@ function sheetThreads() {
   openSheet({
     title: 'Converses',
     wide: true,
-    body: `<p class="muted" style="margin:0 0 10px;font-size:var(--t-13)">${myId() ? `Escriu a l’equip ${esc(V.del)} sense correus ni WhatsApp: només ho veuen tu i a qui escrius.` : 'Les converses privades amb la plantilla: només les veuen la persona i qui té el rol a qui ha escrit.'}</p>
-      ${list.length ? `<ul class="list">${list.map(threadRow).join('')}</ul>` : '<div class="panel" style="padding:14px;color:var(--muted);font-size:var(--t-13)">Encara no hi ha cap conversa.</div>'}`,
+    body: `<p class="muted u-m-0-0-10 u-fs-t-13">${myId() ? `Escriu a l’equip ${esc(V.del)} sense correus ni WhatsApp: només ho veuen tu i a qui escrius.` : 'Les converses privades amb la plantilla: només les veuen la persona i qui té el rol a qui ha escrit.'}</p>
+      ${list.length ? `<ul class="list">${list.map(threadRow).join('')}</ul>` : '<div class="panel u-p-14 u-c-muted u-fs-t-13">Encara no hi ha cap conversa.</div>'}`,
     foot: myId() && !PREVIEW ? '<span class="spacer"></span><button class="btn btn-primary" data-act="thread-new">Escriu a l’equip</button>' : '',
   });
 }
@@ -94,10 +94,10 @@ function sheetThreadNew(preset = {}) {
     title: preset.ref ? 'Respon' : 'Escriu a l’equip',
     body: `<div class="kv">
       ${targets.length > 1 ? `<div class="field"><span>A qui</span><div class="pickers" id="th-to">${targets.map((x, i) => `<button type="button" class="pick" data-i="${i}" aria-pressed="${i === 0}">${esc(x.label)}</button>`).join('')}</div></div>`
-        : `<p style="margin:0">Per a <b>${esc(pick.label)}</b>${preset.subject ? ` · sobre «${esc(preset.subject)}»` : ''}</p>`}
+        : `<p class="u-m-0">Per a <b>${esc(pick.label)}</b>${preset.subject ? ` · sobre «${esc(preset.subject)}»` : ''}</p>`}
       ${preset.ref ? '' : '<label class="field"><span>Sobre què (opcional)</span><input class="inp" id="th-subject" maxlength="80" placeholder="p. ex. Al·lèrgies · Uniforme · Audició"></label>'}
-      <label class="field"><span>Missatge</span><textarea class="inp" id="th-text" maxlength="${THREAD_MAX}" style="min-height:130px" placeholder="Escriu aquí…"></textarea></label>
-      <p class="muted" style="margin:0;font-size:var(--t-13)">Només ho veuen tu i a qui escrius. Et respondran aquí mateix i t’arribarà un avís al mòbil.</p>
+      <label class="field"><span>Missatge</span><textarea class="inp u-minh-130" id="th-text" maxlength="${THREAD_MAX}" placeholder="Escriu aquí…"></textarea></label>
+      <p class="muted u-m-0 u-fs-t-13">Només ho veuen tu i a qui escrius. Et respondran aquí mateix i t’arribarà un avís al mòbil.</p>
     </div>`,
     foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="th-send">Envia</button>`,
     onMount: el => {
@@ -151,11 +151,11 @@ function sheetThreadTo(mid) {
   openSheet({
     title: 'Missatge a una persona',
     body: `<div class="kv">
-      ${mid ? `<p style="margin:0">Per a <b>${esc(fullName(S.members.get(mid).name))}</b></p>`
+      ${mid ? `<p class="u-m-0">Per a <b>${esc(fullName(S.members.get(mid).name))}</b></p>`
         : `<label class="field"><span>Per a</span><select class="inp" id="tt-who"><option value="">—</option>${secs.map(x => `<optgroup label="${esc(x.name)}">${list.filter(m => m.section === x.id).map(m => `<option value="${esc(m.id)}">${esc(m.name)}</option>`).join('')}</optgroup>`).join('')}</select></label>`}
       <label class="field"><span>Sobre què (opcional)</span><input class="inp" id="tt-subject" maxlength="80" placeholder="p. ex. Partitura del Gloria"></label>
-      <label class="field"><span>Missatge</span><textarea class="inp" id="tt-text" maxlength="${THREAD_MAX}" style="min-height:130px" placeholder="Escriu aquí…"></textarea></label>
-      <p class="muted" style="margin:0;font-size:var(--t-13)">Només ho veieu tu i aquesta persona. Li arribarà una notificació al mòbil i et podrà respondre aquí mateix.</p>
+      <label class="field"><span>Missatge</span><textarea class="inp u-minh-130" id="tt-text" maxlength="${THREAD_MAX}" placeholder="Escriu aquí…"></textarea></label>
+      <p class="muted u-m-0 u-fs-t-13">Només ho veieu tu i aquesta persona. Li arribarà una notificació al mòbil i et podrà respondre aquí mateix.</p>
     </div>`,
     foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="tt-send">Envia</button>`,
     onMount: el => {
@@ -183,8 +183,8 @@ function sheetThread(id) {
   openSheet({
     title: threadWho(t),
     wide: true,
-    body: `${t.subject ? `<p class="muted" style="margin:0 0 8px;font-size:var(--t-13)">${esc(t.subject)}</p>` : ''}<div class="bubbles" id="th-list">${bubbles()}</div>
-      ${PREVIEW ? '' : `<label class="field" style="margin-top:12px"><span class="sr">Resposta</span><textarea class="inp" id="th-text" maxlength="${THREAD_MAX}" style="min-height:90px" placeholder="Respon…"></textarea></label>`}`,
+    body: `${t.subject ? `<p class="muted u-m-0-0-8 u-fs-t-13">${esc(t.subject)}</p>` : ''}<div class="bubbles" id="th-list">${bubbles()}</div>
+      ${PREVIEW ? '' : `<label class="field u-mt-12"><span class="sr">Resposta</span><textarea class="inp u-minh-90" id="th-text" maxlength="${THREAD_MAX}" placeholder="Respon…"></textarea></label>`}`,
     foot: PREVIEW ? '' : '<span class="spacer"></span><button class="btn btn-primary" id="th-send">Envia</button>',
     onMount: el => {
       const list = el.querySelector('#th-list');

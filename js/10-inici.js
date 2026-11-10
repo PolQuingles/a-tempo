@@ -42,8 +42,8 @@ function sheetInstall() {
   openSheet({
     title: 'Descarrega l’app al mòbil',
     body: phone
-      ? `<p style="margin-top:0">${isiOS() ? 'A l’iPhone, posar l’app a la pantalla d’inici és l’única manera de rebre notificacions al mòbil.' : 'La tindràs com una app més, i s’obre més de pressa.'}</p>${list(isiOS() ? 'ios' : 'android')}`
-      : `<p style="margin-top:0">Obre <b>${esc(location.host)}</b> al navegador del mòbil i entra-hi amb el teu compte. Després, segons el mòbil:</p>
+      ? `<p class="u-mt-0">${isiOS() ? 'A l’iPhone, posar l’app a la pantalla d’inici és l’única manera de rebre notificacions al mòbil.' : 'La tindràs com una app més, i s’obre més de pressa.'}</p>${list(isiOS() ? 'ios' : 'android')}`
+      : `<p class="u-mt-0">Obre <b>${esc(location.host)}</b> al navegador del mòbil i entra-hi amb el teu compte. Després, segons el mòbil:</p>
          <h3 class="install-os">iPhone</h3>${list('ios')}<h3 class="install-os">Android</h3>${list('android')}`,
     foot: phone && installPrompt ? '<span class="spacer"></span><button class="btn btn-primary" data-act="install-go">Descarrega-la</button>' : '',
   });
@@ -151,10 +151,10 @@ const todoCount = () => { const me = S.members.get(myMemberId()); return todoSho
 function convCard(s, me) {
   const a = S.rsvp.get(`${s.id}_${me.id}`);
   return `<div class="conv-card">
-    <div class="a-h" style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><b>${longDate(s.date)}</b>${a ? `<span class="rsvp ${a.answer}">${a.answer === 'yes' ? 'Hi seràs' : 'No hi seràs'}</span>` : '<span class="rsvp none">Confirma-ho</span>'}</div>
-    <span class="muted" style="font-size:var(--t-13)">${esc(s.type)}${s.time ? ` · ${esc(timeRange(s))}` : ''}${s.place ? ` · ${esc(s.place)}` : ''} · ${esc(prodNames(s))}</span>
-    ${s.note ? `<span style="font-size:var(--t-13);color:var(--accent)">${esc(s.note)}</span>` : ''}
-    ${s.rsvpBy ? `<span class="muted mono" style="font-size:var(--t-13)">Respon abans del ${shortDate(s.rsvpBy)}</span>` : ''}
+    <div class="a-h u-d-flex u-jc-space-between u-gap-10 u-fw-wrap"><b>${longDate(s.date)}</b>${a ? `<span class="rsvp ${a.answer}">${a.answer === 'yes' ? 'Hi seràs' : 'No hi seràs'}</span>` : '<span class="rsvp none">Confirma-ho</span>'}</div>
+    <span class="muted u-fs-t-13">${esc(s.type)}${s.time ? ` · ${esc(timeRange(s))}` : ''}${s.place ? ` · ${esc(s.place)}` : ''} · ${esc(prodNames(s))}</span>
+    ${s.note ? `<span class="u-fs-t-13 u-c-accent">${esc(s.note)}</span>` : ''}
+    ${s.rsvpBy ? `<span class="muted mono u-fs-t-13">Respon abans del ${shortDate(s.rsvpBy)}</span>` : ''}
     ${hasInfo(s) ? fitxaChip(s) : ''}
     <div class="c-a"><button class="btn btn-sm ${a?.answer === 'yes' ? 'btn-primary' : ''}" data-act="rsvp-yes" data-sid="${s.id}">Hi seré</button>
       <button class="btn btn-sm ${a?.answer === 'no' ? 'btn-danger' : ''}" data-act="rsvp-no" data-sid="${s.id}">No hi podré anar</button></div>
@@ -459,9 +459,9 @@ function weekSession(s, d, past) {
   const sum = [s.time ? timeRange(s) : '', s.place || '', s.info?.call ? `convocatòria ${s.info.call}` : ''].filter(Boolean).join(' · ');
   const steps = infoSteps(s);
   return `<div class="wk-s${past ? ' past' : ''}"><div class="wk-sh"><b>${esc(longDate(s.date))}</b><span>${esc(s.type || 'Assaig')} · ${esc(prodNames(s))}</span></div>
-    ${sum ? `<p class="m" style="margin:2px 0 0">${esc(sum)}</p>` : ''}${s.note ? `<p style="margin:4px 0 0;color:var(--accent)">${esc(s.note)}</p>` : ''}
+    ${sum ? `<p class="m u-m-2-0-0">${esc(sum)}</p>` : ''}${s.note ? `<p class="u-m-4-0-0 u-c-accent">${esc(s.note)}</p>` : ''}
     ${!past && steps.length ? `<ol class="steps">${steps.map(x => `<li><span class="mono">${esc(x.time || '')}</span><span><b>${esc(x.what || '')}</b>${x.where ? `<small>${esc(x.where)}</small>` : ''}</span></li>`).join('')}</ol>` : ''}
-    ${planHtml(s, false, d.sec) || (past || isShow(s) ? '' : '<p class="m" style="margin:4px 0 0">Encara no hi ha pla d’assaig.</p>')}
+    ${planHtml(s, false, d.sec) || (past || isShow(s) ? '' : '<p class="m u-m-4-0-0">Encara no hi ha pla d’assaig.</p>')}
     ${!past && hasInfo(s) && !steps.length ? fitxaChip(s) : ''}</div>`;
 }
 function weekHtml(d) {
@@ -471,7 +471,7 @@ function weekHtml(d) {
     ...d.polls.map(p => `<li><span><b>${esc(p.title)}</b><small>${isBandes(p) ? 'Votació' : 'Enquesta'}${p.closesAt ? ` · fins al ${shortDate(p.closesAt)}` : ''}</small></span></li>`),
     ...d.trips.map(t => `<li><span><b>${esc(t.title)}</b><small>Sortida · ${esc(tripDates(t))}${t.deadline ? ` · respon fins al ${shortDate(t.deadline)}` : ''}</small></span></li>`),
   ];
-  return `<p class="muted" style="margin:0 0 6px;font-size:var(--t-13)">${esc(capz(shortDate(addDays(TODAY, -7))))} – ${esc(shortDate(addDays(TODAY, 10)))}${d.sec ? ` · el que toca a ${esc(SEC[d.sec].name.toLowerCase())}` : ''}</p>
+  return `<p class="muted u-m-0-0-6 u-fs-t-13">${esc(capz(shortDate(addDays(TODAY, -7))))} – ${esc(shortDate(addDays(TODAY, 10)))}${d.sec ? ` · el que toca a ${esc(SEC[d.sec].name.toLowerCase())}` : ''}</p>
     ${block('Què farem', d.next.length ? d.next.map(s => weekSession(s, d, false)).join('') : '<p class="m">No hi ha cap sessió els pròxims deu dies.</p>')}
     ${d.classes.length ? block(esc(V.classes), `<ul class="tasks">${d.classes.map(({ c, x }) => `<li><span><b>${esc(longDate(c.date))} · ${esc(x.time || '')}</b><small>${esc([teacherOf(c), c.place].filter(Boolean).join(' · '))}</small></span></li>`).join('')}</ul>`) : ''}
     ${block('Per respondre', ask.length ? `<ul class="tasks">${ask.join('')}</ul>` : '')}

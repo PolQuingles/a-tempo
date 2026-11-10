@@ -124,9 +124,9 @@ function sheetShareApp() {
   const msg = `Aquesta és A Tempo, l’app ${ofName()}. Entra-hi amb el correu que has donat a l’agrupació i hi trobaràs el calendari, les llistes, el tauler i el teu espai personal:\n${url}\n\nSi el teu correu no és de Google, toca «Entra amb un altre correu» i crea la teva contrasenya.\nSi no et deixa entrar, obre l’enllaç amb el Safari o el Chrome (no des del WhatsApp) i afegeix-lo a la pantalla d’inici.`;
   openSheet({
     title: 'Enllaç de l’app',
-    body: `<p style="margin-top:0">El mateix enllaç serveix per a tothom. Qui hi entri haurà d’identificar-se amb el seu correu, i només hi podrà accedir si el tens donat d’alta a <b>Persones i accessos</b>.</p>
+    body: `<p class="u-mt-0">El mateix enllaç serveix per a tothom. Qui hi entri haurà d’identificar-se amb el seu correu, i només hi podrà accedir si el tens donat d’alta a <b>Persones i accessos</b>.</p>
       <div class="linkbox">${esc(url)}</div>
-      <p class="muted" style="font-size:var(--t-13);margin:10px 0 0">Consell: digues a tothom que l’obri al <b>navegador del mòbil</b> (Safari o Chrome, no dins del WhatsApp) i, des del menú, triï «Afegeix a la pantalla d’inici» per tenir-lo com una app.</p>`,
+      <p class="muted u-fs-t-13 u-m-10-0-0">Consell: digues a tothom que l’obri al <b>navegador del mòbil</b> (Safari o Chrome, no dins del WhatsApp) i, des del menú, triï «Afegeix a la pantalla d’inici» per tenir-lo com una app.</p>`,
     foot: `${navigator.share ? '<button class="btn" id="sa-native">Comparteix…</button>' : ''}<button class="btn" id="sa-msg">Copia el missatge</button><button class="btn btn-primary" id="sa-copy">Copia l’enllaç</button>`,
     onMount: el => {
       el.querySelector('#sa-copy').onclick = () => copyText(url, 'Enllaç copiat');

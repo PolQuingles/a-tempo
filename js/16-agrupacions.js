@@ -29,7 +29,7 @@ function viewPick(hero) {
       <h2 class="h2">Tria l’agrupació</h2>
       <p>${first ? `Hola, ${esc(first)}. ` : ''}Formes part de més d’una agrupació. Després podràs canviar-ne tocant el nom a dalt de tot.</p>
       <div id="gr-list">${groupList()}</div>
-      ${S.pro ? '<button class="btn btn-ghost" data-act="group-create" style="justify-self:center">+ Crea una agrupació nova</button>' : ''}
+      ${S.pro ? '<button class="btn btn-ghost u-js-center" data-act="group-create">+ Crea una agrupació nova</button>' : ''}
     </div>
     <button class="btn btn-sm btn-ghost" data-act="sign-out">Tanca la sessió</button>
   </section>`;
@@ -40,7 +40,7 @@ function viewSuspended(hero) {
     <div class="login-card"><h2 class="h2">Aquesta agrupació està suspesa</h2>
       <p>Ara mateix no s’hi pot entrar. Si creus que és un error, parla amb qui porta ${esc(PLATFORM.name)}.</p>
       ${others.length ? '<button class="btn btn-primary" data-act="groups">Canvia d’agrupació</button>' : ''}
-      <button class="btn btn-ghost" data-act="sign-out" style="justify-self:center">Tanca la sessió</button></div>
+      <button class="btn btn-ghost u-js-center" data-act="sign-out">Tanca la sessió</button></div>
   </section>`;
 }
 /** Groups of this account: the index, plus the old single pointer of the first group (from before groups). */
@@ -102,9 +102,9 @@ function sheetGroups() {
   openSheet({
     title: 'Les teves agrupacions',
     body: `<div id="gr-list">${groupList()}</div>
-      ${canCreate ? `<div class="entry-new" style="margin-top:14px"><span>Com a Usuari Pro, pots crear una agrupació nova i en seràs l’administrador/a.</span><button class="btn btn-sm" data-act="group-create">+ Crea’n una</button></div>` : ''}
-      ${S.platform ? `<div class="panel" style="margin-top:14px"><div class="setting"><div><div class="t">Plataforma</div><div class="s">Totes les agrupacions, qui les ha creades i qui és Usuari Pro.</div></div><button class="btn btn-sm" data-act="platform">Obre el panell</button></div></div>` : ''}
-      ${claim ? `<div class="panel" style="margin-top:14px"><div class="setting"><div><div class="t">Panell de plataforma</div><div class="s">Encara no el porta ningú. Si l’actives, veuràs totes les agrupacions i decidiràs qui és Usuari Pro i en pot crear.</div></div><button class="btn btn-sm btn-primary" data-act="platform-claim">Activa’l</button></div></div>` : ''}`,
+      ${canCreate ? `<div class="entry-new u-mt-14"><span>Com a Usuari Pro, pots crear una agrupació nova i en seràs l’administrador/a.</span><button class="btn btn-sm" data-act="group-create">+ Crea’n una</button></div>` : ''}
+      ${S.platform ? `<div class="panel u-mt-14"><div class="setting"><div><div class="t">Plataforma</div><div class="s">Totes les agrupacions, qui les ha creades i qui és Usuari Pro.</div></div><button class="btn btn-sm" data-act="platform">Obre el panell</button></div></div>` : ''}
+      ${claim ? `<div class="panel u-mt-14"><div class="setting"><div><div class="t">Panell de plataforma</div><div class="s">Encara no el porta ningú. Si l’actives, veuràs totes les agrupacions i decidiràs qui és Usuari Pro i en pot crear.</div></div><button class="btn btn-sm btn-primary" data-act="platform-claim">Activa’l</button></div></div>` : ''}`,
     onMount: () => refreshGroupInfo().then(() => { const box = $('#gr-list'); if (box) box.innerHTML = groupList(); }),
   });
 }
@@ -171,7 +171,7 @@ function viewCreate() {
       <div class="kind-grid" role="radiogroup" aria-label="Tipus d’agrupació">${Object.entries(KINDS).map(([id, x]) => `<button type="button" role="radio" class="kind-card" aria-checked="${c.kind === id}" data-act="cr-kind" data-k="${id}"><b>${esc(x.label)}</b><small>${esc(x.hint)}</small><span class="kind-secs" aria-hidden="true">${x.sections.slice(0, 4).map(([id]) => esc(id)).join(' ')}${x.sections.length > 4 ? ' …' : ''}</span></button>`).join('')}</div>`;
   } else if (c.step === 2) {
     body = `<h1 class="h1">Com es diu?</h1>
-      <div class="kv" style="margin-top:16px">
+      <div class="kv u-mt-16">
         <label class="field"><span>Nom de l’agrupació</span><input class="inp" id="cr-name" maxlength="60" value="${esc(c.name)}" placeholder="p. ex. ${esc(NAME_EXAMPLES[c.kind] || '')}" autocomplete="off" data-bind="cr" data-f="name"></label>
         <label class="field"><span>Nom curt (opcional)</span><input class="inp" id="cr-short" maxlength="16" value="${esc(c.short)}" placeholder="p. ex. ${esc(initials(NAME_EXAMPLES[c.kind] || ''))}" autocomplete="off" data-bind="cr" data-f="short">
           <small>És el que surt sota la icona quan algú afegeix l’app a la pantalla d’inici.</small></label>
@@ -188,7 +188,7 @@ function viewCreate() {
         <div class="setting"><div><div class="t">${secs.length} ${esc(secs.length === 1 ? k.words.section : k.words.sections)}</div><div class="s">${secs.map(x => `<b>${esc(x.short)}</b> ${esc(x.name)}`).join(' · ')}</div></div></div>
         <div class="setting"><div><div class="t">Tu en seràs l’administrador/a</div><div class="s">${esc(S.email)}. Després hi afegiràs la resta de l’equip i els ${esc(k.words.members)}, cadascú amb el seu correu.</div></div></div>
       </div>
-      <p class="wiz-lead" style="font-size:var(--t-13)">Les dades de l’agrupació només les veuran les persones que hi afegiu. Si només la vols provar, després la pots esborrar des d’Ajustos.</p>`;
+      <p class="wiz-lead u-fs-t-13">Les dades de l’agrupació només les veuran les persones que hi afegiu. Si només la vols provar, després la pots esborrar des d’Ajustos.</p>`;
   }
   const next = c.step < 4
     ? `<button class="btn btn-primary" data-act="cr-next" ${c.step === 1 && !c.kind ? 'disabled' : ''}>Continua</button>`
@@ -246,7 +246,7 @@ async function sheetPlatform() {
   const P = { groups: [], team: { emails: [] }, pro: { emails: [] } };
   const MAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
   const chip = (e, rm) => `<span class="chip-mail">${esc(e)}${rm ? `<button type="button" data-rm-${rm}="${esc(e)}" aria-label="Treu ${esc(e)}">${ICON.close}</button>` : ''}</span>`;
-  const adder = id => `<div style="display:flex;gap:6px"><input class="inp" id="pl-${id}-mail" type="email" placeholder="correu@exemple.com" style="min-height:38px"><button class="btn btn-sm" id="pl-${id}-add">Afegeix</button></div>`;
+  const adder = id => `<div class="u-d-flex u-gap-6"><input class="inp u-minh-38" id="pl-${id}-mail" type="email" placeholder="correu@exemple.com"><button class="btn btn-sm" id="pl-${id}-add">Afegeix</button></div>`;
   const draw = el => {
     const body = el.querySelector('.sheet-b');
     const act = P.groups.filter(g => (g.status || 'active') === 'active');
@@ -259,11 +259,11 @@ async function sheetPlatform() {
         <div class="kpi"><div class="kpi-v">${sum('people')}</div><div class="kpi-l">Persones amb accés</div></div>
         <div class="kpi"><div class="kpi-v">${fmtSize(sum('files'))}</div><div class="kpi-l">Fitxers pujats</div></div>
       </div>
-      <div class="panel" style="margin-top:14px">
-        <div class="setting" style="display:grid;gap:8px"><div><div class="t">Usuaris Pro</div><div class="s">Són els únics que poden <b>crear agrupacions</b> i, de les que administren, <b>canviar-ne</b> el nom, el tipus, les seccions i la imatge o <b>esborrar-les</b>. La resta de persones fan servir les agrupacions on les han donat d’alta, però no en poden crear ni canviar-les. L’equip de la plataforma és Pro sempre.</div></div>
+      <div class="panel u-mt-14">
+        <div class="setting u-d-grid u-gap-8"><div><div class="t">Usuaris Pro</div><div class="s">Són els únics que poden <b>crear agrupacions</b> i, de les que administren, <b>canviar-ne</b> el nom, el tipus, les seccions i la imatge o <b>esborrar-les</b>. La resta de persones fan servir les agrupacions on les han donat d’alta, però no en poden crear ni canviar-les. L’equip de la plataforma és Pro sempre.</div></div>
           <div class="pickers">${(P.team.emails || []).map(e => chip(`${e} · plataforma`)).join('')}${(P.pro.emails || []).filter(e => !(P.team.emails || []).includes(e)).map(e => chip(e, 'pro')).join('')}</div>
           ${adder('pro')}</div>
-        <div class="setting" style="display:grid;gap:8px"><div><div class="t">Equip de la plataforma</div><div class="s">Veuen aquest panell, decideixen qui és Usuari Pro i poden suspendre agrupacions. No veuen les dades de dins de les agrupacions.</div></div>
+        <div class="setting u-d-grid u-gap-8"><div><div class="t">Equip de la plataforma</div><div class="s">Veuen aquest panell, decideixen qui és Usuari Pro i poden suspendre agrupacions. No veuen les dades de dins de les agrupacions.</div></div>
           <div class="pickers">${(P.team.emails || []).map(e => chip(e, e === S.email ? '' : 'team')).join('')}</div>
           ${adder('team')}</div>
       </div>
@@ -280,8 +280,8 @@ async function sheetPlatform() {
             ${st === 'active' ? `<button class="btn btn-sm" data-pl="suspend" data-id="${esc(g.id)}">Suspèn</button>` : st === 'suspended' ? `<button class="btn btn-sm btn-primary" data-pl="activate" data-id="${esc(g.id)}">Reactiva</button>` : `<button class="btn btn-sm btn-danger-ghost" data-pl="forget" data-id="${esc(g.id)}">Treu-la del directori</button>`}
             ${st !== 'deleted' ? `<label class="quota">Fitxers <select class="inp" data-quota="${esc(g.id)}">${QUOTAS.map(q => `<option value="${q}" ${(+g.fileQuotaMB || (g.id === FOUNDER ? 300 : 100)) === q ? 'selected' : ''}>${q < 1000 ? `${q} MB` : '1 GB'}</option>`).join('')}</select></label>` : ''}
           </div></div>`;
-      }).join('') || '<p style="margin:0;padding:14px">Encara no hi ha cap agrupació al directori.</p>'}</div>
-      <p class="muted" style="font-size:var(--t-13)">Una agrupació suspesa no hi pot entrar ningú fins que la reactivis, però no se n’esborra res. La base de dades gratuïta té un límit diari de lectures i 1 GB d’espai per a totes les agrupacions juntes: vigila els fitxers pujats.</p>`;
+      }).join('') || '<p class="u-m-0 u-p-14">Encara no hi ha cap agrupació al directori.</p>'}</div>
+      <p class="muted u-fs-t-13">Una agrupació suspesa no hi pot entrar ningú fins que la reactivis, però no se n’esborra res. La base de dades gratuïta té un límit diari de lectures i 1 GB d’espai per a totes les agrupacions juntes: vigila els fitxers pujats.</p>`;
     const saveList = async (key, doc, emails, ok) => {
       try { await fs.doc(doc).set({ emails, at: new Date().toISOString() }); P[key].emails = emails; toast(ok); draw(el); }
       catch { toast('No s’ha pogut desar'); }
@@ -333,14 +333,14 @@ async function sheetPlatform() {
   };
   openSheet({
     title: 'Plataforma', wide: true,
-    body: '<p class="muted" style="margin:0">Carregant les agrupacions…</p>',
+    body: '<p class="muted u-m-0">Carregant les agrupacions…</p>',
     onMount: async el => {
       try {
         const [snap, t, pro] = await Promise.all([fs.collection('agrupacions').get(), fs.doc('plataforma/equip').get(), fs.doc('plataforma/pro').get()]);
         P.groups = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         P.team = t.exists ? t.data() : { emails: [] };
         P.pro = pro.exists ? pro.data() : { emails: [] };
-      } catch { el.querySelector('.sheet-b').innerHTML = '<p style="margin:0">No s’han pogut carregar les agrupacions. Comprova la connexió.</p>'; return; }
+      } catch { el.querySelector('.sheet-b').innerHTML = '<p class="u-m-0">No s’han pogut carregar les agrupacions. Comprova la connexió.</p>'; return; }
       if (el.isConnected) draw(el);
     },
   });

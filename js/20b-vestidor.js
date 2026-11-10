@@ -94,22 +94,22 @@ function wardManage() {
   const asked = all.filter(x => x.status === 'demanat');
   const order = wardOrder(asked);
   const toOrder = asked.length ? `<div class="panel ward-order"><div class="wo-h"><b>Per encarregar · ${asked.length} ${asked.length === 1 ? 'peça' : 'peces'}</b>
-      <span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" data-act="ward-copy">Copia la comanda</button><button class="btn btn-sm btn-primary" data-act="ward-ordered">Marca-les com a encarregades</button></span></div>
+      <span class="u-d-flex u-gap-6 u-fw-wrap"><button class="btn btn-sm" data-act="ward-copy">Copia la comanda</button><button class="btn btn-sm btn-primary" data-act="ward-ordered">Marca-les com a encarregades</button></span></div>
       ${order.map(o => `<p><b>${esc(o.it.name)}</b> · ${o.sizes.map(([z, c]) => `<span class="mono">${esc(z || 'sense talla')}</span> ×${c}`).join(' · ')}</p>`).join('')}</div>` : '';
   const sec = m => `${esc(SEC[m.section]?.name || '')}${m.part ? ` · ${esc(partTag(m))}` : ''}`;
   let rows;
   if (f === 'none') {
     rows = none.length ? none.sort((a, b) => secIdx(a.section) - secIdx(b.section) || byName(a, b)).map(m => `<li class="ward-row" data-find="${esc(normText(m.name))}">
         ${avatar(m)}<span class="wr-n"><b>${esc(m.name)}</b><small>${sec(m)}</small></span><button class="btn btn-sm" data-act="ward-new" data-mid="${esc(m.id)}">Afegeix</button></li>`).join('')
-      : '<li class="muted" style="padding:14px">Tothom ha demanat el seu vestuari.</li>';
+      : '<li class="muted u-p-14">Tothom ha demanat el seu vestuari.</li>';
   } else {
     const list = all.filter(x => f === 'all' || x.status === f).map(x => ({ x, m: S.members.get(x.memberId) }))
       .sort((a, b) => secIdx(a.m.section) - secIdx(b.m.section) || byName(a.m, b.m) || (a.x.createdAt || '').localeCompare(b.x.createdAt || ''));
     rows = list.length ? list.map(({ x, m }) => `<li data-find="${esc(normText(m.name))}"><button class="ward-row" data-act="ward-item" data-id="${esc(x.id)}">
         ${avatar(m)}<span class="wr-n"><b>${esc(m.name)}</b><small>${sec(m)} · ${esc(wardItem(x.item).name)}${x.size ? ` <span class="mono">${esc(x.size)}</span>` : ''}${x.note ? ' · amb nota' : ''}</small></span>${wardPill(x.status)}</button></li>`).join('')
-      : '<li class="muted" style="padding:14px">No n’hi ha cap en aquest estat.</li>';
+      : '<li class="muted u-p-14">No n’hi ha cap en aquest estat.</li>';
   }
-  return `<div class="section-title"><h2 class="h2">Tot el vestuari</h2><span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" data-act="ward-export">Exporta a Excel</button><button class="btn btn-sm btn-primary" data-act="ward-new">+ Afegeix</button></span></div>
+  return `<div class="section-title"><h2 class="h2">Tot el vestuari</h2><span class="u-d-flex u-gap-6 u-fw-wrap"><button class="btn btn-sm" data-act="ward-export">Exporta a Excel</button><button class="btn btn-sm btn-primary" data-act="ward-new">+ Afegeix</button></span></div>
     ${toOrder}${chips}<div id="wlist">${findBox('#wlist', `Cerca un ${V.member}`)}<ul class="list ward-list">${rows}</ul><div class="panel find-empty" hidden>Ningú amb aquest nom.</div></div>`;
 }
 /** El que s'ha d'encarregar, per peça i per talla (de més petita a més gran, en l'ordre de les talles de la peça). */
@@ -158,7 +158,7 @@ function sheetWardAsk(editId) {
       ${ed ? '' : `<div class="field"><span>Quina peça et toca?</span><div class="pickers" id="wa-item">${items.map(it => `<button type="button" class="pick" data-k="${esc(it.id)}" aria-pressed="${item === it.id}">${esc(it.name)}</button>`).join('')}</div></div>`}
       <div class="field" id="wa-size-f"><span>La teva talla</span><div class="pickers" id="wa-size"></div><small id="wa-size-h"></small></div>
       <label class="field"><span>Nota (opcional)</span><input class="inp" id="wa-note" maxlength="300" value="${esc(ed?.note || '')}" placeholder="p. ex. Entre dues talles · Màniga llarga"></label>
-      <p class="muted" style="margin:0;font-size:var(--t-13)">Si no saps la talla, posa la que creguis i la secretaria te la farà emprovar abans d’entregar-te-la.</p>
+      <p class="muted u-m-0 u-fs-t-13">Si no saps la talla, posa la que creguis i la secretaria te la farà emprovar abans d’entregar-te-la.</p>
     </div>`,
     foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="wa-go">${ed ? 'Desa' : 'Demana-la'}</button>`,
     onMount: el => {
@@ -216,11 +216,11 @@ function sheetWardItem(id) {
   openSheet({
     title: `${it.name} · ${m ? m.name : fullName(x.memberName)}`,
     body: `<div class="kv">
-      <p class="muted" style="margin:0">${m ? `${esc(SEC[m.section]?.name || '')}${m.part ? ` · ${esc(partTag(m))}` : ''} · ` : ''}demanat el ${esc(wardDay(x.createdAt))}</p>
+      <p class="muted u-m-0">${m ? `${esc(SEC[m.section]?.name || '')}${m.part ? ` · ${esc(partTag(m))}` : ''} · ` : ''}demanat el ${esc(wardDay(x.createdAt))}</p>
       <div class="field"><span>Estat</span><div class="ward-st" id="wi-st" role="radiogroup" aria-label="Estat">${WARD_STATES.map(([k, l]) => `<button type="button" role="radio" data-k="${k}" aria-checked="${x.status === k}">${esc(l)}</button>`).join('')}</div><small id="wi-hint"></small></div>
       ${it.sizes.length ? `<div class="field"><span>Talla</span><div class="pickers" id="wi-size">${it.sizes.map(s => `<button type="button" class="pick" data-k="${esc(s)}" aria-pressed="${x.size === s}">${esc(s)}</button>`).join('')}</div></div>` : ''}
       <label class="field"><span>Nota</span><input class="inp" id="wi-note" maxlength="300" value="${esc(x.note || '')}" placeholder="p. ex. Cal escurçar les mànigues 2 cm"><small>La veu també la persona.</small></label>
-      ${(x.history || []).length ? `<div class="field"><span>Per on ha passat</span><ul class="mini-list" style="max-height:none">${[...x.history].reverse().map(h => `<li><span>${esc(WARD_LABEL[h.s] || h.s)}</span><span class="m mono">${esc(wardDay(h.at))}${h.by ? ` · ${esc(h.by.split('@')[0])}` : ''}</span></li>`).join('')}</ul></div>` : ''}
+      ${(x.history || []).length ? `<div class="field"><span>Per on ha passat</span><ul class="mini-list u-maxh-none">${[...x.history].reverse().map(h => `<li><span>${esc(WARD_LABEL[h.s] || h.s)}</span><span class="m mono">${esc(wardDay(h.at))}${h.by ? ` · ${esc(h.by.split('@')[0])}` : ''}</span></li>`).join('')}</ul></div>` : ''}
     </div>`,
     foot: `<button class="btn btn-danger-ghost" id="wi-del">Esborra</button><span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="wi-save">Desa</button>`,
     onMount: el => {
@@ -303,13 +303,13 @@ function wardConfigPanel() {
       <input class="inp" maxlength="30" value="${esc(it.name)}" placeholder="Peça" aria-label="Nom de la peça" data-f="name">
       <input class="inp" maxlength="200" value="${esc((it.sizes || []).join(', '))}" placeholder="Talles, separades per comes" aria-label="Talles" data-f="sizes">
       <button type="button" class="icon-btn" data-act="ward-cfg-del" data-i="${i}" aria-label="Treu la peça" ${wardItems().length < 2 ? 'disabled' : ''}>${ICON.close}</button></div>`).join('');
-  return `<div class="toggle-row setting"><span><b>${on ? 'Activat' : 'Desactivat'}</b><br><span class="muted" style="font-size:var(--t-13)">${on
+  return `<div class="toggle-row setting"><span><b>${on ? 'Activat' : 'Desactivat'}</b><br><span class="muted u-fs-t-13">${on
       ? `Cada ${esc(V.member)} hi demana el seu vestuari amb la talla i en segueix l’estat; la secretaria i la gerència ho porten tot des de la mateixa pantalla.`
       : 'Activa’l si l’agrupació dona vestuari (americana, estola…): cadascú el demanarà amb la seva talla i la secretaria en portarà el seguiment.'}</span></span>
       <label class="switch"><input type="checkbox" id="cfg-ward" ${on ? 'checked' : ''} data-bind="cfg-ward"><span></span></label></div>
-    ${on ? `<div class="setting" style="display:block"><div class="t">Peces i talles</div><div class="s" style="margin-bottom:8px">Cada peça amb les seves talles, separades per comes, de la més petita a la més gran.</div>
+    ${on ? `<div class="setting u-d-block"><div class="t">Peces i talles</div><div class="s u-mb-8">Cada peça amb les seves talles, separades per comes, de la més petita a la més gran.</div>
       <div id="ward-cfg">${rows}</div>
-      <span style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"><button type="button" class="btn btn-sm" data-act="ward-cfg-add">+ Afegeix una peça</button><button type="button" class="btn btn-sm btn-primary" data-act="ward-cfg-save">Desa les peces</button></span></div>` : ''}`;
+      <span class="u-d-flex u-gap-6 u-fw-wrap u-mt-8"><button type="button" class="btn btn-sm" data-act="ward-cfg-add">+ Afegeix una peça</button><button type="button" class="btn btn-sm btn-primary" data-act="ward-cfg-save">Desa les peces</button></span></div>` : ''}`;
 }
 /** Les files del calaix tal com estan ara (amb el que s'hi ha escrit i encara no s'ha desat). */
 function wardCfgRead(skip = -1) {

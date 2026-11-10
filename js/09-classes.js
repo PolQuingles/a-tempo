@@ -110,8 +110,8 @@ function classPendCard(r) {
   const move = r.kind === 'absent' && sl && canMoveSlot(c, sl) ? `<button class="btn btn-sm" data-act="cl-move" data-c="${esc(c.id)}" data-s="${esc(sl.id)}">Mou la classe</button>` : '';
   return `<div class="conv-card">
       <div class="a-h">${classReqLine(r)}</div>
-      ${r.reason ? `<span style="font-size:var(--t-13)">${esc(r.reason)}</span>` : ''}
-      <span style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">${r.kind === 'take' ? btn('accepted', 'Dona-li l’hora', true) + btn('rejected', 'Ara no') : btn('accepted', 'Entesos', true) + move}</span>
+      ${r.reason ? `<span class="u-fs-t-13">${esc(r.reason)}</span>` : ''}
+      <span class="u-d-flex u-gap-6 u-fw-wrap u-mt-6">${r.kind === 'take' ? btn('accepted', 'Dona-li l’hora', true) + btn('rejected', 'Ara no') : btn('accepted', 'Entesos', true) + move}</span>
     </div>`;
 }
 /** Una classe es pot moure si encara no s'ha fet, no té marca i no té un canvi d'hora acceptat. */
@@ -162,13 +162,13 @@ function classDayCard(c, past, inside) {
   const slots = classSlots(c);
   const edit = teach ? `<button class="icon-btn" data-act="cl-edit" data-c="${esc(c.id)}" aria-label="Edita el dia de classe">${ICON.more}</button>` : '';
   const head = inside
-    ? (facts || c.cancelled || edit ? `<div style="display:flex;justify-content:space-between;gap:10px;align-items:center;min-height:26px">
+    ? (facts || c.cancelled || edit ? `<div class="u-d-flex u-jc-space-between u-gap-10 u-ai-center u-minh-26">
         <span>${c.cancelled ? '<span class="st-pill st-rejected">Anul·lada</span> ' : ''}${facts ? `<span class="m">${esc(facts)}</span>` : ''}</span>${edit}</div>` : '')
-    : `<div style="display:flex;justify-content:space-between;gap:10px;align-items:center">
+    : `<div class="u-d-flex u-jc-space-between u-gap-10 u-ai-center">
         <span><b>${esc(longDate(c.date))}</b>${c.cancelled ? ' <span class="st-pill st-rejected">Anul·lada</span>' : ''}${facts ? `<br><span class="m">${esc(facts)}</span>` : ''}</span>${edit}</div>`;
   return `<div class="cl-day ${c.cancelled ? 'off' : ''}">
     ${head}
-    ${slots.length ? slots.map(x => classSlotRow(c, x, past)).join('') : '<p class="muted" style="margin:6px 0 0;font-size:var(--t-13)">Encara no hi ha hores posades.</p>'}
+    ${slots.length ? slots.map(x => classSlotRow(c, x, past)).join('') : '<p class="muted u-m-6-0-0 u-fs-t-13">Encara no hi ha hores posades.</p>'}
   </div>`;
 }
 function classTeachers() {
@@ -235,7 +235,7 @@ function classQuads() {
   }).join('');
   const anyPend = teach && list.some(t => classPending(t.key).length);
   return `<div class="quads cl-quads ${list.length === 4 ? '' : `n-other${list.length > 6 ? ' n-many' : ''}`}" data-n="${list.length}">${quads}</div>
-    ${anyPend ? '<div class="q-legend"><span><i style="background:var(--fnj)"></i>Té canvis per veure</span></div>' : ''}`;
+    ${anyPend ? '<div class="q-legend"><span><i class="u-bg-fnj"></i>Té canvis per veure</span></div>' : ''}`;
 }
 /** L'espai d'un professor/a: el mes, el dia triat hora per hora i els dies que vénen. */
 function classTeacherSpace(who, own) {
@@ -276,8 +276,8 @@ function classTeacherSpace(who, own) {
       <span class="cl-ini">${esc(teacherInitials(t.name))}</span>
       <span class="cl-h-t"><b>${esc(t.name)}</b><small>${esc(facts)}</small></span>
     </div>
-    ${teach ? `<div class="sec-h" style="margin-top:0"><span class="muted" style="font-size:var(--t-13)">Les classes d’aquest ${esc(V.Teacher.toLowerCase())}.</span>
-      <span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" data-act="cl-paste" data-k="${esc(who)}">Enganxa un horari</button><button class="btn btn-sm btn-primary" data-act="cl-new" data-k="${esc(who)}" data-date="${esc(ui.clDay)}">+ Dia</button></span></div>` : ''}
+    ${teach ? `<div class="sec-h u-mt-0"><span class="muted u-fs-t-13">Les classes d’aquest ${esc(V.Teacher.toLowerCase())}.</span>
+      <span class="u-d-flex u-gap-6 u-fw-wrap"><button class="btn btn-sm" data-act="cl-paste" data-k="${esc(who)}">Enganxa un horari</button><button class="btn btn-sm btn-primary" data-act="cl-new" data-k="${esc(who)}" data-date="${esc(ui.clDay)}">+ Dia</button></span></div>` : ''}
     ${ownsClass({ teacher: who }) ? unlinkedPanel(who) : ''}
     <div class="seg3 cl-view" role="radiogroup" aria-label="Vista">${[['month', 'Mes'], ['week', 'Setmana']].map(([k, l]) => `<button type="button" role="radio" aria-checked="${(ui.clView || 'month') === k}" data-act="cl-view" data-k="${k}">${l}</button>`).join('')}</div>
     ${ui.clView === 'week' ? classWeekHtml(who) : `<div class="panel month">
@@ -285,22 +285,22 @@ function classTeacherSpace(who, own) {
       <div class="mweek" aria-hidden="true">${['dl', 'dt', 'dc', 'dj', 'dv', 'ds', 'dg'].map(d => `<span>${d}</span>`).join('')}</div>
       <div class="mgrid">${cells.join('')}</div>
       ${inMonth.length ? `<div class="mlegend"><span><i class="mk cl"></i>Dia de classe</span>${mid ? '<span><i class="mk cl mine"></i>Hi tens hora</span>' : ''}</div>`
-        : `<p class="muted" style="margin:10px 4px 0;font-size:var(--t-13)">${monthState === 'loading' ? 'Carregant aquest mes…' : monthState === 'error' ? 'No s’ha pogut carregar aquest mes. Comprova la connexió.' : 'Aquest mes no hi ha classes.'}</p>`}
+        : `<p class="muted u-m-10-4-0 u-fs-t-13">${monthState === 'loading' ? 'Carregant aquest mes…' : monthState === 'error' ? 'No s’ha pogut carregar aquest mes. Comprova la connexió.' : 'Aquest mes no hi ha classes.'}</p>`}
     </div>
-    <div class="section-title" style="margin-top:18px"><h2 class="h2">${esc(longDate(ui.clDay))}</h2>${dayClasses.length ? `<span class="eyebrow">${esc(classDaySpan(dayClasses[0]))}</span>` : ''}</div>
+    <div class="section-title u-mt-18"><h2 class="h2">${esc(longDate(ui.clDay))}</h2>${dayClasses.length ? `<span class="eyebrow">${esc(classDaySpan(dayClasses[0]))}</span>` : ''}</div>
     ${dayClasses.length ? `<div class="panel">${dayClasses.map(c => classDayCard(c, c.date < TODAY, true)).join('')}</div>`
-      : `<div class="panel" style="padding:14px;font-size:var(--t-13);color:var(--muted)">Cap classe aquest dia.${teach ? ' Amb <b>+ Dia</b> en pots posar una.' : ''}</div>`}`}
-    ${soon.length ? `<div class="section-title" style="margin-top:18px"><h2 class="h2">Properes classes</h2><span class="eyebrow">${soon.length}</span></div>
+      : `<div class="panel u-p-14 u-fs-t-13 u-c-muted">Cap classe aquest dia.${teach ? ' Amb <b>+ Dia</b> en pots posar una.' : ''}</div>`}`}
+    ${soon.length ? `<div class="section-title u-mt-18"><h2 class="h2">Properes classes</h2><span class="eyebrow">${soon.length}</span></div>
       <div class="cl-next">${soon.map(c => {
         const mineSlot = mid ? classSlots(c).find(x => x.memberId === mid) : null;
         const d = new Date(c.date + 'T12:00:00');
         return `<button data-act="cl-day" data-date="${esc(c.date)}">
           <span class="d"><b>${d.getDate()}</b><small>${esc(fmtD(c.date, { month: 'short' }).replace('.', ''))}</small></span>
           <span class="i"><b>${esc(capz(fmtD(c.date, { weekday: 'long' })))}</b><small>${c.cancelled ? 'Anul·lada' : esc(classDaySpan(c))}${c.place ? ` · ${esc(c.place)}` : ''}</small></span>
-          <span class="${mineSlot && !c.cancelled ? 'mine mono' : 'muted mono'}" style="font-size:var(--t-13)">${mineSlot && !c.cancelled ? esc(mineSlot.time) : ''}</span>
+          <span class="${mineSlot && !c.cancelled ? 'mine mono' : 'muted mono'} u-fs-t-13">${mineSlot && !c.cancelled ? esc(mineSlot.time) : ''}</span>
         </button>`;
       }).join('')}</div>` : ''}
-    ${teach ? `<div class="panel" style="margin-top:14px">
+    ${teach ? `<div class="panel u-mt-14">
       <div class="setting"><div><div class="t">Horari fix</div><div class="s">L’hora de cada setmana de cada ${esc(V.member)}: serveix per generar tots els dies d’un període de cop.</div></div>
         <button class="btn btn-sm" data-act="cl-plan" data-k="${esc(who)}">${planRows(who).length ? `Obre’l (${planRows(who).length} hores)` : 'Fes-lo'}</button></div>
       <div class="setting"><div><div class="t">Assistència del curs</div><div class="s">Qui ha vingut a classe i qui no, de tot el curs.</div></div>
@@ -332,43 +332,43 @@ function viewAllClasses(tabs = '') {
     const c = S.classes.get(r.classId), mySl = mySwapSlot(r);
     return `<div class="conv-card">
       <div class="a-h"><b>${esc(reqMemberName(r))}</b> busca algú per canviar l’hora</div>
-      <span class="muted" style="font-size:var(--t-13)">${esc(longDate(c.date))} · té les <b>${esc(slotTime(c, r.slotId))}</b> i tu ${mySl && mySl.c.id !== c.id ? `el ${esc(longDate(mySl.c.date))} ` : ''}les <b>${esc(mySl ? mySl.x.time : '')}</b>. Només per aquella setmana.</span>
-      ${r.reason ? `<span style="font-size:var(--t-13)">${esc(r.reason)}</span>` : ''}
-      <span style="margin-top:6px"><button class="btn btn-sm btn-primary" data-act="cl-open-take" data-r="${esc(r.id)}">Me’l quedo</button></span>
+      <span class="muted u-fs-t-13">${esc(longDate(c.date))} · té les <b>${esc(slotTime(c, r.slotId))}</b> i tu ${mySl && mySl.c.id !== c.id ? `el ${esc(longDate(mySl.c.date))} ` : ''}les <b>${esc(mySl ? mySl.x.time : '')}</b>. Només per aquella setmana.</span>
+      ${r.reason ? `<span class="u-fs-t-13">${esc(r.reason)}</span>` : ''}
+      <span class="u-mt-6"><button class="btn btn-sm btn-primary" data-act="cl-open-take" data-r="${esc(r.id)}">Me’l quedo</button></span>
     </div>`;
   };
   const swapCard = r => {
     const c = S.classes.get(r.classId);
     return `<div class="conv-card">
       <div class="a-h"><b>${esc(reqMemberName(r))}</b> et demana canviar l’hora</div>
-      <span class="muted" style="font-size:var(--t-13)">${c ? esc(longDate(c.date)) : ''} · ell/a té les <b>${esc(slotTime(c, r.slotId))}</b> i tu ${swapWithClass(r) !== r.classId ? 'el ' : 'les '}<b>${esc(swapOther(r))}</b>. Només per aquella setmana.</span>
-      ${r.reason ? `<span style="font-size:var(--t-13)">${esc(r.reason)}</span>` : ''}
-      <span style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><button class="btn btn-sm btn-primary" data-act="cl-answer" data-r="${esc(r.id)}" data-v="accepted">Accepto el canvi</button><button class="btn btn-sm" data-act="cl-answer" data-r="${esc(r.id)}" data-v="rejected">Ara no puc</button></span>
+      <span class="muted u-fs-t-13">${c ? esc(longDate(c.date)) : ''} · ell/a té les <b>${esc(slotTime(c, r.slotId))}</b> i tu ${swapWithClass(r) !== r.classId ? 'el ' : 'les '}<b>${esc(swapOther(r))}</b>. Només per aquella setmana.</span>
+      ${r.reason ? `<span class="u-fs-t-13">${esc(r.reason)}</span>` : ''}
+      <span class="u-d-flex u-gap-6 u-fw-wrap u-mt-6"><button class="btn btn-sm btn-primary" data-act="cl-answer" data-r="${esc(r.id)}" data-v="accepted">Accepto el canvi</button><button class="btn btn-sm" data-act="cl-answer" data-r="${esc(r.id)}" data-v="rejected">Ara no puc</button></span>
     </div>`;
   };
   const mineCard = r => `<li><span>${classReqLine(r)}<br><span class="m">${r.kind === 'swap' ? 'Esperant que respongui' : 'Esperant que ho vegi el professorat'}</span></span>
       <button class="btn btn-sm" data-act="cl-cancel" data-r="${esc(r.id)}">Retira</button></li>`;
   const avisos = `${open.length ? `<div class="section-title"><h2 class="h2">Canvis d’hora oberts</h2><span class="eyebrow">qui vulgui</span></div>
-      <div class="panel" style="display:grid;gap:10px;padding:12px">${open.map(openCard).join('')}</div>` : ''}
-    ${answer.length ? `<div class="section-title"><h2 class="h2">Et demanen un canvi</h2><span class="eyebrow">respon</span></div><div class="panel" style="display:grid;gap:10px;padding:12px">${answer.map(swapCard).join('')}</div>` : ''}
-    ${pending.length ? `<div class="section-title"><h2 class="h2">Absències i canvis per veure</h2><span class="eyebrow">${pending.length}</span></div><div class="panel" style="display:grid;gap:10px;padding:12px">${pending.map(classPendCard).join('')}</div>` : ''}
-    ${mineReq.length ? `<div class="section-title"><h2 class="h2">Les teves absències i canvis</h2></div><ul class="mini-list" style="max-height:none">${mineReq.map(mineCard).join('')}</ul>` : ''}`;
+      <div class="panel u-d-grid u-gap-10 u-p-12">${open.map(openCard).join('')}</div>` : ''}
+    ${answer.length ? `<div class="section-title"><h2 class="h2">Et demanen un canvi</h2><span class="eyebrow">respon</span></div><div class="panel u-d-grid u-gap-10 u-p-12">${answer.map(swapCard).join('')}</div>` : ''}
+    ${pending.length ? `<div class="section-title"><h2 class="h2">Absències i canvis per veure</h2><span class="eyebrow">${pending.length}</span></div><div class="panel u-d-grid u-gap-10 u-p-12">${pending.map(classPendCard).join('')}</div>` : ''}
+    ${mineReq.length ? `<div class="section-title"><h2 class="h2">Les teves absències i canvis</h2></div><ul class="mini-list u-maxh-none">${mineReq.map(mineCard).join('')}</ul>` : ''}`;
   const who = ui.clWho && classTeachers().some(t => t.key === ui.clWho) ? ui.clWho : null;
   if (!who && ui.clWho) ui.clWho = null;
-  if (who) return `<div class="page-head" style="margin-bottom:0"><h1 class="h1">${esc(V.classes)}</h1></div>${tabs}${avisos}${classTeacherSpace(who)}`;
+  if (who) return `<div class="page-head u-mb-0"><h1 class="h1">${esc(V.classes)}</h1></div>${tabs}${avisos}${classTeacherSpace(who)}`;
   return `<div class="page-head"><h1 class="h1">${esc(V.classes)} ${helpBtn('classes')}</h1></div>${tabs}
     ${helpText('classes', `Tria un ${esc(V.Teacher.toLowerCase())} per veure’n el calendari i les hores de cada ${esc(V.member)}. Els canvis d’hora valen només per a la setmana que es demanen, i es poden fer amb qui tingui classe qualsevol dia d’aquella setmana amb el mateix ${esc(V.Teacher.toLowerCase())}. Qui rep la petició ha de dir que sí perquè es faci.`)}
     ${avisos}
     ${teach ? clashBanner() : ''}
     ${classQuads()}
-    ${myId() ? `<div class="panel" style="margin-top:18px">${teach && !inClasses() ? '' : `<div class="setting"><div><div class="t">La teva assistència</div><div class="s">Les classes on has vingut durant el curs.</div></div>
+    ${myId() ? `<div class="panel u-mt-18">${teach && !inClasses() ? '' : `<div class="setting"><div><div class="t">La teva assistència</div><div class="s">Les classes on has vingut durant el curs.</div></div>
       <button class="btn btn-sm" data-act="cl-mystats">Mira-la</button></div>`}
       <div class="setting"><div><div class="t">Les teves classes al calendari del mòbil</div><div class="s">Subscriu-t’hi i les tindràs al Google Calendar, a l’Apple o a l’Outlook, sempre al dia.</div></div>
         <button class="btn btn-sm" data-act="cl-ics">Com fer-ho</button></div></div>` : ''}
-    ${myId() && inClasses() ? `<div class="panel" style="margin-top:12px"><div class="setting"><div><div class="t">La teva fitxa de cant</div><div class="s">Els objectius, el repertori que treballes i totes les notes i enregistraments de les classes.</div></div>
+    ${myId() && inClasses() ? `<div class="panel u-mt-12"><div class="setting"><div><div class="t">La teva fitxa de cant</div><div class="s">Els objectius, el repertori que treballes i totes les notes i enregistraments de les classes.</div></div>
       <button class="btn btn-sm btn-primary" data-act="cl-student" data-m="${esc(myId())}">Obre-la</button></div></div>` : ''}
     ${myNotes.length ? `<div class="section-title"><h2 class="h2">Notes de les teves classes</h2></div>
-      <ul class="mini-list" style="max-height:none">${myNotes.map(n => `<li style="display:grid;gap:4px"><span class="m mono">${esc(shortDate(n.date))}</span>${n.text ? `<span style="white-space:pre-wrap">${esc(n.text)}</span>` : ''}${n.file ? `<button class="btn btn-sm" style="justify-self:start" data-act="cl-rec" data-id="${esc(n.id)}">Escolta l’enregistrament</button>` : ''}</li>`).join('')}</ul>` : ''}
+      <ul class="mini-list u-maxh-none">${myNotes.map(n => `<li class="u-d-grid u-gap-4"><span class="m mono">${esc(shortDate(n.date))}</span>${n.text ? `<span class="u-ws-pre-wrap">${esc(n.text)}</span>` : ''}${n.file ? `<button class="btn btn-sm u-js-start" data-act="cl-rec" data-id="${esc(n.id)}">Escolta l’enregistrament</button>` : ''}</li>`).join('')}</ul>` : ''}
 `;
 }
 
@@ -389,7 +389,7 @@ function viewClassRoll(tabs = '') {
   const day = c => `<div class="section-title"><h2 class="h2">${c.date === TODAY ? 'Avui' : esc(capz(longDate(c.date)))}</h2><span class="eyebrow">${esc(classDaySpan(c))}</span></div>
     <div class="panel">${classDayCard(c, c.date < TODAY, true)}</div>`;
   return `<div class="page-head"><div><div class="eyebrow">${esc(V.classes)}</div><h1 class="h1">Assistència</h1></div><button class="btn btn-sm" data-act="cl-stats">Assistència del curs</button></div>${tabs}
-    ${pend.length ? `<div class="section-title"><h2 class="h2">Absències i canvis per veure</h2><span class="eyebrow">${pend.length}</span></div><div class="panel" style="display:grid;gap:10px;padding:12px">${pend.map(classPendCard).join('')}</div>` : ''}
+    ${pend.length ? `<div class="section-title"><h2 class="h2">Absències i canvis per veure</h2><span class="eyebrow">${pend.length}</span></div><div class="panel u-d-grid u-gap-10 u-p-12">${pend.map(classPendCard).join('')}</div>` : ''}
     ${clashBanner()}
     ${shown.length ? shown.map(day).join('') : `<div class="empty">${staffSvg()}<p>Encara no has fet cap classe. El dia que en facis, aquí marcaràs qui hi ha vingut.</p></div>`}
     ${!now.length && days.some(c => c.date > TODAY) ? `<div class="section-title"><h2 class="h2">Properes classes</h2></div>${classNextList(days.filter(c => c.date > TODAY).slice(0, 3))}` : ''}
@@ -403,7 +403,7 @@ function classNextList(list) {
   return `<div class="cl-next">${list.map(c => { const d = new Date(c.date + 'T12:00:00'), n = classSlots(c).filter(x => x.memberId).length; return `<button data-act="cl-roll-day" data-date="${esc(c.date)}">
     <span class="d"><b>${d.getDate()}</b><small>${esc(fmtD(c.date, { month: 'short' }).replace('.', ''))}</small></span>
     <span class="i"><b>${c.date === TODAY ? 'Avui' : esc(capz(fmtD(c.date, { weekday: 'long' })))}</b><small>${esc(classDaySpan(c))}${c.place ? ` · ${esc(c.place)}` : ''}</small></span>
-    <span class="muted mono" style="font-size:var(--t-13)">${n === 1 ? '1 alumne' : `${n} alumnes`}</span></button>`; }).join('')}</div>`;
+    <span class="muted mono u-fs-t-13">${n === 1 ? '1 alumne' : `${n} alumnes`}</span></button>`; }).join('')}</div>`;
 }
 /** Els noms de l'horari que encara no estan lligats a cap fitxa: [{ name, n }]. */
 function classUnlinked(who) {
@@ -416,7 +416,7 @@ function classUnlinked(who) {
 function unlinkedPanel(who) {
   const list = classUnlinked(who);
   if (!list.length) return '';
-  return `<div class="panel" style="margin-bottom:14px">${list.map(t => `<div class="setting"><div><div class="t">${esc(t.name)}</div><div class="s">Sense fitxa${t.n ? ` · ${t.n} ${t.n === 1 ? 'classe' : 'classes'}` : ''}: no s’hi pot passar llista ni posar-hi notes.</div></div>
+  return `<div class="panel u-mb-14">${list.map(t => `<div class="setting"><div><div class="t">${esc(t.name)}</div><div class="s">Sense fitxa${t.n ? ` · ${t.n} ${t.n === 1 ? 'classe' : 'classes'}` : ''}: no s’hi pot passar llista ni posar-hi notes.</div></div>
     <button class="btn btn-sm" data-act="cl-link" data-k="${esc(who)}" data-n="${esc(t.name)}">Vincula</button></div>`).join('')}</div>`;
 }
 /** Les classes que vénen i coincideixen amb un assaig o un concert, i que encara ningú ha dit que es deixin així. */
@@ -431,7 +431,7 @@ function classClashList() {
 function clashBanner() {
   const n = classClashList().length;
   if (!n) return '';
-  return `<div class="panel" style="margin-bottom:14px"><div class="setting"><div><div class="t">${n === 1 ? '1 classe coincideix' : `${n} classes coincideixen`} amb un assaig o concert</div><div class="s">Mou-les o deixa-les tal com estan.</div></div>
+  return `<div class="panel u-mb-14"><div class="setting"><div><div class="t">${n === 1 ? '1 classe coincideix' : `${n} classes coincideixen`} amb un assaig o concert</div><div class="s">Mou-les o deixa-les tal com estan.</div></div>
     <button class="btn btn-sm" data-act="cl-clashes">Revisa-les</button></div></div>`;
 }
 /** A Inici, amb el rol de professor de cant: les properes classes en lloc dels assajos. */
@@ -441,7 +441,7 @@ function teacherSoonBlock() {
     ${next.length ? classNextList(next) : '<div class="todo-done"><span><b>Res a la vista</b><small>No tens cap classe programada.</small></span></div>'}`;
 }
 function viewTeacherCalendar() {
-  return `<div class="page-head" style="margin-bottom:0"><div><div class="eyebrow">${esc(V.classes)}</div><h1 class="h1">Calendari</h1></div></div>${classTeacherSpace(myTeacherKey(), true)}`;
+  return `<div class="page-head u-mb-0"><div><div class="eyebrow">${esc(V.classes)}</div><h1 class="h1">Calendari</h1></div></div>${classTeacherSpace(myTeacherKey(), true)}`;
 }
 /** Els alumnes d'aquest professor/a: tothom qui té (o ha tingut) hora amb ell/a, amb la seva hora de cada setmana. */
 function myStudents(who) {
@@ -472,7 +472,7 @@ function viewStudents(tabs = '') {
     ${unlinkedPanel(myTeacherKey())}
     ${list.length ? `<div id="stu-list">${list.length > 5 ? findBox('#stu-list', 'Cerca un alumne') : ''}<div class="panel students">${list.map(({ m, hours, next }) => `<button class="stu-row" data-find="${esc(normText(m.name))}" data-act="cl-student" data-m="${esc(m.id)}">
         ${avatar(m)}<span class="stu-t"><b>${esc(fullName(m.name))}</b><small>${esc([SEC[m.section]?.name + (m.part ? ` ${m.part}` : ''), hours.join(', '), next ? `propera, ${shortDate(next)}` : ''].filter(Boolean).join(' · '))}</small><small>${esc(recent(m.id))}</small></span>
-        ${notes.get(m.id) ? `<span class="stu-n">${notes.get(m.id)} ${notes.get(m.id) === 1 ? 'nota' : 'notes'}</span>` : ''}${ICON.right}</button>`).join('')}</div><div class="panel find-empty" style="padding:14px;color:var(--muted)" hidden>Cap alumne amb aquest nom.</div></div>`
+        ${notes.get(m.id) ? `<span class="stu-n">${notes.get(m.id)} ${notes.get(m.id) === 1 ? 'nota' : 'notes'}</span>` : ''}${ICON.right}</button>`).join('')}</div><div class="panel find-empty u-p-14 u-c-muted" hidden>Cap alumne amb aquest nom.</div></div>`
       : `<div class="empty">${staffSvg()}<p>Encara no tens cap alumne. Quan facis l’horari a <b>Calendari</b>, hi sortiran tots.</p></div>`}
-    <p class="muted" style="font-size:var(--t-13);margin:10px 2px 0">A la fitxa de cadascú hi ha els objectius, el repertori que treballa i totes les notes i enregistraments de les classes.</p>`;
+    <p class="muted u-fs-t-13 u-m-10-2-0">A la fitxa de cadascú hi ha els objectius, el repertori que treballa i totes les notes i enregistraments de les classes.</p>`;
 }

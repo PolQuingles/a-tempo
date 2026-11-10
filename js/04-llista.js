@@ -51,7 +51,7 @@ function attAbsences() {
       <button class="pick" aria-pressed="${ui.absFilter !== 'all'}" data-act="abs-filter" data-k="pending">Pendents</button>
       <button class="pick" aria-pressed="${ui.absFilter === 'all'}" data-act="abs-filter" data-k="all">Tots</button></div></div>
     ${list.length ? `<div class="panel">${list.map(a => absenceCard(a, { staff: true })).join('')}</div>`
-      : `<div class="panel" style="padding:16px;font-size:var(--t-13);color:var(--muted)">${ui.absFilter === 'all' ? 'Encara no hi ha cap avís.' : 'No hi ha cap avís per respondre.'} Cada ${V.member} avisa des de la seva pestanya d’Assistència.</div>`}`;
+      : `<div class="panel u-p-16 u-fs-t-13 u-c-muted">${ui.absFilter === 'all' ? 'Encara no hi ha cap avís.' : 'No hi ha cap avís per respondre.'} Cada ${V.member} avisa des de la seva pestanya d’Assistència.</div>`}`;
 }
 /** Des de la corda només es porta aquella corda: no es torna a «totes les cordes». */
 const rollOneSec = () => !!areaSec();
@@ -87,7 +87,7 @@ function viewRollBody() {
     if (onboard) return `<div class="page-head"><h1 class="h1">Benvinguda</h1></div>${onboard}`;
     return `<div class="empty">${staffSvg()}<h2 class="h2">Encara no hi ha res per passar llista</h2>
       <p>${!S.members.size ? `Afegeix els ${V.members} de cada ${V.section}` : 'Crea una producció amb les seves sessions d’assaig'} per començar.</p>
-      ${canEdit() ? `<span style="display:inline-flex;gap:8px;flex-wrap:wrap;justify-content:center">
+      ${canEdit() ? `<span class="u-d-inline-flex u-gap-8 u-fw-wrap u-jc-center">
         <button class="btn btn-primary" data-act="tab" data-tab="gestio">Ves a Gestió</button>
         ${!S.members.size && !S.productions.size ? '<button class="btn" data-act="load-demo">Prova amb dades d’exemple</button>' : ''}
       </span>` : ''}</div>`;
@@ -129,14 +129,14 @@ function viewRollOverview(cur, list, pendingBySec) {
         <div><i class="i-FNJ"></i><b>${c.FNJ}</b><span>Faltes injustificades</span></div>
         <div><i class="i-none"></i><b>${c.none}</b><span>Sense marcar</span></div>
       </div>
-      ${out ? `<p class="muted" style="margin:0;font-size:var(--t-13)">${out === 1 ? `1 ${V.member} està` : `${out} ${V.members} estan`} de baixa o no fan aquesta producció.</p>` : ''}
+      ${out ? `<p class="muted u-m-0 u-fs-t-13">${out === 1 ? `1 ${V.member} està` : `${out} ${V.members} estan`} de baixa o no fan aquesta producció.</p>` : ''}
     </div>`;
   return `${attTabs()}<div class="ctx" id="ctx">${sessionNav(cur, list, false)}</div>
     ${fitxaChip(cur)}
     <div class="roll-grid"><div class="roll-a">
     <div class="quads ${SECTIONS.length === 4 ? '' : `n-other${SECTIONS.length > 6 ? ' n-many' : ''}`}" data-n="${SECTIONS.length}">${quads}</div>
     ${canEdit() && cur.prodId && S.productions.has(cur.prodId) && SECTIONS.some(x => membersOf(x.id).some(m => m.leader)) ? `<div class="roll-tools"><button class="btn btn-sm btn-ghost" data-act="prod-roll" data-pid="${esc(cur.prodId)}">${esc(capz(V.leaders))} en funcions</button></div>` : ''}
-    ${anyDone || anyPend ? `<div class="q-legend">${anyDone ? '<span><i style="background:var(--p)"></i>Llista completa</span>' : ''}${anyPend ? '<span><i style="background:var(--fnj)"></i>Té llistes pendents</span>' : ''}</div>` : ''}
+    ${anyDone || anyPend ? `<div class="q-legend">${anyDone ? '<span><i class="u-bg-p"></i>Llista completa</span>' : ''}${anyPend ? '<span><i class="u-bg-fnj"></i>Té llistes pendents</span>' : ''}</div>` : ''}
     </div><div class="roll-b">
     ${day}
     ${cur.rsvp && canEdit() ? rsvpPanel(cur) : ''}
@@ -160,11 +160,11 @@ function rsvpPanel(session) {
   const r = rsvpCounts(session);
   return `<div class="section-title"><h2 class="h2">Confirmacions</h2><span class="eyebrow">${session.rsvpBy ? `fins al ${shortDate(session.rsvpBy)}` : 'convocatòria'}</span></div>
     <div class="panel rsvp-panel">
-      <div class="rsvp-nums"><span><b style="color:var(--p)">${r.yes}</b><span>hi seran</span></span><span><b style="color:var(--fnj)">${r.no}</b><span>no hi seran</span></span><span><b style="color:var(--muted)">${r.none}</b><span>sense resposta</span></span></div>
-      <div class="legend" style="margin:0">${SECTIONS.filter(x => r.bySec[x.id]).map(x => `<span><b>${esc(x.short)}</b> ${r.bySec[x.id].yes} sí · ${r.bySec[x.id].no} no · ${r.bySec[x.id].none} ?</span>`).join('')}</div>
-      ${session.bus ? (() => { const ys = [...S.rsvp.values()].filter(a => a.sessionId === session.id && a.answer === 'yes'); const bus = ys.filter(a => a.transport === 'bus').length, own = ys.filter(a => a.transport === 'own').length; return `<p class="m" style="margin:0">Autocar: <b>${bus}</b> · pel seu compte: <b>${own}</b>${ys.length - bus - own ? ` · sense dir-ho: ${ys.length - bus - own}` : ''}</p>`; })() : ''}
-      ${(session.tasks || []).length ? `<p class="m" style="margin:0">${session.tasks.map(t => `${esc(t.label)}: <b>${taskPeople(session, t.id).length}</b> de ${t.need || '?'}`).join(' · ')}</p>` : ''}
-      <span style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-sm" data-act="rsvp-list" data-sid="${session.id}">Veure les respostes</button>${r.none && session.date >= TODAY ? `<button class="btn btn-sm btn-primary" data-act="rsvp-remind" data-sid="${session.id}">Recorda-ho als ${r.none} que falten</button>` : ''}</span>
+      <div class="rsvp-nums"><span><b class="u-c-p">${r.yes}</b><span>hi seran</span></span><span><b class="u-c-fnj">${r.no}</b><span>no hi seran</span></span><span><b class="u-c-muted">${r.none}</b><span>sense resposta</span></span></div>
+      <div class="legend u-m-0">${SECTIONS.filter(x => r.bySec[x.id]).map(x => `<span><b>${esc(x.short)}</b> ${r.bySec[x.id].yes} sí · ${r.bySec[x.id].no} no · ${r.bySec[x.id].none} ?</span>`).join('')}</div>
+      ${session.bus ? (() => { const ys = [...S.rsvp.values()].filter(a => a.sessionId === session.id && a.answer === 'yes'); const bus = ys.filter(a => a.transport === 'bus').length, own = ys.filter(a => a.transport === 'own').length; return `<p class="m u-m-0">Autocar: <b>${bus}</b> · pel seu compte: <b>${own}</b>${ys.length - bus - own ? ` · sense dir-ho: ${ys.length - bus - own}` : ''}</p>`; })() : ''}
+      ${(session.tasks || []).length ? `<p class="m u-m-0">${session.tasks.map(t => `${esc(t.label)}: <b>${taskPeople(session, t.id).length}</b> de ${t.need || '?'}`).join(' · ')}</p>` : ''}
+      <span class="u-d-flex u-gap-8 u-fw-wrap"><button class="btn btn-sm" data-act="rsvp-list" data-sid="${session.id}">Veure les respostes</button>${r.none && session.date >= TODAY ? `<button class="btn btn-sm btn-primary" data-act="rsvp-remind" data-sid="${session.id}">Recorda-ho als ${r.none} que falten</button>` : ''}</span>
     </div>`;
 }
 /** La llista d'una corda és completa quan tothom hi té marca (els de baixa o fora de la producció ja compten). */
@@ -225,11 +225,11 @@ function viewRollSection(cur, list, sec, pendingBySec) {
   <ul class="roster${rollCompact() ? ' compact' : ''}" id="roster">${inRoll.map(m => rowHtml(cur, m)).join('')}${told.length ? `<li class="roster-sep">Han avisat que no vindran</li>${told.map(m => rowHtml(cur, m)).join('')}` : ''}</ul>
   ${out.length ? `<details class="np-group" ${out.some(m => effMark(cur, m)?.s !== 'NP') ? 'open' : ''}>
       <summary><span>De baixa o no fan la producció (${out.length})</span>${ICON.chev}</summary>
-      <ul class="roster${rollCompact() ? ' compact' : ''}" style="margin-top:0">${out.map(m => rowHtml(cur, m)).join('')}</ul>
+      <ul class="roster${rollCompact() ? ' compact' : ''} u-mt-0">${out.map(m => rowHtml(cur, m)).join('')}</ul>
     </details>` : ''}
-  ${rollOneSec() ? '' : `<button class="btn" data-act="close-sec" style="display:flex;margin:18px auto 0">Torna a totes les ${V.sections}</button>`}
+  ${rollOneSec() ? '' : `<button class="btn u-d-flex u-m-18-auto-0" data-act="close-sec">Torna a totes les ${V.sections}</button>`}
   ${subQuiet(cur, sec, leader)}
-  ${canMark(cur, sec) ? '<p class="muted" style="font-size:var(--t-13);text-align:center;margin-top:12px">Toca l’estat marcat una altra vegada per desmarcar-lo.</p>' : ''}`;
+  ${canMark(cur, sec) ? '<p class="muted u-fs-t-13 u-ta-center u-mt-12">Toca l’estat marcat una altra vegada per desmarcar-lo.</p>' : ''}`;
 }
 function subLine(cur, sec, leader) {
   const sub = subFor(cur.id, sec);
@@ -258,7 +258,7 @@ function tallyInner(c, pendingInRoll) {
     <div class="legend">${legend}</div>
     <div class="tally-foot">
       <span class="progress-txt">${c.min ? `Retard acumulat <b>${c.min}′</b>` : (c.R ? 'Retards sense minuts' : '')}${c.left ? ` · ${c.left === 1 ? 'n’ha marxat 1' : `n’han marxat ${c.left}`} abans (<b>${c.leftMin}′</b>)` : ''}</span>
-      <span style="display:flex;gap:8px;flex-wrap:wrap">
+      <span class="u-d-flex u-gap-8 u-fw-wrap">
         ${S.role === 'edit' ? '<button class="btn btn-sm" data-act="summary">Resum</button>' : ''}
         ${canMark(sessionById(ui.sessionId), ui.rollSec || ui.section) ? `<button class="btn btn-sm btn-primary" data-act="mark-rest" ${pendingInRoll ? '' : 'disabled'}>Resta com a presents</button>` : ''}
       </span>
@@ -313,9 +313,9 @@ function rowHtml(session, m) {
         <input class="note-input" id="note-${m.id}" type="text" maxlength="120" placeholder="Opcional" value="${esc(mk.note || '')}" data-bind="note"></div>`;
     }
   } else if (mk && mk.note) {
-    body = `<div class="muted" style="font-size:var(--t-13)">${esc(mk.note)}</div>`;
+    body = `<div class="muted u-fs-t-13">${esc(mk.note)}</div>`;
   }
-  const dot = s === 'none' ? '' : `<i class="i-${s}" style="display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px"></i>`;
+  const dot = s === 'none' ? '' : `<i class="i-${s} u-d-inline-block u-w-9 u-h-9 u-br-3 u-mr-6"></i>`;
   return `<li class="row ${mk ? 'has-mark' : ''}${editable ? ' ed' : ''}" data-mid="${m.id}" data-s="${s}">
     <div class="row-top" ${editable ? '' : 'style="margin-bottom:4px"'}><span class="who">${avatar(m)}<span class="name">${esc(m.name)}</span>${m.part ? `<span class="part" title="${V.Part}">${esc(partTag(m))}</span>` : ''}${m.leader ? `<span class="tag">${V.Leader}</span>` : ''}${mk?.auto || !canEdit() ? '' : ruleTag(session, m)}${session.rsvp && canEdit() && !mk?.auto ? rsvpPill(session, m) : ''}</span>
       <span class="state ${warn ? 'warn' : ''}">${editable ? '' : dot}${state}</span></div>
