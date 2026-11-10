@@ -370,6 +370,7 @@ const actions = {
   'choice-open': el => sheetProdChoice(el.dataset.mid || myMemberId()),
   'choices-overview': () => sheetChoicesOverview(),
   'export-csv': () => exportCSV(),
+  'stats-report': () => printStatsReport(),
   'export-json': () => exportJSON(),
   'manage': el => {
     const enter = ui.tab !== 'gestio';

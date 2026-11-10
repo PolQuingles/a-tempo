@@ -268,11 +268,16 @@ function fitxaChip(s) {
   if (canProd() && isShow(s)) return `<button class="fitxa-chip empty" data-act="session-edit" data-sid="${s.id}">${ICON.info}<span><b>Afegeix la fitxa ${V.sh.del}</b><small>Convocatòria, vestuari, punt de trobada…</small></span></button>`;
   return '';
 }
+/** Com es diu una sessió en un desplegable: «15/11 dg · Assaig · Oratori». */
+const sessionLabel = s => [`${ddmm(s.date)} ${wdShort(s.date)}`, s.type || 'Assaig', prodShort(S.productions.get(s.prodId) || {})].filter(Boolean).join(' · ');
 function sheetSession(sid, presetProd, presetDate) {
   const existing = sid ? sessionById(sid) : null;
   const prods = productionsByNow();
   if (!prods.length) { toast('Primer crea una producció'); ui.tab = 'gestio'; ui.manage = 'produccions'; closeSheet(); render(); return; }
-  const cur = existing || { id: uid('s'), date: presetDate || TODAY, time: '20:30', end: '22:30', type: 'Assaig', place: '', note: '', sections: [], prodId: presetProd || (ui.calProd !== 'all' ? ui.calProd : currentProductionId()) };
+  const firstProd = presetProd || (ui.calProd !== 'all' ? ui.calProd : currentProductionId());
+  const cur = existing || { id: uid('s'), date: presetDate || TODAY, time: '20:30', end: '22:30', type: 'Assaig', place: S.productions.get(firstProd)?.place || '', note: '', sections: [], prodId: firstProd };
+  // Per copiar la fitxa d'una altra sessió (les més recents, primer).
+  const infoFrom = allSessions().filter(x => x.id !== cur.id && hasInfo(x)).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 40);
   const secs = new Set(cur.sections && cur.sections.length ? cur.sections : SECTIONS.map(x => x.id));
   openSheet({
     title: existing ? 'Edita la sessió' : 'Nova sessió',
@@ -299,6 +304,7 @@ function sheetSession(sid, presetProd, presetDate) {
       <details class="fitxa-edit" id="se-fitxa" ${isShow(cur) || hasInfo(cur) ? 'open' : ''}>
         <summary><span><b>Fitxa ${V.sh.del}</b><br><span class="muted" style="font-size:var(--t-13)">Convocatòria, vestuari, punt de trobada… La veuen tots els convocats.</span></span>${ICON.chev}</summary>
         <div class="kv" style="margin-top:12px">
+          ${infoFrom.length ? `<label class="field"><span>Copia la fitxa d’una altra sessió</span><select class="inp" id="se-copy"><option value="">Tria’n una…</option>${infoFrom.map(x => `<option value="${esc(x.id)}">${esc(sessionLabel(x))}</option>`).join('')}</select><small>Omple els camps de sota. Fins que no desis, no canvia res.</small></label>` : ''}
           <label class="field"><span>Hora de convocatòria</span><input class="inp" id="se-call" type="time" style="max-width:170px" value="${esc(cur.info?.call || '')}"><small>A quina hora han de ser-hi els ${V.members}.</small></label>
           <label class="field"><span>Vestuari</span><input class="inp" id="se-dress" type="text" maxlength="100" value="${esc(cur.info?.dress || '')}" placeholder="p. ex. Uniforme negre i fulard lila"></label>
           <label class="field"><span>Punt de trobada</span><input class="inp" id="se-meet" type="text" maxlength="100" value="${esc(cur.info?.meet || '')}" placeholder="p. ex. Entrada d’artistes, c. Sant Pere Més Alt"></label>
@@ -333,9 +339,19 @@ function sheetSession(sid, presetProd, presetDate) {
         el.querySelectorAll('[data-rm-task]').forEach(b => b.onclick = () => { readRows(); tasks.splice(+b.dataset.rmTask, 1); paintRows(); });
       };
       paintRows();
+      el.querySelector('#se-copy')?.addEventListener('change', e => {
+        const from = sessionById(e.target.value);
+        if (!from) return;
+        for (const [k] of INFO_FIELDS) el.querySelector(`#se-${k}`).value = from.info?.[k] || '';
+        steps.splice(0, steps.length, ...clone(from.info?.steps || []));
+        paintRows();
+        toast('Fitxa copiada. Revisa-la i desa.');
+      });
       el.querySelector('#se-step-add').onclick = () => { readRows(); steps.push({ time: '', what: '', where: '' }); paintRows(); };
       el.querySelector('#se-task-add').onclick = () => { readRows(); tasks.push({ id: uid('tk'), label: '', need: 2 }); paintRows(); };
       el.querySelector('#se-type').onchange = e => { if (SHOWS.has(e.target.value)) el.querySelector('#se-fitxa').open = true; };
+      // En una sessió nova, si es canvia de producció, també el lloc habitual.
+      if (!existing) el.querySelector('#se-prod').addEventListener('change', e => { const place = el.querySelector('#se-place'), was = S.productions.get(cur.prodId)?.place || ''; if (!place.value.trim() || place.value.trim() === was) place.value = S.productions.get(e.target.value)?.place || ''; cur.prodId = e.target.value; });
       el.querySelector('#se-save').onclick = () => {
         const date = el.querySelector('#se-date').value;
         if (!date) { toast('Indica la data de la sessió'); return; }

@@ -291,6 +291,10 @@ summary::-webkit-details-marker{display:none}
 .extra .m{font-size:var(--t-13);color:var(--muted)}
 .early-add{display:block;margin:6px 0 0 auto;min-height:40px;padding:0 8px;font-size:var(--t-13);font-weight:600;color:var(--muted);text-decoration:underline;text-underline-offset:3px}
 .early-add:hover{color:var(--ink)}
+.roster-sep{padding:12px 12px 4px;font-size:var(--t-12);font-weight:600;color:var(--muted);border-top:1px solid var(--line)}
+.bulk-list{display:grid;gap:1px;max-height:260px;overflow-y:auto;background:var(--line);border:1px solid var(--line);border-radius:var(--r-md)}
+.stats-exp{display:inline-flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.pr-table .n{text-align:right;font-variant-numeric:tabular-nums}
 .roster.compact .early-add{display:none}
 .extra.x-FJ{background:var(--fj-soft)}
 .extra.x-FNJ{background:var(--fnj-soft)}
@@ -1997,6 +2001,8 @@ svg{stroke-linecap:round;stroke-linejoin:round}
 .roster.compact .who{row-gap:2px;column-gap:8px}
 .roster.compact .opt{width:34px;height:34px;min-height:0;padding:0;border-radius:50%;font-size:0;gap:0;background:var(--surface);border:2px solid var(--line-strong)}
 .roster.compact .opt i{display:none}
+/* Els cercles són petits: la zona tàctil arriba a tota l'alçada de la fila. */
+.roster.compact .opt::before{content:'';position:absolute;inset:-7px -2px}
 .roster.compact .opt::after{content:attr(data-c);font-size:var(--t-12);font-weight:700;letter-spacing:-.02em;color:var(--ink-2)}
 .roster.compact .opt.o-P{border-color:var(--p)} .roster.compact .opt.o-R{border-color:var(--r)} .roster.compact .opt.o-FJ{border-color:var(--fj)} .roster.compact .opt.o-FNJ{border-color:var(--fnj)} .roster.compact .opt.o-NP{border-color:var(--np)}
 .roster.compact .opt.o-P[aria-checked="true"]{background:var(--p);color:var(--p-ink)}

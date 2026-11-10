@@ -19,6 +19,28 @@ function exportJSON() {
   const slug = (S.config.name || 'agrupacio').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   offerFile(`${slug}-${TODAY}.json`, JSON.stringify(data, null, 2), 'application/json');
 }
+/** L'informe d'assistència per a direcció: es desa com a PDF des de la finestra d'imprimir. */
+function printStatsReport() {
+  const scope = currentScope();
+  if (!scope) return;
+  const st = computeStats(scope, '');
+  const kpi = (v, l) => `<div class="pr-kpi"><b>${v}</b><span>${l}</span></div>`;
+  const row = (name, c) => `<td>${name}</td><td class="n"><b>${pct(rate(c))}</b></td><td class="n">${c.P}</td><td class="n">${c.R}${c.min ? ` <small>(${c.min}′)</small>` : ''}</td><td class="n">${c.FJ}</td><td class="n">${c.FNJ}</td>`;
+  const head = first => `<thead><tr><th>${first}</th><th>Assist.</th><th>Present</th><th>Retard</th><th>Just.</th><th>No just.</th></tr></thead>`;
+  const secs = SECTIONS.filter(x => st.rows.some(r => r.m.section === x.id));
+  const rule = scope.kind === 'prod' ? st.rows.map(r => ({ m: r.m, r: ruleStatus(scope.id, r.m) })).filter(x => x.r && x.r.status !== 'ok').sort((a, b) => a.r.cur - b.r.cur) : [];
+  const counted = r => r.P + r.R + r.FJ + r.FNJ > 0;
+  printDoc(`Informe d’assistència · ${scope.name}`, `
+    ${scope.kind === 'range' ? `<p>Del ${esc(longDate(scope.from).toLowerCase())} al ${esc(longDate(scope.to).toLowerCase())}.</p>` : ''}
+    <div class="pr-kpis">${kpi(pct(rate(st.tot)), 'Assistència')}${kpi(st.counted.length, st.counted.length === 1 ? 'Sessió amb llista' : 'Sessions amb llista')}${kpi(st.tot.R, 'Retards')}${kpi(st.tot.FJ, 'Faltes justificades')}${kpi(st.tot.FNJ, 'Faltes no justificades')}</div>
+    <h2>Per ${esc(V.sections)}</h2>
+    <table class="pr-table">${head(capz(V.Section))}<tbody>${secs.map(x => `<tr>${row(esc(x.name), st.bySec[x.id])}</tr>`).join('')}</tbody></table>
+    ${rule.length ? `<h2>Per sota del ${minAttendance()}%</h2><table class="pr-table"><thead><tr><th>Nom</th><th>${capz(V.Section)}</th><th>Assist.</th><th>Situació</th></tr></thead><tbody>${rule.map(x => `<tr><td>${esc(x.m.name)}</td><td>${esc(SEC[x.m.section].name)}</td><td class="n">${pct(x.r.cur)}</td><td>${x.r.status === 'out' ? 'Ja no hi arriba' : 'En risc'}</td></tr>`).join('')}</tbody></table>` : ''}
+    <h2>Sessions</h2>
+    <table class="pr-table">${head('Sessió')}<tbody>${st.counted.map(({ s, c }) => `<tr>${row(`${ddmm(s.date)} · ${esc(s.type || 'Assaig')}`, c)}</tr>`).join('')}</tbody></table>
+    <h2>Per persona</h2>
+    ${secs.map(x => `<h3>${esc(x.name)}</h3><table class="pr-table">${head('Nom')}<tbody>${st.rows.filter(r => r.m.section === x.id && counted(r)).sort((a, b) => byName(a.m, b.m)).map(r => `<tr>${row(esc(r.m.name), r)}</tr>`).join('')}</tbody></table>`).join('')}`);
+}
 function exportCSV() {
   const scope = currentScope();
   if (!scope) return;
