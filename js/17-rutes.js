@@ -32,10 +32,13 @@ function routeFromUi() {
     case 'vestidor': return 'vestidor';
     case 'bandes': return 'bandes';
     case 'tauler': return `tauler/${ROUTE_BOARD[ui.board] || 'anuncis'}`;
-    case 'classes':
-      if (ui.clWho) return `classes/${encodeURIComponent(teacherSlug(ui.clWho))}`;
-      // El professorat: l'assistència de cada dia (#/classes), els alumnes o totes les classes.
-      return clTabKeys().length && ui.clTab === 'alumnes' ? 'alumnes' : clTabKeys().length && ui.clTab === 'totes' ? 'classes/totes' : 'classes';
+    case 'classes': {
+      // Qui fa o dona classes: Classes (#/classes), el Calendari (d'un professor/a), els Alumnes i l'Espai personal.
+      if (!clTabKeys().length) return ui.clWho ? `classes/${encodeURIComponent(teacherSlug(ui.clWho))}` : 'classes';
+      const k = clTabNow();
+      if (k === 'calendari') return ui.clWho ? `classes/${encodeURIComponent(teacherSlug(ui.clWho))}` : 'classes/calendari';
+      return k === 'alumnes' ? 'alumnes' : k === 'espai' ? 'classes/espai' : 'classes';
+    }
     default: return 'inici';
   }
 }
@@ -68,7 +71,7 @@ function applyRoute(route) {
     else { ui.att = 'llista'; ui.rollSec = sub && SEC_MAP[sub] ? (ui.section = sub) : null; }
     return true;
   }
-  if (a === 'calendari') { ui.tab = 'calendari'; return true; }
+  if (a === 'calendari') { ui.tab = 'calendari'; return true; }   // qui només dona classes hi té el de les classes (vegeu renderTabs)
   // L'arxiu de partitures és al Repertori del Tauler, i els alumnes, a les Classes.
   if (a === 'partitures') { ui.tab = 'tauler'; ui.board = 'materials'; return true; }
   if (a === 'alumnes') { ui.tab = 'classes'; ui.clTab = 'alumnes'; ui.clWho = null; return true; }
@@ -80,7 +83,7 @@ function applyRoute(route) {
     const t = sub && typeof classTeachers === 'function' ? classTeachers().find(x => teacherSlug(x.key) === sub) : null;
     if (!t || t.key !== ui.clWho) { ui.clMonth = null; ui.clDay = null; }
     ui.clWho = t ? t.key : null;
-    ui.clTab = t || sub === 'totes' ? 'totes' : 'llista';
+    ui.clTab = t || sub === 'totes' || sub === 'calendari' ? 'calendari' : sub === 'espai' ? 'espai' : 'classes';
     return true;
   }
   return false;

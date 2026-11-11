@@ -246,7 +246,14 @@ prova('rols sumats: cadascú té les pestanyes i els permisos de tots els seus r
   igual(as(['admin', 'gerencia']), { tabs: 'avisos,llista,calendari,tauler,gestio', more: 'classes', gestio: 'personal,produccions,config', areas: 'all' },
     'administració sense classes pròpies: les classes al menú del compte');
   igual(as(['voice']).tabs, 'avisos,calendari,classes', 'professor de cant');
-  igual(clTabKeys(), ['llista', 'alumnes'], 'el professor, a Classes: l’assistència i els alumnes');
+  igual(clTabKeys(), ['classes', 'calendari', 'alumnes'], 'el professor, a la barra de Classes: les classes, el calendari i els alumnes');
+  ui.tab = 'avisos';
+  igual(clMode(), true, 'qui només dona classes té sempre la barra de Classes');
+  as(['singer'], { section: 'T', memberId: 't' });
+  igual(clTabKeys(), ['classes', 'calendari', 'espai'], 'qui fa classes: les classes, el calendari i l’espai personal');
+  igual(clMode(), false, 'fora de Classes, la barra de sempre');
+  ui.tab = 'classes'; ui.clTab = 'llista';
+  igual([clMode(), clTabNow()], [true, 'classes'], 'a Classes, la seva barra (i la part d’abans, «llista», és Classes)');
   // Qui edita què: el tauler i les sessions no són del cap de corda.
   as(['leader', 'singer'], { section: 'T', memberId: 't' });
   igual([canEdit(), canBoard(), canProd(), canRepertoire(), absencesOn()], [true, false, false, false, true], 'el cap de corda passa llista i respon absències');

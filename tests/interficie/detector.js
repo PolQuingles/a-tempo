@@ -47,6 +47,8 @@
 
   A.scan = label => {
     A.seen.push(label);
+    // Es mira la pantalla quieta: els moviments que encara corren (la barra de Classes, l'entrada de la vista) s'acaben ara.
+    for (const an of document.getAnimations()) { try { an.finish(); } catch { /* una animació sense fi */ } }
     clipCache.clear();
     const d = document.documentElement, W = d.clientWidth;
     const sheet = document.querySelector('#sheet-root .sheet');

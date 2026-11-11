@@ -21,7 +21,7 @@ const PROD_ONLY = new Set(['session-new', 'session-edit', 'plan-edit', 'seating-
 // Les fitxes de la plantilla: qui porta les persones (canPeople, com peopleEdit a les regles).
 const PEOPLE_ONLY = new Set(['member-edit', 'member-new', 'member-bulk', 'roster-export']);
 const actions = {
-  'tab': el => { if (el.dataset.tab === 'gestio' && ui.tab !== 'gestio') ui.gestioFrom = ui.tab; ui.tab = el.dataset.tab; if (ui.tab === 'tauler') ui.board = boardStart(); ui.rollSec = null; ui._calScrolled = false; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
+  'tab': el => { if (el.dataset.tab === 'gestio' && ui.tab !== 'gestio') ui.gestioFrom = ui.tab; ui.tab = el.dataset.tab; if (ui.tab === 'tauler') ui.board = boardStart(); if (ui.tab === 'classes') ui.clTab = 'classes'; ui.rollSec = null; ui._calScrolled = false; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
   'reload': () => location.reload(),
   'my-cal': () => sheetMyCalendar(),
   'google-in': () => signInGoogle(),
@@ -29,15 +29,24 @@ const actions = {
   'cl-paste': el => sheetClassPaste(el.dataset.k || ''),
   'cl-plan': el => sheetClassPlan(el.dataset.k || planWho()),
   // El calendari de la pantalla de Classes passa a ser el d'aquest professor/a (des del selector o des del professorat plegat).
-  'cl-who': el => { const from = el.closest('.cl-prof'); ui.clWho = el.dataset.k; ui.clMonth = null; ui.clDay = null; saveUI(); render(); if (from) document.querySelector('#cl-cal')?.scrollIntoView({ block: 'start', behavior: 'smooth' }); },
-  'cl-roll-day': el => { ui.tab = 'calendari'; ui.clDay = el.dataset.date; ui.clMonth = el.dataset.date.slice(0, 7); ui.clView = 'month'; saveUI(); render(); window.scrollTo({ top: 0 }); },
+  'cl-who': el => {
+    const from = el.closest('.cl-prof');
+    ui.clWho = el.dataset.k; ui.clMonth = null; ui.clDay = null;
+    // Des del professorat (a Classes), el seu calendari, a la pestanya Calendari si n'hi ha.
+    if (from && clTabKeys().length) { ui.clTab = 'calendari'; saveUI(); render(); window.scrollTo({ top: 0 }); return; }
+    saveUI(); render(); if (from) document.querySelector('#cl-cal')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  },
+  'cl-roll-day': el => { ui.tab = 'classes'; ui.clTab = 'calendari'; ui.clWho = myTeacherKey(); ui.clDay = el.dataset.date; ui.clMonth = el.dataset.date.slice(0, 7); ui.clView = 'month'; saveUI(); render(); window.scrollTo({ top: 0 }); },
   // Les estadístiques i el risc de tot el cor (des d'Inici, la targeta de la producció).
   'att-open': el => { ui.tab = 'llista'; ui.attArea = 'all'; ui.att = el.dataset.k; ui.rollSec = null; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
   'att-abs': () => { ui.tab = 'llista'; ui.attArea = absArea(); ui.att = 'abs'; ui.rollSec = null; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
   // Assistència: la meva, la de la corda o la de tot el cor (vegeu attAreas).
   'att-area': el => { ui.attArea = el.dataset.k; ui.att = attTabKeys()[0] || 'llista'; ui.rollSec = null; if (el.dataset.k === 'all') ui.statsSec = ''; saveUI(); render(); window.scrollTo({ top: 0 }); },
   // Classes del professorat: l'assistència de cada dia, els alumnes o totes les classes.
-  'cl-tab': el => { ui.clTab = el.dataset.k; ui.clWho = null; ui.clMonth = null; ui.clDay = null; saveUI(); render(); window.scrollTo({ top: 0 }); },
+  // La barra de Classes (vegeu clTabKeys).
+  'cl-tab': el => { ui.tab = 'classes'; ui.clTab = el.dataset.k; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
+  // Una de les meves properes classes: aquell dia al calendari del seu professor/a.
+  'cl-go-day': el => { ui.tab = 'classes'; ui.clTab = 'calendari'; ui.clWho = el.dataset.k; ui.clView = 'month'; ui.clDay = el.dataset.date; ui.clMonth = el.dataset.date.slice(0, 7); saveUI(); render(); (document.querySelector('.cl-dayhead') || document.body).scrollIntoView({ block: 'start' }); },
   'privacy': () => sheetPrivacy(),
   'my-data': () => exportMyData(),
   'retention': () => sheetRetention(),
@@ -129,7 +138,8 @@ const actions = {
   'ql-reply': el => sheetLogReply(el.dataset.m, el.dataset.id, el.closest('.sheet') ? backToStudent(el.dataset.m) : null),
   'ql-play': el => playInline(el),
   'ql-tab': el => { ui.qlTab = el.dataset.k; render(); },
-  'stu-report': el => sheetStudentReport(el.dataset.m, backToStudent(el.dataset.m)),
+  'ql-filter': el => { ui.qlFilter = el.dataset.k; render(); },
+  'stu-report': el => sheetStudentReport(el.dataset.m, el.dataset.k === 'espai' ? null : backToStudent(el.dataset.m)),
   'rep-new': el => sheetRepItem(el.dataset.m, '', el.closest('.sheet') ? backToStudent(el.dataset.m) : null),
   'rep-edit': el => sheetRepItem(el.dataset.m, el.dataset.id, el.closest('.sheet') ? backToStudent(el.dataset.m) : null),
   'goals-edit': el => sheetGoals(el.dataset.m, el.dataset.k === 'myGoals' ? 'myGoals' : 'goals', el.closest('.sheet') ? backToStudent(el.dataset.m) : null),
@@ -203,7 +213,7 @@ const actions = {
     ui.rollSec = sec && convoked(s, sec) ? (ui.section = sec) : null;
     closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 });
   },
-  'cal-class': el => { ui.tab = 'classes'; ui.clWho = el.dataset.k || null; ui.clView = 'month'; ui.clMonth = (el.dataset.date || TODAY).slice(0, 7); ui.clDay = el.dataset.date || null; closeSheet(); saveUI(); render(); (document.querySelector('.cl-dayhead') || document.body).scrollIntoView({ block: 'start' }); },
+  'cal-class': el => { ui.tab = 'classes'; ui.clTab = 'calendari'; ui.clWho = el.dataset.k || null; ui.clView = 'month'; ui.clMonth = (el.dataset.date || TODAY).slice(0, 7); ui.clDay = el.dataset.date || null; closeSheet(); saveUI(); render(); (document.querySelector('.cl-dayhead') || document.body).scrollIntoView({ block: 'start' }); },
   'ann-new': () => sheetAnnouncement(null),
   'ann-edit': el => sheetAnnouncement(el.dataset.id),
   'mat-new': () => sheetMaterial(ui.matProd, null),

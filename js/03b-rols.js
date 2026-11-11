@@ -108,13 +108,22 @@ const areaAbsences = list => { const sec = areaSec(); return absencesForMe(list)
 /** Des d'Inici, les absències per respondre s'obren a tot el cor si les respon totes; si no, a la seva corda. */
 const absArea = () => absAll() && attAreas().includes('all') ? 'all' : 'sec';
 
-/* ---------- Classes, per al professorat ---------- */
+/* ---------- Classes: una barra pròpia ---------- */
 /** Qui només fa classes (sense fitxa a la plantilla ni cap altra feina): Inici i el Calendari són els de les seves classes. */
 const teacherOnly = () => iHave('voice') && !myId() && !canEdit();
-/** Les parts de Classes del professorat: la llista de cada dia i els alumnes (i totes les classes, si també en fa o les porta totes). */
-const CL_TABS = [['llista', 'Assistència'], ['alumnes', 'Alumnes'], ['totes', 'Totes']];
-const clTabKeys = () => iHave('voice') && classesOn() ? ['llista', 'alumnes', ...(inClasses() || isAdmin() ? ['totes'] : [])] : [];
-const clTabs = () => { const keys = clTabKeys(); return `<div class="subtabs cl-tabs" role="tablist" style="grid-template-columns:repeat(${keys.length},1fr)">${CL_TABS.filter(([k]) => keys.includes(k)).map(([k, l]) => `<button class="subtab" role="tab" aria-selected="${ui.clTab === k}" data-act="cl-tab" data-k="${k}">${l}</button>`).join('')}</div>`; };
+// Qui fa o dona classes, en entrar a Classes, hi té una barra de baix pròpia: Inici · Classes (el dia a dia: la llista, les notes,
+// els canvis) · Calendari · Alumnes (el professorat) · Espai personal (qui en fa: el quadern i l'assistència). Qui només dona
+// classes la té sempre. Qui només les mira (l'administració) hi té la pantalla de totes les classes.
+const CL_BAR = { classes: 'Classes', calendari: 'Calendari', alumnes: 'Alumnes', espai: 'Espai personal' };
+const clTabKeys = () => classesOn() && classesMine() ? ['classes', 'calendari', ...(iHave('voice') ? ['alumnes'] : []), ...(inClasses() ? ['espai'] : [])] : [];
+/** La part de Classes que es mira (les d'abans, «llista» i «totes», ara són Classes i Calendari). */
+function clTabNow() {
+  const keys = clTabKeys();
+  const k = { llista: 'classes', totes: 'calendari' }[ui.clTab] || ui.clTab;
+  return keys.includes(k) ? k : keys[0];
+}
+/** Si la barra de baix és la de Classes. */
+const clMode = () => clTabKeys().length > 0 && (ui.tab === 'classes' || teacherOnly());
 
 /* ---------- Enllaços d'abans ---------- */
 // Fins a l'octubre del 2026 cadascú entrava amb un sol rol, i els avisos del mòbil obrien l'app amb ?rol=…: ja no cal, i es treu.

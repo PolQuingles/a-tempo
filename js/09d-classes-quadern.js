@@ -552,12 +552,16 @@ function studentNextCard() {
     ${!notice ? `<div class="next-a"><button class="btn btn-sm" data-act="cl-avisa" data-c="${esc(c.id)}" data-s="${esc(x.id)}">Avisa o canvia l’hora…</button></div>` : ''}
   </article>`;
 }
-/** El quadern a la pantalla de Classes: afegir-hi una nota o una gravació d'un toc, què hi has posat des de l'última classe i,
- *  en pestanyes, el diari (les últimes entrades), el repertori i els objectius. */
+/** El quadern, a l'Espai personal: afegir-hi una nota o una gravació d'un toc, què hi has posat des de l'última classe i, en
+ *  pestanyes, el diari (sencer, amb un filtre), el repertori i els objectius. */
 function studentQuadernBlock() {
   const mid = myId();
   if (!mid) return '';
-  const entries = quadernEntries(mid);
+  const all = quadernEntries(mid);
+  // A l'Espai personal, el diari sencer, amb un filtre: el de classe, les meves notes o les gravacions.
+  const QF = { tot: ['Tot', () => true], classe: ['De classe', e => e.src === 'class' || !!e.t], notes: ['Les teves notes', e => e.src === 'log' && !e.t && e.kind !== 'rec'], grav: ['Gravacions', e => !!e.file] };
+  const qf = QF[ui.qlFilter] ? ui.qlFilter : 'tot';
+  const entries = all.filter(QF[qf][1]);
   const rep = repOf(mid);
   const ctx = { mid, own: true, teach: false, seenAt: stuSeenAt(mid) };
   const tab = ['diari', 'repertori', 'objectius'].includes(ui.qlTab) ? ui.qlTab : 'diari';
@@ -571,7 +575,7 @@ function studentQuadernBlock() {
     : `Des de l’última classe (${esc(shortDate(last.c.date))}) encara no hi has afegit res.`;
   const compose = [['note', 'Nota', 'El que has treballat a casa'], ['rec', 'Grava’t', `Fins a ${Math.round(LOG_REC_MAX / 60e3)} minuts`]]
     .map(([k, t, sub]) => `<button data-act="ql-new" data-m="${esc(mid)}" data-k="${k}"><span class="ql-q-ic">${qlIcon(k)}</span><span class="ql-q-t"><b>${t}</b><small>${sub}</small></span></button>`).join('');
-  const tabs = [['diari', 'Diari', entries.length], ['repertori', 'Repertori', rep.length], ['objectius', 'Objectius', 0]];
+  const tabs = [['diari', 'Diari', all.length], ['repertori', 'Repertori', rep.length], ['objectius', 'Objectius', 0]];
   let pane;
   if (tab === 'repertori') {
     pane = `${rep.length ? repHtml(mid, true) : '<p class="ql-hint u-m-0">Encara no hi ha cap obra. Afegeix les que treballes i marca com van: així el teu professorat sap per on vas.</p>'}
@@ -579,11 +583,12 @@ function studentQuadernBlock() {
   } else if (tab === 'objectius') {
     pane = stuPane(mid, 'objectius');
   } else {
-    pane = entries.length ? `${qlList(entries, ctx, 3)}${entries.length > 3 ? `<button class="ql-more" data-act="cl-student" data-m="${esc(mid)}" data-k="quadern">Mostra’n ${entries.length - 3 === 1 ? '1 més' : `${entries.length - 3} més`}${ICON.right}</button>` : ''}`
-      : '<p class="ql-hint u-m-0">Aquí hi haurà les notes de cada classe i el que hi afegeixis tu. Només ho veieu tu i el teu professorat.</p>';
+    const chips = all.length > 3 ? `<div class="chips ql-filter" role="group" aria-label="Què es mostra">${Object.entries(QF).map(([k, [l]]) => `<button class="chip" data-act="ql-filter" data-k="${k}" aria-pressed="${qf === k}">${l}</button>`).join('')}</div>` : '';
+    pane = !all.length ? '<p class="ql-hint u-m-0">Aquí hi haurà les notes de cada classe i el que hi afegeixis tu. Només ho veieu tu i el teu professorat.</p>'
+      : `${chips}${entries.length ? qlList(entries, ctx) : '<p class="ql-hint u-m-0">No n’hi ha cap.</p>'}`;
   }
   return `<section class="ql-block" aria-label="El teu quadern">
-    <div class="section-title"><h2 class="h2">El teu quadern</h2><button class="btn btn-sm btn-ghost" data-act="cl-student" data-m="${esc(mid)}">Obre’l sencer</button></div>
+    <div class="section-title"><h2 class="h2">El teu quadern</h2></div>
     <div class="ql-quick" role="group" aria-label="Afegeix al quadern">${compose}</div>
     ${sinceTxt ? `<p class="ql-since${since.length ? ' is-done' : ''}">${since.length ? ICON.check : ''}<span>${sinceTxt}</span></p>` : ''}
     <div class="panel ql-panel">
@@ -591,6 +596,30 @@ function studentQuadernBlock() {
       <div class="ql-pane ql-pane-${tab}">${pane}</div>
     </div>
   </section>`;
+}
+
+/* ---------- L'Espai personal ---------- */
+// De qui fa classes (a la barra de Classes): l'assistència del curs, el quadern sencer (les notes de classe, les seves i les
+// gravacions), el repertori i els objectius, i l'informe del trimestre.
+const SPACE_ATT = { mid: '', busy: false, err: false };
+/** L'assistència del curs: arriba després (es llegeixen els dies de classe de tot el curs); mentrestant, la silueta. */
+function spaceAttHtml(mid) {
+  const fresh = COURSE.mid === mid && COURSE.days && Date.now() - COURSE.at < 10 * 60e3;
+  if (!fresh && !SPACE_ATT.busy && !(SPACE_ATT.err && SPACE_ATT.mid === mid)) {
+    Object.assign(SPACE_ATT, { mid, busy: true, err: false });
+    studentCourse(mid).then(() => { SPACE_ATT.busy = false; scheduleRender(); }, () => { Object.assign(SPACE_ATT, { busy: false, err: true }); scheduleRender(); });
+  }
+  if (!fresh) return SPACE_ATT.err && SPACE_ATT.mid === mid ? '<p class="muted u-m-0 u-fs-t-13">No s’ha pogut carregar l’assistència del curs. Comprova la connexió.</p>' : '<span class="sk stu-att-sk"></span>';
+  const { season } = seasonCfg();
+  const st = courseStats(COURSE.days, mid, season.from, TODAY);
+  if (!st.list.length) return '<p class="muted u-m-0 u-fs-t-13">Encara no has fet cap classe aquest curs.</p>';
+  return `<div class="sp-att-n"><b class="num">${st.pct == null ? '—' : `${st.pct}%`}</b><small>${st.marked ? `${st.P + st.R} de ${st.marked} ${st.marked === 1 ? 'classe' : 'classes'} aquest curs` : 'Encara cap classe marcada aquest curs'}</small></div>${attStripHtml(st)}`;
+}
+function viewStudentSpace() {
+  const mid = myId();
+  return `<div class="page-head"><div><div class="eyebrow">${esc(V.classes)}</div><h1 class="h1">Espai personal</h1></div><button class="btn btn-sm" data-act="stu-report" data-m="${esc(mid)}" data-k="espai">Informe</button></div>
+    <section class="panel sp-att" aria-label="La teva assistència a classe"><span class="eyebrow">Assistència a classe</span>${spaceAttHtml(mid)}</section>
+    ${studentQuadernBlock()}`;
 }
 
 /* ---------- L'assistència del curs d'un alumne ---------- */

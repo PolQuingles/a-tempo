@@ -939,17 +939,20 @@ def main():
         r.update(page.evaluate("""async () => ({ gerGestio: gestioTabs().join(',') === 'personal,produccions,config' && tabsForRole().includes('gestio') })"""))
         switch_user(page, base, "prof")
         r.update(page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
-          const tabs = () => [...document.querySelectorAll('.tabs-in .tab:not(.tab-extra)')].map(b => b.dataset.tab).join(',');
-          out.profTabs = tabs() === 'avisos,calendari,classes';
+          const bar = () => [...document.querySelectorAll('.tabs-in .tab:not(.tab-extra)')].map(b => b.dataset.k || b.dataset.tab).join(',');
           ui.tab = 'avisos'; render(); await s(200);
+          out.profTabs = bar() === 'avisos,classes,calendari,alumnes';
           out.profHome = !!document.querySelector('.h-soon .cl-next, .h-soon .todo-done') && /Properes classes/.test(document.querySelector('.h-soon')?.textContent || '');
-          document.querySelector('.tab[data-tab="classes"]').click(); await s(300);
-          out.profClTabs = [...document.querySelectorAll('[data-act="cl-tab"]')].map(b => b.dataset.k).join(',') === 'llista,alumnes';
-          out.profAtt = /Assistència/.test(document.querySelector('#view h1')?.textContent || '') && !!document.querySelector('[data-act="cl-stats"]');
-          document.querySelector('[data-act="cl-tab"][data-k="alumnes"]').click(); await s(300);
+          document.querySelector('.tab[data-k="classes"]').click(); await s(300);
+          out.profClTabs = bar() === 'avisos,classes,calendari,alumnes' && !document.querySelector('#view .subtabs');
+          out.profAtt = /Classes/.test(document.querySelector('#view h1')?.textContent || '') && !!document.querySelector('[data-act="cl-stats"]');
+          document.querySelector('.tab[data-k="alumnes"]').click(); await s(300);
           out.students = document.querySelectorAll('.stu-row').length === myStudents(myTeacherKey()).length && document.querySelectorAll('.stu-row').length > 0;
-          document.querySelector('.tab[data-tab="calendari"]').click(); await s(300);
-          out.profCal = !!document.querySelector('.cl-hero') && !document.querySelector('[data-act="cl-back"]');
+          document.querySelector('.tab[data-k="calendari"]').click(); await s(300);
+          out.profCal = !!document.querySelector('#view #cl-cal .mgrid') && !!document.querySelector('[data-act="cl-new"]') && location.hash.startsWith('#/classes/');
+          // Un enllaç d'abans al Calendari porta al de les classes.
+          ui.tab = 'calendari'; render(); await s(200);
+          out.profCal = out.profCal && ui.tab === 'classes' && ui.clTab === 'calendari';
           out.overflow2 = document.documentElement.scrollWidth <= innerWidth;
           return out; }"""))
         for k, label in [("noPicker", "en obrir l'app no es tria cap rol"),
@@ -977,11 +980,11 @@ def main():
                          ("dirGestio", "a Gestió, Personal, Produccions i Ajustos"),
                          ("dirSessions", "i porta les sessions i el tauler"),
                          ("gerGestio", "la gerència també té tota la Gestió"),
-                         ("profTabs", "el professor de cant té Inici, Calendari i Classes"),
+                         ("profTabs", "el professor de cant té Inici, Classes, Calendari i Alumnes"),
                          ("profHome", "a Inici, les seves properes classes"),
-                         ("profClTabs", "a Classes, l'assistència i els alumnes"),
-                         ("profAtt", "hi passa llista a les classes"),
-                         ("students", "i hi té els seus alumnes"),
+                         ("profClTabs", "sempre amb la barra de Classes, sense pestanyes a dins"),
+                         ("profAtt", "a Classes hi passa llista"),
+                         ("students", "a Alumnes hi té els seus alumnes"),
                          ("profCal", "el Calendari és el de les seves classes"),
                          ("overflow2", "sense eixamplar la pantalla del mòbil")]:
             check(r.get(k), label, str(r))
@@ -1030,25 +1033,31 @@ def main():
         r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
           const c = classDays('prof@exemple.cat').find(k => k.slots.filter(x => x.memberId).length > 1), other = c.slots.find(x => x.memberId && x.memberId !== myId());
           S.classes.set(c.id, { ...c, date: TODAY, slots: c.slots.map(x => x.id === other.id ? { ...x, mark: 'FNJ', markFor: x.memberId } : x) });
-          ui.clWho = 'prof@exemple.cat'; ui.clMonth = TODAY.slice(0, 7); ui.clDay = TODAY; ui.tab = 'classes'; render(); await s(300);
-          out.day = !document.querySelector('#view .cl-mk.FNJ');
+          ui.clWho = 'prof@exemple.cat'; ui.clMonth = TODAY.slice(0, 7); ui.clDay = TODAY; ui.tab = 'classes'; ui.clTab = 'calendari'; render(); await s(300);
+          out.day = !!document.querySelector('#view #cl-cal') && !document.querySelector('#view .cl-mk.FNJ');
           ui.clView = 'week'; render(); await s(300); out.week = !document.querySelector('#view .cl-mk.FNJ'); ui.clView = 'month';
           return out; }""")
         check(r["day"] and r["week"], "un cantaire no veu les marques d'assistència dels companys", str(r))
         ctx.close()
 
-        print("Classes: el calendari, el quadern de l'alumne (notes, obres) i el que en veu i hi respon el professor")
+        print("Classes: la barra de Classes, el calendari, l'Espai personal (notes, obres) i el que en veu i hi respon el professor")
         ctx, page, errors = open_app(browser, base, "singer", MOBILE, "#/classes")
         r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {}, sh = () => document.querySelector('.sheet'), mid = myId();
-          ui.tab = 'classes'; ui.clWho = null; render(); await s(300);
-          out.card = !!document.querySelector('#view .cl-next-card') && !!document.querySelector('#view .ql-quick');
-          // El calendari hi és sempre, amb el professor/a de la meva classe; el professorat, plegat.
+          const bar = () => [...document.querySelectorAll('.tabs-in .tab:not(.tab-extra)')].map(b => b.dataset.k || b.dataset.tab).join(',');
+          ui.tab = 'avisos'; ui.clWho = null; render(); await s(300);
+          const before = bar();
+          document.querySelector('.tab[data-tab="classes"]').click(); await s(1000);
+          // En entrar a Classes, la barra és la de Classes; en tornar a Inici, la de sempre.
+          out.bar = before === 'avisos,llista,calendari,tauler,classes' && bar() === 'avisos,classes,calendari,espai' && !document.querySelector('.tab-ghost');
+          out.card = !!document.querySelector('#view .cl-next-card') && !document.querySelector('#view .ql-quick');
+          // El professorat, plegat: tocar-ne un obre el seu calendari.
           const prof = document.querySelector('#view details.cl-prof');
-          out.cal = !!document.querySelector('#view #cl-cal .mgrid') && !!prof && !prof.open && !!prof.querySelector('.quad');
-          out.kinds = [...document.querySelectorAll('#view .ql-quick [data-k]')].map(b => b.dataset.k).join(',') === 'note,rec' && !document.querySelector('#view [data-k="q"]');
+          out.cal = !!prof && !prof.open && !!prof.querySelector('.quad');
           prof.querySelector('summary').click(); await s(200);
           prof.querySelector('.quad[data-k="prof@exemple.cat"]').click(); await s(300);
-          out.pick = ui.clWho === 'prof@exemple.cat' && document.querySelector('#view .cl-pick [aria-pressed="true"]')?.dataset.k === 'prof@exemple.cat' && document.querySelector('#view details.cl-prof').open;
+          out.pick = ui.clWho === 'prof@exemple.cat' && ui.clTab === 'calendari' && !!document.querySelector('#view #cl-cal .mgrid') && document.querySelector('#view .cl-pick [aria-pressed="true"]')?.dataset.k === 'prof@exemple.cat';
+          document.querySelector('.tab[data-k="espai"]').click(); await s(300);
+          out.kinds = !!document.querySelector('#view .sp-att') && [...document.querySelectorAll('#view .ql-quick [data-k]')].map(b => b.dataset.k).join(',') === 'note,rec' && !document.querySelector('#view [data-k="q"]') && location.hash === '#/classes/espai';
           document.querySelector('#view .ql-quick [data-k="note"]').click(); await s(300);
           out.noQ = !sh().querySelector('.ql-kinds [data-k="q"]');
           sh().querySelector('#ql-text').value = 'Com respiro al c. 12?'; sh().querySelector('#ql-go').click(); await s(800);
@@ -1060,13 +1069,17 @@ def main():
           sh().querySelector('#rp-title').value = 'Caro mio ben'; sh().querySelector('#rp-comp').value = 'G. Giordani'; sh().querySelector('#rp-go').click(); await s(500);
           out.rep = (S.students.get(mid)?.repertoire || []).some(x => x.title === 'Caro mio ben' && x.status === 'treballant') && /Caro mio ben/.test(document.querySelector('#view .rep-list')?.innerText || '');
           ui.qlTab = 'diari'; render();
+          document.querySelector('.tab[data-tab="avisos"]').click(); await s(1000);
+          out.back = bar() === 'avisos,llista,calendari,tauler,classes' && !document.querySelector('.tab-ghost');
           sheetStudent(mid); await s(600);
           out.sheet = !!sh()?.querySelector('.stu-facts') && /Com respiro/.test(sh().querySelector('#stu-pane').innerText) && !sh().querySelector('[data-act="ql-reply"]');
           closeSheet(); await s(200);
           return out; }""")
-        for k, what in [("card", "el cantaire té la seva propera classe i el quadern a dalt de Classes"),
-                        ("cal", "el calendari de classes hi és sempre, i el professorat queda plegat"), ("kinds", "al quadern s'hi afegeix una nota o una gravació (ja no preguntes)"),
-                        ("pick", "un professor del desplegable en mostra el calendari"), ("noQ", "la finestra tampoc ofereix preguntes"),
+        for k, what in [("bar", "en entrar a Classes, la barra passa a ser Inici, Classes, Calendari i Espai personal"),
+                        ("card", "a Classes hi ha la seva propera classe (el quadern és a l'Espai personal)"),
+                        ("cal", "el professorat queda plegat"), ("kinds", "a l'Espai personal, l'assistència i el quadern: una nota o una gravació (ja no preguntes)"),
+                        ("pick", "un professor del desplegable obre el seu calendari"), ("noQ", "la finestra tampoc ofereix preguntes"),
+                        ("back", "Inici torna a la barra de sempre"),
                         ("question", "hi deixa una nota, i la fitxa diu qui el porta"),
                         ("shown", "la nota surt al seu quadern"), ("rep", "hi afegeix una obra al repertori"), ("sheet", "a la seva fitxa hi ha el quadern sencer, sense «Respon»")]:
             check(r.get(k), what, str(r))
@@ -1106,7 +1119,7 @@ def main():
             check(r.get(k), what, str(r))
         switch_user(page, base, "singer")
         r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms));
-          ui.tab = 'classes'; ui.clWho = null; render(); await s(400);
+          ui.tab = 'classes'; ui.clTab = 'espai'; ui.clWho = null; render(); await s(400);
           return { answered: /Respira al c. 11/.test(document.querySelector('#view .ql-list')?.innerText || '') }; }""")
         check(r.get("answered"), "l'alumne veu la resposta al seu quadern", str(r))
         check(not errors, "sense errors al quadern", "; ".join(errors[:3]))
@@ -1160,7 +1173,7 @@ def main():
           prod.sessions = [...(prod.sessions || []), { id: 'sx1', date: c.date, time: x.time, end: '23:00', type: 'Assaig', status: 'published' }];
           if (typeof invalidateSessions === 'function') invalidateSessions();
           const n = classClashList().length; out.found = n > 0;
-          ui.tab = 'classes'; ui.clTab = 'totes'; ui.clWho = null; render(); await s(300); out.banner = /coincideix/.test(document.querySelector('#view').innerText);
+          ui.tab = 'classes'; ui.clTab = 'classes'; ui.clWho = null; render(); await s(300); out.banner = /coincideix/.test(document.querySelector('#view').innerText);
           sheetClassClashes(); await s(300);
           sh().querySelector('[data-act="cl-clash-ok"]').click(); await s(400);
           out.left = classClashList().length === n - 1;
