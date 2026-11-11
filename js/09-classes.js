@@ -392,7 +392,7 @@ function viewClassHome() {
   const list = classTeachers();
   // Les meves properes classes, després de la de la targeta.
   const mine = student ? classDays().filter(c => c.date >= TODAY && classLive(c) && classSlots(c).some(x => x.memberId === mid)).slice(1, 5) : [];
-  return `<div class="page-head"><h1 class="h1">${esc(V.classes)} ${helpBtn('classes')}</h1>${teach ? '<button class="btn btn-sm" data-act="cl-stats">Assistència del curs</button>' : ''}</div>
+  return `<div class="page-head"><h1 class="h1">${esc(V.classes)} ${helpBtn('classes')}</h1>${teachesClasses() ? '<button class="btn btn-sm" data-act="cl-stats">Assistència del curs</button>' : ''}</div>
     ${helpText('classes', teach
       ? `Aquí hi ha les classes d’avui: marca qui ha vingut, escriu la nota de classe, obre la fitxa de l’alumne o mou-li l’hora. Al <b>Calendari</b> hi ha tots els dies i l’horari fix, i a <b>Alumnes</b>, la fitxa de cadascú.`
       : `Aquí hi ha la teva propera classe i les peticions de canvi d’hora. Els canvis valen només per a la setmana que es demanen, i qui rep la petició ha de dir que sí perquè es faci. Al <b>Calendari</b> hi ha tots els dies, i a l’<b>Espai personal</b>, el teu quadern i l’assistència.`)}
@@ -428,7 +428,7 @@ function viewClassCal() {
 function viewAllClasses() {
   const list = classTeachers();
   if (ui.clWho && !list.some(t => t.key === ui.clWho)) ui.clWho = null;
-  return `<div class="page-head"><h1 class="h1">${esc(V.classes)} ${helpBtn('classes')}</h1></div>
+  return `<div class="page-head"><h1 class="h1">${esc(V.classes)} ${helpBtn('classes')}</h1>${teachesClasses() ? '<button class="btn btn-sm" data-act="cl-stats">Assistència del curs</button>' : ''}</div>
     ${helpText('classes', `Al calendari hi ha els dies de classe i les hores de cada ${esc(V.member)}${list.length > 1 ? `; a dalt tries de quin ${esc(V.Teacher.toLowerCase())}` : ''}. Els canvis d’hora valen només per a la setmana que es demanen.`)}
     ${classAvisosHtml(teachesClasses() ? reqsForTeacher() : [])}
     ${teachesClasses() ? clashBanner() : ''}
