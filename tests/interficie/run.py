@@ -960,7 +960,7 @@ def main():
           ui.clView = 'month'; ui.clMonth = pastDay.date.slice(0, 7); ui.clDay = pastDay.date; render(); await s(300);
           out.calPlan = !!document.querySelector('#view .cl-slot') && !document.querySelector('#view .cl-marks, #view [data-act="cl-note"]') && !!document.querySelector('#view [data-act="cl-roll-open"]');
           document.querySelector('#view [data-act="cl-roll-open"]').click(); await s(300);
-          out.rollPast = ui.clTab === 'classes' && !!document.querySelector('#view .cl-marks') && !!document.querySelector('#view [data-act="cl-note"]') && !!document.querySelector('#view .cl-roll-back');
+          out.rollPast = ui.clTab === 'classes' && !!document.querySelector('#view .cl-marks') && !!document.querySelector('#view [data-act="cl-note"]') && !!document.querySelector('#view [data-act="cl-rec-new"]') && !!document.querySelector('#view .cl-roll-back');
           document.querySelector('#view .cl-roll-back').click(); await s(300);
           out.rollPast = out.rollPast && !ui.rollDay && !document.querySelector('#view .cl-roll-back');
           out.overflow2 = document.documentElement.scrollWidth <= innerWidth;
@@ -997,7 +997,7 @@ def main():
                          ("students", "a Alumnes hi té els seus alumnes"),
                          ("profCal", "el Calendari és el de les seves classes"),
                          ("calPlan", "al calendari es planifica: sense passar llista ni notes, amb un botó cap a Classes"),
-                         ("rollPast", "i a Classes s'hi passa llista d'aquell dia, i es torna a avui"),
+                         ("rollPast", "i a Classes s'hi passa llista d'aquell dia (amb nota, gravació i fitxa), i es torna a avui"),
                          ("overflow2", "sense eixamplar la pantalla del mòbil")]:
             check(r.get(k), label, str(r))
         check(not errors, "sense errors amb els rols sumats", "; ".join(errors[:3]))

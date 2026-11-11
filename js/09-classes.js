@@ -152,7 +152,7 @@ function classSlotRow(c, x, past, plan) {
     : '';
   const canMove = owner && canMoveSlot(c, x);
   const noteBtn = plan ? (canMove ? `<span class="cl-acts cl-tools"><button class="btn btn-sm btn-ghost" data-act="cl-move" data-c="${esc(c.id)}" data-s="${esc(x.id)}">Mou</button></span>` : '')
-    : owner && x.memberId ? `<span class="cl-acts cl-tools"><button class="btn btn-sm btn-ghost" data-act="cl-note" data-c="${esc(c.id)}" data-s="${esc(x.id)}">${qlIcon('note')}${note || priv ? 'Edita la nota' : 'Nota de classe'}</button><button class="btn btn-sm btn-ghost" data-act="cl-student" data-m="${esc(x.memberId)}">${qlIcon('cls')}Fitxa</button>${canMove ? `<button class="btn btn-sm btn-ghost" data-act="cl-move" data-c="${esc(c.id)}" data-s="${esc(x.id)}">Mou</button>` : ''}</span>` : '';
+    : owner && x.memberId ? `<span class="cl-acts cl-tools"><button class="btn btn-sm btn-ghost" data-act="cl-note" data-c="${esc(c.id)}" data-s="${esc(x.id)}">${qlIcon('note')}${note || priv ? 'Edita la nota' : 'Nota de classe'}</button><button class="btn btn-sm btn-ghost" data-act="cl-rec-new" data-c="${esc(c.id)}" data-s="${esc(x.id)}">${qlIcon('rec')}Grava</button><button class="btn btn-sm btn-ghost" data-act="cl-student" data-m="${esc(x.memberId)}">${qlIcon('cls')}Fitxa</button>${canMove ? `<button class="btn btn-sm btn-ghost" data-act="cl-move" data-c="${esc(c.id)}" data-s="${esc(x.id)}">Mou</button>` : ''}</span>` : '';
   // A qui fa la classe, abans de fer-la: el que va quedar de l'última i el que l'alumne ha afegit al quadern.
   const news = owner && !plan && m ? stuNews(m.id) : null;
   const prev = owner && !plan && m && !past && !note ? lastClassNote(m.id, c.date) : null;

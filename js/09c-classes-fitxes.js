@@ -69,28 +69,32 @@ async function startRecording({ name, onTick, onDone, maxMs = 0 }) {
 }
 const recClock = ms => { const t = Math.floor(ms / 1000); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; };
 /** Què s'ha treballat i què cal preparar (ho veuen el professorat i aquell alumne), i una nota privada que l'alumne no veu. */
-function sheetClassNote(classId, slotId) {
+/** La nota d'una classe (pública i privada) i el seu enregistrament. rec: s'obre per gravar (el botó «Grava» de la llista):
+ *  l'enregistrament va primer i comença a gravar de seguida. */
+function sheetClassNote(classId, slotId, rec) {
   const c = S.classes.get(classId);
   const slot = c && classSlots(c).find(x => x.id === slotId);
   if (!slot) return;
   const id = `${classId}_${slotId}`;
   const ex = S.classNotes.get(id), exPriv = S.classPriv.get(id);
   const m = S.members.get(slot.memberId || '');
-  openSheet({
-    title: `Nota de la classe${m ? ` de ${firstName(m.name)}` : ''}`,
-    body: `<div class="kv">
-      <p class="u-m-0">${esc(longDate(c.date))}, a les <b>${esc(slot.time || '')}</b>.</p>
-      <label class="field"><span>Què s’ha treballat i què cal preparar</span><textarea class="inp u-minh-130" id="cn-text" maxlength="600" placeholder="p. ex. Vocalitzacions fins al la. Per la setmana vinent, els compassos 1-40 de memòria.">${esc(ex?.text || '')}</textarea>
-        <small>Ho veieu tu i ${m ? esc(firstName(m.name)) : 'qui tingui aquesta hora'}. La resta de l’agrupació, no.</small></label>
-      <label class="field"><span>Nota privada</span><textarea class="inp u-minh-70" id="cn-priv" maxlength="600" placeholder="p. ex. Li costa concentrar-se quan ve cansat.">${esc(exPriv?.text || '')}</textarea>
-        <small>${m ? esc(firstName(m.name)) : 'L’alumne'} no la veu. Només la veus tu i, si cal, l’administració de l’app.</small></label>
-      <div class="field"><span>Enregistrament de la classe (opcional)</span>
+  const recField = `      <div class="field"><span>Enregistrament de la classe (opcional)</span>
         ${ex?.file ? `<div class="rec-cur" id="cn-cur"><span>${esc(ex.file.name)} · ${fmtSize(ex.file.size)}</span><button type="button" class="btn btn-sm btn-ghost" id="cn-rec-rm">Treu-lo</button></div>` : ''}
         ${canRecord() ? `<div class="rec-box"><button type="button" class="btn" id="cn-rec-go"><i class="rec-dot"></i>Grava ara</button>
           <div class="rec-live" id="cn-rec-live" hidden><i class="rec-dot on"></i><b class="mono" id="cn-rec-t">0:00</b><span class="muted" id="cn-rec-s">Gravant…</span><span class="spacer"></span><button type="button" class="btn btn-primary" id="cn-rec-stop">Atura</button></div>
           <audio id="cn-rec-prev" controls playsinline preload="metadata" hidden></audio></div>` : ''}
         <label class="dropzone" for="cn-file" id="cn-drop"><input id="cn-file" type="file" accept="audio/*,video/*,.m4a,.mp3" class="sr">
-          <span class="dz-t">${ex?.file ? 'Canvia’l per un fitxer' : 'O tria un fitxer'}</span><span class="dz-s">Fins a 20 MB. L’alumne el podrà escoltar més lent i repetir fragments.</span></label></div>
+          <span class="dz-t">${ex?.file ? 'Canvia’l per un fitxer' : 'O tria un fitxer'}</span><span class="dz-s">Fins a 20 MB. L’alumne el podrà escoltar més lent i repetir fragments.</span></label></div>`;
+  openSheet({
+    title: `${rec ? 'Grava la classe' : 'Nota de la classe'}${m ? ` de ${firstName(m.name)}` : ''}`,
+    body: `<div class="kv">
+      <p class="u-m-0">${esc(longDate(c.date))}, a les <b>${esc(slot.time || '')}</b>.</p>
+      ${rec ? recField : ''}
+      <label class="field"><span>Què s’ha treballat i què cal preparar</span><textarea class="inp u-minh-130" id="cn-text" maxlength="600" placeholder="p. ex. Vocalitzacions fins al la. Per la setmana vinent, els compassos 1-40 de memòria.">${esc(ex?.text || '')}</textarea>
+        <small>Ho veieu tu i ${m ? esc(firstName(m.name)) : 'qui tingui aquesta hora'}. La resta de l’agrupació, no.</small></label>
+      <label class="field"><span>Nota privada</span><textarea class="inp u-minh-70" id="cn-priv" maxlength="600" placeholder="p. ex. Li costa concentrar-se quan ve cansat.">${esc(exPriv?.text || '')}</textarea>
+        <small>${m ? esc(firstName(m.name)) : 'L’alumne'} no la veu. Només la veus tu i, si cal, l’administració de l’app.</small></label>
+      ${rec ? '' : recField}
     </div>`,
     foot: `${ex || exPriv ? '<button class="btn btn-danger-ghost" id="cn-del">Esborra</button>' : ''}<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="cn-save">Desa</button>`,
     onMount: el => {
