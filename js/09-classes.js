@@ -284,7 +284,6 @@ function classTeacherSpace(who) {
       <button class="btn btn-sm btn-primary" data-act="cl-new" data-k="${esc(who)}" data-date="${esc(ui.clDay)}">${ICON.plus}Dia de classe</button>
       <button class="btn btn-sm" data-act="cl-plan" data-k="${esc(who)}">Horari fix${planRows(who).length ? `<span class="tb-n">${planRows(who).length}</span>` : ''}</button>
       <button class="btn btn-sm" data-act="cl-paste" data-k="${esc(who)}">Enganxa un horari</button>
-      <button class="btn btn-sm" data-act="cl-stats">Assistència del curs</button>
     </div>` : ''}
     ${ownsClass({ teacher: who }) ? unlinkedPanel(who) : ''}
     ${ui.clView === 'week' ? classWeekHtml(who) : `<div class="panel month">
