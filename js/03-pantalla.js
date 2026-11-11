@@ -27,6 +27,7 @@ const TAB_ICONS = {
   classes: '<path d="M12 6.6c-2-1.5-4-2-6.5-2v12c2.5 0 4.5.5 6.5 2 2-1.5 4-2 6.5-2v-12c-2.5 0-4.5.5-6.5 2Z"/><path d="M12 6.6v12"/>',
   partitures: '<path d="M6 3.5h9l3 3v14H6z"/><path d="M15 3.5v3h3M9 11h6M9 14h6M9 17h4"/>',
   alumnes: '<circle cx="9" cy="8" r="3.2"/><path d="M3.5 19.5c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><path d="M16 5.2a3 3 0 010 5.6M18 14.8c1.5.7 2.4 2.2 2.6 4.7"/>',
+  espai: '<circle cx="12" cy="8.2" r="3.6"/><path d="M5 20.2c.8-3.7 3.6-5.8 7-5.8s6.2 2.1 7 5.8"/>',
 };
 // El penja-robes del vestidor (al menú del compte, a «Per fer» i al menú lateral de l'ordinador).
 // La medalla de les bandes (08c-nit-bandes): al menú del compte, a «Per fer» i al menú lateral.
@@ -45,6 +46,8 @@ function renderTabs() {
   // Les pestanyes de l'arxiver i dels alumnes ara són dins del Tauler i de les Classes.
   if (ui.tab === 'partitures') { ui.tab = 'tauler'; ui.board = 'materials'; }
   if (ui.tab === 'alumnes') { ui.tab = 'classes'; ui.clTab = 'alumnes'; }
+  // Qui només dona classes té el calendari de les classes dins la barra de Classes.
+  if (ui.tab === 'calendari' && teacherOnly() && clTabKeys().length) { ui.tab = 'classes'; ui.clTab = 'calendari'; }
   if (ui.tab === 'vestidor' && !(wardOn() && (myId() || wardStaff()))) ui.tab = tabs[0];
   if (ui.tab !== 'vestidor' && ui.tab !== 'bandes' && !all.includes(ui.tab)) ui.tab = tabs[0];
   // Un sol número vermell, a Inici: tot el que espera resposta.
@@ -64,8 +67,79 @@ function renderTabs() {
     <span class="tab-ico"><svg viewBox="0 0 24 24">${WARD_ICON}</svg></span>Vestidor</button>` : '';
   const band = bandesMenuOn() ? `<button class="tab tab-extra" data-act="bandes-open" aria-current="${ui.tab === 'bandes' ? 'page' : 'false'}">
     <span class="tab-ico"><svg viewBox="0 0 24 24">${BANDES_ICON}</svg></span>Bandes</button>` : '';
-  $('.tabs-in').innerHTML = side + tabs.map(t => `<button class="tab" data-act="tab" data-tab="${t}" aria-current="${t === navTab() ? 'page' : 'false'}"${shortName(t) ? ` aria-label="${TAB_LABEL[t]}"` : ''}>
-    <span class="tab-ico"><svg viewBox="0 0 24 24">${TAB_ICONS[t]}</svg>${t === 'avisos' && badge ? `<span class="tab-badge">${badge > 99 ? '99+' : badge}</span>` : ''}</span>${shortName(t) || TAB_LABEL[t]}</button>`).join('') + more + band + vest;
+  const inn = $('.tabs-in');
+  const cl = clMode();
+  const ico = t => `<span class="tab-ico"><svg viewBox="0 0 24 24">${TAB_ICONS[t]}</svg>${t === 'avisos' && badge ? `<span class="tab-badge">${badge > 99 ? '99+' : badge}</span>` : ''}</span>`;
+  let bar;
+  if (cl) {
+    // La barra de Classes: Inici i les parts de Classes (vegeu clTabKeys).
+    const keys = clTabKeys(), cur = ui.tab === 'classes' ? clTabNow() : '';
+    inn.classList.remove('n6', 'n7');
+    bar = `<button class="tab" data-bar="avisos" data-act="tab" data-tab="avisos" aria-current="${ui.tab === 'avisos' ? 'page' : 'false'}">${ico('avisos')}Inici</button>`
+      + keys.map(k => `<button class="tab" data-bar="${k === 'calendari' ? 'cl-calendari' : k}" data-act="cl-tab" data-k="${k}" aria-current="${cur === k ? 'page' : 'false'}"${k === 'espai' ? ' aria-label="Espai personal"' : ''}>${ico(k === 'classes' ? 'classes' : k)}${k === 'espai' ? '<span class="tl-long">Espai personal</span><span class="tl-short">Espai</span>' : CL_BAR[k]}</button>`).join('');
+  } else {
+    bar = tabs.map(t => `<button class="tab" data-bar="${t}" data-act="tab" data-tab="${t}" aria-current="${t === navTab() ? 'page' : 'false'}"${shortName(t) ? ` aria-label="${TAB_LABEL[t]}"` : ''}>
+    ${ico(t)}${shortName(t) || TAB_LABEL[t]}</button>`).join('');
+  }
+  // En entrar a Classes (o en sortir-ne), la icona de Classes llisca: vegeu barMorph.
+  const mode = cl ? 'cl' : 'main';
+  const morph = barMode && barMode !== mode && !teacherOnly() && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+  barMode = mode;
+  // Si no ha canviat res, no es torna a pintar (arriben dades sovint, i tallarien el moviment).
+  const html = side + bar + more.replace(/<button class="tab tab-extra"/g, '<button class="tab tab-extra" data-bar="x"') + band + vest;
+  if (html === barHtml) return;
+  barHtml = html;
+  document.querySelectorAll('.tab-ghost').forEach(g => g.remove());
+  const before = morph ? barSnap(inn) : null;
+  inn.innerHTML = html;
+  if (morph) barMorph(inn, before, cl);
+}
+
+/* ---------- La barra de Classes ---------- */
+// En entrar a Classes, la icona de Classes llisca cap a l'esquerra per sobre de les altres (Assistència, Calendari, Tauler), que
+// s'hi amaguen a sota, i després se'n despleguen les de Classes. En tornar a Inici, fa el camí al revés.
+let barMode = '', barHtml = '';
+/** Les pestanyes visibles de la barra, amb on són. */
+const barSnap = inn => [...inn.querySelectorAll('.tab[data-bar]')].map(el => ({ el, k: el.dataset.bar === 'x' ? `x${el.textContent.trim()}` : el.dataset.bar, r: el.getBoundingClientRect() })).filter(x => x.r.width);
+function barMorph(inn, before, into) {
+  const host = inn.closest('.tabs'), hr = host.getBoundingClientRect();
+  const after = barSnap(inn);
+  const old = new Map(before.map(x => [x.k, x])), now = new Map(after.map(x => [x.k, x]));
+  const a = old.get('classes'), b = now.get('classes');
+  if (!a || !b) return;
+  const D = 360, ease = 'cubic-bezier(.3,.7,.2,1)';
+  const mid = r => [r.left + r.width / 2, r.top + r.height / 2];
+  const [ax, ay] = mid(a.r), [bx, by] = mid(b.r);
+  const len2 = (bx - ax) ** 2 + (by - ay) ** 2 || 1;
+  // En quin moment del camí (de 0 a 1) la icona de Classes passa per sobre d'aquest lloc.
+  const when = r => { const [x, y] = mid(r); return Math.min(1, Math.max(0, ((x - ax) * (bx - ax) + (y - ay) * (by - ay)) / len2)); };
+  const start = into ? 0 : 160;
+  const shift = (from, to) => `translate(${from[0] - to[0]}px, ${from[1] - to[1]}px)`;
+  // Les que hi són abans i després (Inici, Classes i, a l'ordinador, les del peu): es mouen del lloc d'abans al d'ara.
+  for (const x of after) {
+    const o = old.get(x.k);
+    if (!o) continue;
+    if (x.k === 'classes') x.el.classList.add('tab-moving');
+    const an = x.el.animate([{ transform: shift(mid(o.r), mid(x.r)) }, { transform: 'none' }], { duration: D, delay: start, easing: ease, fill: 'backwards' });
+    if (x.k === 'classes') an.onfinish = an.oncancel = () => x.el.classList.remove('tab-moving');
+  }
+  // Les que marxen: en entrar, s'amaguen quan la de Classes hi passa per sobre; en sortir, es recullen dins la de Classes.
+  before.filter(x => !now.has(x.k)).forEach((x, i) => {
+    const g = x.el;
+    g.classList.add('tab-ghost'); g.setAttribute('aria-hidden', 'true'); g.removeAttribute('data-act');
+    Object.assign(g.style, { position: 'absolute', left: `${x.r.left - hr.left}px`, top: `${x.r.top - hr.top}px`, width: `${x.r.width}px`, height: `${x.r.height}px`, margin: '0', zIndex: '1', pointerEvents: 'none' });
+    host.appendChild(g);
+    const an = into
+      ? g.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'scale(.7)' }], { duration: 170, delay: Math.max(0, start + when(x.r) * D * .8 - 90), easing: 'ease-out', fill: 'both' })
+      : g.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: `${shift(mid(a.r), mid(x.r))} scale(.6)` }], { duration: 200, delay: i * 30, easing: 'ease-in', fill: 'both' });
+    an.onfinish = an.oncancel = () => g.remove();
+    setTimeout(() => g.remove(), 700);   // per si el navegador no acaba el moviment (una pestanya amagada)
+  });
+  // Les que arriben: en entrar, es despleguen des de la icona de Classes; en sortir, tornen a aparèixer quan aquesta hi passa.
+  after.filter(x => !old.has(x.k)).forEach((x, i) => {
+    if (into) x.el.animate([{ opacity: 0, transform: `${shift(mid(b.r), mid(x.r))} scale(.6)` }, { opacity: 1, transform: 'none' }], { duration: 300, delay: start + D * .6 + i * 45, easing: ease, fill: 'backwards' });
+    else x.el.animate([{ opacity: 0, transform: 'scale(.7)' }, { opacity: 1, transform: 'none' }], { duration: 200, delay: start + when(x.r) * D * .8, easing: 'ease-out', fill: 'backwards' });
+  });
 }
 // Gestió, quan no és a la barra (al menú lateral i al del compte): uns controls lliscants.
 const GESTIO_ICON = '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>';
@@ -276,7 +350,7 @@ function render() {
       <div class="sk-grid"><span class="sk sk-tile"></span><span class="sk sk-tile"></span></div></div>`;
     return;
   }
-  const html = { llista: viewRoll, calendari: () => teacherOnly() ? viewTeacherCalendar() : viewCalendar(), stats: () => viewStats(false), gestio: viewManage, avisos: viewHome, tauler: viewBoard, classes: viewClasses, vestidor: viewWardrobe, bandes: viewBandes }[ui.tab]();
+  const html = { llista: viewRoll, calendari: viewCalendar, stats: () => viewStats(false), gestio: viewManage, avisos: viewHome, tauler: viewBoard, classes: viewClasses, vestidor: viewWardrobe, bandes: viewBandes }[ui.tab]();
   v.innerHTML = html;
   const key = [ui.tab, ui.att, ui.attArea, ui.board, ui.manage, ui.people, ui.pmFilter, ui.rollSec, ui.clTab, ui.sessionId].join('|');
   // L'entrada només en canviar de pantalla: si la mateixa pantalla es torna a pintar (arriben dades), no s'ha de notar.

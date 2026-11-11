@@ -247,13 +247,10 @@ function classQuads() {
   return `<div class="quads cl-quads ${list.length === 4 ? '' : `n-other${list.length > 6 ? ' n-many' : ''}`}" data-n="${list.length}">${quads}</div>
     ${anyPend ? '<div class="q-legend"><span><i class="u-bg-fnj"></i>Té canvis per veure</span></div>' : ''}`;
 }
-/** L'espai d'un professor/a: el mes, el dia triat hora per hora i els dies que vénen. own: el meu (pestanya Calendari del
- *  professorat). embed: dins la pantalla de Classes, sota el selector de professor/a (sense capçalera ni la llista dels dies
- *  que vénen, que ja hi és a la targeta de la propera classe). */
-function classTeacherSpace(who, own, embed) {
+/** El calendari d'un professor/a: les eines (si en dona), el mes o la setmana, i el dia triat hora per hora. */
+function classTeacherSpace(who) {
   const teach = teachesClasses();
   const mid = myId();
-  const t = classTeachers().find(x => x.key === who) || { key: who, name: teacherName(who) || V.Teacher };
   const days = classDays(who);
   const next = days.filter(c => c.date >= TODAY && classLive(c));
   if (!/^\d{4}-\d{2}$/.test(ui.clMonth || '')) ui.clMonth = ((next[0] || days[days.length - 1] || {}).date || TODAY).slice(0, 7);
@@ -279,23 +276,13 @@ function classTeacherSpace(who, own, embed) {
   while (cells.length % 7) cells.push('<span class="mday out" aria-hidden="true"></span>');
   const title = capz(fmtD(`${ui.clMonth}-01`, { month: 'long', year: 'numeric' }));
   const dayClasses = byDay.get(ui.clDay) || [];
-  const soon = next.filter(c => c.date !== ui.clDay).slice(0, 8);
-  const students = new Set();
-  for (const c of days) for (const x of (c.slots || [])) if (x.memberId) students.add(x.memberId);
-  const facts = [students.size ? `${students.size} ${students.size === 1 ? V.member : V.members}` : '',
-    classWeekdays(next.slice(0, 10)), next.length ? `${next.length} ${next.length === 1 ? 'dia' : 'dies'} per venir` : 'sense dies per venir'].filter(Boolean).join(' · ');
-  return `${embed ? '' : `<div class="cl-hero">
-      <span class="cl-ini">${esc(teacherInitials(t.name))}</span>
-      <span class="cl-h-t"><b>${esc(t.name)}</b><small>${esc(facts)}</small></span>
-    </div>`}
-    ${teach ? `<div class="cl-toolbar" role="toolbar" aria-label="Eines del calendari">
+  return `${teach ? `<div class="cl-toolbar" role="toolbar" aria-label="Eines del calendari">
       <button class="btn btn-sm btn-primary" data-act="cl-new" data-k="${esc(who)}" data-date="${esc(ui.clDay)}">${ICON.plus}Dia de classe</button>
       <button class="btn btn-sm" data-act="cl-plan" data-k="${esc(who)}">Horari fix${planRows(who).length ? `<span class="tb-n">${planRows(who).length}</span>` : ''}</button>
       <button class="btn btn-sm" data-act="cl-paste" data-k="${esc(who)}">Enganxa un horari</button>
       <button class="btn btn-sm" data-act="cl-stats">Assistència del curs</button>
     </div>` : ''}
     ${ownsClass({ teacher: who }) ? unlinkedPanel(who) : ''}
-    ${embed ? '' : clViewSeg()}
     ${ui.clView === 'week' ? classWeekHtml(who) : `<div class="panel month">
       <div class="mnav"><button class="nav-arrow" data-act="cl-month" data-dir="-1" aria-label="Mes anterior">${ICON.left}</button><h2 class="h2">${esc(title)}</h2><button class="nav-arrow" data-act="cl-month" data-dir="1" aria-label="Mes següent">${ICON.right}</button></div>
       <div class="mweek" aria-hidden="true">${['dl', 'dt', 'dc', 'dj', 'dv', 'ds', 'dg'].map(d => `<span>${d}</span>`).join('')}</div>
@@ -305,24 +292,15 @@ function classTeacherSpace(who, own, embed) {
     </div>
     <div class="section-title u-mt-18 cl-dayhead"><h2 class="h2">${esc(longDate(ui.clDay))}</h2>${dayClasses.length ? `<span class="eyebrow">${esc(classDaySpan(dayClasses[0]))}</span>` : ''}</div>
     ${dayClasses.length ? `<div class="panel">${dayClasses.map(c => classDayCard(c, c.date < TODAY, true)).join('')}</div>`
-      : `<div class="panel u-p-14 u-fs-t-13 u-c-muted">Cap classe aquest dia.${teach ? ' Amb <b>+ Dia</b> en pots posar una.' : ''}</div>`}`}
-    ${soon.length && !embed ? `<div class="section-title u-mt-18"><h2 class="h2">Properes classes</h2><span class="eyebrow">${soon.length}</span></div>
-      <div class="cl-next">${soon.map(c => {
-        const mineSlot = mid ? classSlots(c).find(x => x.memberId === mid) : null;
-        const d = new Date(c.date + 'T12:00:00');
-        return `<button data-act="cl-day" data-date="${esc(c.date)}">
-          <span class="d"><b>${d.getDate()}</b><small>${esc(fmtD(c.date, { month: 'short' }).replace('.', ''))}</small></span>
-          <span class="i"><b>${esc(capz(fmtD(c.date, { weekday: 'long' })))}</b><small>${c.cancelled ? 'Anul·lada' : esc(classDaySpan(c))}${c.place ? ` · ${esc(c.place)}` : ''}</small></span>
-          <span class="${mineSlot && !c.cancelled ? 'mine mono' : 'muted mono'} u-fs-t-13">${mineSlot && !c.cancelled ? esc(mineSlot.time) : ''}</span>
-        </button>`;
-      }).join('')}</div>` : ''}
-    ${teach && !embed ? planSummaryHtml(who) : ''}`;
+      : `<div class="panel u-p-14 u-fs-t-13 u-c-muted">Cap classe aquest dia.${teach ? ' Amb <b>+ Dia de classe</b> en pots posar una.' : ''}</div>`}`}`;
+
 }
 const clViewSeg = () => `<div class="seg3 cl-view" role="radiogroup" aria-label="Vista">${[['month', 'Mes'], ['week', 'Setmana']].map(([k, l]) => `<button type="button" role="radio" aria-checked="${(ui.clView || 'month') === k}" data-act="cl-view" data-k="${k}">${l}</button>`).join('')}</div>`;
-/** De qui es mostra el calendari a la pantalla de Classes: el triat, si no el de la meva propera classe (o l'última), si no el
- *  meu si en faig, si no el primer. */
+/** De qui es mostra el calendari de les classes: el triat, si no el meu si en dono, si no el de la meva propera classe (o
+ *  l'última), si no el primer. */
 function classCalWho(list = classTeachers()) {
   if (ui.clWho && list.some(t => t.key === ui.clWho)) return ui.clWho;
+  if (iHave('voice') && list.some(t => t.key === myEmail())) return myEmail();
   const mid = myId();
   if (mid) {
     const { next, last } = studentClassFacts(mid);
@@ -340,7 +318,7 @@ function classCalBlock(list) {
   const name = list.find(t => t.key === who)?.name || '';
   return `<section id="cl-cal" class="cl-cal" aria-label="Calendari de les classes">
     <div class="section-title cl-cal-h"><h2 class="h2">Calendari${list.length === 1 && name ? `<small>${esc(name)}</small>` : ''}</h2>${clViewSeg()}</div>
-    ${pick}${classTeacherSpace(who, false, true)}</section>`;
+    ${pick}${classTeacherSpace(who)}</section>`;
 }
 /** El professorat, plegat: les caselles de cadascú (amb quants alumnes i quan fa classe). Tocar-ne una en mostra el calendari. */
 function classProfBlock(list) {
@@ -360,26 +338,21 @@ function planSummaryHtml(who) {
       <p class="ql-hint">Des de l’horari fix es generen tots els dies d’un període de cop. Els canvis d’un dia concret es fan al calendari.</p>`
       : `<p class="ql-hint">L’hora de cada setmana de cada ${esc(V.member)}. Amb l’horari fix generes tots els dies d’un trimestre de cop.</p>`}`;
 }
-/** La pestanya Classes. El professorat hi té la llista de cada dia i els alumnes (vegeu clTabKeys); la resta, totes les classes. */
+/** La pestanya Classes. Qui fa o dona classes hi té una barra pròpia (vegeu clTabKeys): Classes, Calendari, Alumnes i Espai
+ *  personal. Qui només les mira (l'administració), totes les classes en una pantalla. */
 function viewClasses() {
-  const keys = clTabKeys();
-  if (!keys.length) return viewAllClasses();
-  // Des de l'espai d'un professor (o d'un enllaç que hi porta), totes les classes.
-  if (ui.clWho && keys.includes('totes')) ui.clTab = 'totes';
-  if (!keys.includes(ui.clTab)) ui.clTab = keys[0];
-  const tabs = clTabs();
-  if (ui.clTab === 'alumnes') return viewStudents(tabs);
-  if (ui.clTab === 'totes') return viewAllClasses(tabs);
-  return viewClassRoll(tabs);
+  if (!clTabKeys().length) return viewAllClasses();
+  ui.clTab = clTabNow();
+  if (ui.clTab === 'alumnes') return viewStudents();
+  if (ui.clTab === 'calendari') return viewClassCal();
+  if (ui.clTab === 'espai') return viewStudentSpace();
+  return viewClassHome();
 }
-/** Totes les classes: el quadre del professorat, l'espai de cadascú i, per a qui en fa, les seves hores. tabs = les parts del professorat. */
-function viewAllClasses(tabs = '') {
-  const teach = teachesClasses();
+/** Les peticions de canvi d'hora i els avisos: les que em demanen, les obertes, les que he fet i (pending) les que ha de veure
+ *  el professorat. */
+function classAvisosHtml(pending) {
   const answer = reqsToAnswer();
-  const pending = teach ? reqsForTeacher() : [];
   const mineReq = myId() ? [...S.classReq.values()].filter(r => r.memberId === myId() && r.status === 'pending' && reqOpen(r)).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')) : [];
-  // Qui té classes: la seva propera classe i el seu quadern, abans que el quadre del professorat.
-  const student = !!myId() && inClasses();
   const open = openSwaps();
   const openCard = r => {
     const c = S.classes.get(r.classId), mySl = mySwapSlot(r);
@@ -401,27 +374,62 @@ function viewAllClasses(tabs = '') {
   };
   const mineCard = r => `<li><span>${classReqLine(r)}<br><span class="m">${r.kind === 'swap' ? 'Esperant que respongui' : 'Esperant que ho vegi el professorat'}</span></span>
       <button class="btn btn-sm" data-act="cl-cancel" data-r="${esc(r.id)}">Retira</button></li>`;
-  const avisos = `${open.length ? `<div class="section-title"><h2 class="h2">Canvis d’hora oberts</h2><span class="eyebrow">qui vulgui</span></div>
+  return `${open.length ? `<div class="section-title"><h2 class="h2">Canvis d’hora oberts</h2><span class="eyebrow">qui vulgui</span></div>
       <div class="panel u-d-grid u-gap-10 u-p-12">${open.map(openCard).join('')}</div>` : ''}
     ${answer.length ? `<div class="section-title"><h2 class="h2">Et demanen un canvi</h2><span class="eyebrow">respon</span></div><div class="panel u-d-grid u-gap-10 u-p-12">${answer.map(swapCard).join('')}</div>` : ''}
     ${pending.length ? `<div class="section-title"><h2 class="h2">Absències i canvis per veure</h2><span class="eyebrow">${pending.length}</span></div><div class="panel u-d-grid u-gap-10 u-p-12">${pending.map(classPendCard).join('')}</div>` : ''}
     ${mineReq.length ? `<div class="section-title"><h2 class="h2">Les teves absències i canvis</h2></div><ul class="mini-list u-maxh-none">${mineReq.map(mineCard).join('')}</ul>` : ''}`;
+}
+/** Classes, el dia a dia. El professorat: la llista d'avui (marcar, la nota de classe, la fitxa i moure l'hora) i els dies per
+ *  acabar de marcar. Qui en fa: la seva propera classe, les properes i, plegat, el professorat. */
+function viewClassHome() {
+  const teach = iHave('voice'), student = inClasses();
+  const mid = myId();
+  const list = classTeachers();
+  // Les meves properes classes, després de la de la targeta.
+  const mine = student ? classDays().filter(c => c.date >= TODAY && classLive(c) && classSlots(c).some(x => x.memberId === mid)).slice(1, 5) : [];
+  return `<div class="page-head"><h1 class="h1">${esc(V.classes)} ${helpBtn('classes')}</h1>${teach ? '<button class="btn btn-sm" data-act="cl-stats">Assistència del curs</button>' : ''}</div>
+    ${helpText('classes', teach
+      ? `Aquí hi ha les classes d’avui: marca qui ha vingut, escriu la nota de classe, obre la fitxa de l’alumne o mou-li l’hora. Al <b>Calendari</b> hi ha tots els dies i l’horari fix, i a <b>Alumnes</b>, la fitxa de cadascú.`
+      : `Aquí hi ha la teva propera classe i les peticions de canvi d’hora. Els canvis valen només per a la setmana que es demanen, i qui rep la petició ha de dir que sí perquè es faci. Al <b>Calendari</b> hi ha tots els dies, i a l’<b>Espai personal</b>, el teu quadern i l’assistència.`)}
+    ${student ? studentNextCard() : ''}
+    ${classAvisosHtml(teach || !teachesClasses() ? [] : reqsForTeacher())}
+    ${teach ? classRollBody() : teachesClasses() ? clashBanner() : ''}
+    ${mine.length ? `<div class="section-title"><h2 class="h2">${teach ? 'Les teves properes classes' : 'Properes classes'}</h2></div>
+      <div class="cl-next">${mine.map(c => { const x = classSlots(c).find(s => s.memberId === mid), d = new Date(c.date + 'T12:00:00'); return `<button data-act="cl-go-day" data-k="${esc(c.teacher)}" data-date="${esc(c.date)}">
+        <span class="d"><b>${d.getDate()}</b><small>${esc(fmtD(c.date, { month: 'short' }).replace('.', ''))}</small></span>
+        <span class="i"><b>${esc(capz(fmtD(c.date, { weekday: 'long' })))}</b><small>${esc(teacherOf(c) || V.Teacher)}${c.place ? ` · ${esc(c.place)}` : ''}</small></span>
+        <span class="mine mono u-fs-t-13">${esc(x?.time || '')}</span></button>`; }).join('')}</div>` : ''}
+    ${student ? `<div class="u-mt-18">${classProfBlock(list)}</div>` : ''}`;
+}
+/** El calendari de les classes: el mes (o la setmana) de cada professor/a, amb el selector a dalt. Qui només dona classes hi
+ *  veu el seu; qui en fa (o l'administració), el de tothom. */
+function viewClassCal() {
+  const me = myEmail(), teach = iHave('voice');
+  const list = classTeachers().filter(t => !teach || inClasses() || isAdmin() || t.key === me);
+  const who = classCalWho(list);
+  if (!who) return `<div class="page-head"><h1 class="h1">Calendari</h1></div><div class="empty">${staffSvg()}<p>Encara no hi ha cap dia de classe.</p></div>`;
+  const own = who === me && teach;
+  const name = list.find(t => t.key === who)?.name || '';
+  const pick = list.length > 1 ? `<div class="chips cl-pick" role="group" aria-label="De quin ${esc(V.Teacher.toLowerCase())}">${list.map(t => `<button class="chip" data-act="cl-who" data-k="${esc(t.key)}" aria-pressed="${t.key === who}">${esc(t.key === me && teach ? 'El meu' : t.name)}</button>`).join('')}</div>` : '';
+  return `<div class="page-head cl-cal-head"><div><div class="eyebrow">${esc(own || pick ? V.classes : name || V.classes)}</div><h1 class="h1">Calendari</h1></div>${clViewSeg()}</div>
+    <section id="cl-cal" class="cl-cal" aria-label="Calendari de les classes">${pick}${classTeacherSpace(who)}</section>
+    ${own ? `<div class="u-mt-18">${planSummaryHtml(who)}</div>` : ''}
+    ${myId() || teach ? `<div class="panel link-list u-mt-18">
+      <button class="link-row" data-act="cl-ics"><span><b>Les classes al calendari del mòbil</b><small>Google Calendar, Apple o Outlook, sempre al dia</small></span>${ICON.right}</button>
+    </div>` : ''}`;
+}
+/** Totes les classes, per a qui només les mira (l'administració): el que cal veure, el calendari de cada professor/a i el
+ *  professorat. */
+function viewAllClasses() {
   const list = classTeachers();
   if (ui.clWho && !list.some(t => t.key === ui.clWho)) ui.clWho = null;
-  // L'ordre: la meva propera classe, el que cal respondre, el calendari, el meu quadern i, plegat, el professorat.
-  return `<div class="page-head"><h1 class="h1">${esc(V.classes)} ${helpBtn('classes')}</h1></div>${tabs}
-    ${helpText('classes', `Al calendari hi ha els dies de classe i les hores de cada ${esc(V.member)}${list.length > 1 ? `; a dalt tries de quin ${esc(V.Teacher.toLowerCase())}` : ''}. Els canvis d’hora valen només per a la setmana que es demanen, i es poden fer amb qui tingui classe qualsevol dia d’aquella setmana amb el mateix ${esc(V.Teacher.toLowerCase())}. Qui rep la petició ha de dir que sí perquè es faci.`)}
-    ${student ? studentNextCard() : ''}
-    ${avisos}
-    ${teach ? clashBanner() : ''}
+  return `<div class="page-head"><h1 class="h1">${esc(V.classes)} ${helpBtn('classes')}</h1></div>
+    ${helpText('classes', `Al calendari hi ha els dies de classe i les hores de cada ${esc(V.member)}${list.length > 1 ? `; a dalt tries de quin ${esc(V.Teacher.toLowerCase())}` : ''}. Els canvis d’hora valen només per a la setmana que es demanen.`)}
+    ${classAvisosHtml(teachesClasses() ? reqsForTeacher() : [])}
+    ${teachesClasses() ? clashBanner() : ''}
     ${list.length ? classCalBlock(list) : ''}
-    ${student ? studentQuadernBlock() : ''}
-    ${classProfBlock(list)}
-    ${myId() ? `<div class="panel link-list u-mt-18">
-      ${student ? `<button class="link-row" data-act="cl-student" data-m="${esc(myId())}"><span><b>La teva assistència i l’informe</b><small>Les classes del curs, i un resum en PDF de cada trimestre</small></span>${ICON.right}</button>` : ''}
-      <button class="link-row" data-act="cl-ics"><span><b>Les classes al calendari del mòbil</b><small>Google Calendar, Apple o Outlook, sempre al dia</small></span>${ICON.right}</button>
-    </div>` : ''}
-`;
+    ${classProfBlock(list)}`;
 }
 
 /* ---------- El professorat de cant ---------- */
@@ -430,7 +438,9 @@ function viewAllClasses(tabs = '') {
 const myTeacherKey = () => myEmail();
 /** Les hores d'aquest professor/a que tenen alumne i encara no s'han marcat. */
 const unmarkedSlots = c => classSlots(c).filter(x => x.memberId && !x.mark);
-function viewClassRoll(tabs = '') {
+/** La feina del dia del professorat: el que cal veure, la llista d'avui (o de l'última classe), les properes i els dies per
+ *  acabar de marcar. */
+function classRollBody() {
   const who = myTeacherKey();
   const days = classDays(who).filter(classLive);
   const past = days.filter(c => c.date <= TODAY);
@@ -440,8 +450,7 @@ function viewClassRoll(tabs = '') {
   const pend = reqsForTeacher().filter(r => (S.classes.get(r.classId)?.teacher || '') === who);
   const day = c => `<div class="section-title"><h2 class="h2">${c.date === TODAY ? 'Avui' : esc(capz(longDate(c.date)))}</h2><span class="eyebrow">${esc(classDaySpan(c))}</span></div>
     <div class="panel">${classDayCard(c, c.date < TODAY, true)}</div>`;
-  return `<div class="page-head"><div><div class="eyebrow">${esc(V.classes)}</div><h1 class="h1">Assistència</h1></div><button class="btn btn-sm" data-act="cl-stats">Assistència del curs</button></div>${tabs}
-    ${pend.length ? `<div class="section-title"><h2 class="h2">Absències i canvis per veure</h2><span class="eyebrow">${pend.length}</span></div><div class="panel u-d-grid u-gap-10 u-p-12">${pend.map(classPendCard).join('')}</div>` : ''}
+  return `    ${pend.length ? `<div class="section-title"><h2 class="h2">Absències i canvis per veure</h2><span class="eyebrow">${pend.length}</span></div><div class="panel u-d-grid u-gap-10 u-p-12">${pend.map(classPendCard).join('')}</div>` : ''}
     ${clashBanner()}
     ${shown.length ? shown.map(day).join('') : `<div class="empty">${staffSvg()}<p>Encara no has fet cap classe. El dia que en facis, aquí marcaràs qui hi ha vingut.</p></div>`}
     ${!now.length && days.some(c => c.date > TODAY) ? `<div class="section-title"><h2 class="h2">Properes classes</h2></div>${classNextList(days.filter(c => c.date > TODAY).slice(0, 3))}` : ''}
@@ -489,11 +498,8 @@ function clashBanner() {
 /** A Inici, amb el rol de professor de cant: les properes classes en lloc dels assajos. */
 function teacherSoonBlock() {
   const next = classDays(myTeacherKey()).filter(c => c.date >= TODAY && classLive(c)).slice(0, 5);
-  return `<div class="section-title"><h2 class="h2">Properes classes</h2><button class="btn btn-sm" data-act="tab" data-tab="calendari">Calendari</button></div>
+  return `<div class="section-title"><h2 class="h2">Properes classes</h2><button class="btn btn-sm" data-act="cl-tab" data-k="calendari">Calendari</button></div>
     ${next.length ? classNextList(next) : '<div class="todo-done"><span><b>Res a la vista</b><small>No tens cap classe programada.</small></span></div>'}`;
-}
-function viewTeacherCalendar() {
-  return `<div class="page-head u-mb-0"><div><div class="eyebrow">${esc(V.classes)}</div><h1 class="h1">Calendari</h1></div></div>${classTeacherSpace(myTeacherKey(), true)}`;
 }
 /** Els alumnes d'aquest professor/a: tothom qui té (o ha tingut) hora amb ell/a, amb la seva hora de cada setmana. */
 function myStudents(who) {
@@ -511,7 +517,7 @@ function myStudents(who) {
   }
   return [...by].filter(([mid]) => S.members.has(mid)).map(([mid, e]) => ({ m: S.members.get(mid), ...e })).sort((a, b) => byName(a.m, b.m));
 }
-function viewStudents(tabs = '') {
+function viewStudents() {
   const list = myStudents(myTeacherKey());
   const notes = new Map(), lastNote = new Map(), lastClass = new Map();
   const seen = n => { if (n.date > (lastNote.get(n.memberId) || '')) lastNote.set(n.memberId, n.date); };
@@ -523,7 +529,7 @@ function viewStudents(tabs = '') {
   // Primer qui ha afegit alguna cosa al quadern que encara no he vist.
   const withNews = list.filter(({ m }) => stuNews(m.id));
   const sorted = [...withNews, ...list.filter(x => !withNews.includes(x))];
-  return `<div class="page-head"><div><div class="eyebrow">${esc(V.classes)}</div><h1 class="h1">Alumnes</h1></div><span class="eyebrow">${list.length}${withNews.length ? ` · <b class="u-c-accent">${withNews.length} amb novetats</b>` : ''}</span></div>${tabs}
+  return `<div class="page-head"><div><div class="eyebrow">${esc(V.classes)}</div><h1 class="h1">Alumnes</h1></div><span class="eyebrow">${list.length}${withNews.length ? ` · <b class="u-c-accent">${withNews.length} amb novetats</b>` : ''}</span></div>
     ${unlinkedPanel(myTeacherKey())}
     ${list.length ? `<div id="stu-list">${list.length > 5 ? findBox('#stu-list', 'Cerca un alumne') : ''}<div class="panel students">${sorted.map(({ m, hours, next }) => {
       const news = stuNews(m.id);
