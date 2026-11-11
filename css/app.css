@@ -2399,9 +2399,9 @@ button.rep-row:hover{background:var(--surface-2)}
 .stu-hero small{display:block;margin-top:4px;font-size:var(--t-13);color:var(--muted)}
 .stu-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;margin:0 0 16px;background:var(--line);border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden}
 .stu-facts > div{min-width:0;padding:10px 12px;background:var(--surface)}
-.stu-facts dt{font-size:var(--t-12);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.stu-facts dt{font-size:var(--t-12);font-weight:600;color:var(--muted)}
 .stu-facts dd{margin:4px 0 0;font-family:var(--f-display);font-weight:600;font-size:var(--t-17);line-height:1.15;overflow-wrap:anywhere}
-@media (max-width:400px){:root[data-text="molt"] .stu-facts{grid-template-columns:1fr}}
+@media (max-width:400px){:root[data-text] .stu-facts{grid-template-columns:1fr}}
 .stu-facts dd small{display:block;margin-top:2px;font-family:var(--f-ui);font-weight:500;font-size:var(--t-12);color:var(--muted)}
 .stu-tabs{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);width:100%;margin-bottom:6px}
 .stu-tabs button[aria-selected="true"]{background:var(--raised);color:var(--ink);box-shadow:0 1px 2px rgba(27,23,32,.12)}
@@ -2423,6 +2423,88 @@ button.rep-row:hover{background:var(--surface-2)}
 .link-row b{display:block;font-size:var(--t-15);font-weight:600}
 .link-row small{display:block;margin-top:2px;font-size:var(--t-13);color:var(--muted)}
 .link-row > svg{flex:none;width:16px;height:16px;fill:none;stroke:var(--muted);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- El calendari del professorat: eines, mes, setmana i horari fix ---------- */
+.cl-toolbar{display:flex;gap:8px;margin:0 -16px 14px;padding:2px 16px 4px;overflow-x:auto;scrollbar-width:none}
+.cl-toolbar::-webkit-scrollbar{display:none}
+.cl-toolbar .btn{flex:none;gap:6px}
+.cl-toolbar .btn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.tb-n{min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--surface-2);font-size:var(--t-12);line-height:20px;color:var(--ink-2)}
+/* Un dia de classe és un cercle de color; si hi tens hora, ple. Avui, l'anell daurat; el dia triat, la casella marcada. */
+.mday.has-cl .mmarks{display:none}
+.mday.has-cl .mnum{background:var(--accent-soft);color:var(--accent);font-weight:700}
+.mday.has-mine .mnum{background:var(--accent);color:var(--accent-ink)}
+.mday.has-cl.past .mnum{background:var(--surface-2);color:var(--ink-2)}
+.mday.is-off .mnum{background:none;color:var(--muted);text-decoration:line-through}
+.mday.today .mnum{box-shadow:0 0 0 2px var(--surface), 0 0 0 3.5px var(--sig)}
+.mday.sel{background:none;box-shadow:inset 0 0 0 1.5px var(--ink)}
+.mday.sel::after{content:none}   /* .sel també és el contenidor dels desplegables (la fletxa): aquí no */
+.mday .mnum{width:30px;height:30px}
+.mcount{font-size:var(--t-11);font-weight:700;color:var(--muted);line-height:1;font-variant-numeric:tabular-nums}
+.mday.has-cl:not(.past) .mcount{color:var(--accent)}
+.lg-cl{display:inline-block;width:12px;height:12px;border-radius:50%;background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent-line)}
+.lg-cl.mine{background:var(--accent);box-shadow:none}
+.lg-today{display:inline-block;width:12px;height:12px;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--sig)}
+/* La setmana: cada dia com una entrada de programa (la data gran, què i on), i les hores a sota. */
+.wk-day{padding:14px 2px;border-top:1px solid var(--line)}
+.wk-day.is-today .wk-d b{color:var(--sig-ink)}
+.wk-h{display:grid;grid-template-columns:44px minmax(0,1fr) auto;align-items:center;gap:12px;width:100%;margin:0 0 8px;padding:0;text-align:left;color:inherit;font-size:inherit}
+.wk-h:hover .wk-t b{color:var(--accent)}
+.wk-d{display:grid;justify-items:center;line-height:1}
+.wk-d b{font-family:var(--f-display);font-weight:600;font-size:var(--t-24);font-variant-numeric:lining-nums}
+.wk-d small{margin-top:3px;font-size:var(--t-12);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.wk-t{display:grid;gap:2px;min-width:0}
+.wk-t b{font-size:var(--t-15);font-weight:700}
+.wk-t small{font-size:var(--t-13);color:var(--muted)}
+.wk-slots{display:grid;gap:2px;margin-left:56px}
+.wk-slot{display:flex;align-items:center;gap:12px;padding:4px 0;font-size:var(--t-15)}
+.wk-slot .mono{min-width:calc(46px * var(--ts));font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink-2)}
+.wk-slot .cl-free{font-size:var(--t-13)}
+/* L'horari fix i la graella enganxada: un bloc per dia, l'aula a la capçalera. */
+.pl-sum{margin:0 0 12px;font-size:var(--t-13);color:var(--ink-2)}
+.pl-sum:empty{display:none}
+.pc-warn{color:var(--fj-text);font-weight:700}
+.pl-days{display:grid;gap:12px}
+.pl-day{border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);overflow:hidden}
+.pl-dh{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;background:var(--surface-2)}
+.pl-dh > span{display:grid;gap:1px;flex:none}
+.pl-dh b{font-family:var(--f-display);font-weight:600;font-size:var(--t-17)}
+.pl-dh small{font-size:var(--t-12);color:var(--muted)}
+.pl-place{flex:1 1 0;width:0;min-width:0;max-width:200px;min-height:40px;background:var(--surface)}
+.pl-rows{display:grid}
+.pl-row{display:grid;grid-template-columns:calc(116px * var(--ts)) calc(64px * var(--ts)) minmax(0,1fr) 44px;align-items:center;gap:6px;padding:8px 6px 8px 12px;border-top:1px solid var(--line)}
+.pl-rows > :first-child{border-top:0}
+.pl-row .inp{min-width:0}
+.pl-more{margin:4px 8px 8px}
+.pl-more svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2}
+.pl-add{display:block;margin-top:12px}
+.pl-gen{margin-top:20px;padding:14px;border-radius:var(--r-md);background:var(--surface-2)}
+.pl-gen h3{margin:0 0 10px;font-family:var(--f-display);font-weight:600;font-size:var(--t-17)}
+.pc-row{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;align-items:center;padding:10px 12px;border-top:1px solid var(--line)}
+.pc-row .mono{font-weight:700;font-variant-numeric:tabular-nums;font-size:var(--t-13)}
+.pc-name{font-size:var(--t-13);color:var(--muted);overflow-wrap:anywhere}
+.pc-row select{grid-column:1 / -1}
+.pc-row.is-warn{background:var(--fj-soft)}
+.pc-row.is-warn .pc-name{color:var(--fj-text);font-weight:700}
+@media (max-width:420px){.pl-row{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) 44px}.pl-row .pl-who{grid-column:1 / 3;grid-row:2}.pl-row .icon-btn{grid-column:3;grid-row:1 / 3}}
+/* Els passos d'«Enganxa un horari»: aquí l'ordre sí que compta. */
+.cl-steps{list-style:none;margin:0;padding:0;counter-reset:st;display:grid;gap:18px}
+.cl-steps > li{position:relative;padding-left:40px;counter-increment:st}
+.cl-steps > li::before{content:counter(st);position:absolute;left:0;top:0;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-family:var(--f-display);font-weight:600;font-size:var(--t-15)}
+.cl-steps h3{margin:3px 0 6px;font-size:var(--t-15);font-weight:700}
+.cl-steps p{margin:0 0 10px;font-size:var(--t-13);color:var(--ink-2);line-height:1.5}
+/* L'assistència del curs, a la fitxa de l'alumne: un punt per classe. */
+.stu-att{margin:-4px 0 16px}
+.stu-att-h{margin-bottom:8px}
+.stu-att-dots{display:flex;flex-wrap:wrap;gap:5px}
+.ad{display:inline-block;width:14px;height:14px;border-radius:50%;background:var(--np-soft)}
+.ad-P{background:var(--p)}.ad-R{background:var(--r)}.ad-FJ{background:var(--fj)}.ad-FNJ{background:var(--fnj)}
+.ad-none{background:none;box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.stu-att-leg{display:flex;flex-wrap:wrap;gap:4px 14px;margin:8px 0 0;font-size:var(--t-12);color:var(--muted)}
+.stu-att-leg span{display:inline-flex;align-items:center;gap:6px}
+.stu-att-leg .ad{width:9px;height:9px}
+.stu-att-sk{height:14px;width:70%}
+.sk-inl{display:inline-block;width:48px;height:18px;vertical-align:middle}
 
 /* Utilitats: el que abans anava escrit directament a cada element (style="…"). Porten !important perquè han de guanyar
    com guanyava l'estil de l'element; el display respecta [hidden]. */
@@ -2577,3 +2659,4 @@ button.rep-row:hover{background:var(--surface-2)}
 .u-w-96{width:96px!important}
 .u-w-max-content{width:max-content!important}
 .u-ws-pre-wrap{white-space:pre-wrap!important}
+.u-ws-nowrap{white-space:nowrap!important}
