@@ -44,7 +44,9 @@ const actions = {
   'att-area': el => { ui.attArea = el.dataset.k; ui.att = attTabKeys()[0] || 'llista'; ui.rollSec = null; if (el.dataset.k === 'all') ui.statsSec = ''; saveUI(); render(); window.scrollTo({ top: 0 }); },
   // Classes del professorat: l'assistència de cada dia, els alumnes o totes les classes.
   // La barra de Classes (vegeu clTabKeys).
-  'cl-tab': el => { ui.tab = 'classes'; ui.clTab = el.dataset.k; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
+  // Un dia per passar-hi llista, a Classes (buit: torna a avui).
+  'cl-roll-open': el => { ui.tab = 'classes'; ui.clTab = 'classes'; ui.rollDay = el.dataset.date || null; closeSheet(); render(); window.scrollTo({ top: 0 }); },
+  'cl-tab': el => { ui.tab = 'classes'; ui.clTab = el.dataset.k; ui.rollDay = null; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
   // Una de les meves properes classes: aquell dia al calendari del seu professor/a.
   'cl-go-day': el => { ui.tab = 'classes'; ui.clTab = 'calendari'; ui.clWho = el.dataset.k; ui.clView = 'month'; ui.clDay = el.dataset.date; ui.clMonth = el.dataset.date.slice(0, 7); saveUI(); render(); (document.querySelector('.cl-dayhead') || document.body).scrollIntoView({ block: 'start' }); },
   'privacy': () => sheetPrivacy(),
