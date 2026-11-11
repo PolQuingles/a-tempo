@@ -144,7 +144,9 @@ function todoItems() {
   const news = unreadAnnouncements();
   if (news.length) out.push({ icon: 'ann', t: `${news.length === 1 ? '1 anunci nou' : `${news.length} anuncis nous`}`, s: esc(news[0].title || ''), btn: 'Llegeix', act: 'data-act="board-news"', n: news.length });
   // Els cantaires que l'obren des del navegador del mòbil. Entre les primeres files, perquè no quedi amagat sota «Mostra'n més».
-  if (me && !PREVIEW && (isiOS() || isAndroid()) && !installed()) out.splice(Math.min(2, out.length), 0, { icon: 'app', t: 'Descarrega l’app al mòbil', s: 'La tindràs a la pantalla d’inici, com una app més', btn: installPrompt ? 'Descarrega-la' : 'Com fer-ho', act: installPrompt ? 'data-act="install-go"' : 'data-act="install-how"', n: 0 });
+  // Mentre l'opció «Descarrega l'app al mòbil» del menu del compte hi és (no s'ha instal·lat mai en aquest aparell), també
+  // és a «Per fer», i obre la mateixa finestra: els passos d'aquest mòbil, o els dels dos des de l'ordinador.
+  if (canInstall()) out.splice(Math.min(2, out.length), 0, { icon: 'app', t: 'Descarrega l’app al mòbil', s: 'La tindràs a la pantalla d’inici, com una app més', btn: 'Com fer-ho', act: 'data-act="install-how"', n: 0 });
   return out;
 }
 /** El que surt a «Per fer»: la convocatòria que ja és a la targeta de la propera sessió no s'hi repeteix. */
