@@ -232,7 +232,7 @@ const ui = {
   calProd: 'all', calPast: false,
   statsScope: 'prod', statsProd: null, statsSec: '', statsSort: 'pct',
   manage: 'personal', people: 'singer', pmFilter: 'all', absFilter: 'pending',
-  clWho: null, clMonth: null, clDay: null,
+  clWho: null, clMonth: null, clDay: null, clProfOpen: false, qlTab: 'diari',
   attArea: null, clTab: null,   // Assistència: la meva, la de la corda o la de tot el cor; Classes del professorat: llista o alumnes
 };
 /* ---------- Memòria del mòbil, per agrupació ---------- */
@@ -247,7 +247,7 @@ function loadUI() {
   try { Object.assign(ui, JSON.parse(lsGet(LS_UI) || '{}')); } catch {}
   if (ui.statsScope === 'term') ui.statsScope = 'season';   // els trimestres ja no hi són
   ui.sessionId = null;
-  ui.clWho = null;   // les classes comencen sempre pel quadre del professorat
+  ui.clWho = null;   // el calendari de Classes comença pel professor/a de la meva classe (vegeu classCalWho)
 }
 function saveUI() {
   lsSet(LS_UI, JSON.stringify({ tab: ui.tab, section: ui.section, calProd: ui.calProd, calView: ui.calView, statsScope: ui.statsScope, statsSec: ui.statsSec, statsSort: ui.statsSort, manage: ui.manage, people: ui.people, pmFilter: ui.pmFilter, board: ui.board, att: ui.att, attArea: ui.attArea, clTab: ui.clTab }));

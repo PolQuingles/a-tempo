@@ -1037,32 +1037,45 @@ def main():
         check(r["day"] and r["week"], "un cantaire no veu les marques d'assistència dels companys", str(r))
         ctx.close()
 
-        print("Classes: el quadern de l'alumne (preguntes, obres) i el que en veu i hi respon el professor")
+        print("Classes: el calendari, el quadern de l'alumne (notes, obres) i el que en veu i hi respon el professor")
         ctx, page, errors = open_app(browser, base, "singer", MOBILE, "#/classes")
         r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {}, sh = () => document.querySelector('.sheet'), mid = myId();
           ui.tab = 'classes'; ui.clWho = null; render(); await s(300);
           out.card = !!document.querySelector('#view .cl-next-card') && !!document.querySelector('#view .ql-quick');
-          document.querySelector('#view .ql-quick [data-k="q"]').click(); await s(300);
+          // El calendari hi és sempre, amb el professor/a de la meva classe; el professorat, plegat.
+          const prof = document.querySelector('#view details.cl-prof');
+          out.cal = !!document.querySelector('#view #cl-cal .mgrid') && !!prof && !prof.open && !!prof.querySelector('.quad');
+          out.kinds = [...document.querySelectorAll('#view .ql-quick [data-k]')].map(b => b.dataset.k).join(',') === 'note,rec' && !document.querySelector('#view [data-k="q"]');
+          prof.querySelector('summary').click(); await s(200);
+          prof.querySelector('.quad[data-k="prof@exemple.cat"]').click(); await s(300);
+          out.pick = ui.clWho === 'prof@exemple.cat' && document.querySelector('#view .cl-pick [aria-pressed="true"]')?.dataset.k === 'prof@exemple.cat' && document.querySelector('#view details.cl-prof').open;
+          document.querySelector('#view .ql-quick [data-k="note"]').click(); await s(300);
+          out.noQ = !sh().querySelector('.ql-kinds [data-k="q"]');
           sh().querySelector('#ql-text').value = 'Com respiro al c. 12?'; sh().querySelector('#ql-go').click(); await s(800);
-          const q = [...S.classLog.values()].find(x => x.memberId === mid && x.kind === 'q');
-          out.question = !!q && q.text === 'Com respiro al c. 12?' && S.students.get(mid)?.fresh?.kind === 'q' && (S.students.get(mid)?.teachers || []).includes('prof@exemple.cat');
+          const q = [...S.classLog.values()].find(x => x.memberId === mid && x.text === 'Com respiro al c. 12?');
+          out.question = !!q && q.kind === 'note' && S.students.get(mid)?.fresh?.kind === 'note' && (S.students.get(mid)?.teachers || []).includes('prof@exemple.cat');
           out.shown = /Com respiro al c. 12/.test(document.querySelector('#view .ql-list')?.innerText || '');
+          document.querySelector('#view .ql-tabs [data-k="repertori"]').click(); await s(300);
           document.querySelector('#view [data-act="rep-new"]').click(); await s(300);
           sh().querySelector('#rp-title').value = 'Caro mio ben'; sh().querySelector('#rp-comp').value = 'G. Giordani'; sh().querySelector('#rp-go').click(); await s(500);
           out.rep = (S.students.get(mid)?.repertoire || []).some(x => x.title === 'Caro mio ben' && x.status === 'treballant') && /Caro mio ben/.test(document.querySelector('#view .rep-list')?.innerText || '');
+          ui.qlTab = 'diari'; render();
           sheetStudent(mid); await s(600);
           out.sheet = !!sh()?.querySelector('.stu-facts') && /Com respiro/.test(sh().querySelector('#stu-pane').innerText) && !sh().querySelector('[data-act="ql-reply"]');
           closeSheet(); await s(200);
           return out; }""")
-        for k, what in [("card", "el cantaire té la seva propera classe i el quadern a dalt de Classes"), ("question", "hi deixa una pregunta, i la fitxa diu qui el porta"),
-                        ("shown", "la pregunta surt al seu quadern"), ("rep", "hi afegeix una obra al repertori"), ("sheet", "a la seva fitxa hi ha el quadern sencer, sense «Respon»")]:
+        for k, what in [("card", "el cantaire té la seva propera classe i el quadern a dalt de Classes"),
+                        ("cal", "el calendari de classes hi és sempre, i el professorat queda plegat"), ("kinds", "al quadern s'hi afegeix una nota o una gravació (ja no preguntes)"),
+                        ("pick", "un professor del desplegable en mostra el calendari"), ("noQ", "la finestra tampoc ofereix preguntes"),
+                        ("question", "hi deixa una nota, i la fitxa diu qui el porta"),
+                        ("shown", "la nota surt al seu quadern"), ("rep", "hi afegeix una obra al repertori"), ("sheet", "a la seva fitxa hi ha el quadern sencer, sense «Respon»")]:
             check(r.get(k), what, str(r))
         switch_user(page, base, "prof")
         r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {}, sh = () => document.querySelector('.sheet');
           const mid = [...S.students.keys()].find(k => S.students.get(k).fresh);
           out.news = !!mid && !!stuNews(mid);
           ui.tab = 'inici'; render(); await s(300);
-          out.todo = /pregunta per a la classe/.test(document.querySelector('#view .todo')?.innerText || '');
+          out.todo = /ha escrit al quadern/.test(document.querySelector('#view .todo')?.innerText || '');
           ui.tab = 'classes'; ui.clTab = 'alumnes'; render(); await s(300);
           out.listed = !!document.querySelector('#view .stu-row.has-news .stu-news');
           ui.clTab = 'llista'; render(); await s(300);

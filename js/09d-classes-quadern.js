@@ -10,7 +10,8 @@
 //   que l'alumne ha afegit al quadern, perquè el professorat ho vegi sense haver de llegir el quadern), seen: { <professor>: hora },
 //   at, by }
 // students/<membre>/log/<id> = { id, memberId, kind: note|rec|q, text, file?, work? (una obra del repertori), date, by, byName, at,
-//   edited?, reply?: { text, by, name, at } }. L'alumne hi escriu notes d'estudi, gravacions i preguntes per a la classe; el
+//   edited?, reply?: { text, by, name, at } }. L'alumne hi escriu notes d'estudi i s'hi grava (les preguntes «q» d'abans es
+//   continuen veient, però ja no se'n fan de noves); el
 //   professorat, material (un acompanyament, uns deures) i respostes. Cadascú canvia i esborra el que ha escrit (vegeu les regles).
 const STUDENT_STATUS = { nova: 'Per començar', treballant: 'Treballant-la', apunt: 'A punt' };
 const LOG_KINDS = {
@@ -18,8 +19,11 @@ const LOG_KINDS = {
   rec: { t: 'Gravació', title: 'Gravació', label: 'Què hi ha a la gravació? (opcional)', ph: 'p. ex. El «Laudamus te» sencer, a casa. Escolta sobretot el final.' },
   q: { t: 'Pregunta', title: 'Pregunta per a la classe', label: 'Què vols preguntar?', ph: 'p. ex. Com puc respirar abans del c. 12 sense trencar la frase?' },
 };
-// Una gravació del quadern dura com a molt deu minuts: n'hi ha prou per a una obra sencera i no omple la base de dades.
-const LOG_REC_MAX = 10 * 60e3;
+// Una gravació del quadern dura com a molt quaranta minuts: una classe o un assaig sencer a casa. A 48 kbps són uns 15 MB, dins
+// del límit de 20 MB dels fitxers (si el mòbil grava amb més qualitat, s'atura en arribar-hi, vegeu startRecording).
+const LOG_REC_MAX = 40 * 60e3;
+/** El que l'alumne pot afegir al seu quadern. */
+const OWN_KINDS = ['note', 'rec'];
 const QL_ICON = {
   note: '<path d="M5 19h4L19.5 8.5a2.1 2.1 0 00-3-3L6 16v3z"/><path d="M14.5 7.5l2 2"/>',
   rec: '<rect x="9" y="3.5" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0013 0M12 18v2.5"/>',
@@ -43,6 +47,14 @@ function stuNews(mid) {
 /** Quan l'ha vist el professorat per última vegada (per dir-li a l'alumne «Vist»). */
 const stuSeenAt = mid => Object.values(stuOf(mid)?.seen || {}).sort().pop() || '';
 const freshText = f => !f ? '' : f.kind === 'rec' ? 'Ha afegit una gravació' : f.kind === 'q' ? 'Té una pregunta per a la classe' : 'Ha escrit al quadern';
+/** El nom d'un professor/a a partir de la seva clau, també per a qui no veu les fitxes de l'equip: el que porta algun dia de classe. */
+function teacherLabel(key) {
+  if (!key) return '';
+  const n = teacherName(key);
+  if (n) return fullName(n);
+  for (const c of S.classes.values()) if (c.teacher === key && c.teacherName) return fullName(c.teacherName);
+  return '';
+}
 /** El professorat amb compte de les meves classes: qui ha de poder llegir el meu quadern. */
 function myClassTeachers(mid) {
   const out = new Set(stuOf(mid)?.teachers || []);
@@ -94,9 +106,9 @@ function quadernEntries(mid, notes, privs) {
     const p = privs?.get(n.id)?.text || '';
     if (!n.text && !n.file && !p) continue;
     const c = S.classes.get(n.classId);
-    out.push({ src: 'class', id: n.id, classId: n.classId, slotId: n.slotId, date: n.date || '', at: n.at || '', text: n.text || '', file: n.file || null, priv: p, mineNote: !!n.teacher && n.teacher === myEmail(), who: (c && teacherOf(c)) || teacherName(n.teacher) || V.Teacher });
+    out.push({ src: 'class', id: n.id, classId: n.classId, slotId: n.slotId, date: n.date || '', at: n.at || '', text: n.text || '', file: n.file || null, priv: p, mineNote: !!n.teacher && n.teacher === myEmail(), who: (c && teacherOf(c)) || teacherLabel(n.teacher) || V.Teacher });
   }
-  for (const [k, p] of privs || []) if (!seen.has(k) && p.text) out.push({ src: 'class', id: k, classId: p.classId, slotId: p.slotId, date: p.date || '', at: p.at || '', text: '', file: null, priv: p.text, who: teacherName(p.teacher) || V.Teacher });
+  for (const [k, p] of privs || []) if (!seen.has(k) && p.text) out.push({ src: 'class', id: k, classId: p.classId, slotId: p.slotId, date: p.date || '', at: p.at || '', text: '', file: null, priv: p.text, who: teacherLabel(p.teacher) || V.Teacher });
   for (const x of logOf(mid)) out.push({ src: 'log', ...x });
   return out.sort((a, b) => `${b.date}${b.at}`.localeCompare(`${a.date}${a.at}`));
 }
@@ -251,7 +263,7 @@ function bindRecField(el, { name, maxMs = 0, save }) {
           const a = el.querySelector('#ql-rec-prev');
           if (prevUrl) URL.revokeObjectURL(prevUrl);
           prevUrl = URL.createObjectURL(f); a.src = prevUrl; a.hidden = false;
-          toast(full ? (maxMs ? 'S’ha aturat als deu minuts' : 'S’ha aturat en arribar al límit de 20 MB') : 'Gravació a punt: desa-la per enviar-la');
+          toast(full ? (maxMs && f.size < FILE_MAX * 0.9 ? `S’ha aturat als ${Math.round(maxMs / 60e3)} minuts` : 'S’ha aturat en arribar al límit de 20 MB') : 'Gravació a punt: desa-la per enviar-la');
         },
       });
     } catch (err) { go.disabled = false; toast(err && err.name === 'NotAllowedError' ? 'Dona permís al micròfon per poder gravar' : 'No s’ha pogut engegar el micròfon'); return; }
@@ -266,13 +278,14 @@ const recFieldHtml = (cur, student) => `${cur ? `<div class="rec-cur"><span>${es
     <div class="rec-live" id="ql-rec-live" hidden><i class="rec-dot on"></i><b class="mono" id="ql-rec-t">0:00</b><span class="muted" id="ql-rec-s">Gravant…</span><span class="spacer"></span><button type="button" class="btn btn-primary" id="ql-rec-stop">Atura</button></div>
     <audio id="ql-rec-prev" controls playsinline preload="metadata" hidden></audio></div>` : ''}
   <label class="dropzone" for="ql-file" id="ql-drop"><input id="ql-file" type="file" accept="audio/*,video/*,.m4a,.mp3" class="sr">
-    <span class="dz-t">${cur ? 'Canvia-la per un fitxer' : 'O tria un fitxer'}</span><span class="dz-s">${student ? 'Fins a 10 minuts o 20 MB.' : 'Fins a 20 MB: un acompanyament, una versió de referència…'}</span></label>`;
-/** Afegeix (o canvia) una entrada del quadern. kind: note | rec | q. back: on es torna en acabar (la fitxa). */
+    <span class="dz-t">${cur ? 'Canvia-la per un fitxer' : 'O tria un fitxer'}</span><span class="dz-s">${student ? `Fins a ${Math.round(LOG_REC_MAX / 60e3)} minuts o 20 MB.` : 'Fins a 20 MB: un acompanyament, una versió de referència…'}</span></label>`;
+/** Afegeix (o canvia) una entrada del quadern. kind: note | rec. back: on es torna en acabar (la fitxa). Una pregunta d'abans
+ *  (q) que es torna a editar queda com a nota. */
 function sheetLogNew(mid, kind = 'note', id = '', back = null) {
   const ex = id ? S.classLog.get(id) : null;
   if (id && !ex) return;
   const own = mid === myId();
-  const kinds = own ? ['note', 'rec', 'q'] : ['note', 'rec'];
+  const kinds = OWN_KINDS;
   if (ex) kind = ex.kind;
   if (!kinds.includes(kind)) kind = 'note';
   const rep = repOf(mid);
@@ -306,7 +319,7 @@ function sheetLogNew(mid, kind = 'note', id = '', back = null) {
         const picked = kind === 'rec' ? recf.file() : null;
         let file = kind === 'rec' ? ex?.file || null : null;
         if (kind === 'rec' && !picked && !file) { toast(own ? 'Grava’t o tria un fitxer' : 'Tria el fitxer o grava’l'); return; }
-        if (kind !== 'rec' && !text) { toast(kind === 'q' ? 'Escriu la pregunta' : 'Escriu-hi alguna cosa'); return; }
+        if (kind !== 'rec' && !text) { toast('Escriu-hi alguna cosa'); return; }
         if (PREVIEW) { previewBlocked(); return; }
         save.disabled = true;
         try { await ensureStudentDoc(mid); } catch { toast('Cal connexió per començar el quadern'); save.disabled = false; return; }
@@ -322,7 +335,7 @@ function sheetLogNew(mid, kind = 'note', id = '', back = null) {
         if (work) rec.work = work; else delete rec.work;
         saveLog(rec, ex);
         if (own && !ex) saveStudent(mid, { fresh: { at, kind, by: S.email || '', text: text.slice(0, 140) } });
-        toast(ex ? 'Desat' : kind === 'q' ? `Pregunta desada: la veurà el teu ${V.Teacher.toLowerCase()}` : own ? 'Afegit al teu quadern' : `Afegit al quadern de ${firstName(m?.name || '')}`);
+        toast(ex ? 'Desat' : own ? `Afegit al teu quadern: el veurà el teu ${V.Teacher.toLowerCase()}` : `Afegit al quadern de ${firstName(m?.name || '')}`);
         done();
       };
       el.querySelector('#ql-del')?.addEventListener('click', async () => {
@@ -335,7 +348,7 @@ function sheetLogNew(mid, kind = 'note', id = '', back = null) {
     },
   });
 }
-/** El professorat respon una entrada de l'alumne (una pregunta, una gravació). */
+/** El professorat respon una entrada de l'alumne (una nota, una gravació). */
 function sheetLogReply(mid, id, back) {
   const e = S.classLog.get(id);
   if (!e) return;
@@ -439,7 +452,7 @@ function stuPane(mid, tab) {
   }
   const entries = quadernEntries(mid, own ? null : STU_CTX.notes, own ? null : STU_CTX.privs);
   return entries.length ? qlList(entries, ctx)
-    : `<div class="ql-empty"><p>${own ? 'Aquí hi haurà les notes de cada classe i el que hi afegeixis tu: el que has treballat a casa, gravacions per escoltar-te i preguntes per a la classe.' : 'Encara no hi ha res. Les notes de classe i el que hi afegeixi l’alumne sortiran aquí.'}</p></div>`;
+    : `<div class="ql-empty"><p>${own ? 'Aquí hi haurà les notes de cada classe i el que hi afegeixis tu: el que has treballat a casa i gravacions per escoltar-te.' : 'Encara no hi ha res. Les notes de classe i el que hi afegeixi l’alumne sortiran aquí.'}</p></div>`;
 }
 async function sheetStudent(mid, tab) {
   const m = S.members.get(mid);
@@ -536,27 +549,48 @@ function studentNextCard() {
       </div>
     </div>
     ${prep ? `<p class="next-note cl-prep"><span class="eyebrow">De l’última classe · ${esc(shortDate(last.c.date))}</span>${esc(prep)}</p>` : ''}
-    <div class="next-a">
-      <button class="btn btn-sm btn-primary" data-act="ql-new" data-m="${esc(mid)}" data-k="q">${qlIcon('q')}Pregunta-li una cosa</button>
-      ${!notice ? `<button class="btn btn-sm" data-act="cl-avisa" data-c="${esc(c.id)}" data-s="${esc(x.id)}">Avisa…</button>` : ''}
-    </div>
+    ${!notice ? `<div class="next-a"><button class="btn btn-sm" data-act="cl-avisa" data-c="${esc(c.id)}" data-s="${esc(x.id)}">Avisa o canvia l’hora…</button></div>` : ''}
   </article>`;
 }
-/** El quadern a la pantalla de Classes: afegir-hi alguna cosa d'un toc, les últimes entrades i el repertori. */
+/** El quadern a la pantalla de Classes: afegir-hi una nota o una gravació d'un toc, què hi has posat des de l'última classe i,
+ *  en pestanyes, el diari (les últimes entrades), el repertori i els objectius. */
 function studentQuadernBlock() {
   const mid = myId();
   if (!mid) return '';
   const entries = quadernEntries(mid);
   const rep = repOf(mid);
   const ctx = { mid, own: true, teach: false, seenAt: stuSeenAt(mid) };
-  return `<div class="section-title"><h2 class="h2">El teu quadern</h2><button class="btn btn-sm" data-act="cl-student" data-m="${esc(mid)}">Obre’l sencer</button></div>
-    <div class="ql-quick" role="group" aria-label="Afegeix al quadern">
-      ${['note', 'rec', 'q'].map(k => `<button data-act="ql-new" data-m="${esc(mid)}" data-k="${k}">${qlIcon(k)}<span>${k === 'rec' ? 'Grava’t' : LOG_KINDS[k].t}</span></button>`).join('')}
+  const tab = ['diari', 'repertori', 'objectius'].includes(ui.qlTab) ? ui.qlTab : 'diari';
+  // Des de l'última classe: el que el professorat trobarà quan obri el quadern abans de la propera.
+  const { last } = studentClassFacts(mid);
+  const since = last ? logOf(mid).filter(x => x.by === S.email && !x.t && (x.date || '') > last.c.date) : null;
+  const n = k => since.filter(x => k === 'rec' ? x.kind === 'rec' : x.kind !== 'rec').length;
+  const plural = (k, sg, pl) => `${k} ${k === 1 ? sg : pl}`;
+  const sinceTxt = !since ? '' : since.length
+    ? `Des de l’última classe (${esc(shortDate(last.c.date))}) hi has afegit ${[n('note') ? plural(n('note'), 'nota', 'notes') : '', n('rec') ? plural(n('rec'), 'gravació', 'gravacions') : ''].filter(Boolean).join(' i ')}.`
+    : `Des de l’última classe (${esc(shortDate(last.c.date))}) encara no hi has afegit res.`;
+  const compose = [['note', 'Nota', 'El que has treballat a casa'], ['rec', 'Grava’t', `Fins a ${Math.round(LOG_REC_MAX / 60e3)} minuts`]]
+    .map(([k, t, sub]) => `<button data-act="ql-new" data-m="${esc(mid)}" data-k="${k}"><span class="ql-q-ic">${qlIcon(k)}</span><span class="ql-q-t"><b>${t}</b><small>${sub}</small></span></button>`).join('');
+  const tabs = [['diari', 'Diari', entries.length], ['repertori', 'Repertori', rep.length], ['objectius', 'Objectius', 0]];
+  let pane;
+  if (tab === 'repertori') {
+    pane = `${rep.length ? repHtml(mid, true) : '<p class="ql-hint u-m-0">Encara no hi ha cap obra. Afegeix les que treballes i marca com van: així el teu professorat sap per on vas.</p>'}
+      <button class="ql-more ql-add" data-act="rep-new" data-m="${esc(mid)}"><span>${ICON.plus}Afegeix una obra</span></button>`;
+  } else if (tab === 'objectius') {
+    pane = stuPane(mid, 'objectius');
+  } else {
+    pane = entries.length ? `${qlList(entries, ctx, 3)}${entries.length > 3 ? `<button class="ql-more" data-act="cl-student" data-m="${esc(mid)}" data-k="quadern">Mostra’n ${entries.length - 3 === 1 ? '1 més' : `${entries.length - 3} més`}${ICON.right}</button>` : ''}`
+      : '<p class="ql-hint u-m-0">Aquí hi haurà les notes de cada classe i el que hi afegeixis tu. Només ho veieu tu i el teu professorat.</p>';
+  }
+  return `<section class="ql-block" aria-label="El teu quadern">
+    <div class="section-title"><h2 class="h2">El teu quadern</h2><button class="btn btn-sm btn-ghost" data-act="cl-student" data-m="${esc(mid)}">Obre’l sencer</button></div>
+    <div class="ql-quick" role="group" aria-label="Afegeix al quadern">${compose}</div>
+    ${sinceTxt ? `<p class="ql-since${since.length ? ' is-done' : ''}">${since.length ? ICON.check : ''}<span>${sinceTxt}</span></p>` : ''}
+    <div class="panel ql-panel">
+      <div class="seg3 ql-tabs" role="tablist" aria-label="El quadern">${tabs.map(([k, l, c]) => `<button type="button" role="tab" data-act="ql-tab" data-k="${k}" aria-selected="${tab === k}">${l}${c ? `<span class="stu-n">${c}</span>` : ''}</button>`).join('')}</div>
+      <div class="ql-pane ql-pane-${tab}">${pane}</div>
     </div>
-    ${entries.length ? `<div class="panel ql-panel">${qlList(entries, ctx, 3)}${entries.length > 3 ? `<button class="ql-more" data-act="cl-student" data-m="${esc(mid)}">Mostra’n ${entries.length - 3 === 1 ? '1 més' : `${entries.length - 3} més`}${ICON.right}</button>` : ''}</div>`
-      : '<p class="ql-hint">Apunta què treballes a casa, grava’t per escoltar-te i deixa preguntes per a la propera classe. Només ho veieu tu i el teu professorat.</p>'}
-    <div class="section-title"><h2 class="h2">Repertori</h2><button class="btn btn-sm" data-act="rep-new" data-m="${esc(mid)}">${ICON.plus}Afegeix una obra</button></div>
-    ${rep.length ? `<div class="panel rep-panel">${repHtml(mid, true)}</div>` : '<p class="ql-hint">Encara no hi ha cap obra. Afegeix les que treballes, i marca com van.</p>'}`;
+  </section>`;
 }
 
 /* ---------- L'assistència del curs d'un alumne ---------- */

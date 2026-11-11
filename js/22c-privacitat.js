@@ -14,7 +14,7 @@ function privacyHtml() {
     <ul><li>El teu nom, el correu amb què entres, la ${esc(V.section)} i la ${esc(V.part)}.</li>
       <li>La teva assistència: cada llista, els retards i les faltes, i els avisos d’absència amb el motiu que hi escriguis.</li>
       <li>Si les omples: el telèfon, la fitxa personal (talla i contacte d’emergència), les al·lèrgies i intoleràncies (amb el teu consentiment), els documents signats i la quota.</li>
-      <li>Si fas ${esc(V.classes.toLowerCase())}: l’horari, l’assistència, les notes i els enregistraments de les classes, i el teu quadern (el repertori, els objectius i el que hi afegeixis: notes d’estudi, gravacions i preguntes).</li>
+      <li>Si fas ${esc(V.classes.toLowerCase())}: l’horari, l’assistència, les notes i els enregistraments de les classes, i el teu quadern (el repertori, els objectius i el que hi afegeixis: notes d’estudi i gravacions).</li>
       <li>El que hi escriguis tu: respostes a convocatòries i enquestes, inscripcions a sortides i missatges.</li></ul>
     <h3>Qui les veu</h3>
     <ul><li><b>Tu</b> veus totes les teves dades.</li>
