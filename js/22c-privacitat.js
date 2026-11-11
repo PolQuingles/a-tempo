@@ -14,7 +14,7 @@ function privacyHtml() {
     <ul><li>El teu nom, el correu amb què entres, la ${esc(V.section)} i la ${esc(V.part)}.</li>
       <li>La teva assistència: cada llista, els retards i les faltes, i els avisos d’absència amb el motiu que hi escriguis.</li>
       <li>Si les omples: el telèfon, la fitxa personal (talla i contacte d’emergència), les al·lèrgies i intoleràncies (amb el teu consentiment), els documents signats i la quota.</li>
-      <li>Si fas ${esc(V.classes.toLowerCase())}: l’horari, l’assistència, les notes i els enregistraments de les classes.</li>
+      <li>Si fas ${esc(V.classes.toLowerCase())}: l’horari, l’assistència, les notes i els enregistraments de les classes, i el teu quadern (el repertori, els objectius i el que hi afegeixis: notes d’estudi, gravacions i preguntes).</li>
       <li>El que hi escriguis tu: respostes a convocatòries i enquestes, inscripcions a sortides i missatges.</li></ul>
     <h3>Qui les veu</h3>
     <ul><li><b>Tu</b> veus totes les teves dades.</li>
@@ -22,7 +22,7 @@ function privacyHtml() {
       <li>El teu <b>${esc(V.leader)}</b> veu l’assistència i els avisos de la teva ${esc(V.section)}; la <b>direcció</b>, la <b>gerència</b> i l’<b>administració</b>, els de tothom.</li>
       <li>El telèfon, la talla i el contacte d’emergència els veuen qui porta les persones: la <b>secretaria</b>, la <b>gerència</b>, la <b>direcció</b> i l’<b>administració</b>. Els documents signats i la quota, també.</li>
       <li>Les <b>al·lèrgies i intoleràncies</b> només les veus tu, la <b>secretaria</b> i la <b>gerència</b>, per organitzar els àpats de les sortides i els concerts.</li>
-      <li>Les notes i els enregistraments de classe només els veus tu, el teu ${esc(V.Teacher.toLowerCase())} i l’administració.</li></ul>
+      <li>Les notes i els enregistraments de classe i el teu quadern només els veus tu, el teu ${esc(V.Teacher.toLowerCase())} i l’administració.</li></ul>
     <h3>On es guarden</h3>
     <p>A la base de dades de Google Firebase, en servidors de la Unió Europea, amb accés només per a qui entra amb el seu compte. Cada nit se’n fa una còpia de seguretat en un lloc privat, xifrada amb una contrasenya que només té l’administració.</p>
     <h3>Quant de temps</h3>
@@ -69,6 +69,7 @@ async function exportMyData() {
     fitxaPersonal: profile, alergies: health, documents: docs, produccions: choice, fitxaDeCant: student,
     classes: classDays().flatMap(c => (c.slots || []).filter(x => slotMember(x) === mid).map(x => ({ date: c.date, time: x.time, mark: x.mark || '', teacher: teacherOf(c) }))),
     notesDeClasse: own(S.classNotes).map(n => ({ date: n.date, text: n.text || '', enregistrament: n.file ? n.file.name : '' })),
+    quadern: own(S.classLog).map(x => ({ date: x.date, tipus: LOG_KINDS[x.kind]?.title || x.kind, text: x.text || '', gravacio: x.file ? x.file.name : '', resposta: x.reply ? x.reply.text : '' })),
     missatges: [...S.threads.values()].filter(t => t.memberId === mid).map(t => ({ subject: t.subject || '', msgs: t.msgs || [] })),
   };
   offerFile(`les-meves-dades-${slugify(fullName(m.name || 'cantaire'))}-${TODAY}.json`, JSON.stringify(data, null, 2), 'application/json');
@@ -98,7 +99,7 @@ function sheetRetention() {
       <li><span><b>${p.att.length}</b> llistes d’assistència (de ${p.sessions} sessions)${p.arch.length ? ` i ${p.arch.length} ${p.arch.length === 1 ? 'tros arxivat' : 'trossos arxivats'}` : ''}</span></li>
       <li><span><b>${p.abs.length}</b> avisos d’absència</span></li>
       <li><span><b>${p.rsvp.length}</b> respostes a convocatòries</span></li>
-      <li><span><b>${p.classes.length}</b> dies de ${esc(V.classes.toLowerCase())} (amb les notes i les peticions)</span></li></ul>`;
+      <li><span><b>${p.classes.length}</b> dies de ${esc(V.classes.toLowerCase())} (amb les notes, els enregistraments, les peticions i el que hi hagi d’abans als quaderns)</span></li></ul>`;
     el.querySelector('#rt-go').disabled = !(p.att.length || p.abs.length || p.rsvp.length || p.classes.length || p.arch.length);
   };
   openSheet({
@@ -128,11 +129,22 @@ async function runRetention(p) {
   for (const r of S.classReq.values()) if (cls.has(r.classId)) del.push(`classReq/${r.id}`);
   for (const n of S.classNotes.values()) if (cls.has(n.classId)) del.push(`classNotes/${n.id}`);
   for (const n of S.classPriv.values()) if (cls.has(n.classId)) del.push(`classPriv/${n.id}`);
-  for (let i = 0; i < del.length; i += 400) {
+  // Les notes de classe (i els seus enregistraments) i les privades d'abans de la data, també les que no són al mòbil (només hi
+  // ha les dels dos últims mesos), i el que és d'abans als quaderns dels alumnes, amb les gravacions.
+  const files = [];
+  const before = async q => (await q.where('date', '<', p.cut).get()).docs;
+  for (const d of await before(db.collection('classNotes'))) { del.push(`classNotes/${d.id}`); if (d.data().file) files.push(d.data().file); }
+  for (const d of await before(db.collection('classPriv'))) del.push(`classPriv/${d.id}`);
+  for (const st of (await db.collection('students').get()).docs) {
+    for (const d of await before(db.collection(`students/${st.id}/log`))) { del.push(`students/${st.id}/log/${d.id}`); if (d.data().file) files.push(d.data().file); }
+  }
+  const paths = [...new Set(del)];
+  for (let i = 0; i < paths.length; i += 400) {
     const b = fs.batch();
-    for (const path of del.slice(i, i + 400)) b.delete(db.doc(path));
+    for (const path of paths.slice(i, i + 400)) b.delete(db.doc(path));
     await b.commit();
   }
+  for (const f of files) deleteFile(f);
   // Les còpies de cadascú (llistes privades): se'n treuen aquelles sessions.
   if (attPrivate() && p.sids.size) {
     const FP = firebase.firestore.FieldPath, gone = firebase.firestore.FieldValue.delete();
@@ -149,6 +161,7 @@ async function runRetention(p) {
   for (const k of p.att) S.attendance.delete(k);
   for (const id of p.abs) S.absences.delete(id);
   for (const id of p.classes) S.classes.delete(id);
+  for (const [id, x] of S.classLog) if ((x.date || '') < p.cut) S.classLog.delete(id);
   if (p.arch.length) {
     const ids = ((S.config.attArchive && S.config.attArchive.ids) || []).filter(id => !p.arch.includes(id));
     saveConfig({ attArchive: { ...(S.config.attArchive || {}), ids } });

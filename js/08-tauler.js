@@ -196,7 +196,7 @@ async function uploadFile(file, onProgress, opts = {}) {
   const n = Math.max(1, Math.ceil(bytes.length / FILE_CHUNK));
   for (let i = 0; i < n; i++) {
     const part = bytes.subarray(i * FILE_CHUNK, (i + 1) * FILE_CHUNK);
-    await db.doc(chunkPath(id, i, opts.where)).set({ d: firebase.firestore.Blob.fromUint8Array(part), i, of: n, ...(opts.memberId ? { memberId: opts.memberId } : {}), ...(opts.teacher ? { teacher: opts.teacher } : {}) });
+    await db.doc(chunkPath(id, i, opts.where)).set({ d: firebase.firestore.Blob.fromUint8Array(part), i, of: n, ...(opts.memberId ? { memberId: opts.memberId } : {}), ...(opts.teacher ? { teacher: opts.teacher } : {}), ...(opts.own ? { own: true } : {}) });
     onProgress?.(i + 1, n);
   }
   return { id, name: file.name, type: file.type || '', size: file.size, chunks: n, at: new Date().toISOString(), ...(opts.where ? { where: opts.where } : {}) };

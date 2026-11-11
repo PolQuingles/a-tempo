@@ -148,6 +148,27 @@ service cloud.firestore {
         && day.get('teacher', '') == email()
         && mid in day.get('memberIds', []);
     }
+    // La fitxa de cant d'un alumne, per saber qui el porta des del seu quadern i les seves gravacions.
+    function stuParent(c, mid) { return get(/databases/$(database)/documents/cors/$(c)/students/$(mid)).data; }
+    // El que l'alumne pot escriure a la seva fitxa: obres (com a molt 80) i els seus objectius.
+    function studentOwn(d) {
+      return d.get('repertoire', []) is list && d.get('repertoire', []).size() <= 80
+        && d.get('myGoals', '') is string && d.get('myGoals', '').size() <= 1000;
+    }
+    // Una entrada del quadern: una nota, una gravació o una pregunta, d'aquell alumne i amb el seu id.
+    function logOk(d, mid, id) {
+      return d.keys().hasOnly(['id', 'memberId', 'kind', 'text', 'file', 'work', 'date', 'by', 'byName', 't', 'at', 'edited', 'reply'])
+        && d.id == id && d.memberId == mid && d.kind in ['note', 'rec', 'q']
+        && d.text is string && d.text.size() <= 2000
+        && d.date is string && d.date.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
+        && (!('work' in d) || (d.work is string && d.work.size() <= 40))
+        && d.get('byName', '') is string && d.get('byName', '').size() <= 80
+        && d.get('t', false) is bool;
+    }
+    function replyOk(r) {
+      return r.keys().hasOnly(['text', 'by', 'name', 'at']) && r.text is string && r.text.size() > 0 && r.text.size() <= 1000
+        && r.by == email() && r.get('name', '') is string && r.get('name', '').size() <= 80;
+    }
     // Pot canviar la identitat de l'agrupació o esborrar-la: n'és administrador i és Usuari Pro.
     function canManage(c) { return isAdmin(c) && isPro(); }
     // Camps de config/main que fan d'identitat de l'agrupació.
@@ -205,7 +226,7 @@ service cloud.firestore {
     // tools/stamp.py hi escriu l'empremta d'aquest fitxer. La vigilància comprova que les regles publicades són les del
     // repositori demanant reglesVersio/<empremta>: si les publicades són unes altres, la lectura es denega.
     match /reglesVersio/{v} {
-      allow get: if v == 'ef821645dcc4';
+      allow get: if v == '3209f8247aec';
     }
 
     match /plataforma/equip {
@@ -707,19 +728,48 @@ service cloud.firestore {
         allow create, update, delete: if staffHas(c, ['admin', 'secretaria', 'gerencia']);
       }
       // La fitxa de cant de cada alumne (objectius i repertori): la fa el seu professorat (teachers) i la veu l'alumne.
+      // L'alumne també hi posa i hi treu obres, hi escriu els seus objectius (myGoals) i hi deixa constància de l'última
+      // cosa que ha afegit al quadern (fresh); el professorat hi apunta quan ho ha vist (seen).
       match /students/{mid} {
         // Si encara no existeix, el professorat ho ha de poder saber: és diferent de no tenir-hi accés.
-        allow read: if (resource == null && teaches(c)) || teachersOf(c, resource.data) || (hasSpace(c) && mine(c, mid));
-        allow create: if teachersOf(c, request.resource.data);
-        allow update: if (teachersOf(c, resource.data) && teachersOf(c, request.resource.data)) || joinsStudent(c, mid);
+        // La segona forma (teachers sense valor per defecte) és la que pot comprovar la consulta del professorat
+        // (teachers array-contains el seu correu): així baixa d'una vegada les fitxes de tots els seus alumnes.
+        allow read: if (resource == null && teaches(c)) || teachersOf(c, resource.data) || (hasSpace(c) && mine(c, mid))
+          || (teaches(c) && email() in resource.data.teachers);
+        allow create: if teachersOf(c, request.resource.data)
+          || (hasSpace(c) && mine(c, mid) && studentOwn(request.resource.data)
+              && request.resource.data.keys().hasOnly(['memberId', 'goals', 'myGoals', 'repertoire', 'teachers', 'fresh', 'at', 'by'])
+              && request.resource.data.memberId == mid && request.resource.data.get('goals', '') == ''
+              && request.resource.data.teachers is list && request.resource.data.teachers.size() <= 8);
+        allow update: if (teachersOf(c, resource.data) && teachersOf(c, request.resource.data)) || joinsStudent(c, mid)
+          || (hasSpace(c) && mine(c, mid) && studentOwn(request.resource.data)
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['repertoire', 'myGoals', 'fresh', 'at', 'by']));
         allow delete: if teachersOf(c, resource.data);
+        // El quadern: el que hi afegeixen l'alumne (notes d'estudi, gravacions, preguntes per a la classe) i el seu professorat.
+        // Cadascú canvia i esborra el que ha escrit; el professorat hi respon (reply).
+        match /log/{id} {
+          allow read: if (hasSpace(c) && mine(c, mid)) || teachersOf(c, stuParent(c, mid)) || hasRole(c, ['backup']) || isService();
+          allow create: if logOk(request.resource.data, mid, id) && request.resource.data.by == email() && !('reply' in request.resource.data)
+            && ((hasSpace(c) && mine(c, mid)) || teachersOf(c, stuParent(c, mid)));
+          allow update: if logOk(request.resource.data, mid, id) && request.resource.data.by == resource.data.by
+            && ((resource.data.by == email() && ((hasSpace(c) && mine(c, mid)) || teachersOf(c, stuParent(c, mid)))
+                 && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['kind', 'text', 'file', 'work', 'date', 'at', 'edited']))
+                || (teachersOf(c, stuParent(c, mid)) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reply'])
+                    && (!('reply' in request.resource.data) || replyOk(request.resource.data.reply))));
+          allow delete: if (resource.data.by == email() && ((hasSpace(c) && mine(c, mid)) || teachersOf(c, stuParent(c, mid)))) || isAdmin(c);
+        }
       }
       // Enregistraments de classe, a trossos com els fitxers del tauler: només el professor que els ha pujat i l'alumne.
+      // Les gravacions que l'alumne puja al seu quadern (own) les llegeix també el professorat que porta la seva fitxa.
       match /classFiles/{id} {
-        allow read: if teacherOf(c, resource.data) || (hasSpace(c) && mine(c, resource.data.memberId));
-        allow create: if teacherOf(c, request.resource.data);
+        allow read: if teacherOf(c, resource.data) || (hasSpace(c) && mine(c, resource.data.memberId))
+          || (resource.data.get('own', false) == true && teachersOf(c, stuParent(c, resource.data.memberId)));
+        allow create: if teacherOf(c, request.resource.data)
+          || (hasSpace(c) && mine(c, request.resource.data.memberId) && request.resource.data.get('own', false) == true
+              && !('teacher' in request.resource.data));
         allow update: if teacherOf(c, resource.data) && teacherOf(c, request.resource.data);
-        allow delete: if teacherOf(c, resource.data);
+        allow delete: if teacherOf(c, resource.data)
+          || (hasSpace(c) && mine(c, resource.data.memberId) && resource.data.get('own', false) == true);
       }
       // Les notes de cada classe: només les veuen el professor de la classe i l'alumne de qui són.
       match /classNotes/{id} {

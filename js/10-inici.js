@@ -111,6 +111,9 @@ function todoItems() {
     if (ask.length) out.push({ icon: 'swap', t: ask.length === 1 ? `${esc(reqMemberName(ask[0]))} et demana canviar l’hora` : `${ask.length} peticions de canvi d’hora`, s: esc(ask.map(r => { const c = S.classes.get(r.classId); return c ? shortDate(c.date) : ''; }).filter(Boolean).join(', ')), btn: 'Respon', act: 'data-act="tab" data-tab="classes"', n: ask.length });
     const teach = teachesClasses() ? reqsForTeacher() : [];
     if (teach.length) out.push({ icon: 'cls', t: `${teach.length === 1 ? '1 canvi' : `${teach.length} canvis`} de les ${esc(V.classes.toLowerCase())} per revisar`, s: 'Retards, absències i hores demanades', btn: 'Revisa', act: 'data-act="tab" data-tab="classes"', n: teach.length });
+    // Al professorat: els alumnes que han afegit alguna cosa al quadern (una gravació, una pregunta…) que encara no ha vist.
+    const news = iHave('voice') ? [...S.students.keys()].filter(mid => S.members.has(mid) && stuNews(mid)) : [];
+    if (news.length) out.push({ icon: 'cls', t: news.length === 1 ? `${esc(firstName(S.members.get(news[0]).name))} ${esc(freshText(stuNews(news[0])).toLowerCase())}` : `${news.length} alumnes han afegit coses al quadern`, s: esc(news.map(mid => firstName(S.members.get(mid).name)).join(', ')), btn: 'Mira-ho', act: news.length === 1 ? `data-act="cl-student" data-m="${esc(news[0])}" data-k="quadern"` : 'data-act="cl-news"', n: news.length });
     const open = openSwaps();
     if (open.length) out.push({ icon: 'swap', t: `${open.length === 1 ? '1 canvi d’hora obert' : `${open.length} canvis d’hora oberts`}`, s: 'Algú busca qui es quedi la seva hora', btn: 'Mira’ls', act: 'data-act="tab" data-tab="classes"', n: 0 });
   }

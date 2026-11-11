@@ -249,6 +249,8 @@ async function deleteGroup(el) {
       const snap = await db.collection(col).get();
       for (const d of snap.docs) if (!(col === 'config' && d.id === 'main')) refs.push(d.ref);
     }
+    // El quadern de cada alumne (students/<membre>/log): una subcol·lecció no s'esborra amb la fitxa.
+    for (const r of refs.filter(r => r.parent.id === 'students')) for (const d of (await r.collection('log').get()).docs) refs.push(d.ref);
     // Les al·lèrgies i les claus dels calendaris personals no les llegeix l'administració (vegeu les regles): s'esborren les de
     // cada fitxa, encara que no n'hi hagi.
     for (const mid of S.members.keys()) refs.push(db.doc(`health/${mid}`), db.doc(`calKeys/${mid}`));

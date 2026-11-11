@@ -1032,6 +1032,53 @@ def main():
         check(r["day"] and r["week"], "un cantaire no veu les marques d'assistència dels companys", str(r))
         ctx.close()
 
+        print("Classes: el quadern de l'alumne (preguntes, obres) i el que en veu i hi respon el professor")
+        ctx, page, errors = open_app(browser, base, "singer", MOBILE, "#/classes")
+        r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {}, sh = () => document.querySelector('.sheet'), mid = myId();
+          ui.tab = 'classes'; ui.clWho = null; render(); await s(300);
+          out.card = !!document.querySelector('#view .cl-next-card') && !!document.querySelector('#view .ql-quick');
+          document.querySelector('#view .ql-quick [data-k="q"]').click(); await s(300);
+          sh().querySelector('#ql-text').value = 'Com respiro al c. 12?'; sh().querySelector('#ql-go').click(); await s(800);
+          const q = [...S.classLog.values()].find(x => x.memberId === mid && x.kind === 'q');
+          out.question = !!q && q.text === 'Com respiro al c. 12?' && S.students.get(mid)?.fresh?.kind === 'q' && (S.students.get(mid)?.teachers || []).includes('prof@exemple.cat');
+          out.shown = /Com respiro al c. 12/.test(document.querySelector('#view .ql-list')?.innerText || '');
+          document.querySelector('#view [data-act="rep-new"]').click(); await s(300);
+          sh().querySelector('#rp-title').value = 'Caro mio ben'; sh().querySelector('#rp-comp').value = 'G. Giordani'; sh().querySelector('#rp-go').click(); await s(500);
+          out.rep = (S.students.get(mid)?.repertoire || []).some(x => x.title === 'Caro mio ben' && x.status === 'treballant') && /Caro mio ben/.test(document.querySelector('#view .rep-list')?.innerText || '');
+          sheetStudent(mid); await s(600);
+          out.sheet = !!sh()?.querySelector('.stu-facts') && /Com respiro/.test(sh().querySelector('#stu-pane').innerText) && !sh().querySelector('[data-act="ql-reply"]');
+          closeSheet(); await s(200);
+          return out; }""")
+        for k, what in [("card", "el cantaire té la seva propera classe i el quadern a dalt de Classes"), ("question", "hi deixa una pregunta, i la fitxa diu qui el porta"),
+                        ("shown", "la pregunta surt al seu quadern"), ("rep", "hi afegeix una obra al repertori"), ("sheet", "a la seva fitxa hi ha el quadern sencer, sense «Respon»")]:
+            check(r.get(k), what, str(r))
+        switch_user(page, base, "prof")
+        r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {}, sh = () => document.querySelector('.sheet');
+          const mid = [...S.students.keys()].find(k => S.students.get(k).fresh);
+          out.news = !!mid && !!stuNews(mid);
+          ui.tab = 'inici'; render(); await s(300);
+          out.todo = /pregunta per a la classe/.test(document.querySelector('#view .todo')?.innerText || '');
+          ui.tab = 'classes'; ui.clTab = 'alumnes'; render(); await s(300);
+          out.listed = !!document.querySelector('#view .stu-row.has-news .stu-news');
+          ui.clTab = 'llista'; render(); await s(300);
+          sheetStudent(mid); await s(800);
+          out.read = /Com respiro/.test(sh()?.querySelector('#stu-pane')?.innerText || '') && !stuNews(mid);
+          sh().querySelector('[data-act="ql-reply"]').click(); await s(300);
+          sh().querySelector('#qr-t').value = 'Respira al c. 11'; sh().querySelector('#qr-go').click(); await s(600);
+          out.reply = [...S.classLog.values()].some(x => x.memberId === mid && x.reply?.text === 'Respira al c. 11') && /Respira al c. 11/.test(sh()?.innerText || '');
+          closeSheet(); await s(200);
+          return out; }""")
+        for k, what in [("news", "el professor sap que l'alumne hi ha afegit alguna cosa"), ("todo", "i ho té a «Per fer»"), ("listed", "i a Alumnes, amb la novetat"),
+                        ("read", "en obrir la fitxa ho llegeix i deixa de ser nou"), ("reply", "i hi respon")]:
+            check(r.get(k), what, str(r))
+        switch_user(page, base, "singer")
+        r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms));
+          ui.tab = 'classes'; ui.clWho = null; render(); await s(400);
+          return { answered: /Respira al c. 11/.test(document.querySelector('#view .ql-list')?.innerText || '') }; }""")
+        check(r.get("answered"), "l'alumne veu la resposta al seu quadern", str(r))
+        check(not errors, "sense errors al quadern", "; ".join(errors[:3]))
+        ctx.close()
+
         print("Classes: gravar, notes privades, moure, avisos, alumnes, noms sense fitxa i coincidències")
         ctx, page, errors = open_app(browser, base, "prof", MOBILE, "#/classes")
         r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {}, sh = () => document.querySelector('.sheet');

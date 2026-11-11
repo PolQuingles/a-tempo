@@ -120,7 +120,16 @@ const actions = {
   'trip-no': el => tripAnswer(el.dataset.id, 'no'),
   'board-trips': () => { ui.tab = 'tauler'; ui.board = 'sortides'; render(); window.scrollTo({ top: 0 }); },
   // Classes: fitxa de l'alumne, enregistraments, setmana i imprimir.
-  'cl-student': el => sheetStudent(el.dataset.m),
+  'cl-student': el => sheetStudent(el.dataset.m, el.dataset.k || ''),
+  // El quadern de cant (09d): des de la fitxa, en acabar s'hi torna; des de la pantalla, s'hi queda.
+  'ql-new': el => sheetLogNew(el.dataset.m, el.dataset.k || 'note', '', el.closest('.sheet') ? backToStudent(el.dataset.m) : null),
+  'ql-edit': el => sheetLogNew(el.dataset.m, '', el.dataset.id, el.closest('.sheet') ? backToStudent(el.dataset.m) : null),
+  'ql-reply': el => sheetLogReply(el.dataset.m, el.dataset.id, el.closest('.sheet') ? backToStudent(el.dataset.m) : null),
+  'ql-play': el => playInline(el),
+  'rep-new': el => sheetRepItem(el.dataset.m, '', el.closest('.sheet') ? backToStudent(el.dataset.m) : null),
+  'rep-edit': el => sheetRepItem(el.dataset.m, el.dataset.id, el.closest('.sheet') ? backToStudent(el.dataset.m) : null),
+  'goals-edit': el => sheetGoals(el.dataset.m, el.dataset.k === 'myGoals' ? 'myGoals' : 'goals', el.closest('.sheet') ? backToStudent(el.dataset.m) : null),
+  'cl-news': () => { ui.tab = 'classes'; ui.clTab = 'alumnes'; ui.clWho = null; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
   'cl-rec': el => openRecording(el.dataset.id),
   'cl-view': el => { ui.clView = el.dataset.k; render(); },
   'cl-week': el => { const d = new Date((ui.clDay || TODAY) + 'T12:00:00'); d.setDate(d.getDate() + 7 * +el.dataset.dir); ui.clDay = isoDate(d); ui.clMonth = ui.clDay.slice(0, 7); render(); },

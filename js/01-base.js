@@ -203,7 +203,9 @@ const S = {
   classPlan: new Map(),   // <teacher email> -> their fixed weekly timetable
   classNotes: new Map(),  // <classId>_<slotId> -> what was worked on (teacher and that singer only)
   classPriv: new Map(),   // <classId>_<slotId> -> la nota privada del professor: l'alumne no la veu
-  works: new Map(),       // <id> -> una obra del repertori: partitures, àudios, durada, solistes i petits grups
+  students: new Map(),    // <memberId> -> la fitxa de cant (objectius i repertori): la meva i, al professorat, la dels seus alumnes
+  classLog: new Map(),    // <id> -> una entrada del quadern de cant (students/<membre>/log): les meves i les de les fitxes obertes
+  works: new Map(),      // <id> -> una obra del repertori: partitures, àudios, durada, solistes i petits grups
   messages: new Map(),    // <id> -> un missatge dins l'app, a tothom o a unes cordes (21-missatges)
   memberDocs: null,       // secretaria: documents i quotes de cada persona (es llegeixen quan cal)
   trips: new Map(),       // <id> -> una sortida o gira: dates, transport i habitacions

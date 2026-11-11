@@ -149,11 +149,21 @@ function classSlotRow(c, x, past) {
     ? `<span class="cl-marks" role="radiogroup" aria-label="Assistència de ${esc(m ? m.name : x.name || '')}">${CLASS_MARKS.map(k => `<button class="opt o-${k}" role="radio" aria-checked="${x.mark === k}" data-act="cl-mark" data-c="${esc(c.id)}" data-s="${esc(x.id)}" data-v="${k}"><i></i>${esc(STATUS[k].short)}</button>`).join('')}</span>`
     : '';
   const canMove = owner && canMoveSlot(c, x);
-  const noteBtn = owner && x.memberId ? `<span class="cl-acts"><button class="btn btn-sm" data-act="cl-note" data-c="${esc(c.id)}" data-s="${esc(x.id)}">${note || priv ? 'Canvia la nota' : '+ Nota'}</button>${canMove ? `<button class="btn btn-sm" data-act="cl-move" data-c="${esc(c.id)}" data-s="${esc(x.id)}">Mou</button>` : ''}</span>` : '';
-  return `<div class="cl-slot ${meNow ? 'me' : ''}">
-    <span class="t">${esc(x.time || '')}</span>
-    <span class="who">${m && owner ? `<button class="who-b" data-act="cl-student" data-m="${esc(m.id)}">${esc(m.name)}</button>` : m ? esc(m.name) : x.name ? `${esc(x.name)} <span class="m">· sense fitxa</span>` : '<span class="cl-free">lliure</span>'}${m && m.section ? ` <span class="m">· ${esc(SEC[m.section].short)}</span>` : ''}${x.swapped ? ' <span class="m">(canviat)</span>' : ''}${pills || mark ? `<br>${[mark, pills].filter(Boolean).join(' ')}` : ''}${note && note.text ? `<span class="cl-note">${esc(note.text)}</span>` : ''}${priv && priv.text ? `<span class="cl-note cl-priv"><b>Privada</b> ${esc(priv.text)}</span>` : ''}${note && note.file ? `<button class="cl-rec" data-act="cl-rec" data-id="${esc(note.id)}">▶ Enregistrament</button>` : ''}</span>
+  const noteBtn = owner && x.memberId ? `<span class="cl-acts cl-tools"><button class="btn btn-sm btn-ghost" data-act="cl-note" data-c="${esc(c.id)}" data-s="${esc(x.id)}">${qlIcon('note')}${note || priv ? 'Edita la nota' : 'Nota de classe'}</button><button class="btn btn-sm btn-ghost" data-act="cl-student" data-m="${esc(x.memberId)}">${qlIcon('cls')}Fitxa</button>${canMove ? `<button class="btn btn-sm btn-ghost" data-act="cl-move" data-c="${esc(c.id)}" data-s="${esc(x.id)}">Mou</button>` : ''}</span>` : '';
+  // A qui fa la classe, abans de fer-la: el que va quedar de l'última i el que l'alumne ha afegit al quadern.
+  const news = owner && m ? stuNews(m.id) : null;
+  const prev = owner && m && !past && !note ? lastClassNote(m.id, c.date) : null;
+  const work = owner && m ? repOf(m.id).find(w => w.status === 'treballant') : null;
+  return `<div class="cl-slot ${meNow ? 'me' : ''}${m || x.name ? '' : ' is-free'}">
+    <span class="t"><b>${esc(x.time || '')}</b>${x.mins && (m || x.name) ? `<small>${+x.mins}′</small>` : ''}</span>
+    <span class="who"><span class="who-l">${m && owner ? `<button class="who-b" data-act="cl-student" data-m="${esc(m.id)}">${esc(fullName(m.name))}</button>` : m ? esc(fullName(m.name)) : x.name ? `${esc(x.name)} <span class="m">· sense fitxa</span>` : '<span class="cl-free">Hora lliure</span>'}${m && m.section ? `<span class="m">${esc(SEC[m.section].short)}${m.part ? esc(m.part) : ''}</span>` : ''}${x.swapped ? '<span class="m">canviat</span>' : ''}</span>${pills || mark ? `<span class="cl-pills">${[mark, pills].filter(Boolean).join(' ')}</span>` : ''}${work ? `<span class="cl-work">${esc(work.title)}</span>` : ''}${news ? `<button class="cl-news" data-act="cl-student" data-m="${esc(m.id)}" data-k="quadern">${qlIcon(news.kind)}<span>${esc(freshText(news))}${news.kind === 'q' && news.text ? `: «${esc(news.text)}»` : ''}</span></button>` : ''}${prev ? `<span class="cl-prev"><b>Última classe · ${esc(shortDate(prev.date))}</b>${esc(prev.text)}</span>` : ''}${note && note.text ? `<span class="cl-note">${esc(note.text)}</span>` : ''}${priv && priv.text ? `<span class="cl-note cl-priv"><b>Privada</b> ${esc(priv.text)}</span>` : ''}${note && note.file ? `<button class="cl-rec" data-act="cl-rec" data-id="${esc(note.id)}">${qlIcon('play')}Enregistrament</button>` : ''}</span>
     ${acts}${free ? `<button class="btn btn-sm" data-act="cl-free" data-c="${esc(c.id)}" data-s="${esc(x.id)}">Demana-la</button>` : ''}${marks}${noteBtn}</div>`;
+}
+/** La nota de l'última classe d'un alumne abans d'una data (de les que hi ha al mòbil). */
+function lastClassNote(mid, before) {
+  let best = null;
+  for (const n of S.classNotes.values()) if (n.memberId === mid && n.text && (n.date || '') < before && (!best || n.date > best.date)) best = n;
+  return best;
 }
 /** Un dia de classe. Dins de l'espai d'un professor/a (inside) el dia i el nom ja són a dalt. */
 function classDayCard(c, past, inside) {
@@ -325,8 +335,8 @@ function viewAllClasses(tabs = '') {
   const answer = reqsToAnswer();
   const pending = teach ? reqsForTeacher() : [];
   const mineReq = myId() ? [...S.classReq.values()].filter(r => r.memberId === myId() && r.status === 'pending' && reqOpen(r)).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')) : [];
-  const myNotes = myId() ? [...S.classNotes.values()].filter(n => n.memberId === myId() && (n.text || n.file))
-    .sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, 6) : [];
+  // Qui té classes: la seva propera classe i el seu quadern, abans que el quadre del professorat.
+  const student = !!myId() && inClasses();
   const open = openSwaps();
   const openCard = r => {
     const c = S.classes.get(r.classId), mySl = mySwapSlot(r);
@@ -358,17 +368,16 @@ function viewAllClasses(tabs = '') {
   if (who) return `<div class="page-head u-mb-0"><h1 class="h1">${esc(V.classes)}</h1></div>${tabs}${avisos}${classTeacherSpace(who)}`;
   return `<div class="page-head"><h1 class="h1">${esc(V.classes)} ${helpBtn('classes')}</h1></div>${tabs}
     ${helpText('classes', `Tria un ${esc(V.Teacher.toLowerCase())} per veure’n el calendari i les hores de cada ${esc(V.member)}. Els canvis d’hora valen només per a la setmana que es demanen, i es poden fer amb qui tingui classe qualsevol dia d’aquella setmana amb el mateix ${esc(V.Teacher.toLowerCase())}. Qui rep la petició ha de dir que sí perquè es faci.`)}
+    ${student ? studentNextCard() : ''}
     ${avisos}
     ${teach ? clashBanner() : ''}
+    ${student ? studentQuadernBlock() : ''}
+    ${student ? `<div class="section-title"><h2 class="h2">El professorat</h2><span class="muted u-fs-t-13">Toca’n un per veure’n el calendari</span></div>` : ''}
     ${classQuads()}
-    ${myId() ? `<div class="panel u-mt-18">${teach && !inClasses() ? '' : `<div class="setting"><div><div class="t">La teva assistència</div><div class="s">Les classes on has vingut durant el curs.</div></div>
-      <button class="btn btn-sm" data-act="cl-mystats">Mira-la</button></div>`}
-      <div class="setting"><div><div class="t">Les teves classes al calendari del mòbil</div><div class="s">Subscriu-t’hi i les tindràs al Google Calendar, a l’Apple o a l’Outlook, sempre al dia.</div></div>
-        <button class="btn btn-sm" data-act="cl-ics">Com fer-ho</button></div></div>` : ''}
-    ${myId() && inClasses() ? `<div class="panel u-mt-12"><div class="setting"><div><div class="t">La teva fitxa de cant</div><div class="s">Els objectius, el repertori que treballes i totes les notes i enregistraments de les classes.</div></div>
-      <button class="btn btn-sm btn-primary" data-act="cl-student" data-m="${esc(myId())}">Obre-la</button></div></div>` : ''}
-    ${myNotes.length ? `<div class="section-title"><h2 class="h2">Notes de les teves classes</h2></div>
-      <ul class="mini-list u-maxh-none">${myNotes.map(n => `<li class="u-d-grid u-gap-4"><span class="m mono">${esc(shortDate(n.date))}</span>${n.text ? `<span class="u-ws-pre-wrap">${esc(n.text)}</span>` : ''}${n.file ? `<button class="btn btn-sm u-js-start" data-act="cl-rec" data-id="${esc(n.id)}">Escolta l’enregistrament</button>` : ''}</li>`).join('')}</ul>` : ''}
+    ${myId() ? `<div class="panel link-list u-mt-18">
+      ${teach && !inClasses() ? '' : `<button class="link-row" data-act="cl-mystats"><span><b>La teva assistència</b><small>Les classes on has vingut durant el curs</small></span>${ICON.right}</button>`}
+      <button class="link-row" data-act="cl-ics"><span><b>Les classes al calendari del mòbil</b><small>Google Calendar, Apple o Outlook, sempre al dia</small></span>${ICON.right}</button>
+    </div>` : ''}
 `;
 }
 
@@ -468,11 +477,17 @@ function viewStudents(tabs = '') {
   // classDays va per dates: l'última que queda és la més recent.
   for (const c of classDays(myTeacherKey())) if (classLive(c) && c.date <= TODAY) for (const x of classSlots(c)) if (x.memberId) lastClass.set(x.memberId, c.date);
   const recent = id => [lastClass.has(id) ? `Última classe ${shortDate(lastClass.get(id))}` : 'Encara sense classes fetes', lastNote.has(id) ? `última nota ${shortDate(lastNote.get(id))}` : 'sense notes'].join(' · ');
-  return `<div class="page-head"><div><div class="eyebrow">${esc(V.classes)}</div><h1 class="h1">Alumnes</h1></div><span class="eyebrow">${list.length}</span></div>${tabs}
+  // Primer qui ha afegit alguna cosa al quadern que encara no he vist.
+  const withNews = list.filter(({ m }) => stuNews(m.id));
+  const sorted = [...withNews, ...list.filter(x => !withNews.includes(x))];
+  return `<div class="page-head"><div><div class="eyebrow">${esc(V.classes)}</div><h1 class="h1">Alumnes</h1></div><span class="eyebrow">${list.length}${withNews.length ? ` · <b class="u-c-accent">${withNews.length} amb novetats</b>` : ''}</span></div>${tabs}
     ${unlinkedPanel(myTeacherKey())}
-    ${list.length ? `<div id="stu-list">${list.length > 5 ? findBox('#stu-list', 'Cerca un alumne') : ''}<div class="panel students">${list.map(({ m, hours, next }) => `<button class="stu-row" data-find="${esc(normText(m.name))}" data-act="cl-student" data-m="${esc(m.id)}">
-        ${avatar(m)}<span class="stu-t"><b>${esc(fullName(m.name))}</b><small>${esc([SEC[m.section]?.name + (m.part ? ` ${m.part}` : ''), hours.join(', '), next ? `propera, ${shortDate(next)}` : ''].filter(Boolean).join(' · '))}</small><small>${esc(recent(m.id))}</small></span>
-        ${notes.get(m.id) ? `<span class="stu-n">${notes.get(m.id)} ${notes.get(m.id) === 1 ? 'nota' : 'notes'}</span>` : ''}${ICON.right}</button>`).join('')}</div><div class="panel find-empty u-p-14 u-c-muted" hidden>Cap alumne amb aquest nom.</div></div>`
+    ${list.length ? `<div id="stu-list">${list.length > 5 ? findBox('#stu-list', 'Cerca un alumne') : ''}<div class="panel students">${sorted.map(({ m, hours, next }) => {
+      const news = stuNews(m.id);
+      return `<button class="stu-row${news ? ' has-news' : ''}" data-find="${esc(normText(m.name))}" data-act="cl-student" data-m="${esc(m.id)}">
+        ${avatar(m)}<span class="stu-t"><b>${esc(fullName(m.name))}</b><small>${esc([SEC[m.section]?.name + (m.part ? ` ${m.part}` : ''), hours.join(', '), next ? `propera, ${shortDate(next)}` : ''].filter(Boolean).join(' · '))}</small><small>${esc(recent(m.id))}</small>${news ? `<span class="stu-news">${qlIcon(news.kind)}${esc(freshText(news))} · ${esc(agoText(news.at).toLowerCase())}</span>` : ''}</span>
+        ${notes.get(m.id) ? `<span class="stu-n">${notes.get(m.id)} ${notes.get(m.id) === 1 ? 'nota' : 'notes'}</span>` : ''}${ICON.right}</button>`;
+    }).join('')}</div><div class="panel find-empty u-p-14 u-c-muted" hidden>Cap alumne amb aquest nom.</div></div>`
       : `<div class="empty">${staffSvg()}<p>Encara no tens cap alumne. Quan facis l’horari a <b>Calendari</b>, hi sortiran tots.</p></div>`}
-    <p class="muted u-fs-t-13 u-m-10-2-0">A la fitxa de cadascú hi ha els objectius, el repertori que treballa i totes les notes i enregistraments de les classes.</p>`;
+    <p class="muted u-fs-t-13 u-m-10-2-0">A la fitxa de cadascú hi ha el seu quadern (les notes de classe i el que hi afegeix l’alumne: notes d’estudi, gravacions i preguntes), el repertori i els objectius.</p>`;
 }
