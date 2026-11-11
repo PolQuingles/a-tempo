@@ -278,7 +278,7 @@ function render() {
   }
   const html = { llista: viewRoll, calendari: () => teacherOnly() ? viewTeacherCalendar() : viewCalendar(), stats: () => viewStats(false), gestio: viewManage, avisos: viewHome, tauler: viewBoard, classes: viewClasses, vestidor: viewWardrobe, bandes: viewBandes }[ui.tab]();
   v.innerHTML = html;
-  const key = [ui.tab, ui.att, ui.attArea, ui.board, ui.manage, ui.people, ui.pmFilter, ui.rollSec, ui.clWho, ui.clTab, ui.sessionId].join('|');
+  const key = [ui.tab, ui.att, ui.attArea, ui.board, ui.manage, ui.people, ui.pmFilter, ui.rollSec, ui.clTab, ui.sessionId].join('|');
   // L'entrada només en canviar de pantalla: si la mateixa pantalla es torna a pintar (arriben dades), no s'ha de notar.
   if (key !== lastViewKey) { lastViewKey = key; v.classList.remove('view-in'); void v.offsetWidth; v.classList.add('view-in'); }
   else v.classList.remove('view-in');

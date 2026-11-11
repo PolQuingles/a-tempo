@@ -28,7 +28,8 @@ const actions = {
   'cl-new': el => sheetClassDay(null, { teacher: el.dataset.k || '', date: el.dataset.date || '' }),
   'cl-paste': el => sheetClassPaste(el.dataset.k || ''),
   'cl-plan': el => sheetClassPlan(el.dataset.k || planWho()),
-  'cl-who': el => { ui.clWho = el.dataset.k; ui.clMonth = null; ui.clDay = null; saveUI(); render(); window.scrollTo({ top: 0 }); },
+  // El calendari de la pantalla de Classes passa a ser el d'aquest professor/a (des del selector o des del professorat plegat).
+  'cl-who': el => { const from = el.closest('.cl-prof'); ui.clWho = el.dataset.k; ui.clMonth = null; ui.clDay = null; saveUI(); render(); if (from) document.querySelector('#cl-cal')?.scrollIntoView({ block: 'start', behavior: 'smooth' }); },
   'cl-roll-day': el => { ui.tab = 'calendari'; ui.clDay = el.dataset.date; ui.clMonth = el.dataset.date.slice(0, 7); ui.clView = 'month'; saveUI(); render(); window.scrollTo({ top: 0 }); },
   // Les estadístiques i el risc de tot el cor (des d'Inici, la targeta de la producció).
   'att-open': el => { ui.tab = 'llista'; ui.attArea = 'all'; ui.att = el.dataset.k; ui.rollSec = null; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
@@ -40,7 +41,6 @@ const actions = {
   'privacy': () => sheetPrivacy(),
   'my-data': () => exportMyData(),
   'retention': () => sheetRetention(),
-  'cl-back': () => { ui.clWho = null; saveUI(); render(); window.scrollTo({ top: 0 }); },
   'cl-month': el => { const [y, m] = ui.clMonth.split('-').map(Number); const d = new Date(y, m - 1 + (+el.dataset.dir), 1); ui.clMonth = `${d.getFullYear()}-${pad(d.getMonth() + 1)}`; render(); },
   'cl-day': el => { ui.clDay = el.dataset.date; render(); },
   // Des de la setmana, un dia obre el mes en aquell dia (amb les hores i l'assistència).
@@ -128,6 +128,7 @@ const actions = {
   'ql-edit': el => sheetLogNew(el.dataset.m, '', el.dataset.id, el.closest('.sheet') ? backToStudent(el.dataset.m) : null),
   'ql-reply': el => sheetLogReply(el.dataset.m, el.dataset.id, el.closest('.sheet') ? backToStudent(el.dataset.m) : null),
   'ql-play': el => playInline(el),
+  'ql-tab': el => { ui.qlTab = el.dataset.k; render(); },
   'stu-report': el => sheetStudentReport(el.dataset.m, backToStudent(el.dataset.m)),
   'rep-new': el => sheetRepItem(el.dataset.m, '', el.closest('.sheet') ? backToStudent(el.dataset.m) : null),
   'rep-edit': el => sheetRepItem(el.dataset.m, el.dataset.id, el.closest('.sheet') ? backToStudent(el.dataset.m) : null),
@@ -202,7 +203,7 @@ const actions = {
     ui.rollSec = sec && convoked(s, sec) ? (ui.section = sec) : null;
     closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 });
   },
-  'cal-class': el => { ui.tab = 'classes'; ui.clWho = el.dataset.k || null; ui.clMonth = (el.dataset.date || TODAY).slice(0, 7); ui.clDay = el.dataset.date || null; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
+  'cal-class': el => { ui.tab = 'classes'; ui.clWho = el.dataset.k || null; ui.clView = 'month'; ui.clMonth = (el.dataset.date || TODAY).slice(0, 7); ui.clDay = el.dataset.date || null; closeSheet(); saveUI(); render(); (document.querySelector('.cl-dayhead') || document.body).scrollIntoView({ block: 'start' }); },
   'ann-new': () => sheetAnnouncement(null),
   'ann-edit': el => sheetAnnouncement(el.dataset.id),
   'mat-new': () => sheetMaterial(ui.matProd, null),
@@ -421,6 +422,8 @@ const actions = {
   'join-approve': el => approveJoin(el.dataset.email, el),
   'join-reject': el => rejectJoin(el.dataset.email),
 };
+// El professorat plegat de Classes es queda obert (o tancat) quan la pantalla es torna a pintar.
+document.addEventListener('toggle', e => { if (e.target.matches?.('details.cl-prof')) ui.clProfOpen = e.target.open; }, true);
 document.addEventListener('click', e => {
   const el = e.target.closest('[data-act]');
   if (!el || el.disabled) return;
