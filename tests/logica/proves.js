@@ -809,6 +809,9 @@ prova('classes: el quadern avisa el seu professorat i ho ordena tot per dates', 
   S.students = keep.students; S.classLog = keep.log; S.classNotes = keep.notes; S.email = keep.email;
 });
 
+prova('textos: el singular i el plural', () => {
+  igual([nPl(1, 'dia', 'dies'), nPl(0, 'dia', 'dies'), nPl(3, 'persona', 'persones')], ['1 dia', '0 dies', '3 persones'], '1 dia, 0 dies, 3 persones');
+});
 /** Executa totes les proves: { ok, fail, lines }. */
 function runProves() {
   const lines = [];

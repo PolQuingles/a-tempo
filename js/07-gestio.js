@@ -341,7 +341,7 @@ function manageConfig() {
       : `Activa-la si l’agrupació cobra una quota: es podrà apuntar qui l’ha pagada, quan i com.`}</span></span>
       <label class="switch"><input type="checkbox" id="cfg-fees" ${feesOn() ? 'checked' : ''} data-bind="cfg-fees"><span></span></label></div>
     ${feesOn() ? `<div class="setting"><div><div class="t">Import per temporada</div><div class="s">El que es proposa en marcar-la com a pagada.</div></div>
-      <span class="u-d-flex u-ai-center u-gap-6"><input class="inp u-w-90 u-ta-right" id="cfg-fee-amount" type="number" min="0" step="1" inputmode="decimal" value="${feeAmount() || ''}" data-bind="fee-amount"><b>€</b></span></div>` : ''}</div>` : ''}
+      <span class="u-d-flex u-ai-center u-gap-6"><input class="inp u-w-90 u-ta-right" id="cfg-fee-amount" aria-label="Import per temporada, en euros" type="number" min="0" step="1" inputmode="decimal" value="${feeAmount() || ''}" data-bind="fee-amount"><b>€</b></span></div>` : ''}</div>` : ''}
   ${cfgHead('ics', `Calendari subscrit`, `${icsOn() ? 'Activat' : 'Desactivat'}`)}
   <div class="panel cfg-p"${cfgOpen('ics') ? '' : ' hidden'}>${isAdmin()
     ? `<div class="toggle-row setting"><span><b>${icsOn() ? 'Activat' : 'Desactivat'}</b><br><span class="muted u-fs-t-13">${icsOn() ? 'Qui s’hi subscrigui tindrà les sessions a Google Calendar, Apple o Outlook, sempre al dia. L’adreça és pública però difícil d’endevinar, i no porta noms de persones.' : 'Activa’l perquè tothom pugui tenir les sessions a l’app de calendari del mòbil. Funciona al cap d’unes hores.'}</span></span>
@@ -367,11 +367,11 @@ function manageConfig() {
   <div class="panel cfg-p"${cfgOpen('norma') ? '' : ' hidden'}>
     <div class="setting">
       <div><div class="t">Norma per fer ${esc(V.sh.el)}</div><div class="s">Assistència mínima als assajos d’una producció per poder-hi ${esc(V.play)}.</div></div>
-      <span class="u-d-flex u-ai-center u-gap-6"><input class="inp u-w-80 u-ta-center" id="cfg-min" type="number" inputmode="numeric" min="1" max="100" value="${minAttendance()}" data-bind="cfg-min"><b>%</b></span>
+      <span class="u-d-flex u-ai-center u-gap-6"><input class="inp u-w-80 u-ta-center" id="cfg-min" aria-label="Assistència mínima, en percentatge" type="number" inputmode="numeric" min="1" max="100" value="${minAttendance()}" data-bind="cfg-min"><b>%</b></span>
     </div>
     <div class="setting">
       <div><div class="t">Avís de seguiment</div><div class="s">Assenyala qui acumula aquest nombre de faltes no justificades.</div></div>
-      <input class="inp u-w-80 u-ta-center" id="cfg-alert" type="number" inputmode="numeric" min="1" max="20" value="${+S.config.alertFNJ || 3}" data-bind="cfg-alert">
+      <input class="inp u-w-80 u-ta-center" id="cfg-alert" aria-label="Faltes no justificades per a l’avís de seguiment" type="number" inputmode="numeric" min="1" max="20" value="${+S.config.alertFNJ || 3}" data-bind="cfg-alert">
     </div>
     <div class="setting">
       <div><div class="t">Mínim per ${esc(V.section)} als ${esc(V.sh.els)}</div><div class="s">Quantes persones de cada ${esc(V.section)} calen com a mínim. Si en confirmen menys, l’app ho avisa a l’equip. En blanc, sense mínim.</div></div>

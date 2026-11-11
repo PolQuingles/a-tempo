@@ -53,7 +53,7 @@ function boardRepertoire() {
     + (works.length ? `<div class="works">${works.map(card).join('')}</div>` : `<div class="empty"><p>${all ? 'Encara no hi ha cap obra al repertori.' : `Encara no hi ha obres a ${esc(prod.name)}.`}</p></div>`)
     + archivePanel(prod, works)
     + (files.length ? `<div class="panel u-p-12-14 u-mt-12 u-d-flex u-jc-space-between u-ai-center u-gap-10 u-fw-wrap">
-        <span class="u-fs-t-13">${toSave.length ? `${files.length - toSave.length} de ${files.length} fitxers desats al mòbil.` : `Tens els ${files.length} fitxers desats al mòbil: els pots obrir sense cobertura.`}</span>
+        <span class="u-fs-t-13">${toSave.length ? `${files.length - toSave.length} de ${files.length} fitxers desats al mòbil.` : files.length === 1 ? 'Tens el fitxer desat al mòbil: el pots obrir sense cobertura.' : `Tens els ${files.length} fitxers desats al mòbil: els pots obrir sense cobertura.`}</span>
         ${toSave.length ? `<button class="btn btn-sm" data-act="offline-save-all">Desa’ls al mòbil</button>` : `<button class="btn btn-sm btn-ghost" data-act="offline-clear">Treu-los</button>`}</div>` : '')
     + (prod ? boardMaterialsOf(prod, onlyMine, me) : '');
 }

@@ -103,7 +103,7 @@ function viewRollOverview(cur, list, pendingBySec) {
     const pr = progress(cur, x.id);
     const complete = on && pr.total && pr.done === pr.total;
     const pend = (pendingBySec[x.id] || []).filter(s => s.id !== cur.id).length;
-    const label = `${x.name}: ${on ? `${pr.done} de ${pr.total} marcats` : 'no convocats'}${pend ? `, ${pend} llistes pendents` : ''}`;
+    const label = `${x.name}: ${on ? `${pr.done} de ${pr.total} marcats` : 'no convocats'}${pend ? `, ${nPl(pend, 'llista pendent', 'llistes pendents')}` : ''}`;
     return `<button class="quad ${on ? '' : 'off'} ${complete ? 'is-done' : ''}" data-act="open-sec" data-sec="${x.id}" aria-label="${esc(label)}">
       ${pend ? '<i class="q-dot pend"></i>' : ''}${complete ? '<i class="q-dot done"></i>' : ''}
       <span class="q-l${x.short.length > 1 ? ' long' : ''}">${esc(x.short)}</span><span class="q-n">${esc(x.name)}</span>

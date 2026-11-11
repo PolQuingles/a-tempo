@@ -173,7 +173,7 @@ function sheetSummary(initial) {
     body: `<div class="pickers u-mb-10">
         <button class="pick" aria-pressed="${scope === 'sec'}" data-scope="sec">${SEC[ui.section].name}</button>
         <button class="pick" aria-pressed="${scope === 'all'}" data-scope="all">${capz(V.tot)}</button></div>
-      <textarea class="summary-pre" id="summary-text" readonly>${esc(text())}</textarea>
+      <textarea class="summary-pre" id="summary-text" readonly aria-label="El resum, per copiar">${esc(text())}</textarea>
       <p class="muted u-fs-t-13 u-m-8-0-0">Copia’l i envia’l al grup de WhatsApp o a la direcció.</p>`,
     foot: `<button class="btn btn-primary" id="copy-summary">Copia el resum</button>`,
     onMount: el => {
@@ -265,7 +265,7 @@ function sheetSessionInfo(sid) {
 }
 function fitxaChip(s) {
   if (hasInfo(s)) return `<button class="fitxa-chip" data-act="session-info" data-sid="${s.id}">${ICON.info}<span><b>${isShow(s) ? `Fitxa ${V.sh.del}` : 'Fitxa de la sessió'}</b><small>${esc(infoSummary(s))}</small></span></button>`;
-  if (canProd() && isShow(s)) return `<button class="fitxa-chip empty" data-act="session-edit" data-sid="${s.id}">${ICON.info}<span><b>Afegeix la fitxa ${V.sh.del}</b><small>Convocatòria, vestuari, punt de trobada…</small></span></button>`;
+  if (canProd() && isShow(s)) return `<button class="fitxa-chip is-empty" data-act="session-edit" data-sid="${s.id}">${ICON.info}<span><b>Afegeix la fitxa ${V.sh.del}</b><small>Convocatòria, vestuari, punt de trobada…</small></span></button>`;
   return '';
 }
 /** Com es diu una sessió en un desplegable: «15/11 dg · Assaig · Oratori». */

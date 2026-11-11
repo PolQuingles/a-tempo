@@ -498,7 +498,7 @@ async function sheetStudent(mid, tab) {
       studentCourse(mid).then(days => {
         if (!el.isConnected) return;
         const st = courseStats(days, mid, season.from, TODAY);
-        el.querySelector('#stu-att-f').outerHTML = fact('Assistència', st.pct == null ? '—' : `${st.pct}%`, st.marked ? `${st.P + st.R} de ${st.marked} classes` : 'cap classe marcada');
+        el.querySelector('#stu-att-f').outerHTML = fact('Assistència', st.pct == null ? '—' : `${st.pct}%`, st.marked ? `${st.P + st.R} de ${nPl(st.marked, 'classe', 'classes')}` : 'cap classe marcada');
         el.querySelector('#stu-att-b').innerHTML = attStripHtml(st);
       }).catch(() => {
         if (!el.isConnected) return;

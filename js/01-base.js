@@ -142,6 +142,8 @@ function filterList(input) {
   if (empty) empty.hidden = shown > 0;
 }
 const pad = n => String(n).padStart(2, '0');
+/** Un nombre amb el nom en singular o plural: nPl(1, 'dia', 'dies') → «1 dia». */
+const nPl = (n, sg, pl) => `${n} ${n === 1 ? sg : pl}`;
 const isoDate = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const TODAY = isoDate(new Date());
 const parseISO = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };

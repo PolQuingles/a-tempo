@@ -125,7 +125,7 @@ function sheetMessage(preset = {}) {
     body: `<div class="kv">
       ${all && prods.length ? `<label class="field"><span>Qui</span><select class="inp" id="mg-prod"><option value="">Tota la plantilla</option>${prods.map(p => `<option value="${esc(p.id)}" ${p.id === prod ? 'selected' : ''}>Qui fa ${esc(p.name)}</option>`).join('')}</select></label>` : ''}
       ${all ? `<div class="field"><span id="mg-to-l">Per a</span><div class="pickers" id="mg-to"><button type="button" class="pick" data-sec="*" aria-pressed="${!lead}">Tothom</button>${SECTIONS.map(x => secPick(x, x.id === lead)).join('')}</div></div>`
-        : `<p class="u-m-0">Per a tota la <b>${esc(SEC[lead].name.toLowerCase())}</b> (${membersOf(lead).length} persones). Els arribarà a l’app i, a qui tingui les notificacions activades, al mòbil.</p>`}
+        : `<p class="u-m-0">Per a tota la <b>${esc(SEC[lead].name.toLowerCase())}</b> (${nPl(membersOf(lead).length, 'persona', 'persones')}). Els arribarà a l’app i, a qui tingui les notificacions activades, al mòbil.</p>`}
       <label class="field"><span>Assumpte (opcional)</span><input class="inp" id="mg-title" maxlength="80" value="${esc(preset.title || '')}" placeholder="p. ex. Assaig parcial de dijous"></label>
       <label class="field"><span>Missatge</span><textarea class="inp u-minh-140" id="mg-body" maxlength="1500" placeholder="Escriu aquí…">${esc(preset.body || '')}</textarea></label>
       <p class="muted u-m-0 u-fs-t-13" id="mg-reach"></p>

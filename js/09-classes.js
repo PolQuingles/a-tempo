@@ -238,7 +238,7 @@ function classQuads() {
     const sub = mineDay ? `La teva hora: ${dayLabel(mineDay.date).toLowerCase() || shortDate(mineDay.date)} · ${classSlots(mineDay).find(x => x.memberId === mid).time}`
       : today ? 'Avui hi ha classe' : classWeekdays(next.slice(0, 10));
     const count = students.size ? `${students.size} ${students.size === 1 ? V.member : V.members}`
-      : planRows(t.key).length ? `${planRows(t.key).length} hores fixes` : 'Sense classes';
+      : planRows(t.key).length ? nPl(planRows(t.key).length, 'hora fixa', 'hores fixes') : 'Sense classes';
     return `<button class="quad ${next.length ? '' : 'off'}" data-act="cl-who" data-k="${esc(t.key)}" aria-label="${esc(`${t.name}: ${count}`)}">
       ${pend ? '<i class="q-dot pend"></i>' : ''}${today ? '<i class="q-dot done"></i>' : ''}
       <span class="q-l q-ini">${esc(teacherInitials(t.name))}</span>

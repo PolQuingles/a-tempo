@@ -177,7 +177,7 @@ function sheetRiskWrite(pid) {
       <p class="muted u-m-0 u-fs-t-13">${esc(prod.name)} · cadascú rep un missatge privat amb les seves xifres. Pots canviar el text: {nom}, {percentatge}, {queden}, {maxim} i {minim} s’omplen per a cada persona.</p>
       ${groups.map(([k, l]) => `<div class="field"><span>${title[k]} · ${l.length}</span>
         <ul class="mini-list rw-list u-maxh-none">${l.map(r => `<li><label class="cs-row"><input type="checkbox" value="${esc(r.m.id)}" checked><span><b>${esc(r.m.name)}</b> <span class="m">${esc(SEC[r.m.section].short)} · ${pct(r.rs.cur)}</span></span></label></li>`).join('')}</ul>
-        <textarea class="inp u-minh-110" id="rw-${k}" maxlength="${THREAD_MAX}">${esc(RISK_TEXT[k])}</textarea></div>`).join('')}
+        <textarea class="inp u-minh-110" id="rw-${k}" maxlength="${THREAD_MAX}" aria-label="El missatge">${esc(RISK_TEXT[k])}</textarea></div>`).join('')}
       <p class="muted u-m-0 u-fs-t-13" id="rw-prev"></p>
     </div>`,
     foot: `<span class="spacer"></span><button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="rw-send">Envia</button>`,
