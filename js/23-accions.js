@@ -43,6 +43,8 @@ const actions = {
   'cl-back': () => { ui.clWho = null; saveUI(); render(); window.scrollTo({ top: 0 }); },
   'cl-month': el => { const [y, m] = ui.clMonth.split('-').map(Number); const d = new Date(y, m - 1 + (+el.dataset.dir), 1); ui.clMonth = `${d.getFullYear()}-${pad(d.getMonth() + 1)}`; render(); },
   'cl-day': el => { ui.clDay = el.dataset.date; render(); },
+  // Des de la setmana, un dia obre el mes en aquell dia (amb les hores i l'assistència).
+  'cl-day-open': el => { ui.clDay = el.dataset.date; ui.clMonth = el.dataset.date.slice(0, 7); ui.clView = 'month'; render(); document.querySelector('.cl-dayhead')?.scrollIntoView({ block: 'start', behavior: 'smooth' }); },
   'cl-seats': () => sheetTeacherSeats(),
   'cl-note': el => sheetClassNote(el.dataset.c, el.dataset.s),
   'cl-move': el => sheetClassMove(el.dataset.c, el.dataset.s, el.dataset.k === 'clash' ? sheetClassClashes : null),
@@ -126,6 +128,7 @@ const actions = {
   'ql-edit': el => sheetLogNew(el.dataset.m, '', el.dataset.id, el.closest('.sheet') ? backToStudent(el.dataset.m) : null),
   'ql-reply': el => sheetLogReply(el.dataset.m, el.dataset.id, el.closest('.sheet') ? backToStudent(el.dataset.m) : null),
   'ql-play': el => playInline(el),
+  'stu-report': el => sheetStudentReport(el.dataset.m, backToStudent(el.dataset.m)),
   'rep-new': el => sheetRepItem(el.dataset.m, '', el.closest('.sheet') ? backToStudent(el.dataset.m) : null),
   'rep-edit': el => sheetRepItem(el.dataset.m, el.dataset.id, el.closest('.sheet') ? backToStudent(el.dataset.m) : null),
   'goals-edit': el => sheetGoals(el.dataset.m, el.dataset.k === 'myGoals' ? 'myGoals' : 'goals', el.closest('.sheet') ? backToStudent(el.dataset.m) : null),

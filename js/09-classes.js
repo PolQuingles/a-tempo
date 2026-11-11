@@ -271,7 +271,8 @@ function classTeacherSpace(who, own) {
     const marks = cs.length ? `<i class="mk cl${mineHere ? ' mine' : ''}"></i>` : '';
     const hores = cs.reduce((n, c) => n + classSlots(c).length, 0);
     const label = `${longDate(iso)}${cs.length ? `: ${hores} ${hores === 1 ? 'hora' : 'hores'}${cs.some(c => c.cancelled) ? ', anul·lada' : ''}` : ', cap classe'}`;
-    cells.push(`<button class="mday${iso === TODAY ? ' today' : ''}${iso === ui.clDay ? ' sel' : ''}${iso < TODAY ? ' past' : ''}" data-act="cl-day" data-date="${iso}" aria-pressed="${iso === ui.clDay}" aria-label="${esc(label)}"><span class="mnum">${d}</span><span class="mmarks">${marks}</span></button>`);
+    const off = cs.length && cs.every(c => c.cancelled);
+    cells.push(`<button class="mday${iso === TODAY ? ' today' : ''}${iso === ui.clDay ? ' sel' : ''}${iso < TODAY ? ' past' : ''}${cs.length ? ' has-cl' : ''}${mineHere ? ' has-mine' : ''}${off ? ' is-off' : ''}" data-act="cl-day" data-date="${iso}" aria-pressed="${iso === ui.clDay}" aria-label="${esc(label)}"><span class="mnum">${d}</span><span class="mmarks">${marks}</span>${cs.length && teach ? `<span class="mcount">${hores}</span>` : ''}</button>`);
   }
   while (cells.length % 7) cells.push('<span class="mday out" aria-hidden="true"></span>');
   const title = capz(fmtD(`${ui.clMonth}-01`, { month: 'long', year: 'numeric' }));
@@ -286,18 +287,22 @@ function classTeacherSpace(who, own) {
       <span class="cl-ini">${esc(teacherInitials(t.name))}</span>
       <span class="cl-h-t"><b>${esc(t.name)}</b><small>${esc(facts)}</small></span>
     </div>
-    ${teach ? `<div class="sec-h u-mt-0"><span class="muted u-fs-t-13">Les classes d’aquest ${esc(V.Teacher.toLowerCase())}.</span>
-      <span class="u-d-flex u-gap-6 u-fw-wrap"><button class="btn btn-sm" data-act="cl-paste" data-k="${esc(who)}">Enganxa un horari</button><button class="btn btn-sm btn-primary" data-act="cl-new" data-k="${esc(who)}" data-date="${esc(ui.clDay)}">+ Dia</button></span></div>` : ''}
+    ${teach ? `<div class="cl-toolbar" role="toolbar" aria-label="Eines del calendari">
+      <button class="btn btn-sm btn-primary" data-act="cl-new" data-k="${esc(who)}" data-date="${esc(ui.clDay)}">${ICON.plus}Dia de classe</button>
+      <button class="btn btn-sm" data-act="cl-plan" data-k="${esc(who)}">Horari fix${planRows(who).length ? `<span class="tb-n">${planRows(who).length}</span>` : ''}</button>
+      <button class="btn btn-sm" data-act="cl-paste" data-k="${esc(who)}">Enganxa un horari</button>
+      <button class="btn btn-sm" data-act="cl-stats">Assistència del curs</button>
+    </div>` : ''}
     ${ownsClass({ teacher: who }) ? unlinkedPanel(who) : ''}
     <div class="seg3 cl-view" role="radiogroup" aria-label="Vista">${[['month', 'Mes'], ['week', 'Setmana']].map(([k, l]) => `<button type="button" role="radio" aria-checked="${(ui.clView || 'month') === k}" data-act="cl-view" data-k="${k}">${l}</button>`).join('')}</div>
     ${ui.clView === 'week' ? classWeekHtml(who) : `<div class="panel month">
       <div class="mnav"><button class="nav-arrow" data-act="cl-month" data-dir="-1" aria-label="Mes anterior">${ICON.left}</button><h2 class="h2">${esc(title)}</h2><button class="nav-arrow" data-act="cl-month" data-dir="1" aria-label="Mes següent">${ICON.right}</button></div>
       <div class="mweek" aria-hidden="true">${['dl', 'dt', 'dc', 'dj', 'dv', 'ds', 'dg'].map(d => `<span>${d}</span>`).join('')}</div>
       <div class="mgrid">${cells.join('')}</div>
-      ${inMonth.length ? `<div class="mlegend"><span><i class="mk cl"></i>Dia de classe</span>${mid ? '<span><i class="mk cl mine"></i>Hi tens hora</span>' : ''}</div>`
+      ${inMonth.length ? `<div class="mlegend"><span><i class="lg-cl"></i>Dia de classe${teach ? ' (amb les hores)' : ''}</span>${mid ? '<span><i class="lg-cl mine"></i>Hi tens hora</span>' : ''}<span><i class="lg-today"></i>Avui</span></div>`
         : `<p class="muted u-m-10-4-0 u-fs-t-13">${monthState === 'loading' ? 'Carregant aquest mes…' : monthState === 'error' ? 'No s’ha pogut carregar aquest mes. Comprova la connexió.' : 'Aquest mes no hi ha classes.'}</p>`}
     </div>
-    <div class="section-title u-mt-18"><h2 class="h2">${esc(longDate(ui.clDay))}</h2>${dayClasses.length ? `<span class="eyebrow">${esc(classDaySpan(dayClasses[0]))}</span>` : ''}</div>
+    <div class="section-title u-mt-18 cl-dayhead"><h2 class="h2">${esc(longDate(ui.clDay))}</h2>${dayClasses.length ? `<span class="eyebrow">${esc(classDaySpan(dayClasses[0]))}</span>` : ''}</div>
     ${dayClasses.length ? `<div class="panel">${dayClasses.map(c => classDayCard(c, c.date < TODAY, true)).join('')}</div>`
       : `<div class="panel u-p-14 u-fs-t-13 u-c-muted">Cap classe aquest dia.${teach ? ' Amb <b>+ Dia</b> en pots posar una.' : ''}</div>`}`}
     ${soon.length ? `<div class="section-title u-mt-18"><h2 class="h2">Properes classes</h2><span class="eyebrow">${soon.length}</span></div>
@@ -310,12 +315,18 @@ function classTeacherSpace(who, own) {
           <span class="${mineSlot && !c.cancelled ? 'mine mono' : 'muted mono'} u-fs-t-13">${mineSlot && !c.cancelled ? esc(mineSlot.time) : ''}</span>
         </button>`;
       }).join('')}</div>` : ''}
-    ${teach ? `<div class="panel u-mt-14">
-      <div class="setting"><div><div class="t">Horari fix</div><div class="s">L’hora de cada setmana de cada ${esc(V.member)}: serveix per generar tots els dies d’un període de cop.</div></div>
-        <button class="btn btn-sm" data-act="cl-plan" data-k="${esc(who)}">${planRows(who).length ? `Obre’l (${planRows(who).length} hores)` : 'Fes-lo'}</button></div>
-      <div class="setting"><div><div class="t">Assistència del curs</div><div class="s">Qui ha vingut a classe i qui no, de tot el curs.</div></div>
-        <button class="btn btn-sm" data-act="cl-stats">Mira-la</button></div>
-    </div>` : ''}`;
+    ${teach ? planSummaryHtml(who) : ''}`;
+}
+/** L'horari fix en resum, al peu del calendari: un bloc per dia de la setmana, amb l'aula i les hores. */
+function planSummaryHtml(who) {
+  const rows = planRows(who), places = planPlaces(who);
+  const days = [...new Set(rows.map(r => +r.day))].sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7));
+  return `<div class="section-title"><h2 class="h2">Horari fix</h2><button class="btn btn-sm" data-act="cl-plan" data-k="${esc(who)}">${rows.length ? 'Edita’l' : 'Fes-lo'}</button></div>
+    ${rows.length ? `<div class="plan-sum">${days.map(d => { const rs = rows.filter(r => +r.day === d).sort((a, b) => (a.time || '').localeCompare(b.time || '')); return `<div class="ps-day">
+        <div class="ps-h"><b>${esc(capz(DAYS_CA[d]))}</b><small>${esc([`${rs.length} ${rs.length === 1 ? 'hora' : 'hores'}`, places[d] || ''].filter(Boolean).join(' · '))}</small></div>
+        <ul>${rs.map(r => `<li><span class="mono">${esc(r.time || '')}</span><span>${esc(fullName(S.members.get(r.memberId)?.name || r.name || '')) || '<span class="cl-free">Hora lliure</span>'}</span></li>`).join('')}</ul></div>`; }).join('')}</div>
+      <p class="ql-hint">Des de l’horari fix es generen tots els dies d’un període de cop. Els canvis d’un dia concret es fan al calendari.</p>`
+      : `<p class="ql-hint">L’hora de cada setmana de cada ${esc(V.member)}. Amb l’horari fix generes tots els dies d’un trimestre de cop.</p>`}`;
 }
 /** La pestanya Classes. El professorat hi té la llista de cada dia i els alumnes (vegeu clTabKeys); la resta, totes les classes. */
 function viewClasses() {
@@ -375,7 +386,7 @@ function viewAllClasses(tabs = '') {
     ${student ? `<div class="section-title"><h2 class="h2">El professorat</h2><span class="muted u-fs-t-13">Toca’n un per veure’n el calendari</span></div>` : ''}
     ${classQuads()}
     ${myId() ? `<div class="panel link-list u-mt-18">
-      ${teach && !inClasses() ? '' : `<button class="link-row" data-act="cl-mystats"><span><b>La teva assistència</b><small>Les classes on has vingut durant el curs</small></span>${ICON.right}</button>`}
+      ${student ? `<button class="link-row" data-act="cl-student" data-m="${esc(myId())}"><span><b>La teva assistència i l’informe</b><small>Les classes del curs, i un resum en PDF de cada trimestre</small></span>${ICON.right}</button>` : ''}
       <button class="link-row" data-act="cl-ics"><span><b>Les classes al calendari del mòbil</b><small>Google Calendar, Apple o Outlook, sempre al dia</small></span>${ICON.right}</button>
     </div>` : ''}
 `;

@@ -471,14 +471,27 @@ async function sheetStudent(mid, tab) {
         <div><b>${esc(fullName(m.name))}</b><small>${esc([sec?.name ? `${sec.name}${m.part ? ` ${m.part}` : ''}` : '', ...hours].filter(Boolean).join(' · '))}</small></div></header>
       <dl class="stu-facts">
         ${fact('Propera', next ? esc(next.c.date === TODAY ? 'Avui' : capz(fmtD(next.c.date, { weekday: 'short', day: 'numeric', month: 'short' })).replace('.', '')) : '—', next ? esc(next.x.time || '') : '')}
-        ${fact('Última', last ? esc(shortDate(last.c.date)) : '—', last?.x.mark ? esc(STATUS[last.x.mark]?.short || '') : '')}
+        <div id="stu-att-f">${fact('Assistència', '<span class="sk sk-inl"></span>', last ? `última, ${esc(shortDate(last.c.date))}` : '')}</div>
         ${fact('Obres', String(rep.length), rep.filter(x => x.status === 'apunt').length ? `${rep.filter(x => x.status === 'apunt').length} a punt` : '')}
       </dl>
+      <section class="stu-att" aria-label="L’assistència del curs"><div class="stu-att-h"><span class="eyebrow">Les classes del curs</span></div><div id="stu-att-b"><span class="sk stu-att-sk"></span></div></section>
       <div class="seg3 stu-tabs" role="tablist" aria-label="Fitxa">${tabs.map(([k, l, n]) => `<button type="button" role="tab" data-k="${k}" aria-selected="${STU_CTX.tab === k}">${l}${n ? `<span class="stu-n">${n}</span>` : ''}</button>`).join('')}</div>
       <div id="stu-pane" class="stu-pane">${stuPane(mid, STU_CTX.tab)}</div>
       ${own ? '' : `<p class="muted u-fs-t-13 u-mt-14 u-mb-0">Les notes privades només les veus tu${isAdmin() ? '' : ' i l’administració'}. La resta ho veu ${esc(firstName(m.name))}.</p>`}`,
-    foot: canWrite ? `<span class="spacer"></span><button class="btn btn-primary" data-act="ql-new" data-m="${esc(mid)}" data-k="note">${ICON.plus}${own ? 'Afegeix al quadern' : 'Afegeix-hi material'}</button>` : '',
+    foot: canWrite ? `<button class="btn" data-act="stu-report" data-m="${esc(mid)}">Informe</button><span class="spacer"></span><button class="btn btn-primary" data-act="ql-new" data-m="${esc(mid)}" data-k="note">${ICON.plus}${own ? 'Afegeix al quadern' : 'Afegeix-hi material'}</button>` : '',
     onMount: el => {
+      // L'assistència del curs arriba després: es llegeixen els dies de classe de tot el curs.
+      const { season } = seasonCfg();
+      studentCourse(mid).then(days => {
+        if (!el.isConnected) return;
+        const st = courseStats(days, mid, season.from, TODAY);
+        el.querySelector('#stu-att-f').outerHTML = fact('Assistència', st.pct == null ? '—' : `${st.pct}%`, st.marked ? `${st.P + st.R} de ${st.marked} classes` : 'cap classe marcada');
+        el.querySelector('#stu-att-b').innerHTML = attStripHtml(st);
+      }).catch(() => {
+        if (!el.isConnected) return;
+        el.querySelector('#stu-att-f').outerHTML = fact('Assistència', '—', '');
+        el.querySelector('#stu-att-b').innerHTML = '<p class="muted u-m-0 u-fs-t-13">No s’ha pogut carregar l’assistència del curs. Comprova la connexió.</p>';
+      });
       el.querySelectorAll('.stu-tabs [data-k]').forEach(b => b.onclick = () => {
         STU_CTX.tab = b.dataset.k;
         el.querySelectorAll('.stu-tabs [data-k]').forEach(x => x.setAttribute('aria-selected', String(x === b)));
@@ -544,4 +557,114 @@ function studentQuadernBlock() {
       : '<p class="ql-hint">Apunta què treballes a casa, grava’t per escoltar-te i deixa preguntes per a la propera classe. Només ho veieu tu i el teu professorat.</p>'}
     <div class="section-title"><h2 class="h2">Repertori</h2><button class="btn btn-sm" data-act="rep-new" data-m="${esc(mid)}">${ICON.plus}Afegeix una obra</button></div>
     ${rep.length ? `<div class="panel rep-panel">${repHtml(mid, true)}</div>` : '<p class="ql-hint">Encara no hi ha cap obra. Afegeix les que treballes, i marca com van.</p>'}`;
+}
+
+/* ---------- L'assistència del curs d'un alumne ---------- */
+// Al mòbil només hi ha les classes dels dos últims mesos: per al curs sencer es llegeixen els dies de cada professor de
+// l'alumne (una consulta per professor) i es guarden uns minuts, per no tornar-los a llegir cada cop que s'obre la fitxa.
+const COURSE = { mid: '', at: 0, days: null };
+async function studentCourse(mid) {
+  if (COURSE.mid === mid && COURSE.days && Date.now() - COURSE.at < 10 * 60e3) return COURSE.days;
+  const keys = new Set((stuOf(mid)?.teachers) || []);
+  for (const c of S.classes.values()) if (c.teacher && (c.slots || []).some(x => slotMember(x) === mid || x.memberId === mid)) keys.add(c.teacher);
+  const all = new Map();
+  for (const k of keys) for (const d of (await db.collection('classes').where('teacher', '==', k).get()).docs) { const c = d.data(); if (!c.deleted) all.set(d.id, c); }
+  for (const c of S.classes.values()) all.set(c.id, c);   // el que hi ha al mòbil és el més recent
+  const days = [...all.values()].filter(c => classLive(c) && (c.slots || []).some(x => slotMember(x) === mid)).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  Object.assign(COURSE, { mid, at: Date.now(), days });
+  return days;
+}
+/** Les classes ja fetes d'un període, amb la marca de cadascuna: { list: [{ c, x }], P, R, FJ, FNJ, marked, pct }. */
+function courseStats(days, mid, from, to) {
+  const out = { list: [], P: 0, R: 0, FJ: 0, FNJ: 0, marked: 0, pct: null };
+  for (const c of days) {
+    if (c.date < from || c.date > to || c.date > TODAY) continue;
+    const x = (c.slots || []).find(s => slotMember(s) === mid);
+    // La d'avui només compta un cop marcada: potser encara no s'ha fet.
+    if (!x || (c.date === TODAY && !x.mark)) continue;
+    out.list.push({ c, x });
+    if (x.mark && x.mark in out) { out[x.mark]++; out.marked++; }
+  }
+  out.pct = out.marked ? Math.round(((out.P + out.R) / out.marked) * 100) : null;
+  return out;
+}
+/** La tira de l'assistència a la fitxa: un punt per classe feta, del color de la marca. */
+function attStripHtml(st) {
+  if (!st.list.length) return '<p class="muted u-m-0 u-fs-t-13">Encara no hi ha cap classe feta aquest curs.</p>';
+  const shown = st.list.slice(-30);
+  return `<div class="stu-att-dots" role="list">${shown.map(({ c, x }) => `<span role="listitem" class="ad ${x.mark ? `ad-${x.mark}` : 'ad-none'}" title="${esc(`${shortDate(c.date)} · ${x.mark ? STATUS[x.mark].label || STATUS[x.mark].short : 'sense marcar'}`)}" aria-label="${esc(`${longDate(c.date)}: ${x.mark ? STATUS[x.mark].short : 'sense marcar'}`)}"></span>`).join('')}</div>
+    <p class="stu-att-leg">${[['P', st.P], ['R', st.R], ['FJ', st.FJ], ['FNJ', st.FNJ]].filter(([, n]) => n).map(([k, n]) => `<span><i class="ad ad-${k}"></i>${n} ${esc(STATUS[k].short.toLowerCase())}</span>`).join('')}${st.list.length > st.marked ? `<span><i class="ad ad-none"></i>${st.list.length - st.marked} sense marcar</span>` : ''}</p>`;
+}
+
+/* ---------- L'informe del trimestre ---------- */
+/** Els trimestres de la temporada (setembre-desembre, gener-març, abril-juliol) i el curs sencer. */
+function coursePeriods() {
+  const { season } = seasonCfg();
+  const y = +String(season.from).slice(0, 4);
+  const clip = (f, t) => ({ from: f < season.from ? season.from : f, to: t > season.to ? season.to : t });
+  return [
+    { k: 't1', name: '1r trimestre', ...clip(`${y}-09-01`, `${y}-12-31`) },
+    { k: 't2', name: '2n trimestre', ...clip(`${y + 1}-01-01`, `${y + 1}-03-31`) },
+    { k: 't3', name: '3r trimestre', ...clip(`${y + 1}-04-01`, `${y + 1}-07-31`) },
+    { k: 'curs', name: 'Tot el curs', from: season.from, to: season.to },
+  ].filter(p => p.from <= p.to);
+}
+function sheetStudentReport(mid, back) {
+  const m = S.members.get(mid);
+  if (!m) return;
+  const ps = coursePeriods();
+  const cur = ps.find(p => p.k !== 'curs' && p.from <= TODAY && TODAY <= p.to) || ps[ps.length - 1];
+  let pick = cur.k;
+  openSheet({
+    title: 'Informe de classes',
+    body: `<div class="kv">
+      <p class="u-m-0">Un resum de ${mid === myId() ? 'les teves classes' : `les classes de ${esc(firstName(m.name))}`} per guardar o enviar en PDF: l’assistència, el repertori, els objectius i les notes de classe. Les notes privades no hi surten.</p>
+      <div class="field"><span>De quin període?</span><div class="pickers" id="rr-p">${ps.map(p => `<button type="button" class="pick" data-k="${p.k}" aria-pressed="${p.k === pick}">${esc(p.name)}</button>`).join('')}<button type="button" class="pick" data-k="alt" aria-pressed="false">Unes altres dates</button></div></div>
+      <div class="row3" id="rr-dates" hidden>
+        <label class="field"><span>Des del</span><input class="inp" id="rr-from" type="date" value="${esc(cur.from)}"></label>
+        <label class="field"><span>Fins al</span><input class="inp" id="rr-to" type="date" value="${esc(cur.to)}"></label>
+      </div>
+      <p class="muted u-m-0 u-fs-t-13">Al mòbil, tria «Desa com a PDF» a la finestra d’imprimir.</p>
+    </div>`,
+    foot: `<span class="spacer"></span><button class="btn" id="rr-no">Cancel·la</button><button class="btn btn-primary" id="rr-go">Fes l’informe</button>`,
+    onMount: el => {
+      el.querySelectorAll('#rr-p .pick').forEach(b => b.onclick = () => {
+        pick = b.dataset.k;
+        el.querySelectorAll('#rr-p .pick').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+        el.querySelector('#rr-dates').hidden = pick !== 'alt';
+      });
+      el.querySelector('#rr-no').onclick = () => { if (back) back(); else closeSheet(); };
+      el.querySelector('#rr-go').onclick = async e => {
+        const p = ps.find(x => x.k === pick) || { name: '', from: el.querySelector('#rr-from').value, to: el.querySelector('#rr-to').value };
+        if (!p.from || !p.to || p.from > p.to) { toast('Tria unes dates correctes'); return; }
+        e.currentTarget.disabled = true; e.currentTarget.textContent = 'Preparant…';
+        try { await printStudentReport(mid, p.from, p.to, p.name); if (back) back(); else closeSheet(); }
+        catch { toast('No s’ha pogut preparar l’informe. Comprova la connexió.'); e.currentTarget.disabled = false; e.currentTarget.textContent = 'Fes l’informe'; }
+      };
+    },
+  });
+}
+async function printStudentReport(mid, from, to, name) {
+  const m = S.members.get(mid);
+  const own = mid === myId();
+  if ((await loadStudentCtx(mid)) !== 'ok') throw new Error('fitxa');
+  const days = await studentCourse(mid);
+  const st = courseStats(days, mid, from, to);
+  const inRange = d => d >= from && d <= to;
+  const notes = (own ? [...S.classNotes.values()].filter(n => n.memberId === mid) : STU_CTX.notes || []).filter(n => n.text && inRange(n.date || '')).sort((a, b) => a.date.localeCompare(b.date));
+  const log = logOf(mid).filter(x => inRange(x.date || ''));
+  const rep = repOf(mid), s = stuOf(mid) || {};
+  const teachers = [...new Set(st.list.map(({ c }) => teacherOf(c)).filter(Boolean))];
+  const period = `${name ? `${name} · ` : ''}del ${longDate(from).toLowerCase()} al ${longDate(to).toLowerCase()}`;
+  const kpi = (v, l) => `<div class="pr-kpi"><b>${v}</b><span>${l}</span></div>`;
+  const count = k => log.filter(x => x.kind === k && !x.t).length;
+  printDoc(`Classes de cant · ${fullName(m.name)}`, `
+    <p><b>${esc(fullName(m.name))}</b>${SEC[m.section] ? ` · ${esc(SEC[m.section].name)}` : ''}${teachers.length ? ` · amb ${esc(teachers.join(', '))}` : ''}<br>${esc(capz(period))}.</p>
+    <div class="pr-kpis">${kpi(st.list.length, st.list.length === 1 ? 'Classe feta' : 'Classes fetes')}${kpi(st.pct == null ? '—' : `${st.pct}%`, 'Assistència')}${kpi(st.R, 'Retards')}${kpi(st.FJ + st.FNJ, 'Faltes')}${kpi(`${rep.filter(x => x.status === 'apunt').length}/${rep.length}`, 'Obres a punt')}</div>
+    ${s.goals || s.myGoals ? `<h2>Objectius</h2>${s.goals ? `<h3>Del ${esc(V.Teacher.toLowerCase())}</h3><p class="u-ws-pre-wrap">${esc(s.goals)}</p>` : ''}${s.myGoals ? `<h3>De l’alumne</h3><p class="u-ws-pre-wrap">${esc(s.myGoals)}</p>` : ''}` : ''}
+    ${rep.length ? `<h2>Repertori</h2><table class="pr-table"><thead><tr><th>Obra</th><th>Compositor</th><th>Com va</th></tr></thead><tbody>${rep.map(x => `<tr><td>${esc(x.title)}</td><td>${esc(x.composer || '')}</td><td>${esc(STUDENT_STATUS[x.status] || '')}</td></tr>`).join('')}</tbody></table>` : ''}
+    ${st.list.length ? `<h2>Assistència</h2><table class="pr-table"><thead><tr><th>Dia</th><th>Hora</th><th>${esc(V.Teacher)}</th><th>Assistència</th></tr></thead><tbody>${st.list.map(({ c, x }) => `<tr><td>${esc(capz(fmtD(c.date, { weekday: 'short', day: 'numeric', month: 'short' })))}</td><td>${esc(x.time || '')}</td><td>${esc(teacherOf(c))}</td><td>${x.mark ? esc(STATUS[x.mark].short) : '—'}</td></tr>`).join('')}</tbody></table>` : ''}
+    ${notes.length ? `<h2>Notes de classe</h2><table class="pr-table"><tbody>${notes.map(n => `<tr><td class="u-ws-nowrap">${esc(shortDate(n.date))}</td><td class="u-ws-pre-wrap">${esc(n.text)}</td></tr>`).join('')}</tbody></table>` : ''}
+    ${log.length ? `<h2>Quadern</h2><p>${[[count('note'), 'notes d’estudi', 'nota d’estudi'], [count('rec'), 'gravacions', 'gravació'], [count('q'), 'preguntes', 'pregunta']].filter(([n]) => n).map(([n, pl, sg]) => `${n} ${n === 1 ? sg : pl}`).join(' · ') || 'Material del professorat'}.</p>
+      <table class="pr-table"><tbody>${log.filter(x => x.text).sort((a, b) => a.date.localeCompare(b.date)).map(x => `<tr><td class="u-ws-nowrap">${esc(shortDate(x.date))}</td><td>${esc(x.t ? 'Material' : LOG_KINDS[x.kind]?.title || '')}</td><td class="u-ws-pre-wrap">${esc(x.text)}${x.reply ? `<br><i>${esc(fullName(x.reply.name) || V.Teacher)}: ${esc(x.reply.text)}</i>` : ''}</td></tr>`).join('')}</tbody></table>` : ''}`);
 }

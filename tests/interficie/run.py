@@ -1067,9 +1067,24 @@ def main():
           sh().querySelector('#qr-t').value = 'Respira al c. 11'; sh().querySelector('#qr-go').click(); await s(600);
           out.reply = [...S.classLog.values()].some(x => x.memberId === mid && x.reply?.text === 'Respira al c. 11') && /Respira al c. 11/.test(sh()?.innerText || '');
           closeSheet(); await s(200);
+          sheetStudent(mid); await s(1200);
+          out.att = /Assistència/.test(sh()?.querySelector('.stu-facts')?.innerText || '') && !!sh().querySelector('#stu-att-b .stu-att-dots, #stu-att-b p');
+          let printed = ''; const pr = window.print; window.print = () => { printed = document.querySelector('#print-root')?.innerText || ''; };
+          sh().querySelector('[data-act="stu-report"]').click(); await s(300); sh().querySelector('#rr-go').click(); await s(1500); window.print = pr;
+          out.report = /Classes fetes/.test(printed) && /Repertori/.test(printed) && !/Privada/.test(printed);
+          closeSheet(true); await s(200);
+          sheetClassPlan(S.email); await s(300);
+          const pe = sh(), nd = pe.querySelector('#pl-newday'); nd.value = '3'; nd.dispatchEvent(new Event('change')); await s(100);
+          pe.querySelector('[data-add="3"]').click(); await s(100);
+          out.plan = pe.querySelectorAll('.pl-day[data-day="3"] .pl-row').length >= 2;
+          pe.querySelector('#pl-save').click(); await s(300);
+          const wed = planRows(S.email).filter(r => +r.day === 3).map(r => r.time).sort();
+          out.planSaved = wed.length >= 2 && wed[0] < wed[1];
           return out; }""")
         for k, what in [("news", "el professor sap que l'alumne hi ha afegit alguna cosa"), ("todo", "i ho té a «Per fer»"), ("listed", "i a Alumnes, amb la novetat"),
-                        ("read", "en obrir la fitxa ho llegeix i deixa de ser nou"), ("reply", "i hi respon")]:
+                        ("read", "en obrir la fitxa ho llegeix i deixa de ser nou"), ("reply", "i hi respon"),
+                        ("att", "la fitxa té l'assistència del curs"), ("report", "i en fa l'informe (sense les notes privades)"),
+                        ("plan", "a l'horari fix, les hores van per dies i una de nova va darrere l'última"), ("planSaved", "i es desa")]:
             check(r.get(k), what, str(r))
         switch_user(page, base, "singer")
         r = page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms));
