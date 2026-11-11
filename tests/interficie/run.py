@@ -1500,7 +1500,7 @@ def main():
           // 6. Classes: «La teva hora: avui · …» i sense la llegenda «Avui hi ha classe».
           saveClassDay({ id: 'cdavui', date: TODAY, place: 'Aula 2', note: '', teacher: 'prof@exemple.cat', teacherName: 'Prat, Berta', slots: [{ id: 'qa', time: '17:00', mins: 40, memberId: 'mT1' }] }); await s(300);
           applyRoute('classes'); render(); await s(300);
-          out.classToday = /La teva hora: avui · 17:00/.test(txt('#view')) && !/Avui hi ha classe/.test(txt('.q-legend') + (document.querySelector('.q-legend') ? '' : ''));
+          out.classToday = /La teva hora: avui · 17:00/.test(document.querySelector('#view').textContent) && !/Avui hi ha classe/.test(txt('.q-legend') + (document.querySelector('.q-legend') ? '' : ''));
           // 7. Una obra a mig repartir diu «Repartint» amb el recompte.
           setScore('p1', 'w1', S.members.get('mS0'), 'given');
           applyRoute('tauler/repertori'); ui.matProd = 'p1'; render(); await s(300);
