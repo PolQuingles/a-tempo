@@ -116,7 +116,9 @@ function classPendCard(r) {
 }
 /** Una classe es pot moure si encara no s'ha fet, no té marca i no té un canvi d'hora acceptat. */
 const canMoveSlot = (c, x) => !!x.memberId && classLive(c) && c.date >= TODAY && !x.mark && !x.swapped;
-function classSlotRow(c, x, past) {
+/** Una hora d'un dia de classe. plan: al calendari, que és per planificar (qui ve, a quina hora, moure-la): sense passar llista
+ *  ni les notes, que són a Classes. */
+function classSlotRow(c, x, past, plan) {
   const m = S.members.get(x.memberId);
   const meNow = myId() && x.memberId === myId();
   const rq = slotReqs(c, x);
@@ -145,18 +147,20 @@ function classSlotRow(c, x, past) {
   const priv = owner ? S.classPriv.get(`${c.id}_${x.id}`) : null;
   // Les marques d'assistència només les veuen qui fa la classe i la persona de qui són.
   const mark = x.mark && (owner || meNow) ? `<span class="cl-mk ${x.mark}">${esc(STATUS[x.mark].short)}</span>` : '';
-  const marks = owner && x.memberId && c.date <= TODAY
+  const marks = owner && !plan && x.memberId && c.date <= TODAY
     ? `<span class="cl-marks" role="radiogroup" aria-label="Assistència de ${esc(m ? m.name : x.name || '')}">${CLASS_MARKS.map(k => `<button class="opt o-${k}" role="radio" aria-checked="${x.mark === k}" data-act="cl-mark" data-c="${esc(c.id)}" data-s="${esc(x.id)}" data-v="${k}"><i></i>${esc(STATUS[k].short)}</button>`).join('')}</span>`
     : '';
   const canMove = owner && canMoveSlot(c, x);
-  const noteBtn = owner && x.memberId ? `<span class="cl-acts cl-tools"><button class="btn btn-sm btn-ghost" data-act="cl-note" data-c="${esc(c.id)}" data-s="${esc(x.id)}">${qlIcon('note')}${note || priv ? 'Edita la nota' : 'Nota de classe'}</button><button class="btn btn-sm btn-ghost" data-act="cl-student" data-m="${esc(x.memberId)}">${qlIcon('cls')}Fitxa</button>${canMove ? `<button class="btn btn-sm btn-ghost" data-act="cl-move" data-c="${esc(c.id)}" data-s="${esc(x.id)}">Mou</button>` : ''}</span>` : '';
+  const noteBtn = plan ? (canMove ? `<span class="cl-acts cl-tools"><button class="btn btn-sm btn-ghost" data-act="cl-move" data-c="${esc(c.id)}" data-s="${esc(x.id)}">Mou</button></span>` : '')
+    : owner && x.memberId ? `<span class="cl-acts cl-tools"><button class="btn btn-sm btn-ghost" data-act="cl-note" data-c="${esc(c.id)}" data-s="${esc(x.id)}">${qlIcon('note')}${note || priv ? 'Edita la nota' : 'Nota de classe'}</button><button class="btn btn-sm btn-ghost" data-act="cl-rec-new" data-c="${esc(c.id)}" data-s="${esc(x.id)}">${qlIcon('rec')}Grava</button><button class="btn btn-sm btn-ghost" data-act="cl-student" data-m="${esc(x.memberId)}">${qlIcon('cls')}Fitxa</button>${canMove ? `<button class="btn btn-sm btn-ghost" data-act="cl-move" data-c="${esc(c.id)}" data-s="${esc(x.id)}">Mou</button>` : ''}</span>` : '';
   // A qui fa la classe, abans de fer-la: el que va quedar de l'última i el que l'alumne ha afegit al quadern.
-  const news = owner && m ? stuNews(m.id) : null;
-  const prev = owner && m && !past && !note ? lastClassNote(m.id, c.date) : null;
-  const work = owner && m ? repOf(m.id).find(w => w.status === 'treballant') : null;
+  const news = owner && !plan && m ? stuNews(m.id) : null;
+  const prev = owner && !plan && m && !past && !note ? lastClassNote(m.id, c.date) : null;
+  const work = owner && !plan && m ? repOf(m.id).find(w => w.status === 'treballant') : null;
+  const shown = plan && owner ? null : note;
   return `<div class="cl-slot ${meNow ? 'me' : ''}${m || x.name ? '' : ' is-free'}">
     <span class="t"><b>${esc(x.time || '')}</b>${x.mins && (m || x.name) ? `<small>${+x.mins}′</small>` : ''}</span>
-    <span class="who"><span class="who-l">${m && owner ? `<button class="who-b" data-act="cl-student" data-m="${esc(m.id)}">${esc(fullName(m.name))}</button>` : m ? esc(fullName(m.name)) : x.name ? `${esc(x.name)} <span class="m">· sense fitxa</span>` : '<span class="cl-free">Hora lliure</span>'}${m && m.section ? `<span class="m">${esc(SEC[m.section].short)}${m.part ? esc(m.part) : ''}</span>` : ''}${x.swapped ? '<span class="m">canviat</span>' : ''}</span>${pills || mark ? `<span class="cl-pills">${[mark, pills].filter(Boolean).join(' ')}</span>` : ''}${work ? `<span class="cl-work">${esc(work.title)}</span>` : ''}${news ? `<button class="cl-news" data-act="cl-student" data-m="${esc(m.id)}" data-k="quadern">${qlIcon(news.kind)}<span>${esc(freshText(news))}${news.kind === 'q' && news.text ? `: «${esc(news.text)}»` : ''}</span></button>` : ''}${prev ? `<span class="cl-prev"><b>Última classe · ${esc(shortDate(prev.date))}</b>${esc(prev.text)}</span>` : ''}${note && note.text ? `<span class="cl-note">${esc(note.text)}</span>` : ''}${priv && priv.text ? `<span class="cl-note cl-priv"><b>Privada</b> ${esc(priv.text)}</span>` : ''}${note && note.file ? `<button class="cl-rec" data-act="cl-rec" data-id="${esc(note.id)}">${qlIcon('play')}Enregistrament</button>` : ''}</span>
+    <span class="who"><span class="who-l">${m && owner ? `<button class="who-b" data-act="cl-student" data-m="${esc(m.id)}">${esc(fullName(m.name))}</button>` : m ? esc(fullName(m.name)) : x.name ? `${esc(x.name)} <span class="m">· sense fitxa</span>` : '<span class="cl-free">Hora lliure</span>'}${m && m.section ? `<span class="m">${esc(SEC[m.section].short)}${m.part ? esc(m.part) : ''}</span>` : ''}${x.swapped ? '<span class="m">canviat</span>' : ''}</span>${pills || mark ? `<span class="cl-pills">${[mark, pills].filter(Boolean).join(' ')}</span>` : ''}${work ? `<span class="cl-work">${esc(work.title)}</span>` : ''}${news ? `<button class="cl-news" data-act="cl-student" data-m="${esc(m.id)}" data-k="quadern">${qlIcon(news.kind)}<span>${esc(freshText(news))}${news.kind === 'q' && news.text ? `: «${esc(news.text)}»` : ''}</span></button>` : ''}${prev ? `<span class="cl-prev"><b>Última classe · ${esc(shortDate(prev.date))}</b>${esc(prev.text)}</span>` : ''}${shown && shown.text ? `<span class="cl-note">${esc(shown.text)}</span>` : ''}${!plan && priv && priv.text ? `<span class="cl-note cl-priv"><b>Privada</b> ${esc(priv.text)}</span>` : ''}${shown && shown.file ? `<button class="cl-rec" data-act="cl-rec" data-id="${esc(note.id)}">${qlIcon('play')}Enregistrament</button>` : ''}</span>
     ${acts}${free ? `<button class="btn btn-sm" data-act="cl-free" data-c="${esc(c.id)}" data-s="${esc(x.id)}">Demana-la</button>` : ''}${marks}${noteBtn}</div>`;
 }
 /** La nota de l'última classe d'un alumne abans d'una data (de les que hi ha al mòbil). */
@@ -165,8 +169,8 @@ function lastClassNote(mid, before) {
   for (const n of S.classNotes.values()) if (n.memberId === mid && n.text && (n.date || '') < before && (!best || n.date > best.date)) best = n;
   return best;
 }
-/** Un dia de classe. Dins de l'espai d'un professor/a (inside) el dia i el nom ja són a dalt. */
-function classDayCard(c, past, inside) {
+/** Un dia de classe. Dins de l'espai d'un professor/a (inside) el dia i el nom ja són a dalt; plan: al calendari (vegeu classSlotRow). */
+function classDayCard(c, past, inside, plan) {
   const teach = teachesClasses();
   const facts = [c.place, inside ? '' : teacherOf(c), c.note].filter(Boolean).join(' · ');
   const slots = classSlots(c);
@@ -178,7 +182,7 @@ function classDayCard(c, past, inside) {
         <span><b>${esc(longDate(c.date))}</b>${c.cancelled ? ' <span class="st-pill st-rejected">Anul·lada</span>' : ''}${facts ? `<br><span class="m">${esc(facts)}</span>` : ''}</span>${edit}</div>`;
   return `<div class="cl-day ${c.cancelled ? 'off' : ''}">
     ${head}
-    ${slots.length ? slots.map(x => classSlotRow(c, x, past)).join('') : '<p class="muted u-m-6-0-0 u-fs-t-13">Encara no hi ha hores posades.</p>'}
+    ${slots.length ? slots.map(x => classSlotRow(c, x, past, plan)).join('') : '<p class="muted u-m-6-0-0 u-fs-t-13">Encara no hi ha hores posades.</p>'}
   </div>`;
 }
 function classTeachers() {
@@ -291,7 +295,8 @@ function classTeacherSpace(who) {
         : `<p class="muted u-m-10-4-0 u-fs-t-13">${monthState === 'loading' ? 'Carregant aquest mes…' : monthState === 'error' ? 'No s’ha pogut carregar aquest mes. Comprova la connexió.' : 'Aquest mes no hi ha classes.'}</p>`}
     </div>
     <div class="section-title u-mt-18 cl-dayhead"><h2 class="h2">${esc(longDate(ui.clDay))}</h2>${dayClasses.length ? `<span class="eyebrow">${esc(classDaySpan(dayClasses[0]))}</span>` : ''}</div>
-    ${dayClasses.length ? `<div class="panel">${dayClasses.map(c => classDayCard(c, c.date < TODAY, true)).join('')}</div>`
+    ${dayClasses.length ? `<div class="panel">${dayClasses.map(c => classDayCard(c, c.date < TODAY, true, true)).join('')}</div>
+      ${ui.clDay <= TODAY && dayClasses.some(c => ownsClass(c) && classLive(c)) ? `<button class="btn btn-sm btn-primary u-mt-10" data-act="cl-roll-open" data-date="${esc(ui.clDay)}">${dayClasses.some(c => ownsClass(c) && unmarkedSlots(c).length) ? 'Passa llista' : 'Assistència i notes'} d’aquest dia${ICON.right}</button>` : ''}`
       : `<div class="panel u-p-14 u-fs-t-13 u-c-muted">Cap classe aquest dia.${teach ? ' Amb <b>+ Dia de classe</b> en pots posar una.' : ''}</div>`}`}`;
 
 }
@@ -438,24 +443,27 @@ function viewAllClasses() {
 const myTeacherKey = () => myEmail();
 /** Les hores d'aquest professor/a que tenen alumne i encara no s'han marcat. */
 const unmarkedSlots = c => classSlots(c).filter(x => x.memberId && !x.mark);
-/** La feina del dia del professorat: el que cal veure, la llista d'avui (o de l'última classe), les properes i els dies per
- *  acabar de marcar. */
+/** La feina del dia del professorat: el que cal veure, la llista d'avui (o de l'última classe, o del dia d'abans triat), les
+ *  properes i els dies per acabar de marcar. Aquí, i no al calendari, és on es passa llista i s'escriuen les notes. */
 function classRollBody() {
   const who = myTeacherKey();
   const days = classDays(who).filter(classLive);
   const past = days.filter(c => c.date <= TODAY);
   const now = past.filter(c => c.date === TODAY);
-  const shown = now.length ? now : past.slice(-1);
+  // Un dia d'abans triat (des de «Dies sense acabar de marcar» o del calendari); si no, avui o l'última classe.
+  const picked = ui.rollDay && ui.rollDay !== TODAY ? past.filter(c => c.date === ui.rollDay) : [];
+  const shown = picked.length ? picked : now.length ? now : past.slice(-1);
   const todo = past.filter(c => !shown.includes(c) && c.date >= addDays(TODAY, -45) && unmarkedSlots(c).length).reverse();
   const pend = reqsForTeacher().filter(r => (S.classes.get(r.classId)?.teacher || '') === who);
+  const back = picked.length ? `<button class="btn btn-sm btn-ghost cl-roll-back" data-act="cl-roll-open" data-date="">${ICON.left}${now.length ? 'Torna a avui' : 'Torna a l’última classe'}</button>` : '';
   const day = c => `<div class="section-title"><h2 class="h2">${c.date === TODAY ? 'Avui' : esc(capz(longDate(c.date)))}</h2><span class="eyebrow">${esc(classDaySpan(c))}</span></div>
     <div class="panel">${classDayCard(c, c.date < TODAY, true)}</div>`;
   return `    ${pend.length ? `<div class="section-title"><h2 class="h2">Absències i canvis per veure</h2><span class="eyebrow">${pend.length}</span></div><div class="panel u-d-grid u-gap-10 u-p-12">${pend.map(classPendCard).join('')}</div>` : ''}
     ${clashBanner()}
-    ${shown.length ? shown.map(day).join('') : `<div class="empty">${staffSvg()}<p>Encara no has fet cap classe. El dia que en facis, aquí marcaràs qui hi ha vingut.</p></div>`}
-    ${!now.length && days.some(c => c.date > TODAY) ? `<div class="section-title"><h2 class="h2">Properes classes</h2></div>${classNextList(days.filter(c => c.date > TODAY).slice(0, 3))}` : ''}
+    ${back}${shown.length ? shown.map(day).join('') : `<div class="empty">${staffSvg()}<p>Encara no has fet cap classe. El dia que en facis, aquí marcaràs qui hi ha vingut.</p></div>`}
+    ${!now.length && !picked.length && days.some(c => c.date > TODAY) ? `<div class="section-title"><h2 class="h2">Properes classes</h2></div>${classNextList(days.filter(c => c.date > TODAY).slice(0, 3))}` : ''}
     ${todo.length ? `<div class="section-title"><h2 class="h2">Dies sense acabar de marcar</h2><span class="eyebrow">${todo.length}</span></div>
-      <div class="cl-next">${todo.map(c => { const d = new Date(c.date + 'T12:00:00'), n = unmarkedSlots(c).length; return `<button data-act="cl-roll-day" data-date="${esc(c.date)}">
+      <div class="cl-next">${todo.map(c => { const d = new Date(c.date + 'T12:00:00'), n = unmarkedSlots(c).length; return `<button data-act="cl-roll-open" data-date="${esc(c.date)}">
         <span class="d"><b>${d.getDate()}</b><small>${esc(fmtD(c.date, { month: 'short' }).replace('.', ''))}</small></span>
         <span class="i"><b>${esc(capz(fmtD(c.date, { weekday: 'long' })))}</b><small>${n === 1 ? '1 hora sense marcar' : `${n} hores sense marcar`}</small></span></button>`; }).join('')}</div>` : ''}`;
 }

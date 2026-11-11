@@ -953,6 +953,16 @@ def main():
           // Un enllaç d'abans al Calendari porta al de les classes.
           ui.tab = 'calendari'; render(); await s(200);
           out.profCal = out.profCal && ui.tab === 'classes' && ui.clTab === 'calendari';
+          // Al calendari es planifica; la llista i les notes són a Classes, on es pot obrir un dia d'abans.
+          const c1 = classDays(myTeacherKey()).find(c => classLive(c) && c.slots.some(x => x.memberId));
+          const pastDay = { ...c1, id: 'passat', date: addDays(TODAY, -3), slots: c1.slots.map(x => ({ ...x, mark: undefined })) };
+          saveClassDay(pastDay); await s(300);
+          ui.clView = 'month'; ui.clMonth = pastDay.date.slice(0, 7); ui.clDay = pastDay.date; render(); await s(300);
+          out.calPlan = !!document.querySelector('#view .cl-slot') && !document.querySelector('#view .cl-marks, #view [data-act="cl-note"]') && !!document.querySelector('#view [data-act="cl-roll-open"]');
+          document.querySelector('#view [data-act="cl-roll-open"]').click(); await s(300);
+          out.rollPast = ui.clTab === 'classes' && !!document.querySelector('#view .cl-marks') && !!document.querySelector('#view [data-act="cl-note"]') && !!document.querySelector('#view [data-act="cl-rec-new"]') && !!document.querySelector('#view .cl-roll-back');
+          document.querySelector('#view .cl-roll-back').click(); await s(300);
+          out.rollPast = out.rollPast && !ui.rollDay && !document.querySelector('#view .cl-roll-back');
           out.overflow2 = document.documentElement.scrollWidth <= innerWidth;
           return out; }"""))
         for k, label in [("noPicker", "en obrir l'app no es tria cap rol"),
@@ -986,6 +996,8 @@ def main():
                          ("profAtt", "a Classes hi passa llista"),
                          ("students", "a Alumnes hi té els seus alumnes"),
                          ("profCal", "el Calendari és el de les seves classes"),
+                         ("calPlan", "al calendari es planifica: sense passar llista ni notes, amb un botó cap a Classes"),
+                         ("rollPast", "i a Classes s'hi passa llista d'aquell dia (amb nota, gravació i fitxa), i es torna a avui"),
                          ("overflow2", "sense eixamplar la pantalla del mòbil")]:
             check(r.get(k), label, str(r))
         check(not errors, "sense errors amb els rols sumats", "; ".join(errors[:3]))

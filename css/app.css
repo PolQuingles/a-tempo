@@ -2358,6 +2358,7 @@ body.is-login .appbar{visibility:hidden}
 .tab.tab-moving{position:relative;z-index:2;background:var(--surface);border-radius:var(--r-md)}
 /* El Calendari de Classes: el selector Mes/Setmana a la capçalera. */
 .cl-cal-head{align-items:flex-end}
+.cl-roll-back{margin:0 0 4px -8px}
 .cl-cal-head .cl-view{margin:0}
 .cl-cal-head .cl-view button{padding:0 14px}
 /* L'Espai personal: l'assistència a classe, i el filtre del diari. */

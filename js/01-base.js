@@ -232,7 +232,7 @@ const ui = {
   calProd: 'all', calPast: false,
   statsScope: 'prod', statsProd: null, statsSec: '', statsSort: 'pct',
   manage: 'personal', people: 'singer', pmFilter: 'all', absFilter: 'pending',
-  clWho: null, clMonth: null, clDay: null, clProfOpen: false, qlTab: 'diari', qlFilter: 'tot',
+  clWho: null, clMonth: null, clDay: null, clProfOpen: false, qlTab: 'diari', qlFilter: 'tot', rollDay: null,
   attArea: null, clTab: null,   // Assistència: la meva, la de la corda o la de tot el cor; Classes del professorat: llista o alumnes
 };
 /* ---------- Memòria del mòbil, per agrupació ---------- */
