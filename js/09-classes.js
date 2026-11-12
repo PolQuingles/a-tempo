@@ -238,7 +238,7 @@ function classQuads() {
     const sub = mineDay ? `La teva hora: ${dayLabel(mineDay.date).toLowerCase() || shortDate(mineDay.date)} · ${classSlots(mineDay).find(x => x.memberId === mid).time}`
       : today ? 'Avui hi ha classe' : classWeekdays(next.slice(0, 10));
     const count = students.size ? `${students.size} ${students.size === 1 ? V.member : V.members}`
-      : planRows(t.key).length ? `${planRows(t.key).length} hores fixes` : 'Sense classes';
+      : planRows(t.key).length ? nPl(planRows(t.key).length, 'hora fixa', 'hores fixes') : 'Sense classes';
     return `<button class="quad ${next.length ? '' : 'off'}" data-act="cl-who" data-k="${esc(t.key)}" aria-label="${esc(`${t.name}: ${count}`)}">
       ${pend ? '<i class="q-dot pend"></i>' : ''}${today ? '<i class="q-dot done"></i>' : ''}
       <span class="q-l q-ini">${esc(teacherInitials(t.name))}</span>
@@ -284,7 +284,6 @@ function classTeacherSpace(who) {
       <button class="btn btn-sm btn-primary" data-act="cl-new" data-k="${esc(who)}" data-date="${esc(ui.clDay)}">${ICON.plus}Dia de classe</button>
       <button class="btn btn-sm" data-act="cl-plan" data-k="${esc(who)}">Horari fix${planRows(who).length ? `<span class="tb-n">${planRows(who).length}</span>` : ''}</button>
       <button class="btn btn-sm" data-act="cl-paste" data-k="${esc(who)}">Enganxa un horari</button>
-      <button class="btn btn-sm" data-act="cl-stats">Assistència del curs</button>
     </div>` : ''}
     ${ownsClass({ teacher: who }) ? unlinkedPanel(who) : ''}
     ${ui.clView === 'week' ? classWeekHtml(who) : `<div class="panel month">
@@ -393,7 +392,7 @@ function viewClassHome() {
   const list = classTeachers();
   // Les meves properes classes, després de la de la targeta.
   const mine = student ? classDays().filter(c => c.date >= TODAY && classLive(c) && classSlots(c).some(x => x.memberId === mid)).slice(1, 5) : [];
-  return `<div class="page-head"><h1 class="h1">${esc(V.classes)} ${helpBtn('classes')}</h1>${teach ? '<button class="btn btn-sm" data-act="cl-stats">Assistència del curs</button>' : ''}</div>
+  return `<div class="page-head"><h1 class="h1">${esc(V.classes)} ${helpBtn('classes')}</h1>${teachesClasses() ? '<button class="btn btn-sm" data-act="cl-stats">Assistència del curs</button>' : ''}</div>
     ${helpText('classes', teach
       ? `Aquí hi ha les classes d’avui: marca qui ha vingut, escriu la nota de classe, obre la fitxa de l’alumne o mou-li l’hora. Al <b>Calendari</b> hi ha tots els dies i l’horari fix, i a <b>Alumnes</b>, la fitxa de cadascú.`
       : `Aquí hi ha la teva propera classe i les peticions de canvi d’hora. Els canvis valen només per a la setmana que es demanen, i qui rep la petició ha de dir que sí perquè es faci. Al <b>Calendari</b> hi ha tots els dies, i a l’<b>Espai personal</b>, el teu quadern i l’assistència.`)}
@@ -429,7 +428,7 @@ function viewClassCal() {
 function viewAllClasses() {
   const list = classTeachers();
   if (ui.clWho && !list.some(t => t.key === ui.clWho)) ui.clWho = null;
-  return `<div class="page-head"><h1 class="h1">${esc(V.classes)} ${helpBtn('classes')}</h1></div>
+  return `<div class="page-head"><h1 class="h1">${esc(V.classes)} ${helpBtn('classes')}</h1>${teachesClasses() ? '<button class="btn btn-sm" data-act="cl-stats">Assistència del curs</button>' : ''}</div>
     ${helpText('classes', `Al calendari hi ha els dies de classe i les hores de cada ${esc(V.member)}${list.length > 1 ? `; a dalt tries de quin ${esc(V.Teacher.toLowerCase())}` : ''}. Els canvis d’hora valen només per a la setmana que es demanen.`)}
     ${classAvisosHtml(teachesClasses() ? reqsForTeacher() : [])}
     ${teachesClasses() ? clashBanner() : ''}

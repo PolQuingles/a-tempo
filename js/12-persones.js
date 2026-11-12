@@ -260,7 +260,7 @@ function sheetPerson(email, preset = {}) {
           }
           // 3) Si fa classes i ja en tenia com a professor sense compte, passen al seu compte.
           const seat = rec && all.includes('voice') && q('#ps-seat')?.value;
-          if (seat) { const n = await moveTeacher(seat, rec.email, rec.name); toast(`${n} dies de classe passats al seu compte`); }
+          if (seat) { const n = await moveTeacher(seat, rec.email, rec.name); toast(`${nPl(n, 'dia de classe passat', 'dies de classe passats')} al seu compte`); }
           render();
           if (rec && !rec.lastSeen && (!existing || rec.email !== existing.email)) { sheetInvite(rec, true); return; }
           closeSheet();

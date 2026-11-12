@@ -26,7 +26,7 @@ function sheetProduction(pid) {
       <label class="field"><span>Nom</span><input class="inp" id="pe-name" type="text" maxlength="60" value="${esc(d.name)}" placeholder="p. ex. Concert de Nadal 2026"></label>
       <label class="field"><span>Nom curt (opcional)</span><input class="inp" id="pe-short" type="text" maxlength="24" value="${esc(d.short || '')}" placeholder="p. ex. Nadal"><small>Surt a Inici i al calendari, on el nom sencer no hi cap.</small></label>
       <div class="field"><span>Color al calendari</span><div class="pickers" id="pe-hue">${PROD_HUES.map(h => `<button type="button" class="hue-pick prod-tone" style="--ph:${h}" data-hue="${h}" aria-pressed="${prodHue(d) === h}" aria-label="Color ${h}"></button>`).join('')}</div></div>
-      <div class="field"><span>Cartell</span><div class="poster-edit"><span id="pe-poster">${d.poster ? `<span class="poster-th"><img src="${esc(d.poster)}" alt=""></span>` : '<span class="poster-th empty">Cap</span>'}</span>
+      <div class="field"><span>Cartell</span><div class="poster-edit"><span id="pe-poster">${d.poster ? `<span class="poster-th"><img src="${esc(d.poster)}" alt=""></span>` : '<span class="poster-th is-empty">Cap</span>'}</span>
         <span class="u-d-flex u-gap-6 u-fw-wrap"><label class="btn btn-sm" for="pe-poster-f">${d.poster ? 'Canvia’l' : 'Tria una imatge'}</label><input id="pe-poster-f" type="file" accept="image/*" class="sr">
         <button type="button" class="btn btn-sm btn-ghost" id="pe-poster-rm" ${d.poster ? '' : 'hidden'}>Treu-lo</button></span></div>
         <small>Surt a Inici, al calendari i a la fitxa ${V.sh.del}. Una foto o el PDF del cartell convertit en imatge.</small></div>
@@ -88,7 +88,7 @@ function sheetProduction(pid) {
         } catch { toast('No s’ha pogut llegir la imatge. Prova amb una foto (JPG o PNG).'); }
         pf.value = '';
       };
-      el.querySelector('#pe-poster-rm').onclick = () => { delete d.poster; el.querySelector('#pe-poster').innerHTML = '<span class="poster-th empty">Cap</span>'; el.querySelector('#pe-poster-rm').hidden = true; };
+      el.querySelector('#pe-poster-rm').onclick = () => { delete d.poster; el.querySelector('#pe-poster').innerHTML = '<span class="poster-th is-empty">Cap</span>'; el.querySelector('#pe-poster-rm').hidden = true; };
       const bindRm = () => el.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { d.sessions = d.sessions.filter(s => s.id !== b.dataset.rm); el.querySelector('#pe-slist').innerHTML = sessionsList(); bindRm(); });
       bindRm();
       el.querySelectorAll('#g-days .pick').forEach(b => b.onclick = () => b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') !== 'true'));

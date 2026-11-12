@@ -1300,7 +1300,7 @@ def main():
           out.marks = !!document.querySelector('.cal-row.is-past .vmarks');
           ui.calPast = false; render(); await s(200);
           applyRoute('inici'); render(); await s(300);
-          out.noPlanChip = !document.querySelector('.soon-row .fitxa-chip.empty');
+          out.noPlanChip = !document.querySelector('.soon-row .fitxa-chip.is-empty');
           const nx = allSessions().find(x => x.date >= TODAY && !isShow(x));
           out.planTodo = !planOf(nx) && nx.date <= addDays(TODAY, 7) ? todoItems().some(x => x.icon === 'plan' && /pla d’assaig/.test(x.t)) : true;
           applyRoute('gestio/personal'); render(); await s(300);

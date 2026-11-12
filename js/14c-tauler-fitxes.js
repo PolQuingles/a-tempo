@@ -131,7 +131,7 @@ function sheetMaterial(pid, id) {
           } catch { btn.disabled = false; btn.textContent = 'Desa'; toast('No s’ha pogut pujar un fitxer. Torna-ho a provar.'); return; }
           const p = S.productions.get(p0.id);
           saveTo(p, [...(p.materials || []), ...add]);
-          ui.matProd = p.id; closeSheet(); toast(`${add.length} materials pujats`); render();
+          ui.matProd = p.id; closeSheet(); toast(nPl(add.length, 'material pujat', 'materials pujats')); render();
           return;
         }
         if (!title.value.trim() && !src.picked()) { toast('Posa un títol'); return; }

@@ -226,12 +226,12 @@ function sheetClassPaste(preset) {
         let known;
         try { known = await classDaysByDate(who); } catch { toast('No s’han pogut llegir els dies que ja hi ha. Comprova la connexió.'); return; }
         const kept = dates.filter(d => keptDay(known.get(d))).length;
-        if (!await confirmSheet('Crear el calendari?', `Es crearan o actualitzaran <b>${dates.length - kept} dies de classe</b>, entre el ${ddmm(dates[0])} i el ${ddmm(dates[dates.length - 1])}, amb ${rows.length} hores cada setmana. Es mantenen les notes, les assistències i els canvis d’hora.${keptText(kept)}${clashes ? `<br><br><b>Atenció:</b> ${clashes} ${clashes === 1 ? 'hora coincideix' : 'hores coincideixen'} amb un assaig o un concert. Les marcarà al calendari perquè les puguis moure.` : ''}`, 'Crea-les')) return;
+        if (!await confirmSheet('Crear el calendari?', `Es crearan o actualitzaran <b>${nPl(dates.length - kept, 'dia de classe', 'dies de classe')}</b>, entre el ${ddmm(dates[0])} i el ${ddmm(dates[dates.length - 1])}, amb ${nPl(rows.length, 'hora', 'hores')} cada setmana. Es mantenen les notes, les assistències i els canvis d’hora.${keptText(kept)}${clashes ? `<br><br><b>Atenció:</b> ${clashes} ${clashes === 1 ? 'hora coincideix' : 'hores coincideixen'} amb un assaig o un concert. Les marcarà al calendari perquè les puguis moure.` : ''}`, 'Crea-les')) return;
         try {
           const pl = Object.fromEntries(parsed.days.map(d => [d, String(placeOf(el, d)).trim()]).filter(([, v]) => v));
           const done = await writeClassDays(dates, rows, who, pl, known);
           if (el.querySelector('#cp-plan').checked) savePlan(who, rows.map(r => ({ id: uid('pl'), day: r.day, time: hhmm(r.from), mins: r.mins, memberId: r.memberId || '', ...(r.memberId ? {} : { name: r.name || '' }) })), pl);
-          closeSheet(); toast(`${done} dies de classe creats`); render();
+          closeSheet(); toast(nPl(done, 'dia de classe creat', 'dies de classe creats')); render();
         } catch { toast('No s’han pogut desar. Comprova la connexió.'); render(); }
       };
     },
@@ -323,8 +323,8 @@ function sheetClassPlan(who) {
         let known;
         try { known = await classDaysByDate(who); } catch { toast('No s’han pogut llegir els dies que ja hi ha. Comprova la connexió.'); return; }
         const kept = dates.filter(d => keptDay(known.get(d))).length;
-        if (!await confirmSheet('Generar els dies?', `Es crearan o actualitzaran <b>${dates.length - kept} dies de classe</b>, entre el ${ddmm(dates[0])} i el ${ddmm(dates[dates.length - 1])}, amb ${list.length} hores cada setmana.${keptText(kept)}${clashes ? `<br><br><b>Atenció:</b> ${clashes} ${clashes === 1 ? 'hora coincideix' : 'hores coincideixen'} amb un assaig o un concert.` : ''}`, 'Genera-los')) return;
-        try { const done = await writeClassDays(dates, list, who, rec.places, known); closeSheet(); toast(`${done} dies de classe creats`); render(); }
+        if (!await confirmSheet('Generar els dies?', `Es crearan o actualitzaran <b>${nPl(dates.length - kept, 'dia de classe', 'dies de classe')}</b>, entre el ${ddmm(dates[0])} i el ${ddmm(dates[dates.length - 1])}, amb ${nPl(list.length, 'hora', 'hores')} cada setmana.${keptText(kept)}${clashes ? `<br><br><b>Atenció:</b> ${clashes} ${clashes === 1 ? 'hora coincideix' : 'hores coincideixen'} amb un assaig o un concert.` : ''}`, 'Genera-los')) return;
+        try { const done = await writeClassDays(dates, list, who, rec.places, known); closeSheet(); toast(nPl(done, 'dia de classe creat', 'dies de classe creats')); render(); }
         catch { toast('No s’han pogut desar. Comprova la connexió.'); }
       };
     },

@@ -109,7 +109,7 @@ const secIdx = id => Math.max(0, SECTIONS.findIndex(x => x.id === id)) % 8;
 function seatCell(mid, extra = '') {
   const m = S.members.get(mid);
   return m ? `<span class="seat sx${secIdx(m.section)} ${extra}" title="${esc(m.name)}"><b>${esc(firstName(m.name))}</b><small>${esc(partTag(m) || SEC[m.section].short)}</small></span>`
-    : `<span class="seat empty ${extra}"></span>`;
+    : `<span class="seat is-empty ${extra}"></span>`;
 }
 function seatingHtml(s, me) {
   const rows = seatRows(s);
@@ -233,7 +233,7 @@ async function sheetParticipants(sid) {
   let onlyYes = !!s.rsvp;
   const cols = new Set(partCols().filter(([, , on]) => on).map(([k]) => k));
   const title = `${s.type || V.sh.Show} · ${prodNames(s)}`;
-  const count = el => { el.querySelector('#pt-n').textContent = `${concertPeople(s, onlyYes).length} persones a la llista`; };
+  const count = el => { el.querySelector('#pt-n').textContent = `${nPl(concertPeople(s, onlyYes).length, 'persona', 'persones')} a la llista`; };
   openSheet({
     title: 'Llista de participants',
     body: `<p class="u-mt-0"><b>${esc(title)}</b><br><span class="muted u-fs-t-13">${esc(longDate(s.date))}${s.place ? ` · ${esc(s.place)}` : ''}</span></p>
@@ -255,7 +255,7 @@ async function sheetParticipants(sid) {
 }
 function participantsHtml(s, onlyYes, cols) {
   const t = participantRows(s, onlyYes, cols);
-  return `<p class="pr-sub">${esc(longDate(s.date))}${s.time ? ` · ${esc(timeRange(s))}` : ''}${s.place ? ` · ${esc(s.place)}` : ''} · ${t.rows.length} persones</p>
+  return `<p class="pr-sub">${esc(longDate(s.date))}${s.time ? ` · ${esc(timeRange(s))}` : ''}${s.place ? ` · ${esc(s.place)}` : ''} · ${nPl(t.rows.length, 'persona', 'persones')}</p>
     <table class="pr-table${cols.has('sign') ? ' sign' : ''}"><thead><tr>${t.head.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead>
     <tbody>${t.rows.map(r => `<tr>${r.map(v => `<td>${esc(v)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
 }

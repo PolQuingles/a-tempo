@@ -364,7 +364,7 @@ const actions = {
     saveAttendance(key, doc);
     render();
     celebrateRoll(cur, ui.section, true);
-    toast(`${pending.length} marcats com a presents · llista completa`, { label: 'Desfés', run: () => {
+    toast(`${nPl(pending.length, 'marcat com a present', 'marcats com a presents')} · llista completa`, { label: 'Desfés', run: () => {
       if (before) saveAttendance(key, before);
       else { const d = clone(attDoc(cur.id, ui.section)); for (const m of pending) delete d.marks[m.id]; saveAttendance(key, d); }
       render();

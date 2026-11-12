@@ -195,7 +195,7 @@ async function sheetJoinLink(fresh) {
     body: `<p class="u-mt-0">Qui l’obri entra amb el seu compte de Google (o amb un altre correu), tria el seu nom de la llista i et demana l’accés. Tu l’aproves amb un toc, des d’Inici (a «Per fer»). Així no cal recollir els correus.</p>
       <div class="jn-qr" id="jn-qr" aria-label="Codi QR de l’enllaç"><span class="muted">Fent el QR…</span></div>
       <div class="linkbox" id="jn-url">${esc(url)}</div>
-      <p class="muted u-fs-t-13">${left ? `A la llista per triar-s’hi hi ha les ${left} persones de la plantilla que encara no tenen accés.` : 'Tota la plantilla ja té accés: qui l’obri haurà de dir el seu nom.'} Si l’enllaç arriba a qui no toca, fes-ne un de nou: el d’ara deixarà de funcionar.</p>`,
+      <p class="muted u-fs-t-13">${left ? left === 1 ? 'A la llista per triar-s’hi hi ha la persona de la plantilla que encara no té accés.' : `A la llista per triar-s’hi hi ha les ${left} persones de la plantilla que encara no tenen accés.` : 'Tota la plantilla ja té accés: qui l’obri haurà de dir el seu nom.'} Si l’enllaç arriba a qui no toca, fes-ne un de nou: el d’ara deixarà de funcionar.</p>`,
     foot: `<button class="btn btn-danger-ghost" id="jn-off">Desactiva’l</button><button class="btn" id="jn-new">Fes-ne un de nou</button><span class="spacer"></span><button class="btn" id="jn-print">Imprimeix el QR</button><button class="btn btn-primary" id="jn-share">${navigator.share ? 'Comparteix' : 'Copia l’enllaç'}</button>`,
     onMount: el => {
       drawJoinQr(el.querySelector('#jn-qr'), url);

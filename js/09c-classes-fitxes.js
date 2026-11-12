@@ -373,8 +373,8 @@ function sheetClassStats(onlyMine) {
       const pct = r => r.total ? Math.round(((r.P + r.R) / r.total) * 100) : null;
       el.querySelector('.sheet-b').innerHTML = !marked
         ? `<p class="u-m-0">Encara no hi ha cap classe amb l’assistència marcada. ${teachesClasses() ? 'Marca-la des del calendari, al dia que toqui.' : ''}</p>`
-        : `<p class="u-mt-0">${days.length} dies de classe al curs · ${marked} assistències marcades.</p>
-          <ul class="mini-list u-maxh-none">${rows.map(({ m, r }) => `<li><span>${esc(m.name)}<br><span class="m">${r.P + r.R} de ${r.total} classes${r.FJ ? ` · ${r.FJ} just.` : ''}${r.FNJ ? ` · ${r.FNJ} no just.` : ''}</span></span>
+        : `<p class="u-mt-0">${nPl(days.length, 'dia de classe', 'dies de classe')} al curs · ${nPl(marked, 'assistència marcada', 'assistències marcades')}.</p>
+          <ul class="mini-list u-maxh-none">${rows.map(({ m, r }) => `<li><span>${esc(m.name)}<br><span class="m">${r.P + r.R} de ${nPl(r.total, 'classe', 'classes')}${r.FJ ? ` · ${r.FJ} just.` : ''}${r.FNJ ? ` · ${r.FNJ} no just.` : ''}</span></span>
             <span class="mono"><b>${pct(r)}%</b></span></li>`).join('')}</ul>
           <p class="muted u-fs-t-13 u-m-10-0-0">Compta les classes marcades: hi ha assistit (present o amb retard) sobre el total.</p>`;
     },
@@ -388,9 +388,9 @@ function sheetClassDay(id, preset) {
   const usualMins = () => +rec.slots[rec.slots.length - 1]?.mins || +planRows(rec.teacher)[0]?.mins || 30;
   const taken = () => new Set(rec.slots.map(x => x.memberId).filter(Boolean));
   const rows = () => rec.slots.map((x, i) => `<div class="sec-row u-d-flex u-gap-6 u-ai-center u-fw-wrap" data-i="${i}">
-      <input class="inp u-w-110" type="time" value="${esc(x.time || '')}" data-f="time">
+      <input class="inp u-w-110" type="time" value="${esc(x.time || '')}" data-f="time" aria-label="Hora">
       <input class="inp u-w-72" type="number" min="5" max="120" step="5" value="${+x.mins || usualMins()}" data-f="mins" aria-label="Minuts">
-      <select class="inp u-flex-1 u-minw-130" data-f="member"><option value="">— lliure —</option>${memberOptions(x.memberId || '')}</select>
+      <select class="inp u-flex-1 u-minw-130" data-f="member" aria-label="${esc(V.Member)}"><option value="">— lliure —</option>${memberOptions(x.memberId || '')}</select>
       <button type="button" class="icon-btn" data-rm="${i}" aria-label="Treu aquesta hora">${ICON.close}</button>
     </div>`).join('');
   const read = el => {
@@ -419,7 +419,7 @@ function sheetClassDay(id, preset) {
       ${teacherOptions().length > 1 ? `<label class="field"><span>${esc(V.Teacher)}</span><select class="inp" id="cd-who">${teacherOptions().map(t => `<option value="${esc(t.key)}" ${t.key === (rec.teacher || '') ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></label>` : ''}
       <div class="field"><span>Genera les hores</span>
         <div class="u-d-flex u-gap-6 u-fw-wrap u-ai-center">
-          <input class="inp u-w-110" id="cd-from" type="time" value="17:00">
+          <input class="inp u-w-110" id="cd-from" type="time" value="17:00" aria-label="Hora de la primera classe">
           <input class="inp u-w-80" id="cd-mins" type="number" min="5" max="120" step="5" value="${usualMins()}" aria-label="Minuts per classe">
           <span class="muted u-fs-t-13">min ·</span>
           <input class="inp u-w-70" id="cd-n" type="number" min="1" max="20" value="6" aria-label="Quantes classes">
@@ -551,7 +551,7 @@ function sheetClassSwap(classId, slotId) {
           ...(one ? { withSlotId: one.x.id, withClassId: one.k.id, withMemberId: one.x.memberId, withName: S.members.get(one.x.memberId)?.name || '' }
             : { open: true, ...(sel.length ? { to: sel.map(o => o.x.memberId), offers: Object.fromEntries(sel.map(o => [o.x.memberId, key(o)])) } : {}) }),
           reason: el.querySelector('#cs-why').value.trim(), status: 'pending', createdAt: new Date().toISOString(), uid: S.uid });
-        closeSheet(); toast(one ? 'Petició enviada' : sel.length ? `Demanat a ${sel.length} persones` : 'Demanat a tothom qui té classe aquella setmana'); render();
+        closeSheet(); toast(one ? 'Petició enviada' : sel.length ? `Demanat a ${nPl(sel.length, 'persona', 'persones')}` : 'Demanat a tothom qui té classe aquella setmana'); render();
       };
     },
   });

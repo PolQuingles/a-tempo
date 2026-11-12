@@ -113,7 +113,7 @@ function sheetRetention() {
       el.querySelector('#rt-cut').onchange = e => { cut = e.target.value || season.from; paint(el); };
       el.querySelector('#rt-go').onclick = async () => {
         const p = retentionPlan(cut);
-        if (!await confirmSheet('Esborrar-ho per sempre?', `S’esborraran ${p.att.length} llistes, ${p.abs.length} avisos, ${p.rsvp.length} respostes i ${p.classes.length} dies de classe d’abans del ${esc(shortDate(cut))}. No es pot desfer.`, 'Esborra-ho', true)) return;
+        if (!await confirmSheet('Esborrar-ho per sempre?', `S’esborraran ${nPl(p.att.length, 'llista', 'llistes')}, ${nPl(p.abs.length, 'avís', 'avisos')}, ${nPl(p.rsvp.length, 'resposta', 'respostes')} i ${nPl(p.classes.length, 'dia de classe', 'dies de classe')} d’abans del ${esc(shortDate(cut))}. No es pot desfer.`, 'Esborra-ho', true)) return;
         try { await runRetention(p); toast('Fet: les dades velles s’han esborrat'); }
         catch { toast('No s’ha pogut acabar. Comprova la connexió i torna-ho a provar.'); }
         render();

@@ -102,7 +102,7 @@ function sheetTrip(id) {
   const t = ex ? clone(ex) : { id: uid('tr'), title: '', from: '', to: '', place: '', deadline: '', notes: '', sections: [], transports: [], rooms: [], questions: [], createdAt: new Date().toISOString(), by: S.me?.name || S.email || '' };
   t.transports = t.transports || []; t.rooms = t.rooms || []; t.questions = t.questions || [];
   const listRows = (key, label, unit) => t[key].map(x => `<div class="sec-row u-d-flex u-gap-6 u-ai-center" data-k="${key}" data-id="${esc(x.id)}">
-      <input class="inp u-flex-1 u-minw-0" data-f="name" type="text" maxlength="40" value="${esc(x.name)}" placeholder="${label}">
+      <input class="inp u-flex-1 u-minw-0" data-f="name" type="text" maxlength="40" value="${esc(x.name)}" placeholder="${label}" aria-label="${label}">
       <input class="inp u-w-84" data-f="n" type="number" min="1" max="200" inputmode="numeric" value="${esc(String(x[unit] || ''))}" aria-label="${unit === 'seats' ? 'Places' : 'Llits'}">
       <button type="button" class="icon-btn" data-rm="${esc(x.id)}" aria-label="Treu-lo">${ICON.close}</button></div>`).join('');
   const read = el => {
@@ -219,7 +219,7 @@ function tripRows(t) {
 function tripHtml(t) {
   const c = tripCounts(t);
   const by = (list, key) => (list || []).map(x => ({ x, ms: c.yes.filter(m => signupOf(t, m.id)?.[key] === x.id) }));
-  return `<p class="pr-sub">${esc(capz(tripDates(t)))}${t.place ? ` · ${esc(t.place)}` : ''} · ${c.yes.length} persones</p>
+  return `<p class="pr-sub">${esc(capz(tripDates(t)))}${t.place ? ` · ${esc(t.place)}` : ''} · ${nPl(c.yes.length, 'persona', 'persones')}</p>
     ${(t.transports || []).length ? `<h2>Transport</h2>${by(t.transports, 'transport').map(({ x, ms }) => `<h3>${esc(x.name)} · ${ms.length}/${x.seats || 0}</h3><ol class="pr-list">${ms.map(m => `<li>${esc(fullName(m.name))} <small>${esc(phoneOf(m))}</small></li>`).join('')}</ol>`).join('')}` : ''}
     ${(t.rooms || []).length ? `<h2>Habitacions</h2><table class="pr-table"><tbody>${by(t.rooms, 'room').map(({ x, ms }) => `<tr><td><b>${esc(x.name)}</b></td><td>${ms.map(m => esc(fullName(m.name))).join(', ')}</td><td>${ms.length}/${x.beds || 0}</td></tr>`).join('')}</tbody></table>` : ''}
     ${(t.questions || []).map(q => { const counts = {}; for (const m of c.yes) { const v = signupOf(t, m.id)?.answers?.[q.id]; if (v) counts[v] = (counts[v] || 0) + 1; } return Object.keys(counts).length ? `<p class="pr-sub"><b>${esc(q.label)}</b> ${Object.entries(counts).map(([v, n]) => `${esc(v)}: ${n}`).join(' · ')}</p>` : ''; }).join('')}
