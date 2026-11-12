@@ -50,7 +50,7 @@ function openSheet({ title, body, foot = '', onMount = null, wide = false }) {
   closeSheet(true);
   const root = $('#sheet-root');
   root.innerHTML = `<div class="sheet-back" data-sheet-back>
-    <div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(title)}" ${wide ? 'style="max-width:680px"' : ''}>
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(title)}" ${wide ? 'data-wide' : ''}>
       <div class="sheet-grab" aria-hidden="true"></div>
       <div class="sheet-h">${fromMenu ? `<button class="icon-btn sheet-up" data-act="account" aria-label="Torna a El teu compte">${ICON.left}</button>` : ''}<h2 class="h2">${esc(title)}</h2><button class="icon-btn" data-act="sheet-close" aria-label="Tanca">${ICON.close}</button></div>
       <div class="sheet-b">${body}</div>
@@ -130,7 +130,7 @@ function sheetSessionPicker() {
   for (const p of productionsSorted()) {
     const ss = list.filter(s => s.prodId === p.id);
     if (!ss.length) continue;
-    body += `<div class="eyebrow prod-tone" style="margin:14px 0 4px;--ph:${prodHue(p)}"><i class="pdot"></i>${esc(p.name)}</div><ul class="picklist">${ss.map(s => {
+    body += `<div class="eyebrow prod-tone u-m-14-0-4" style="--ph:${prodHue(p)}"><i class="pdot"></i>${esc(p.name)}</div><ul class="picklist">${ss.map(s => {
       const prs = SECTIONS.filter(x => convoked(s, x.id)).map(x => progress(s, x.id));
       const done = prs.reduce((a, b) => a + b.done, 0), tot = prs.reduce((a, b) => a + b.total, 0);
       return `<li><button data-act="pick-session" data-sid="${s.id}" aria-current="${s.id === ui.sessionId}" id="pick-${s.id}">
@@ -548,7 +548,7 @@ function sheetMemberStats(mid) {
   openSheet({
     title: m.name,
     body: `<div class="eyebrow u-mb-10">${SEC[m.section].name} · ${esc(scope.name)}</div>
-      ${rs ? `<div class="notice" style="margin:0 0 12px;background:${rs.status === 'ok' ? 'var(--p-soft)' : rs.status === 'risk' ? 'var(--fj-soft)' : 'var(--fnj-soft)'};border:0">
+      ${rs ? `<div class="notice rs-note rs-${rs.status === 'ok' || rs.status === 'risk' ? rs.status : 'out'}">
         <b>${rs.status === 'ok' ? `Compleix la norma del ${minAttendance()}%` : rs.status === 'risk' ? 'En risc de no poder fer el concert' : 'No pot fer el concert'}</b>
         <span>Assistència als assajos: ${pct(rs.cur)} (${rs.att} de ${rs.att + rs.abs})${rs.remaining ? ` · queden ${rs.remaining} assajos, màxim possible ${pct(rs.best)}` : ''}.</span></div>` : ''}
       ${leaveText(m) ? `<p class="muted u-m-0-0-10 u-fs-t-13">${leaveText(m)}</p>` : ''}
@@ -562,7 +562,7 @@ function sheetMemberStats(mid) {
       ${hist ? `<div class="hist">${hist}</div>` : '<p class="muted">Encara no hi ha sessions passades.</p>'}
       <div class="legend">${ORDER.map(k => `<span><i class="i-${k}"></i>${STATUS[k].short}</span>`).join('')}<span><i class="i-none"></i>Sense llista</span></div>
       ${r.notes.length ? `<div class="section-title u-mt-20"><h3 class="eyebrow">Motius registrats</h3></div>
-      <ul class="notes-list">${r.notes.map(({ s, mk }) => `<li><span class="mono muted">${ddmm(s.date)}</span><span><span class="pill ${mk.s === 'FNJ' ? 'fnj' : ''}" style="${mk.s === 'FJ' ? 'background:var(--fj-soft);color:var(--ink)' : ''}">${mk.s}</span> ${esc(mk.note)}</span></li>`).join('')}</ul>` : ''}
+      <ul class="notes-list">${r.notes.map(({ s, mk }) => `<li><span class="mono muted">${ddmm(s.date)}</span><span><span class="pill ${mk.s === 'FNJ' ? 'fnj' : mk.s === 'FJ' ? 'fj' : ''}">${mk.s}</span> ${esc(mk.note)}</span></li>`).join('')}</ul>` : ''}
       ${m.phone ? `<p class="u-mt-18"><a class="btn btn-sm" href="tel:${esc(m.phone.replace(/\s/g, ''))}">Truca ${esc(m.phone)}</a></p>` : ''}
       ${canTrack(m) ? '<div id="ms-track"></div>' : ''}`,
     foot: canEdit() || canWriteTo() ? `<span class="spacer"></span>${canWriteTo() && writableMembers().some(x => x.id === m.id) ? `<button class="btn" data-act="thread-to" data-mid="${m.id}">Escriu-li</button>` : ''}${canEdit() ? `<button class="btn" data-act="certificate" data-mid="${m.id}">Certificat d’assistència</button>` : ''}` : '',

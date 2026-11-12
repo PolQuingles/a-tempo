@@ -124,7 +124,7 @@ function viewStats(inBoard) {
         return `<tr data-act="member-stats" data-mid="${r.m.id}" data-find="${esc(normText(r.m.name))}">
           <td class="m">${esc(SEC[r.m.section].name)}</td><td><b>${esc(r.m.name)}</b></td>
           <td class="n"><b>${counted ? pct(rate(r)) : (r.NP ? 'No fa' : '—')}</b></td><td class="n">${r.P}</td><td class="n">${r.R}</td><td class="n">${r.min ? `${r.min}′` : ''}</td><td class="n">${r.leftMin ? `${r.leftMin}′` : ''}</td>
-          <td class="n">${r.FJ}</td><td class="n" ${r.FNJ ? 'style="color:var(--fnj-text);font-weight:700"' : ''}>${r.FNJ}</td><td class="n">${r.NP || ''}</td>
+          <td class="n">${r.FJ}</td><td class="n${r.FNJ ? ' is-fnj' : ''}">${r.FNJ}</td><td class="n">${r.NP || ''}</td>
           <td>${rs && rs.status !== 'ok' ? `<span class="rule ${rs.status}">${rs.status === 'out' ? `&lt;${minAttendance()}%` : 'En risc'}</span>` : ''}</td></tr>`;
       }).join('')}</tbody></table></div>
     <div class="panel find-empty" hidden>Ningú amb aquest nom.</div></div>`;

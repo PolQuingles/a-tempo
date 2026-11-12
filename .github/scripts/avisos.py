@@ -20,7 +20,7 @@ donat d'alta es miren en dues lectures, i la plantilla i les llistes només quan
 L'estat («què ja s'ha enviat») es desa al repositori privat de còpies, perquè el compte de servei no pot
 escriure a la base de dades: la primera agrupació a l'arrel i la resta a agrupacions/<agrupació>/.
 """
-import datetime, hashlib, json, math, os, subprocess, sys, time
+import datetime, hashlib, json, math, os, re, subprocess, sys, time
 from zoneinfo import ZoneInfo
 
 from pywebpush import WebPushException, webpush
@@ -832,6 +832,47 @@ class Group:
                 for did, d in self.to_emails(staff_of(req)):
                     self.deliver(f"cls:{rid}:{status}:t:{did}", d, teach_body, f"cls-{rid}")
 
+    # ---------- El quadern de classe ----------
+    def quadern(self):
+        """Avisos del quadern de classe. A l'alumne: la nota d'una classe (o la seva gravació) i el que li deixa o li respon el
+        professorat al quadern (tfresh, a la seva fitxa). Al professorat que el porta: el que l'alumne hi afegeix (fresh), si encara
+        no ho ha vist a l'app (seen)."""
+        if QUIET or self.first_run or not self.config.get("classesOn"):
+            return
+        members = self.members()
+        name = lambda mid: dades.full_name((members.get(mid or "") or {}).get("name")) or "Un alumne"
+
+        def teacher(email):
+            p = self.people.get(email or "") or {}
+            return dades.full_name(p.get("name")) or "El teu professor/a"
+
+        seen_key = lambda e: re.sub(r"[^a-z0-9]+", "_", str(e or "").lower())   # com seenKey, a js/09d-classes-quadern.js
+        # Les notes de classe noves: una per classe, i una altra si després s'hi afegeix la gravació (canviar el text no avisa).
+        for nid, n in sorted(r.query(self.base, "classNotes", [("at", ">=", FRESH)]).items()):
+            mid = n.get("memberId")
+            if not mid or not (n.get("text") or n.get("file")):
+                continue
+            when = day_label(n["date"]) if n.get("date") else "l'última classe"
+            what = "una nota i una gravació" if n.get("text") and n.get("file") else "una gravació" if n.get("file") else "una nota"
+            body = f"{teacher(n.get('teacher'))} t'ha deixat {what} de la classe de {when}. La tens al teu quadern."
+            for did, d in self.targets("classes", member_ids={mid}):
+                self.deliver(f"qd:note:{nid}:{'f' if n.get('file') else 't'}:{did}", d, body, f"qd-{mid}")
+        for mid, st in sorted(r.list(f"{self.base}/students").items()):
+            tf = st.get("tfresh") or {}
+            if (tf.get("at") or "") >= FRESH:
+                who = teacher(tf.get("by"))
+                body = f"{who} t'ha respost al quadern." if tf.get("kind") == "reply" else \
+                    f"{who} t'ha deixat {'una gravació' if tf.get('kind') == 'rec' else 'material'} al quadern."
+                for did, d in self.targets("classes", member_ids={mid}):
+                    self.deliver(f"qd:t:{mid}:{tf['at']}:{did}", d, body, f"qd-{mid}")
+            f = st.get("fresh") or {}
+            if (f.get("at") or "") >= FRESH:
+                body = f"{name(mid)} ha afegit {'una gravació' if f.get('kind') == 'rec' else 'una nota'} al seu quadern."
+                seen = st.get("seen") or {}
+                emails = {e for e in st.get("teachers") or [] if (seen.get(seen_key(e)) or "") < f["at"]}
+                for did, d in self.to_emails(emails):
+                    self.deliver(f"qd:s:{mid}:{f['at']}:{did}", d, body, f"qd-s-{mid}")
+
     # ---------- Caps de corda o de secció ----------
     def leader_sections(self, d):
         """Seccions de les quals aquest aparell vol els avisos de cap."""
@@ -948,6 +989,7 @@ class Group:
         self.absences()
         self.new_absences()
         self.classes()
+        self.quadern()
         if not self.first_run:
             self.rolls()
         self.risk()

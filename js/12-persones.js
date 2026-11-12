@@ -140,7 +140,6 @@ function sheetPerson(email, preset = {}) {
     const ms = free().filter(m => m.section === x.id).sort(byName);
     return ms.length ? `<optgroup label="${esc(x.name)}">${ms.map(m => `<option value="${esc(m.id)}" ${m.id === sel ? 'selected' : ''}>${esc(m.name)}${m.active === false ? ' (inactiu)' : ''}</option>`).join('')}</optgroup>` : '';
   }).join('');
-  const small = 'style="font-size:var(--t-13)"';
   openSheet({
     title: existing ? (existing.name || existing.email) : from ? `Accés per a ${fullName(from.name)}` : 'Afegeix una persona',
     body: `<div class="kv">

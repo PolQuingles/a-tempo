@@ -81,7 +81,7 @@ function viewBoard() {
   if (!tabs.some(([k]) => k === ui.board)) ui.board = 'anuncis';
   if (ui.board === 'anuncis') { lsSet(LS_SEEN, new Date().toISOString()); setTimeout(renderTabs, 0); }
   const head = `<div class="page-head"><h1 class="h1">Tauler</h1></div>
-    <div class="subtabs board-tabs" role="tablist" style="margin-bottom:10px;grid-template-columns:repeat(${tabs.length},1fr)">${tabs.map(([k, l]) => `<button class="subtab" role="tab" aria-selected="${ui.board === k}" data-act="board" data-k="${k}"><svg viewBox="0 0 24 24" aria-hidden="true">${TODO_ICONS[BOARD_ICONS[k]]}</svg><span>${l}</span></button>`).join('')}</div>`;
+    <div class="subtabs board-tabs u-mb-10" role="tablist" style="grid-template-columns:repeat(${tabs.length},1fr)">${tabs.map(([k, l]) => `<button class="subtab" role="tab" aria-selected="${ui.board === k}" data-act="board" data-k="${k}"><svg viewBox="0 0 24 24" aria-hidden="true">${TODO_ICONS[BOARD_ICONS[k]]}</svg><span>${l}</span></button>`).join('')}</div>`;
   // Al repertori, els arxivers (i l'administració) hi tenen a dalt l'arxiu: les carpetes, les etiquetes i els codis.
   if (ui.board === 'materials') return head + kitPanel() + boardRepertoire();
   if (ui.board === 'sortides') return head + boardTrips();
@@ -307,8 +307,8 @@ function sheetOpenFile(f, title) {
         const kept = offlineSaved().has(f.id);
         // Un PDF es llegeix aquí mateix: els botons van a dalt (sota d'una partitura llarga no es veurien) i «Obre» és secundari.
         const pdf = kind === 'PDF';
-        const info = `<p class="muted" style="margin:${media && !pdf ? '12px' : '0'} 0 ${pdf ? '10px' : '14px'};font-size:var(--t-13);overflow-wrap:anywhere">${esc(f.name)} · ${esc(kind)} · ${fmtSize(f.size)}${kept ? ' · desat al mòbil' : ''}</p>
-          <div style="display:flex;gap:8px;flex-wrap:wrap${pdf ? ';margin-bottom:14px' : ''}"><a class="btn${pdf ? ' btn-sm' : ' btn-primary'}" href="${url}" target="_blank" rel="noopener">${pdf ? 'Obre a part' : 'Obre'}</a><a class="btn${pdf ? ' btn-sm' : ''}" href="${url}" download="${esc(f.name)}">Desa al dispositiu</a>
+        const info = `<p class="muted file-info${media && !pdf ? ' after-media' : ''}${pdf ? ' is-pdf' : ''}">${esc(f.name)} · ${esc(kind)} · ${fmtSize(f.size)}${kept ? ' · desat al mòbil' : ''}</p>
+          <div class="u-d-flex u-gap-8 u-fw-wrap${pdf ? ' u-mb-14' : ''}"><a class="btn${pdf ? ' btn-sm' : ' btn-primary'}" href="${url}" target="_blank" rel="noopener">${pdf ? 'Obre a part' : 'Obre'}</a><a class="btn${pdf ? ' btn-sm' : ''}" href="${url}" download="${esc(f.name)}">Desa al dispositiu</a>
             ${!f.where && 'caches' in window ? `<button class="btn${pdf ? ' btn-sm' : ''}" id="fo-keep">${kept ? 'Treu-lo del mòbil' : 'Tenir-lo sense cobertura'}</button>` : ''}</div>`;
         box.innerHTML = pdf ? info + media : media + info;
         bindStudyPlayer(box);
