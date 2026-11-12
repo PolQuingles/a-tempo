@@ -16,7 +16,7 @@ const pushKinds = () => ({
   sortides: ['Sortides i caps de setmana', 'Quan se’n proposa una i si encara no has respost quan s’acaba el termini.'],
   absencies: ['Resposta a les teves absències', 'Quan t’accepten o no una absència que has avisat.'],
   assajos: ['Recordatori d’assaig', `La vespra, amb la fitxa ${V.sh.del} si n’hi ha.`],
-  ...(classesOn() ? { classes: [V.classes, `Absències i canvis d’hora de les ${V.classes.toLowerCase()}.`] } : {}),
+  ...(classesOn() ? { classes: [V.classes, `Absències, canvis d’hora i el quadern (notes, gravacions i respostes) de les ${V.classes.toLowerCase()}.`] } : {}),
 });
 // Només per a qui edita: avisos sobre les seccions que porta.
 const leaderKinds = () => ({

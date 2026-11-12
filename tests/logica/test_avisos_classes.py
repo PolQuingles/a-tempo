@@ -26,7 +26,7 @@ def device(n, email, mid=""):
     return {"endpoint": f"https://push.example/{n}", "p256dh": "x", "auth": "y", "email": email, "memberId": mid, "section": "S", "prefs": {"classes": True}}
 DB = {
     f"cors/{G}/config/main": {"name": "Cor de proves", "kind": "cor", "classesOn": True},
-    f"cors/{G}/staff/prof@x.cat": {"email": "prof@x.cat", "roles": ["voice"]},
+    f"cors/{G}/staff/prof@x.cat": {"email": "prof@x.cat", "roles": ["voice"], "name": "Prat, Berta"},
     f"cors/{G}/staff/altre@x.cat": {"email": "altre@x.cat", "roles": ["voice"]},
     f"cors/{G}/staff/admin@x.cat": {"email": "admin@x.cat", "roles": ["admin"]},
     f"cors/{G}/staff/a@x.cat": {"email": "a@x.cat", "roles": ["singer"], "memberId": "m1"},
@@ -43,6 +43,13 @@ DB = {
     f"cors/{G}/classes/c3": {"id": "c3", "date": tomorrow, "teacher": "prof@x.cat", "slots": [], "changedAt": now(), "changes": [{"m": "m1", "b": "Hora nova"}]},
     f"cors/{G}/classes/c4": {"id": "c4", "date": tomorrow, "teacher": "pf1", "slots": [], "changedAt": now(), "changes": [{"m": "m2", "b": "Canvi 1"}]},
     f"cors/{G}/classes/c5": {"id": "c5", "date": tomorrow, "teacher": "pf1", "deleted": True, "changedAt": now(), "changes": [{"m": "m2", "b": "Canvi 2"}]},
+    # El quadern: la Berta deixa a l'Anna la nota d'una classe amb gravació i li respon; el Marc s'hi grava (ho veu l'altre
+    # professor, que encara no ho ha vist); l'Anna hi havia escrit abans i la Berta ja ho ha vist (no s'avisa).
+    f"cors/{G}/classNotes/c1_s1": {"id": "c1_s1", "classId": "c1", "slotId": "s1", "memberId": "m1", "teacher": "prof@x.cat", "date": "2026-11-10", "text": "Bé", "file": {"id": "f1"}, "at": now()},
+    f"cors/{G}/classNotes/c1_buida": {"id": "c1_buida", "memberId": "m1", "teacher": "prof@x.cat", "date": "2026-11-10", "text": "", "at": now()},
+    f"cors/{G}/students/m1": {"memberId": "m1", "teachers": ["prof@x.cat"], "tfresh": {"at": now(), "kind": "reply", "by": "prof@x.cat"},
+                              "fresh": {"at": now(), "kind": "note"}, "seen": {"prof_x_cat": "2999-01-01T00:00:00Z"}},
+    f"cors/{G}/students/m2": {"memberId": "m2", "teachers": ["altre@x.cat"], "fresh": {"at": now(), "kind": "rec"}},
 }
 class Reader:
     full = True
@@ -80,9 +87,10 @@ who = lambda n: [b for d, b in SENT if d == n]
 night = not (8 <= datetime.datetime.now(zoneinfo.ZoneInfo("Europe/Madrid")).hour < 22)
 ok = not SENT if night else (
     len(who("prof")) == 1 and "Anna Puig" in who("prof")[0]
-    and not who("altre")
+    and who("altre") == ["Marc Bosch ha afegit una gravació al seu quadern."]
     and len(who("admin")) == 1 and "Marc Bosch" in who("admin")[0]
-    and who("anna") == ["Hora nova"]
+    and who("anna") == ["Hora nova", "Berta Prat t'ha deixat una nota i una gravació de la classe de dt 10/11. La tens al teu quadern.",
+                        "Berta Prat t'ha respost al quadern."]
     and who("marc") == ["Han canviat 2 de les teves classes. Mira-ho a l'app."])
 print(("CORRECTE" if ok else "INCORRECTE") + (" (de nit: res a enviar)" if night else ""))
 sys.exit(0 if ok else 1)

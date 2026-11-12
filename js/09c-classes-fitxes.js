@@ -40,7 +40,11 @@ function sheetTeacherSeats() {
 // parla: la cancel·lació d'eco i el control de volum destrossen una veu cantada.
 const REC_TYPES = ['audio/mp4;codecs=mp4a.40.2', 'audio/mp4', 'audio/webm;codecs=opus', 'audio/webm'];
 const canRecord = () => !!(navigator.mediaDevices?.getUserMedia && window.MediaRecorder);
-async function startRecording({ name, onTick, onDone, maxMs = 0 }) {
+/** Com a molt, 30 minuts per gravació (les del professorat i les del quadern): uns 11 MB, perquè l'espai no creixi massa. */
+const REC_MAX = 30 * 60e3;
+/** Els minuts que queden, mentre es grava. */
+const recLeft = ms => `queden ${recClock(Math.max(0, REC_MAX - ms))}`;
+async function startRecording({ name, onTick, onDone, maxMs = REC_MAX }) {
   const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
   const type = REC_TYPES.find(t => MediaRecorder.isTypeSupported(t)) || '';
   const mr = new MediaRecorder(stream, { ...(type ? { mimeType: type } : {}), audioBitsPerSecond: 48000 });
@@ -48,7 +52,7 @@ async function startRecording({ name, onTick, onDone, maxMs = 0 }) {
   let size = 0, dropped = false, full = false, wake = null;
   // Que la pantalla no s'apagui: amb el mòbil bloquejat, el navegador talla el micròfon.
   try { wake = await navigator.wakeLock?.request('screen'); } catch {}
-  // Com a molt maxMs (les gravacions del quadern): s'atura sola i es desa com si s'hagués omplert.
+  // Com a molt maxMs (vegeu REC_MAX): s'atura sola i es desa com si s'hagués omplert.
   const tick = setInterval(() => { const ms = Date.now() - t0; onTick(ms, size); if (maxMs && ms >= maxMs && mr.state === 'recording') { full = true; mr.stop(); } }, 1000);
   const release = () => { clearInterval(tick); stream.getTracks().forEach(t => t.stop()); try { wake?.release(); } catch {} };
   mr.ondataavailable = e => {
@@ -84,7 +88,7 @@ function sheetClassNote(classId, slotId, rec) {
           <div class="rec-live" id="cn-rec-live" hidden><i class="rec-dot on"></i><b class="mono" id="cn-rec-t">0:00</b><span class="muted" id="cn-rec-s">Gravant…</span><span class="spacer"></span><button type="button" class="btn btn-primary" id="cn-rec-stop">Atura</button></div>
           <audio id="cn-rec-prev" controls playsinline preload="metadata" hidden></audio></div>` : ''}
         <label class="dropzone" for="cn-file" id="cn-drop"><input id="cn-file" type="file" accept="audio/*,video/*,.m4a,.mp3" class="sr">
-          <span class="dz-t">${ex?.file ? 'Canvia’l per un fitxer' : 'O tria un fitxer'}</span><span class="dz-s">Fins a 20 MB. L’alumne el podrà escoltar més lent i repetir fragments.</span></label></div>`;
+          <span class="dz-t">${ex?.file ? 'Canvia’l per un fitxer' : 'O tria un fitxer'}</span><span class="dz-s">Gravacions de fins a ${REC_MAX / 60e3} minuts; fitxers de fins a 20 MB. L’alumne el podrà escoltar més lent i repetir fragments.</span></label></div>`;
   openSheet({
     title: `${rec ? 'Grava la classe' : 'Nota de la classe'}${m ? ` de ${firstName(m.name)}` : ''}`,
     body: `<div class="kv">
@@ -122,7 +126,7 @@ function sheetClassNote(classId, slotId, rec) {
         try {
           rec = await startRecording({
             name: `Classe del ${c.date}`,
-            onTick: (ms, size) => { el.querySelector('#cn-rec-t').textContent = recClock(ms); el.querySelector('#cn-rec-s').textContent = fmtSize(size); },
+            onTick: (ms, size) => { el.querySelector('#cn-rec-t').textContent = recClock(ms); el.querySelector('#cn-rec-s').textContent = `${fmtSize(size)} · ${recLeft(ms)}`; },
             onDone: (f, full) => {
               rec = null; sheetLock = null; save.disabled = false; live.hidden = true; go.hidden = false; go.disabled = false;
               go.lastChild.textContent = 'Torna a gravar';
@@ -131,7 +135,7 @@ function sheetClassNote(classId, slotId, rec) {
               const a = el.querySelector('#cn-rec-prev');
               if (prevUrl) URL.revokeObjectURL(prevUrl);
               prevUrl = URL.createObjectURL(f); a.src = prevUrl; a.hidden = false;
-              toast(full ? 'S’ha aturat en arribar al límit de 20 MB' : 'Gravació a punt: desa-la per enviar-la');
+              toast(full ? (f.size < FILE_MAX * 0.9 ? `S’ha aturat als ${REC_MAX / 60e3} minuts` : 'S’ha aturat en arribar al límit de 20 MB') : 'Gravació a punt: desa-la per enviar-la');
             },
           });
         } catch (err) { go.disabled = false; toast(err && err.name === 'NotAllowedError' ? 'Dona permís al micròfon per poder gravar' : 'No s’ha pogut engegar el micròfon'); return; }

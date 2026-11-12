@@ -298,13 +298,13 @@ function manageConfig() {
     </div>
   </div>
   ${cfgHead('seccions', `${esc(V.Sections)}`, `${SECTIONS.map(x => esc(x.short)).join(' · ')}`)}
-  <div class="panel cfg-p"${cfgOpen('seccions') ? '' : ' hidden'} style="padding:14px;display:grid;gap:10px">
+  <div class="panel cfg-p u-p-14 u-d-grid u-gap-10"${cfgOpen('seccions') ? '' : ' hidden'}>
     <p class="muted u-m-0 u-fs-t-13">Es passa llista per ${esc(V.sections)}. L’abreviatura surt als quadres de la llista i al calendari. No en pots treure cap que tingui gent assignada.</p>
     ${sectionsEditor('cfg', CFG_SECTIONS, lockedSections())}
     <div id="cfg-secs-save" class="sec-save" ${CFG_DIRTY ? '' : 'hidden'}><span class="muted u-fs-t-13">Canvis sense desar</span><span class="spacer"></span><button class="btn btn-sm btn-ghost" data-act="sections-undo">Desfés</button><button class="btn btn-sm btn-primary" data-act="sections-save">Desa</button></div>
   </div>
   ${cfgHead('identitat', `Identitat visual`, `${brand.logo ? 'Logotip, color i nom curt' : 'Sense logotip · color i nom curt'}`)}
-  <div class="panel cfg-p"${cfgOpen('identitat') ? '' : ' hidden'} style="padding:14px;display:grid;gap:14px">
+  <div class="panel cfg-p u-p-14 u-d-grid u-gap-14"${cfgOpen('identitat') ? '' : ' hidden'}>
     <div class="u-d-flex u-ai-center u-gap-14 u-fw-wrap">
       ${brand.logo ? `<img class="logo-prev" src="${brand.logo}" alt="Logotip">` : '<span class="logo-prev u-d-grid u-place-items-center u-c-muted u-fs-t-13">Sense logo</span>'}
       <span class="u-d-flex u-gap-6 u-fw-wrap"><label class="btn btn-sm" for="logo-file">${brand.logo ? 'Canvia el logotip' : 'Puja el logotip'}</label>
@@ -379,7 +379,7 @@ function manageConfig() {
     </div>
   </div>
   ${cfgHead('temporada', `Temporada`, `${esc(season.name)} · ${ddmm(season.from)}–${ddmm(season.to)}`)}
-  <div class="panel cfg-p"${cfgOpen('temporada') ? '' : ' hidden'} style="padding:14px;display:grid;gap:12px">
+  <div class="panel cfg-p u-p-14 u-d-grid u-gap-12"${cfgOpen('temporada') ? '' : ' hidden'}>
     <label class="field"><span>Nom de la temporada</span><input class="inp" id="cfg-sname" type="text" maxlength="40" value="${esc(season.name)}" data-bind="cfg-period"></label>
     <div class="row3"><label class="field"><span>Inici</span><input class="inp" id="cfg-sfrom" type="date" value="${season.from}" data-bind="cfg-period"></label>
       <label class="field"><span>Final</span><input class="inp" id="cfg-sto" type="date" value="${season.to}" data-bind="cfg-period"></label></div>

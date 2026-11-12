@@ -7,7 +7,8 @@
 /* ---------- Dades ---------- */
 // students/<membre> = { memberId, goals (els objectius que hi posa el professorat), myGoals (els que hi posa l'alumne),
 //   repertoire: [{ id, title, composer, status, by, at }], teachers (qui el porta), fresh: { at, kind, by, text } (l'última cosa
-//   que l'alumne ha afegit al quadern, perquè el professorat ho vegi sense haver de llegir el quadern), seen: { <professor>: hora },
+//   que l'alumne ha afegit al quadern, perquè el professorat ho vegi sense haver de llegir el quadern), tfresh: { at, kind, by } (l'últim
+//   material o resposta del professorat, per avisar l'alumne al mòbil), seen: { <professor>: hora },
 //   at, by }
 // students/<membre>/log/<id> = { id, memberId, kind: note|rec|q, text, file?, work? (una obra del repertori), date, by, byName, at,
 //   edited?, reply?: { text, by, name, at } }. L'alumne hi escriu notes d'estudi i s'hi grava (les preguntes «q» d'abans es
@@ -19,9 +20,9 @@ const LOG_KINDS = {
   rec: { t: 'Gravació', title: 'Gravació', label: 'Què hi ha a la gravació? (opcional)', ph: 'p. ex. El «Laudamus te» sencer, a casa. Escolta sobretot el final.' },
   q: { t: 'Pregunta', title: 'Pregunta per a la classe', label: 'Què vols preguntar?', ph: 'p. ex. Com puc respirar abans del c. 12 sense trencar la frase?' },
 };
-// Una gravació del quadern dura com a molt quaranta minuts: una classe o un assaig sencer a casa. A 48 kbps són uns 15 MB, dins
-// del límit de 20 MB dels fitxers (si el mòbil grava amb més qualitat, s'atura en arribar-hi, vegeu startRecording).
-const LOG_REC_MAX = 40 * 60e3;
+// Una gravació del quadern dura com a molt trenta minuts, com les del professorat (REC_MAX). A 48 kbps són uns 11 MB, dins del
+// límit de 20 MB dels fitxers (si el mòbil grava amb més qualitat, s'atura en arribar-hi, vegeu startRecording).
+const LOG_REC_MAX = REC_MAX;   // vegeu 09c-classes-fitxes
 /** El que l'alumne pot afegir al seu quadern. */
 const OWN_KINDS = ['note', 'rec'];
 const QL_ICON = {
@@ -312,7 +313,7 @@ function sheetLogNew(mid, kind = 'note', id = '', back = null) {
       };
       el.querySelectorAll('.ql-kinds button').forEach(b => b.onclick = () => { kind = b.dataset.k; paint(); });
       paint();
-      const recf = bindRecField(el, { name: `${own ? 'Quadern' : 'Material'} ${TODAY}`, maxMs: own ? LOG_REC_MAX : 0, save });
+      const recf = bindRecField(el, { name: `${own ? 'Quadern' : 'Material'} ${TODAY}`, maxMs: LOG_REC_MAX, save });
       el.querySelector('#ql-no').onclick = () => { if (sheetLock) { sheetLock(); return; } done(); };
       save.onclick = async () => {
         const text = el.querySelector('#ql-text').value.trim(), work = el.querySelector('#ql-work')?.value || '';
@@ -335,6 +336,8 @@ function sheetLogNew(mid, kind = 'note', id = '', back = null) {
         if (work) rec.work = work; else delete rec.work;
         saveLog(rec, ex);
         if (own && !ex) saveStudent(mid, { fresh: { at, kind, by: S.email || '', text: text.slice(0, 140) } });
+        // El que hi deixa el professorat: l'alumne en rep l'avís al mòbil (vegeu quadern, a .github/scripts/avisos.py).
+        else if (!own && !ex) saveStudent(mid, { tfresh: { at, kind, by: S.email || '' } });
         toast(ex ? 'Desat' : own ? `Afegit al teu quadern: el veurà el teu ${V.Teacher.toLowerCase()}` : `Afegit al quadern de ${firstName(m?.name || '')}`);
         done();
       };
@@ -368,6 +371,8 @@ function sheetLogReply(mid, id, back) {
         if (reply) next.reply = reply; else delete next.reply;
         S.classLog.set(id, next);
         db.doc(`students/${mid}/log/${id}`).update({ reply: reply || firebase.firestore.FieldValue.delete() }).catch(writeFailed);
+        // Perquè l'alumne en rebi l'avís al mòbil (vegeu quadern, a .github/scripts/avisos.py).
+        if (reply && !e.reply) saveStudent(mid, { tfresh: { at: new Date().toISOString(), kind: 'reply', by: S.email || '' } });
       };
       el.querySelector('#qr-no').onclick = done;
       el.querySelector('#qr-go').onclick = () => {

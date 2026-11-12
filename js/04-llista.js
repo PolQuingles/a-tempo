@@ -317,7 +317,7 @@ function rowHtml(session, m) {
   }
   const dot = s === 'none' ? '' : `<i class="i-${s} u-d-inline-block u-w-9 u-h-9 u-br-3 u-mr-6"></i>`;
   return `<li class="row ${mk ? 'has-mark' : ''}${editable ? ' ed' : ''}" data-mid="${m.id}" data-s="${s}">
-    <div class="row-top" ${editable ? '' : 'style="margin-bottom:4px"'}><span class="who">${avatar(m)}<span class="name">${esc(m.name)}</span>${m.part ? `<span class="part" title="${V.Part}">${esc(partTag(m))}</span>` : ''}${m.leader ? `<span class="tag">${V.Leader}</span>` : ''}${mk?.auto || !canEdit() ? '' : ruleTag(session, m)}${session.rsvp && canEdit() && !mk?.auto ? rsvpPill(session, m) : ''}</span>
+    <div class="row-top${editable ? '' : ' is-ro'}"><span class="who">${avatar(m)}<span class="name">${esc(m.name)}</span>${m.part ? `<span class="part" title="${V.Part}">${esc(partTag(m))}</span>` : ''}${m.leader ? `<span class="tag">${V.Leader}</span>` : ''}${mk?.auto || !canEdit() ? '' : ruleTag(session, m)}${session.rsvp && canEdit() && !mk?.auto ? rsvpPill(session, m) : ''}</span>
       <span class="state ${warn ? 'warn' : ''}">${editable ? '' : dot}${state}</span></div>
     ${body}${noticeHtml(session, m, mk && !mk.auto ? mk : null)}</li>`;
 }
