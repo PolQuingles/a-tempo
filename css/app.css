@@ -1156,34 +1156,39 @@ button.mday:hover{background:var(--surface-2)}
 /* Els finalistes, a la gala: entren un rere l'altre. */
 @media (prefers-reduced-motion:reduce){.gala-fin li,.gala-roll i,.gala::after,.bn-seal-i circle,.bn-nom.opening .bn-fin li{animation:none}.gala-w.now .gala-n{animation:none;opacity:1}.bb-prog span{transition:none}}
 /* Com es reparteixen els vots: qui guanya, amb el color de l'agrupació; els altres finalistes, en grisos; un empat, en ambre. */
-:root{--bd-g1:#8E809D;--bd-g2:#AFA3BC;--bd-g3:#CDC4D6;--bd-r:#E4DEE9;--gold:#8A6216;--gold-soft:#F8F0DE;--gold-line:#DFC68F}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bd-g1:#9A8EA6;--bd-g2:#776C83;--bd-g3:#5A5164;--bd-r:#3D3645;--gold:#E7C77B;--gold-soft:#272017;--gold-line:#5C4A2B}}
-:root[data-theme="dark"]{--bd-g1:#9A8EA6;--bd-g2:#776C83;--bd-g3:#5A5164;--bd-r:#3D3645;--gold:#E7C77B;--gold-soft:#272017;--gold-line:#5C4A2B}
+/* Els pastissos de les bandes (vegeu pieShapes): el lila de l'agrupació i sis colors més, en un ordre on dos trossos del costat es
+   distingeixen també amb daltonisme (protanopia, deuteranopia i tritanopia: ΔE OKLab ≥ 10). La resta, en gris. */
+:root{--pie1:var(--accent);--pie2:#D9822B;--pie3:#16869A;--pie4:#7BA23F;--pie5:#C4466A;--pie6:#3B7BD4;--pie7:#8A5A44;--bd-r:#E4DEE9;--gold:#8A6216;--gold-soft:#F8F0DE;--gold-line:#DFC68F}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--pie2:#F0A35A;--pie3:#3FB4D0;--pie4:#A6CC6B;--pie5:#EC7A9A;--pie6:#78A9F0;--pie7:#C99A7A;--bd-r:#3D3645;--gold:#E7C77B;--gold-soft:#272017;--gold-line:#5C4A2B}}
+:root[data-theme="dark"]{--pie2:#F0A35A;--pie3:#3FB4D0;--pie4:#A6CC6B;--pie5:#EC7A9A;--pie6:#78A9F0;--pie7:#C99A7A;--bd-r:#3D3645;--gold:#E7C77B;--gold-soft:#272017;--gold-line:#5C4A2B}
+/* Cada formatget, amb una vora del color del fons perquè se separin. */
+.bd-pie :is(path,circle),.bn-mu :is(path,circle){stroke:var(--surface);stroke-width:1.5;stroke-linejoin:round;transition:opacity .15s}
+:is(.bd-pie,.bn-mu) .c1{fill:var(--pie1)}:is(.bd-pie,.bn-mu) .c2{fill:var(--pie2)}:is(.bd-pie,.bn-mu) .c3{fill:var(--pie3)}:is(.bd-pie,.bn-mu) .c4{fill:var(--pie4)}
+:is(.bd-pie,.bn-mu) .c5{fill:var(--pie5)}:is(.bd-pie,.bn-mu) .c6{fill:var(--pie6)}:is(.bd-pie,.bn-mu) .c7{fill:var(--pie7)}:is(.bd-pie,.bn-mu) .r{fill:var(--bd-r)}
+.bn-mu .off{opacity:.25}
 .bd-pie{display:grid;grid-template-columns:120px minmax(0,1fr);align-items:center;gap:14px}
 .bd-pie svg{display:block;width:120px;height:120px}
-.bd-pie circle{fill:none;stroke-width:16;transition:opacity .15s}
-.bd-pie circle.w{stroke:var(--accent)}.bd-pie circle.t{stroke:var(--fj)}.bd-pie circle.g1{stroke:var(--bd-g1)}.bd-pie circle.g2{stroke:var(--bd-g2)}.bd-pie circle.g3{stroke:var(--bd-g3)}.bd-pie circle.r{stroke:var(--bd-r)}
-.bd-pie text{text-anchor:middle;fill:var(--ink);font-family:var(--f-display)}
-.bd-pie .c1{font-size:22px;font-weight:600}
-.bd-pie .c2{fill:var(--muted);font-family:var(--f-ui);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase}
+.bd-leg-h{margin:0 0 6px;font-size:var(--t-12);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .bd-leg{list-style:none;margin:0;padding:0;display:grid;gap:6px}
 .bd-leg li{display:grid;grid-template-columns:10px minmax(0,1fr) auto 38px;align-items:center;gap:8px;font-size:var(--t-15)}
 .bd-leg i{width:10px;height:10px;border-radius:3px}
 .bd-leg .bd-who{grid-area:auto;min-width:0;display:flex;flex-wrap:wrap;align-items:center;gap:2px 0}
-.bd-leg i.w{background:var(--accent)}.bd-leg i.t{background:var(--fj)}.bd-leg i.g1{background:var(--bd-g1)}.bd-leg i.g2{background:var(--bd-g2)}.bd-leg i.g3{background:var(--bd-g3)}.bd-leg i.r{background:var(--bd-r)}
+.bd-leg i.c1{background:var(--pie1)}.bd-leg i.c2{background:var(--pie2)}.bd-leg i.c3{background:var(--pie3)}.bd-leg i.c4{background:var(--pie4)}.bd-leg i.c5{background:var(--pie5)}.bd-leg i.c6{background:var(--pie6)}.bd-leg i.c7{background:var(--pie7)}.bd-leg i.r{background:var(--bd-r)}
 .bd-leg .bd-pc{text-align:right;color:var(--muted);font-size:var(--t-12)}
-.bd-pie:has(.bd-leg li:hover) circle{opacity:.28}
-.bd-pie:has(.bd-leg li[data-i="0"]:hover) circle[data-i="0"],.bd-pie:has(.bd-leg li[data-i="1"]:hover) circle[data-i="1"],.bd-pie:has(.bd-leg li[data-i="2"]:hover) circle[data-i="2"],
-.bd-pie:has(.bd-leg li[data-i="3"]:hover) circle[data-i="3"],.bd-pie:has(.bd-leg li[data-i="4"]:hover) circle[data-i="4"],.bd-pie:has(.bd-leg li[data-i="5"]:hover) circle[data-i="5"]{opacity:1}
+.bd-pie:has(.bd-leg li:hover) :is(path,circle){opacity:.28}
+.bd-pie:has(.bd-leg li[data-i="0"]:hover) [data-i="0"],.bd-pie:has(.bd-leg li[data-i="1"]:hover) [data-i="1"],.bd-pie:has(.bd-leg li[data-i="2"]:hover) [data-i="2"],
+.bd-pie:has(.bd-leg li[data-i="3"]:hover) [data-i="3"],.bd-pie:has(.bd-leg li[data-i="4"]:hover) [data-i="4"],.bd-pie:has(.bd-leg li[data-i="5"]:hover) [data-i="5"],.bd-pie:has(.bd-leg li[data-i="6"]:hover) [data-i="6"]{opacity:1}
 .bd-band.tie{background:var(--fj-soft);color:var(--fj-text)}
 .bd-fin{margin:0;font-size:var(--t-13);color:var(--ink-2)}
 @media (max-width:360px){.bd-pie{grid-template-columns:96px minmax(0,1fr);gap:10px}.bd-pie svg{width:96px;height:96px}}
 .bd-top{display:grid;gap:6px}
 .bd-top .bar-row{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) 32px}
 .bd-top .lbl span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* La fila de categories ocupa tota l'amplada (marges negatius): el quadre els deixa lloc. */
+.bd-res{margin-inline:-16px;padding-inline:16px}
 .bd-res .bd-note{margin:6px 0 0;font-size:var(--t-12)}
 .bd-idx{margin-top:2px}
-@media (prefers-reduced-motion:reduce){.bd-pie circle{transition:none}}
+@media (prefers-reduced-motion:reduce){.bd-pie :is(path,circle){transition:none}}
 /* ---------- La Nit de les Bandes (08c-nit-bandes.js): un escenari fosc, amb la banda creuant-lo, com la gala ---------- */
 .bn-page{display:grid;gap:14px}
 /* La invitació: escenari fosc amb dos focus, un marc daurat i la banda (la faixa) creuant-lo. */
@@ -1280,11 +1285,6 @@ button.mday:hover{background:var(--surface-2)}
 .bn-mu{display:grid;justify-items:center;align-content:start;gap:4px;padding:12px 10px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);text-align:center}
 .bn-mu h3{margin:0;font-size:var(--t-13);font-weight:700;line-height:1.25;text-wrap:balance}
 .bn-mu svg{display:block;width:96px;height:96px;margin:4px 0}
-.bn-mu circle{fill:none;stroke-width:16}
-.bn-mu circle.g1{stroke:var(--bd-g1)}.bn-mu circle.g2{stroke:var(--bd-g2)}.bn-mu circle.g3{stroke:var(--bd-g3)}.bn-mu circle.r{stroke:var(--bd-r)}.bn-mu circle.w{stroke:var(--gold)}
-.bn-mu text{text-anchor:middle;fill:var(--ink);font-family:var(--f-display)}
-.bn-mu .c1{font-size:22px;font-weight:600}
-.bn-mu .c2{fill:var(--muted);font-family:var(--f-ui);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase}
 .bn-mu p{margin:0;font-size:var(--t-12);color:var(--muted);font-variant-numeric:tabular-nums}
 .bn-mu .bn-mu-w{color:var(--ink)}
 .bn-mu .bn-mu-w b{color:var(--gold)}

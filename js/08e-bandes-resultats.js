@@ -37,28 +37,19 @@ function bandesDays(days) {
       <text x="${W}" y="9" text-anchor="end">màx. ${max}</text>
     </svg><figcaption>Paperetes enviades cada dia</figcaption></figure>`;
 }
-/** Com es reparteixen els vots d'una categoria: un anell amb els cinc més votats i «la resta». Qui s'emporta la banda va amb
- *  el color de l'agrupació i els altres, en grisos (el que compta és qui guanya i per quant); la llegenda en diu els vots i el
- *  percentatge. Els vots són els noms que hi ha posat cada papereta (fins a dos per categoria). */
+/** Com es reparteixen els vots d'una categoria: un pastís amb els més votats (fins a set; si n'hi ha més, sis i «la resta»),
+ *  cadascun d'un color (el primer, el lila de l'agrupació; vegeu pieShapes). La llegenda en diu els vots, el percentatge i qui
+ *  s'emporta la banda. Els vots són els noms que hi ha posat cada papereta (fins a dos per categoria). */
 function bandesDonut(x) {
   const total = x.rows.reduce((n, r) => n + r.n, 0);
   if (!total) return '';
   const wins = new Set(x.winners), tied = new Set(x.open ? x.tied : []);
-  let g = 0;
-  const segs = x.rows.slice(0, 5).map(r => ({ label: keyName(r.key), n: r.n, cls: wins.has(r.key) ? 'w' : tied.has(r.key) ? 't' : `g${Math.min(3, ++g)}` }));
-  const rest = x.rows.slice(5);
-  if (rest.length) segs.push({ label: rest.length === 1 ? keyName(rest[0].key) : `La resta (${rest.length})`, n: rest.reduce((n, r) => n + r.n, 0), cls: 'r' });
-  const R = 42, C = 2 * Math.PI * R, gap = segs.length > 1 ? 1.6 : 0;
-  let at = 0;
-  const arcs = segs.map((s, i) => {
-    const len = Math.max(0, s.n / total * C - gap);
-    const arc = `<circle data-i="${i}" class="${s.cls}" r="${R}" cx="60" cy="60" stroke-dasharray="${len.toFixed(2)} ${(C - len).toFixed(2)}" stroke-dashoffset="${(-at).toFixed(2)}"><title>${esc(s.label)}: ${s.n} ${s.n === 1 ? 'vot' : 'vots'} (${pct(s.n / total)})</title></circle>`;
-    at += s.n / total * C;
-    return arc;
-  }).join('');
-  return `<div class="bd-pie"><svg viewBox="0 0 120 120" role="img" aria-label="Repartiment dels ${total} vots: ${esc(segs.map(s => `${s.label}, ${pct(s.n / total)}`).join('; '))}">
-      <g transform="rotate(-90 60 60)">${arcs}</g><text x="60" y="60" class="c1">${total}</text><text x="60" y="75" class="c2">${total === 1 ? 'vot' : 'vots'}</text></svg>
-    <ul class="bd-leg">${segs.map((s, i) => `<li data-i="${i}"><i class="${s.cls}" aria-hidden="true"></i><span class="bd-who">${esc(s.label)}${s.cls === 'w' ? '<span class="bd-band">Banda</span>' : s.cls === 't' ? '<span class="bd-band tie">Empat</span>' : ''}</span><span class="mono">${s.n}</span><span class="mono bd-pc">${pct(s.n / total)}</span></li>`).join('')}</ul></div>`;
+  const many = x.rows.length > PIE_N;
+  const segs = x.rows.slice(0, many ? PIE_N - 1 : PIE_N).map((r, i) => ({ label: keyName(r.key), n: r.n, cls: `c${i + 1}`, mark: wins.has(r.key) ? 'w' : tied.has(r.key) ? 't' : '' }));
+  if (many) { const rest = x.rows.slice(PIE_N - 1); segs.push({ label: `La resta (${rest.length})`, n: rest.reduce((n, r) => n + r.n, 0), cls: 'r', mark: '' }); }
+  const titles = segs.map(s => `${s.label}: ${nPl(s.n, 'vot', 'vots')} (${pct(s.n / total)})`);
+  return `<div class="bd-pie"><svg viewBox="0 0 120 120" role="img" aria-label="Repartiment dels ${nPl(total, 'vot', 'vots')}: ${esc(segs.map(s => `${s.label}, ${pct(s.n / total)}`).join('; '))}">${pieShapes(segs.map(s => s.n), segs.map(s => s.cls), titles)}</svg>
+    <div class="bd-leg-w"><p class="bd-leg-h">${nPl(total, 'vot', 'vots')}</p><ul class="bd-leg">${segs.map((s, i) => `<li data-i="${i}"><i class="${s.cls}" aria-hidden="true"></i><span class="bd-who">${esc(s.label)}${s.mark === 'w' ? '<span class="bd-band">Banda</span>' : s.mark === 't' ? '<span class="bd-band tie">Empat</span>' : ''}</span><span class="mono">${s.n}</span><span class="mono bd-pc">${pct(s.n / total)}</span></li>`).join('')}</ul></div></div>`;
 }
 function bandesCatHtml(x, p) {
   const c = x.cat, w = c.win || 1, rows = x.rows, max = rows[0]?.n || 1;

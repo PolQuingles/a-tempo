@@ -143,24 +143,27 @@ function bandesPublish(pid) {
 }
 
 /* ---------- Publicar els finalistes (qui porta el tauler) ---------- */
-function bandesNominate(pid) {
+// Primer es tria com es revelen; després es mira com quedarà (la pàgina de les bandes, dia per dia) i només llavors es publica.
+// st: el que s'ha triat ({ every, from }), per tornar-hi des de la vista prèvia.
+function bandesNominate(pid, st = {}) {
   const p = S.polls.get(pid);
   if (!p || p.draft) return;
   const k = +p.finalists || BANDES_FINAL;
   const t = bandesTally(p, bandesVotes(p), bandesPeople(p));
   const fin = Object.fromEntries(t.cats.map(x => [x.cat.id, bandesFinalists(x.rows, k).sort(byKeyName)]));
   const after = p.closesAt ? addDays(p.closesAt, 1) : TODAY;
-  const from0 = p.nomFrom || (after > TODAY ? after : TODAY);
+  const from0 = st.from || p.nomFrom || (after > TODAY ? after : TODAY);
+  const every0 = st.every || (p.nomEvery === 'all' || !p.galaAt ? 'all' : 'day');
   const stillOpen = !pollClosed(p);
   openSheet({
-    title: 'Publicar els finalistes?',
+    title: 'Publicar els finalistes',
     body: `<p class="u-mt-0">Es publiquen els ${k} més votats de cada categoria, per ordre alfabètic i sense els vots${stillOpen ? '. <b>La votació es tanca:</b> ja no s’hi podrà votar' : ''}. Qui guanya no es veu fins que publiquis el palmarès.</p>
-      <div class="field"><span>Com es revelen</span><div class="pickers" id="bn-every"><button type="button" class="pick" data-v="day" aria-pressed="${p.nomEvery !== 'all' && !!p.galaAt}">Una categoria cada dia fins a la Nit</button><button type="button" class="pick" data-v="all" aria-pressed="${p.nomEvery === 'all' || !p.galaAt}">Totes alhora</button></div></div>
+      <div class="field"><span>Com es revelen</span><div class="pickers" id="bn-every"><button type="button" class="pick" data-v="day" aria-pressed="${every0 === 'day'}">Una categoria cada dia fins a la Nit</button><button type="button" class="pick" data-v="all" aria-pressed="${every0 === 'all'}">Totes alhora</button></div></div>
       <label class="field"><span>A partir del</span><input class="inp" type="date" id="bn-from" value="${esc(from0)}"></label>
       <p class="m u-m-0" id="bn-plan"></p>
       <details class="np-group"><summary><span>Quants finalistes hi ha a cada categoria</span>${ICON.chev}</summary>
         <ul class="mini-list u-maxh-none">${t.cats.map(x => `<li><span>${esc(x.cat.name)}</span><span class="mono">${fin[x.cat.id].length}${fin[x.cat.id].length > k ? ' · empat' : ''}</span></li>`).join('')}</ul></details>`,
-    foot: '<span class="spacer"></span><button class="btn" data-act="sheet-close">Encara no</button><button class="btn btn-primary" id="bn-ok">Publica’ls</button>',
+    foot: '<span class="spacer"></span><button class="btn" data-act="sheet-close">Encara no</button><button class="btn btn-primary" id="bn-ok">Mira com quedarà</button>',
     onMount: el => {
       const every = () => el.querySelector('#bn-every .pick[aria-pressed="true"]')?.dataset.v || 'all';
       const plan = () => {
@@ -172,9 +175,38 @@ function bandesNominate(pid) {
       el.querySelectorAll('#bn-every .pick').forEach(b => b.onclick = () => { el.querySelectorAll('#bn-every .pick').forEach(x => x.setAttribute('aria-pressed', x === b)); plan(); });
       el.querySelector('#bn-from').oninput = plan;
       plan();
-      el.querySelector('#bn-ok').onclick = () => {
+      el.querySelector('#bn-ok').onclick = () => bandesNomPreview(pid, { from: el.querySelector('#bn-from').value || from0, every: p.galaAt ? every() : 'all' }, fin);
+    },
+  });
+}
+/** La vista prèvia: la pàgina de les bandes tal com la veurà tothom cada dia que es revelen finalistes (sense sobres). Encara no
+ *  s'ha publicat res: «Torna» hi canvia coses i «Publica’ls» ho publica. */
+function bandesNomPreview(pid, st, fin) {
+  const p = S.polls.get(pid);
+  if (!p) return;
+  const q = { ...p, closed: true, nominees: fin, nomFrom: st.from, nomEvery: st.every };
+  const days = [...new Set(nomSchedule(q))].sort();
+  let day = days[0];
+  const label = d => d === p.galaAt ? `${ddmm(d)} · la Nit` : ddmm(d);
+  openSheet({
+    title: 'Com quedarà',
+    wide: true,
+    body: `<p class="u-mt-0 m">Així ho veurà tothom a la pàgina de les bandes${days.length > 1 ? '. Tria un dia per veure què s’hi veu aquell dia' : ''}. <b>Encara no s’ha publicat res.</b>${st.every === 'day' && days.length > 1 ? ' Cada dia, els finalistes nous arriben dins d’un sobre que cadascú obre.' : ''}</p>
+      ${days.length > 1 ? `<div class="chips bnp-days" role="group" aria-label="Quin dia">${days.map(d => `<button type="button" class="chip" data-d="${esc(d)}" aria-pressed="${d === day}">${esc(label(d))}</button>`).join('')}</div>` : ''}
+      <div class="bnp-page" id="bnp-body"></div>`,
+    foot: '<button class="btn" id="bnp-back">Torna</button><span class="spacer"></span><button class="btn btn-primary" id="bnp-ok">Publica’ls</button>',
+    onMount: el => {
+      const draw = () => { el.querySelector('#bnp-body').innerHTML = bandesNomBlock(q, day, true); };
+      el.querySelectorAll('.bnp-days [data-d]').forEach(b => b.onclick = () => {
+        day = b.dataset.d;
+        el.querySelectorAll('.bnp-days [data-d]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+        draw();
+      });
+      draw();
+      el.querySelector('#bnp-back').onclick = () => bandesNominate(pid, st);
+      el.querySelector('#bnp-ok').onclick = () => {
         const now = new Date().toISOString();
-        const rec = { ...clone(S.polls.get(pid)), closed: true, nominees: fin, nomFrom: el.querySelector('#bn-from').value || from0, nomEvery: p.galaAt ? every() : 'all', nomAt: now };
+        const rec = { ...clone(S.polls.get(pid)), closed: true, nominees: fin, nomFrom: st.from, nomEvery: st.every, nomAt: now };
         S.polls.set(pid, rec); persist('polls', pid, rec, 10);
         closeSheet(); toast('Finalistes publicats'); render();
       };

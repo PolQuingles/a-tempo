@@ -188,23 +188,25 @@ function bandesEnvelope(el) {
   open.add(key); lsSet(LS_SOBRES, JSON.stringify([...open].slice(-300)));
   if (card) { card.classList.remove('sealed'); card.classList.add('opening'); }
 }
-function bandesNomBlock(p) {
+/** Els finalistes a la pàgina de les bandes: els d'avui (dins d'un sobre), els d'abans i els que falten. day i preview: la vista
+ *  prèvia de qui els publica (com es veurà aquell dia, sense sobres). */
+function bandesNomBlock(p, day = TODAY, preview = false) {
   if (!p.nominees) return '';
-  const { shown, next } = nomReveal(p), today = shown.filter(x => x.date === TODAY), past = shown.filter(x => x.date !== TODAY).reverse();
+  const { shown, next } = nomReveal(p, day), today = shown.filter(x => x.date === day), past = shown.filter(x => x.date !== day).reverse();
   const open = sobresOberts(), me = myId();
-  const mine = me ? shown.filter(x => x.keys.some(k => keyIds(k).includes(me))) : [];
+  const mine = me && !preview ? shown.filter(x => x.keys.some(k => keyIds(k).includes(me))) : [];
   const card = x => {
-    const sealed = x.date === TODAY && x.keys.length && !open.has(`${p.id}:${x.cat.id}`);
-    return `<li class="bn-nom${x.date === TODAY ? ' today' : ''}${sealed ? ' sealed' : ''}"><div class="bn-nom-h"><span class="bn-date">${x.date === TODAY ? 'Avui es revelen' : esc(shortDate(x.date))}</span><h3>${esc(x.cat.name)}</h3>${x.cat.pair ? '<span class="tag">Parella</span>' : x.cat.sec ? `<span class="tag">${esc(SEC[x.cat.sec]?.name || x.cat.sec)}</span>` : ''}</div>
+    const sealed = !preview && x.date === day && x.keys.length && !open.has(`${p.id}:${x.cat.id}`);
+    return `<li class="bn-nom${x.date === day ? ' today' : ''}${sealed ? ' sealed' : ''}"><div class="bn-nom-h"><span class="bn-date">${x.date === day ? 'Avui es revelen' : esc(shortDate(x.date))}</span><h3>${esc(x.cat.name)}</h3>${x.cat.pair ? '<span class="tag">Parella</span>' : x.cat.sec ? `<span class="tag">${esc(SEC[x.cat.sec]?.name || x.cat.sec)}</span>` : ''}</div>
     ${x.cat.desc ? `<p class="bn-desc">${esc(x.cat.desc)}</p>` : ''}
     ${sealed ? `<button class="bn-seal" data-act="bandes-envelope" data-id="${esc(p.id)}" data-cat="${esc(x.cat.id)}"><svg class="bn-seal-i" viewBox="0 0 48 36" aria-hidden="true"><rect x="1.5" y="1.5" width="45" height="33" rx="4"/><path d="M2.5 4l21.5 17L45.5 4"/><circle cx="24" cy="21" r="5.5"/></svg><span><b>Obre el sobre</b><small>${x.keys.length} finalistes</small></span></button>` : ''}
     ${x.keys.length ? `<ul class="bn-fin">${x.keys.map((k, j) => `<li style="--d:${j * 110}ms">${bnWho(k)}</li>`).join('')}</ul>` : '<p class="m u-m-0">Ningú no hi va rebre vots.</p>'}</li>`;
   };
   return `<div class="section-title"><h2 class="h2">Finalistes</h2><span class="bn-n mono">${shown.length}/${shown.length + next.length}</span></div>
     ${mine.length ? `<p class="bn-me"><b>Ets finalista</b> a ${esc(mine.map(x => catQ(x.cat)).join(', '))}. Ens veiem a la Nit!</p>` : ''}
-    ${shown.length ? `<ol class="bn-noms">${[...today, ...past].map(card).join('')}</ol>` : `<p class="m">Els primers finalistes es revelen ${esc(longDate(next[0]?.date || TODAY).toLowerCase())}.</p>`}
+    ${shown.length ? `<ol class="bn-noms">${[...today, ...past].map(card).join('')}</ol>` : `<p class="m">Els primers finalistes es revelen ${esc(longDate(next[0]?.date || day).toLowerCase())}.</p>`}
     ${next.length ? `<details class="np-group bn-next"><summary><span>Encara per revelar (${next.length})</span>${ICON.chev}</summary>
-      <ul class="bn-next-l">${next.map(x => `<li><span>${esc(x.cat.name)}</span><span class="mono">${dayDiff(TODAY, x.date) === 1 ? 'demà' : esc(ddmm(x.date))}</span></li>`).join('')}</ul></details>` : ''}`;
+      <ul class="bn-next-l">${next.map(x => `<li><span>${esc(x.cat.name)}</span><span class="mono">${dayDiff(day, x.date) === 1 ? 'demà' : esc(ddmm(x.date))}</span></li>`).join('')}</ul></details>` : ''}`;
 }
 /** Qui s'ha endut més bandes aquesta Nit (si algú en té més d'una). */
 function bandesRecord(p) {
@@ -366,22 +368,36 @@ function tallyFor(p) {
   }
   return BN_TALLY.data;
 }
-/** L'anell d'una categoria, sense noms: un tros per persona (o parella), de més a menys vots (les dotze primeres; la resta,
- *  juntes). Amb el palmarès, els trossos dels guanyadors van en daurat. */
+/** Els colors dels pastissos de les bandes: el lila de l'agrupació i sis més (vegeu --pie1…--pie7 a app.css), triats perquè dos
+ *  trossos del costat es distingeixin també amb daltonisme. Si hi ha més trossos que colors, els últims van junts, en gris. */
+const PIE_N = 7;
+/** Els trossos d'un pastís (SVG de 120×120): un per valor, en el sentit de les agulles del rellotge des de dalt. cls: la classe
+ *  (el color) de cada tros; titles: el text de cadascun en passar-hi per sobre. */
+function pieShapes(vals, cls, titles = []) {
+  const total = vals.reduce((a, b) => a + b, 0);
+  if (!total) return '';
+  const R = 56, t = i => titles[i] ? `<title>${esc(titles[i])}</title>` : '';
+  const live = vals.map((v, i) => v > 0 ? i : -1).filter(i => i >= 0);
+  if (live.length === 1) return `<circle data-i="${live[0]}" class="${cls[live[0]]}" cx="60" cy="60" r="${R}">${t(live[0])}</circle>`;
+  const pt = a => `${(60 + R * Math.cos(a)).toFixed(2)} ${(60 + R * Math.sin(a)).toFixed(2)}`;
+  let a = -Math.PI / 2;
+  return vals.map((v, i) => {
+    const b = a + v / total * 2 * Math.PI, d = `M60 60L${pt(a)}A${R} ${R} 0 ${b - a > Math.PI ? 1 : 0} 1 ${pt(b)}Z`;
+    a = b;
+    return v ? `<path data-i="${i}" class="${cls[i]}" d="${d}">${t(i)}</path>` : '';
+  }).join('');
+}
+/** El pastís d'una categoria, sense noms: un tros per persona (o parella), de més a menys vots (les set primeres; si n'hi ha
+ *  més, les sis primeres i la resta, juntes). Amb el palmarès, els trossos dels guanyadors queden en color i la resta s'apaga. */
 function tallyDonut(n, win) {
   const total = n.reduce((a, b) => a + b, 0);
   if (!total) return '';
   const gold = new Set(), left = [...(win || [])];
   n.forEach((v, i) => { const j = left.indexOf(v); if (j >= 0) { gold.add(i); left.splice(j, 1); } });
-  const segs = n.slice(0, 12).map((v, i) => ({ v, cls: gold.has(i) ? 'w' : `g${i % 3 + 1}` }));
-  if (n.length > 12) segs.push({ v: n.slice(12).reduce((a, b) => a + b, 0), cls: 'r' });
-  const R = 42, C = 2 * Math.PI * R, gap = segs.length > 1 ? 1.6 : 0;
-  let at = 0;
-  return `<svg viewBox="0 0 120 120" aria-hidden="true"><g transform="rotate(-90 60 60)">${segs.map(s => {
-    const len = Math.max(0, s.v / total * C - gap), arc = `<circle class="${s.cls}" r="${R}" cx="60" cy="60" stroke-dasharray="${len.toFixed(2)} ${(C - len).toFixed(2)}" stroke-dashoffset="${(-at).toFixed(2)}"/>`;
-    at += s.v / total * C;
-    return arc;
-  }).join('')}</g><text x="60" y="60" class="c1">${total}</text><text x="60" y="75" class="c2">${total === 1 ? 'vot' : 'vots'}</text></svg>`;
+  const many = n.length > PIE_N, shown = many ? n.slice(0, PIE_N - 1) : n;
+  const vals = [...shown, ...(many ? [n.slice(PIE_N - 1).reduce((a, b) => a + b, 0)] : [])];
+  const cls = vals.map((v, i) => `${many && i === vals.length - 1 ? 'r' : `c${i + 1}`}${win && win.length && !gold.has(i) ? ' off' : ''}`);
+  return `<svg viewBox="0 0 120 120" aria-hidden="true">${pieShapes(vals, cls)}</svg>`;
 }
 function bandesMuteBlock(p) {
   const d = tallyFor(p), cats = (p.cats || []).filter(c => d?.cats?.[c.id]?.n?.length);
@@ -393,7 +409,7 @@ function bandesMuteBlock(p) {
     const line = win ? win.map(w => `<b>${esc(keyName(w.k))}</b>, amb el ${pct(w.v / total)}`).join(' · ') : x.n.length === 1 ? `Tots els vots, per a la mateixa ${who[0]}` : `El més votat en té el ${pct(x.n[0] / total)}`;
     const label = `${c.name}: ${total} ${total === 1 ? 'vot' : 'vots'} entre ${x.n.length} ${who[x.n.length === 1 ? 0 : 1]}. ${win ? win.map(w => `${keyName(w.k)}, ${pct(w.v / total)}`).join('; ') : `El més votat, ${pct(x.n[0] / total)}`}.`;
     return `<li class="bn-mu" role="img" aria-label="${esc(label)}"><h3>${esc(c.name)}</h3>${tallyDonut(x.n, win && d.win[c.id])}
-      <p>${x.b} ${x.b === 1 ? 'papereta' : 'paperetes'} · ${x.n.length} ${who[x.n.length === 1 ? 0 : 1]}</p><p class="bn-mu-w">${line}</p></li>`;
+      <p>${x.b} ${x.b === 1 ? 'papereta' : 'paperetes'} · ${nPl(total, 'vot', 'vots')} · ${x.n.length} ${who[x.n.length === 1 ? 0 : 1]}</p><p class="bn-mu-w">${line}</p></li>`;
   };
   return `<details class="np-group bn-mute"><summary><span>Com s’ha votat (${cats.length} ${cats.length === 1 ? 'categoria' : 'categories'})</span>${ICON.chev}</summary>
     <p class="m bn-mute-i">Sense noms: cada tros és una persona${cats.some(c => c.pair) ? ' (o una parella)' : ''}, i com més gran, més vots.${p.results ? ' Els guanyadors van en daurat.' : ' Qui ha guanyat es descobreix a la Nit.'}</p>

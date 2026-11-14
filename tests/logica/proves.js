@@ -727,11 +727,13 @@ prova('Bandes: l’app compta igual que el servidor (el mateix cas que tests/log
   igual(Object.fromEntries(t.people.map(e => [e.id, e.nominations]).sort()), { a: 1, b: 3, c: 2 }, 'i les mateixes categories per persona');
 });
 
-prova('Bandes: l’anell dels resultats muts (sense noms) i quan es veu', () => {
+prova('Bandes: el pastís dels resultats muts (sense noms) i quan es veu', () => {
   const p = { id: 'q', cats: [{ id: 'k1', name: 'Riure' }], sections: [] };
   const svg = tallyDonut([3, 1, 1], [3]);
-  igual([(svg.match(/class="w"/g) || []).length, (svg.match(/<circle/g) || []).length, />5</.test(svg)], [1, 3, true], 'un tros per persona, el guanyador en daurat, i el total al mig');
-  igual((tallyDonut(Array(15).fill(1)).match(/<circle/g) || []).length, 13, 'de la tretzena endavant, totes juntes');
+  igual([(svg.match(/<path/g) || []).length, (svg.match(/ off"/g) || []).length, /class="c1"/.test(svg)], [3, 2, true], 'un formatget per persona, de colors (el primer, lila), i amb el palmarès els altres s’apaguen');
+  const many = tallyDonut(Array(15).fill(1));
+  igual([(many.match(/<path/g) || []).length, (many.match(/class="r"/g) || []).length], [7, 1], 'set trossos com a molt: els sis primers i la resta, junts en gris');
+  igual((tallyDonut([4]).match(/<circle/g) || []).length, 1, 'tots els vots per a una persona: un cercle sencer');
   igual(tallyOn({ ...p, closesAt: '2000-01-01' }) && !tallyOn({ ...p, closesAt: '2999-01-01' }), true, 'només quan s’ha tancat la votació');
   igual(bandesVotes({ id: 'q', ballotsGone: '2027-01-27' }), [], 'amb les paperetes esborrades, no en compta cap (encara que el mòbil en tingui)');
 });
