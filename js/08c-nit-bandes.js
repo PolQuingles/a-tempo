@@ -200,7 +200,7 @@ function bandesNomBlock(p, day = TODAY, preview = false) {
     return `<li class="bn-nom${x.date === day ? ' today' : ''}${sealed ? ' sealed' : ''}"><div class="bn-nom-h"><span class="bn-date">${x.date === day ? 'Avui es revelen' : esc(shortDate(x.date))}</span><h3>${esc(x.cat.name)}</h3>${x.cat.pair ? '<span class="tag">Parella</span>' : x.cat.sec ? `<span class="tag">${esc(SEC[x.cat.sec]?.name || x.cat.sec)}</span>` : ''}</div>
     ${x.cat.desc ? `<p class="bn-desc">${esc(x.cat.desc)}</p>` : ''}
     ${sealed ? `<button class="bn-seal" data-act="bandes-envelope" data-id="${esc(p.id)}" data-cat="${esc(x.cat.id)}"><svg class="bn-seal-i" viewBox="0 0 48 36" aria-hidden="true"><rect x="1.5" y="1.5" width="45" height="33" rx="4"/><path d="M2.5 4l21.5 17L45.5 4"/><circle cx="24" cy="21" r="5.5"/></svg><span><b>Obre el sobre</b><small>${x.keys.length} finalistes</small></span></button>` : ''}
-    ${x.keys.length ? `<ul class="bn-fin">${x.keys.map((k, j) => `<li style="--d:${j * 110}ms">${bnWho(k)}</li>`).join('')}</ul>` : '<p class="m u-m-0">Ningú no hi va rebre vots.</p>'}</li>`;
+    ${x.keys.length ? `<div class="bn-nom-b"><ul class="bn-fin">${x.keys.map((k, j) => `<li style="--d:${j * 110}ms">${bnWho(k)}</li>`).join('')}</ul>${nomPie(p, x.cat.id)}</div>` : '<p class="m u-m-0">Ningú no hi va rebre vots.</p>'}</li>`;
   };
   return `<div class="section-title"><h2 class="h2">Finalistes</h2><span class="bn-n mono">${shown.length}/${shown.length + next.length}</span></div>
     ${mine.length ? `<p class="bn-me"><b>Ets finalista</b> a ${esc(mine.map(x => catQ(x.cat)).join(', '))}. Ens veiem a la Nit!</p>` : ''}
@@ -250,6 +250,7 @@ function bandesTeamBlock(p) {
     ph === 'prop' && b('bandes-props-close', 'Tanca les propostes'),
     ['draft', 'prop'].includes(ph) && b('bandes-publish', 'Obre la votació', true),
     ph === 'closed' && b('bandes-nominate', 'Publica els finalistes', true),
+    p.nominees && b('bandes-insta', 'Imatges per a Instagram'),
     !['draft', 'prop'].includes(ph) && b('bandes-results', 'Resultats'),
     !['draft', 'prop'].includes(ph) && b('bandes-gala', 'Gala'),
     ph === 'vote' && b('poll-results', 'Qui ha votat'),
@@ -398,6 +399,13 @@ function tallyDonut(n, win) {
   const vals = [...shown, ...(many ? [n.slice(PIE_N - 1).reduce((a, b) => a + b, 0)] : [])];
   const cls = vals.map((v, i) => `${many && i === vals.length - 1 ? 'r' : `c${i + 1}`}${win && win.length && !gold.has(i) ? ' off' : ''}`);
   return `<svg viewBox="0 0 120 120" aria-hidden="true">${pieShapes(vals, cls)}</svg>`;
+}
+/** El pastís dels finalistes d'una categoria: com s'han repartit els vots entre ells (de més a menys), sense dir de qui és cada
+ *  tros (els noms van per ordre alfabètic). Els vots es desen en publicar-los (nomN). */
+function nomPie(p, cid) {
+  const n = p.nomN?.[cid];
+  if (!n || n.length < 2 || !n.some(Boolean)) return '';
+  return `<svg class="bn-pie" viewBox="0 0 120 120" role="img" aria-label="Com s’han repartit els vots entre els finalistes, sense dir de qui és cada tros">${pieShapes(n, n.map((v, i) => `c${Math.min(i, 7) + 1}`))}</svg>`;
 }
 function bandesMuteBlock(p) {
   const d = tallyFor(p), cats = (p.cats || []).filter(c => d?.cats?.[c.id]?.n?.length);

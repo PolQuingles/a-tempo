@@ -151,6 +151,7 @@ function bandesNominate(pid, st = {}) {
   const k = +p.finalists || BANDES_FINAL;
   const t = bandesTally(p, bandesVotes(p), bandesPeople(p));
   const fin = Object.fromEntries(t.cats.map(x => [x.cat.id, bandesFinalists(x.rows, k).sort(byKeyName)]));
+  const nomN = nomVotes({ ...p, nominees: fin }, t);
   const after = p.closesAt ? addDays(p.closesAt, 1) : TODAY;
   const from0 = st.from || p.nomFrom || (after > TODAY ? after : TODAY);
   const every0 = st.every || (p.nomEvery === 'all' || !p.galaAt ? 'all' : 'day');
@@ -175,16 +176,16 @@ function bandesNominate(pid, st = {}) {
       el.querySelectorAll('#bn-every .pick').forEach(b => b.onclick = () => { el.querySelectorAll('#bn-every .pick').forEach(x => x.setAttribute('aria-pressed', x === b)); plan(); });
       el.querySelector('#bn-from').oninput = plan;
       plan();
-      el.querySelector('#bn-ok').onclick = () => bandesNomPreview(pid, { from: el.querySelector('#bn-from').value || from0, every: p.galaAt ? every() : 'all' }, fin);
+      el.querySelector('#bn-ok').onclick = () => bandesNomPreview(pid, { from: el.querySelector('#bn-from').value || from0, every: p.galaAt ? every() : 'all' }, fin, nomN);
     },
   });
 }
 /** La vista prèvia: la pàgina de les bandes tal com la veurà tothom cada dia que es revelen finalistes (sense sobres). Encara no
  *  s'ha publicat res: «Torna» hi canvia coses i «Publica’ls» ho publica. */
-function bandesNomPreview(pid, st, fin) {
+function bandesNomPreview(pid, st, fin, nomN) {
   const p = S.polls.get(pid);
   if (!p) return;
-  const q = { ...p, closed: true, nominees: fin, nomFrom: st.from, nomEvery: st.every };
+  const q = { ...p, closed: true, nominees: fin, nomN, nomFrom: st.from, nomEvery: st.every };
   const days = [...new Set(nomSchedule(q))].sort();
   let day = days[0];
   const label = d => d === p.galaAt ? `${ddmm(d)} · la Nit` : ddmm(d);
@@ -193,6 +194,7 @@ function bandesNomPreview(pid, st, fin) {
     wide: true,
     body: `<p class="u-mt-0 m">Així ho veurà tothom a la pàgina de les bandes${days.length > 1 ? '. Tria un dia per veure què s’hi veu aquell dia' : ''}. <b>Encara no s’ha publicat res.</b>${st.every === 'day' && days.length > 1 ? ' Cada dia, els finalistes nous arriben dins d’un sobre que cadascú obre.' : ''}</p>
       ${days.length > 1 ? `<div class="chips bnp-days" role="group" aria-label="Quin dia">${days.map(d => `<button type="button" class="chip" data-d="${esc(d)}" aria-pressed="${d === day}">${esc(label(d))}</button>`).join('')}</div>` : ''}
+      <button class="link-row bnp-ig" id="bnp-ig"><span><b>Imatges per a Instagram</b><small>Una per categoria, amb el pastís dels vots i els finalistes</small></span>${ICON.right}</button>
       <div class="bnp-page" id="bnp-body"></div>`,
     foot: '<button class="btn" id="bnp-back">Torna</button><span class="spacer"></span><button class="btn btn-primary" id="bnp-ok">Publica’ls</button>',
     onMount: el => {
@@ -204,12 +206,172 @@ function bandesNomPreview(pid, st, fin) {
       });
       draw();
       el.querySelector('#bnp-back').onclick = () => bandesNominate(pid, st);
+      el.querySelector('#bnp-ig').onclick = () => bandesInsta(q, () => bandesNomPreview(pid, st, fin, nomN));
       el.querySelector('#bnp-ok').onclick = () => {
         const now = new Date().toISOString();
-        const rec = { ...clone(S.polls.get(pid)), closed: true, nominees: fin, nomFrom: st.from, nomEvery: st.every, nomAt: now };
+        const rec = { ...clone(S.polls.get(pid)), closed: true, nominees: fin, nomN, nomFrom: st.from, nomEvery: st.every, nomAt: now };
         S.polls.set(pid, rec); persist('polls', pid, rec, 10);
         closeSheet(); toast('Finalistes publicats'); render();
       };
+    },
+  });
+}
+
+/* ---------- Les imatges per a Instagram ---------- */
+// Una targeta per categoria, per penjar-la quan se'n revelen els finalistes: el pastís de com s'han repartit els vots entre ells
+// (sense dir de qui és cada tros) i els noms per ordre alfabètic. 1080 × 1350 (el format vertical d'Instagram), amb l'estètica de
+// la gala: la nit, el lila i el daurat. Es dibuixa en un canvas, amb les lletres de l'app.
+const INSTA_W = 1080, INSTA_H = 1350;
+// Els colors dels trossos sobre el fons de la nit: els mateixos que --pie1…--pie8 del mode fosc (vegeu app.css).
+const PIE_NIGHT = ['#6A2C9C', '#B38AD9', '#741A3D', '#C42B3A', '#F2801F', '#F9B26A', '#FDE58A', '#E9D8C6'];
+/** Els vots dels finalistes de cada categoria, de més a menys i sense noms: { categoria: [n] }. Els desats en publicar-los o,
+ *  per a l'equip (que pot llegir les paperetes), el recompte d'ara. */
+function nomVotes(p, t = null) {
+  if (p.nomN) return p.nomN;
+  t = t || bandesTally(p, bandesVotes(p), bandesPeople(p));
+  return Object.fromEntries(t.cats.map(x => [x.cat.id, (p.nominees?.[x.cat.id] || []).map(k => x.rows.find(r => r.key === k)?.n || 0).sort((a, b) => b - a)]));
+}
+/** Les línies d'un text que caben en max píxels (amb la lletra que ja té el context). */
+function canvasLines(ctx, words, max, sep = ' ') {
+  const out = [];
+  let line = [];
+  for (const w of words) {
+    const next = [...line, w];
+    if (line.length && ctx.measureText(next.join(sep)).width > max) { out.push(line); line = [w]; } else line = next;
+  }
+  if (line.length) out.push(line);
+  return out;
+}
+/** Un text centrat amb les lletres espaiades (els rètols en majúscules). */
+function canvasSpaced(ctx, text, cx, y, track) {
+  const chars = [...text], w = chars.reduce((n, ch) => n + ctx.measureText(ch).width, 0) + track * (chars.length - 1);
+  let x = cx - w / 2;
+  ctx.textAlign = 'left';
+  for (const ch of chars) { ctx.fillText(ch, x, y); x += ctx.measureText(ch).width + track; }
+  ctx.textAlign = 'center';
+}
+/** La targeta d'una categoria, com a PNG (Blob). */
+async function instaCard(p, c, keys, votes) {
+  const F = { k: '700 24px "Hanken Grotesk"', fin: 'italic 500 46px "Bodoni Moda"', d: '400 30px "Hanken Grotesk"', n: '600 40px "Hanken Grotesk"', q: 'italic 500 36px "Bodoni Moda"', s: '500 26px "Hanken Grotesk"' };
+  if (document.fonts) await Promise.all([...Object.values(F), '600 100px "Bodoni Moda"'].map(f => document.fonts.load(f).catch(() => {})));
+  const cv = document.createElement('canvas');
+  cv.width = INSTA_W; cv.height = INSTA_H;
+  const x = cv.getContext('2d'), W = INSTA_W, H = INSTA_H, cx = W / 2;
+  x.textAlign = 'center'; x.textBaseline = 'alphabetic';
+  // El fons: la nit, un focus daurat a dalt, dues llums liles a baix i la banda daurada en diagonal.
+  x.fillStyle = '#110814'; x.fillRect(0, 0, W, H);
+  const glow = (gx, gy, r, col) => { const g = x.createRadialGradient(gx, gy, 0, gx, gy, r); g.addColorStop(0, col); g.addColorStop(1, 'rgba(17,8,20,0)'); x.fillStyle = g; x.fillRect(0, 0, W, H); };
+  glow(cx, -80, 820, 'rgba(242,213,138,.22)'); glow(90, H + 60, 640, 'rgba(201,167,230,.17)'); glow(W - 90, H + 60, 640, 'rgba(201,167,230,.17)');
+  x.save(); x.beginPath(); x.rect(0, 0, W, 520); x.clip(); x.translate(W * .7, -60); x.rotate(-.62); x.fillStyle = 'rgba(242,213,138,.08)'; x.fillRect(0, 0, 70, 700); x.restore();
+  // El marc.
+  const m = 40, r = 34;
+  x.beginPath(); x.roundRect ? x.roundRect(m, m, W - 2 * m, H - 2 * m, r) : x.rect(m, m, W - 2 * m, H - 2 * m);
+  x.lineWidth = 2; x.strokeStyle = 'rgba(242,213,138,.38)'; x.stroke();
+  // A dalt: de quina Nit és, «Finalistes» i la categoria.
+  const year = (p.galaAt || p.closesAt || TODAY).slice(0, 4);
+  x.font = F.k; x.fillStyle = '#C9A7E6';
+  canvasSpaced(x, `${galaName(p)} ${year}`.toUpperCase(), cx, 132, 4.3);
+  x.font = F.fin; x.fillStyle = '#F2D58A'; x.fillText('Finalistes', cx, 204);
+  const name = String(c.name || '').replace(/^["“”«»']+|["“”«»']+$/g, '');
+  let size = 100, tl;
+  for (; size >= 64; size -= 6) { x.font = `600 ${size}px "Bodoni Moda"`; tl = canvasLines(x, name.split(/\s+/), 880); if (tl.length <= 2) break; }
+  x.fillStyle = '#F6EEFB';
+  let y = 204 + 26 + size * .92;
+  for (const l of tl.slice(0, 3)) { x.fillText(l.join(' '), cx, y); y += size * 1.04; }
+  y -= size * 1.04;
+  // La línia daurada sota el títol.
+  const hy = y + 40, hl = x.createLinearGradient(cx - 90, 0, cx + 90, 0);
+  hl.addColorStop(0, 'rgba(242,213,138,0)'); hl.addColorStop(.5, '#F2D58A'); hl.addColorStop(1, 'rgba(242,213,138,0)');
+  x.fillStyle = hl; x.fillRect(cx - 90, hy, 180, 2);
+  y = hy + 22;
+  if (c.desc) {
+    x.font = F.d; x.fillStyle = '#D9CCE4';
+    const dl = canvasLines(x, String(c.desc).split(/\s+/), 820);
+    for (const l of dl.slice(0, 3)) { y += 42; x.fillText(l.join(' ') + (l === dl[2] && dl.length > 3 ? '…' : ''), cx, y); }
+  }
+  // A baix: qui s'endurà la banda i quan es sabrà.
+  const foot1 = H - 132, foot2 = H - 88;
+  // Els noms, per ordre alfabètic, separats per punts daurats.
+  x.font = F.n;
+  const names = keys.map(keyName), greedy = canvasLines(x, names, 900, '   ·   ');
+  // Les mateixes línies, però repartint els noms a parts iguals (2 i 2, no 3 i 1), si hi caben.
+  const per = Math.ceil(names.length / greedy.length), even = Array.from({ length: greedy.length }, (_, i) => names.slice(i * per, (i + 1) * per)).filter(l => l.length);
+  const nl = even.length === greedy.length && even.every(l => x.measureText(l.join('   ·   ')).width <= 900) ? even : greedy;
+  const nlh = 58, namesTop = foot1 - 96 - nl.length * nlh;
+  nl.forEach((l, i) => {
+    const yy = namesTop + nlh * (i + .8), full = l.join('   ·   '), w = x.measureText(full).width;
+    let xx = cx - w / 2;
+    x.textAlign = 'left';
+    l.forEach((nm, j) => {
+      x.fillStyle = '#F6EEFB'; x.fillText(nm, xx, yy); xx += x.measureText(nm).width;
+      if (j < l.length - 1) { x.fillStyle = '#F2D58A'; x.fillText('   ·   ', xx, yy); xx += x.measureText('   ·   ').width; }
+    });
+    x.textAlign = 'center';
+  });
+  // El pastís, a l'espai que queda entre la descripció i els noms.
+  const top = y + 56, bottom = namesTop - 44, R = Math.max(130, Math.min(250, (bottom - top) / 2 - 18)), py = (top + bottom) / 2;
+  const total = votes.reduce((a, b) => a + b, 0);
+  x.beginPath(); x.arc(cx, py, R + 18, 0, 2 * Math.PI); x.lineWidth = 2; x.strokeStyle = 'rgba(242,213,138,.32)'; x.stroke();
+  if (total) {
+    let a = -Math.PI / 2;
+    votes.forEach((v, i) => {
+      if (!v) return;
+      const b = a + v / total * 2 * Math.PI;
+      x.beginPath(); x.moveTo(cx, py); x.arc(cx, py, R, a, b); x.closePath();
+      x.fillStyle = PIE_NIGHT[Math.min(i, PIE_NIGHT.length - 1)]; x.fill();
+      x.lineWidth = 5; x.lineJoin = 'round'; x.strokeStyle = '#110814'; x.stroke();
+      a = b;
+    });
+  }
+  x.font = F.q; x.fillStyle = '#F2D58A'; x.fillText('Qui s’endurà la banda?', cx, foot1);
+  x.font = F.s; x.fillStyle = '#A898B8';
+  x.fillText(p.galaAt ? `Ho sabrem el ${fmtD(p.galaAt, { day: 'numeric', month: 'long' })}${p.galaPlace ? `, ${p.galaPlace}` : ''}` : 'Ho sabrem a la Nit', cx, foot2);
+  return new Promise(res => cv.toBlob(res, 'image/png'));
+}
+const canShareFiles = () => { try { return !!navigator.canShare?.({ files: [new File([''], 'a.png', { type: 'image/png' })] }); } catch { return false; } };
+/** Comparteix les imatges (al mòbil, cap a Instagram o on sigui) o, si el navegador no pot, les desa. */
+async function shareOrSave(files) {
+  if (canShareFiles()) {
+    try { await navigator.share({ files }); } catch (e) { if (e?.name !== 'AbortError') toast('No s’han pogut compartir. Torna-ho a provar.'); }
+    return;
+  }
+  for (const f of files) {
+    const a = document.createElement('a'), url = URL.createObjectURL(f);
+    a.href = url; a.download = f.name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  }
+}
+/** Les imatges per a Instagram de totes les categories. p: la votació amb els finalistes (també la de la vista prèvia, encara
+ *  sense publicar). back: on es torna. */
+function bandesInsta(p, back = null) {
+  const cats = (p.cats || []).filter(c => (p.nominees?.[c.id] || []).length);
+  if (!cats.length) { toast('Encara no hi ha finalistes'); return; }
+  const votes = nomVotes(p), share = canShareFiles(), urls = [];
+  const slug = s => normText(s).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'categoria';
+  openSheet({
+    title: 'Imatges per a Instagram',
+    wide: true,
+    body: `<p class="u-mt-0 m">Una per categoria, en el format vertical d’Instagram (1080 × 1350). El pastís diu com s’han repartit els vots entre els finalistes, però no de qui és cada tros: els noms van per ordre alfabètic.</p>
+      <div class="ig-grid">${cats.map(c => `<figure class="ig-it" data-c="${esc(c.id)}"><div class="ig-ph"><span class="sk"></span></div>
+        <figcaption><span>${esc(c.name)}</span><button type="button" class="btn btn-sm" data-ig="${esc(c.id)}" disabled>${share ? 'Comparteix' : 'Desa'}</button></figcaption></figure>`).join('')}</div>`,
+    foot: `${back ? '<button class="btn" id="ig-back">Torna</button>' : ''}<span class="spacer"></span>${cats.length > 1 ? `<button class="btn btn-primary" id="ig-all" disabled>${share ? 'Comparteix-les totes' : 'Desa-les totes'}</button>` : ''}`,
+    onMount: async el => {
+      const files = new Map();
+      const close0 = sheetClose;
+      sheetClose = () => { urls.forEach(u => URL.revokeObjectURL(u)); close0(); };
+      el.querySelector('#ig-back')?.addEventListener('click', () => back());
+      el.querySelectorAll('[data-ig]').forEach(b => b.onclick = () => { const f = files.get(b.dataset.ig); if (f) shareOrSave([f]); });
+      el.querySelector('#ig-all')?.addEventListener('click', () => shareOrSave(cats.map(c => files.get(c.id)).filter(Boolean)));
+      for (const c of cats) {
+        const blob = await instaCard(p, c, p.nominees[c.id], votes[c.id] || []);
+        if (!el.isConnected || !blob) return;
+        const f = new File([blob], `finalistes-${slug(c.name)}.png`, { type: 'image/png' }), url = URL.createObjectURL(blob);
+        files.set(c.id, f); urls.push(url);
+        const it = el.querySelector(`.ig-it[data-c="${CSS.escape(c.id)}"]`);
+        it.querySelector('.ig-ph').innerHTML = `<img src="${url}" alt="${esc(`Finalistes de ${c.name}: ${p.nominees[c.id].map(keyName).join(', ')}`)}">`;
+        it.querySelector('[data-ig]').disabled = false;
+      }
+      const all = el.querySelector('#ig-all'); if (all) all.disabled = false;
     },
   });
 }

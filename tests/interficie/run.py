@@ -2436,7 +2436,7 @@ def main():
           document.querySelector('#bn-ok').click(); await s(400);
           document.querySelector('#bnp-ok').click(); await s(400); flushAll(); await s(300);
           const q = S.polls.get('bn1'), abc = l => [...l].sort((a, b) => keyName(a).localeCompare(keyName(b), 'ca'));
-          out.noms = q.closed && JSON.stringify(q.nominees.k1) === JSON.stringify(abc([id('Laia Ferrer'), id('Marc Bosch'), id('Pau Riera')]))
+          out.noms = q.closed && JSON.stringify(q.nominees.k1) === JSON.stringify(abc([id('Laia Ferrer'), id('Marc Bosch'), id('Pau Riera')])) && JSON.stringify(q.nomN.k1) === '[2,2,1]'
             && JSON.stringify(nomSchedule(q)) === JSON.stringify([TODAY, addDays(TODAY, 1), addDays(TODAY, 2)]);
           document.querySelector('[data-act="bandes-open"]').click(); await s(400);
           out.route = location.hash === '#/bandes' && ui.tab === 'bandes';

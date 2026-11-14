@@ -734,6 +734,10 @@ prova('Bandes: el pastís dels resultats muts (sense noms) i quan es veu', () =>
   const many = tallyDonut(Array(15).fill(1));
   igual([(many.match(/<path/g) || []).length, (many.match(/class="r"/g) || []).length], [7, 1], 'set trossos com a molt: els sis primers i la resta, junts en gris');
   igual((tallyDonut([4]).match(/<circle/g) || []).length, 1, 'tots els vots per a una persona: un cercle sencer');
+  const pie = nomPie({ nomN: { k1: [5, 3, 3, 1, 0] } }, 'k1');
+  igual([(pie.match(/<path/g) || []).length, /class="c1"/.test(pie) && /class="c4"/.test(pie), nomPie({ nomN: { k1: [4] } }, 'k1'), nomPie({}, 'k1')], [4, true, '', ''],
+    'el pastís dels finalistes: un tros per finalista amb vots, de més a menys (amb un sol finalista, o sense vots desats, res)');
+  igual(nomVotes({ nomN: { k1: [2, 1] } }), { k1: [2, 1] }, 'els vots dels finalistes desats en publicar-los');
   igual(tallyOn({ ...p, closesAt: '2000-01-01' }) && !tallyOn({ ...p, closesAt: '2999-01-01' }), true, 'només quan s’ha tancat la votació');
   igual(bandesVotes({ id: 'q', ballotsGone: '2027-01-27' }), [], 'amb les paperetes esborrades, no en compta cap (encara que el mòbil en tingui)');
 });
