@@ -730,7 +730,7 @@ prova('Bandes: l’app compta igual que el servidor (el mateix cas que tests/log
 prova('Bandes: el pastís dels resultats muts (sense noms) i quan es veu', () => {
   const p = { id: 'q', cats: [{ id: 'k1', name: 'Riure' }], sections: [] };
   const svg = tallyDonut([3, 1, 1], [3]);
-  igual([(svg.match(/<path/g) || []).length, (svg.match(/class="off"/g) || []).length, /fill:var\(--pie1\)/.test(svg)], [3, 2, true], 'un formatget per persona, el primer lila fort, i amb el palmarès els altres s’apaguen');
+  igual([(svg.match(/<path/g) || []).length, (svg.match(/class="off"/g) || []).length, /fill:var\(--pie1\)/.test(svg), /%</.test(svg), /60%</.test(tallyDonut([3, 1, 1]))], [3, 2, true, false, true], 'un formatget per persona amb el percentatge, el primer lila fort, i amb el palmarès els altres s’apaguen');
   const many = tallyDonut(Array(15).fill(1));
   igual([(many.match(/<path/g) || []).length, (many.match(/color-mix/g) || []).length], [15, 8], 'tothom hi té el seu tros: després dels set colors, verds cada vegada més suaus');
   igual(pieColors(9).slice(7), ['color-mix(in oklab, var(--pie-g0), var(--pie-g1) 0%)', 'color-mix(in oklab, var(--pie-g0), var(--pie-g1) 100%)'], 'els verds van del més viu al més suau');

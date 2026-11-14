@@ -378,22 +378,28 @@ function pieColors(n) {
   return Array.from({ length: n }, (_, i) => i < PIE_N ? `var(--pie${i + 1})`
     : `color-mix(in oklab, var(--pie-g0), var(--pie-g1) ${tail > 1 ? Math.round((i - PIE_N) / (tail - 1) * 100) : 0}%)`);
 }
+/** Els colors clars (el lila fluix, els taronges fluixos, el groc i els verds), que porten el percentatge en fosc. */
+const pieLight = i => i === 1 || i >= 5;
 /** Els trossos d'un pastís (SVG de 120×120): un per valor, en el sentit de les agulles del rellotge des de dalt. fills: el color
- *  de cada tros (vegeu pieColors); cls: una classe per tros (opcional); titles: el text de cadascun en passar-hi per sobre. */
-function pieShapes(vals, fills, titles = [], cls = []) {
+ *  de cada tros (vegeu pieColors); cls: una classe per tros (opcional); titles: el text de cadascun en passar-hi per sobre;
+ *  labels: el percentatge, petit, dins de cada tros que hi cap. */
+function pieShapes(vals, fills, titles = [], cls = [], labels = false) {
   const total = vals.reduce((a, b) => a + b, 0);
   if (!total) return '';
   const R = 56, t = i => titles[i] ? `<title>${esc(titles[i])}</title>` : '';
   const at = i => `data-i="${i}"${cls[i] ? ` class="${cls[i]}"` : ''} style="fill:${fills[i]}"`;
   const live = vals.map((v, i) => v > 0 ? i : -1).filter(i => i >= 0);
-  if (live.length === 1) return `<circle ${at(live[0])} cx="60" cy="60" r="${R}">${t(live[0])}</circle>`;
+  if (live.length === 1) return `<circle ${at(live[0])} cx="60" cy="60" r="${R}">${t(live[0])}</circle>${labels ? `<text class="pie-pc${pieLight(live[0]) ? ' dk' : ''}" x="60" y="60">100%</text>` : ''}`;
   const pt = a => `${(60 + R * Math.cos(a)).toFixed(2)} ${(60 + R * Math.sin(a)).toFixed(2)}`;
   let a = -Math.PI / 2;
-  return vals.map((v, i) => {
+  const txt = [];
+  const shapes = vals.map((v, i) => {
     const b = a + v / total * 2 * Math.PI, d = `M60 60L${pt(a)}A${R} ${R} 0 ${b - a > Math.PI ? 1 : 0} 1 ${pt(b)}Z`;
+    if (labels && v / total >= .07) { const m = (a + b) / 2; txt.push(`<text class="pie-pc${pieLight(i) ? ' dk' : ''}" x="${(60 + R * .64 * Math.cos(m)).toFixed(1)}" y="${(60 + R * .64 * Math.sin(m)).toFixed(1)}">${Math.round(v / total * 100)}%</text>`); }
     a = b;
     return v ? `<path ${at(i)} d="${d}">${t(i)}</path>` : '';
   }).join('');
+  return shapes + txt.join('');
 }
 /** El pastís d'una categoria, sense noms: un tros per persona (o parella), de més a menys vots. Amb el palmarès, els trossos dels
  *  guanyadors queden en color i la resta s'apaga. */
@@ -402,14 +408,14 @@ function tallyDonut(n, win) {
   if (!total) return '';
   const gold = new Set(), left = [...(win || [])];
   n.forEach((v, i) => { const j = left.indexOf(v); if (j >= 0) { gold.add(i); left.splice(j, 1); } });
-  return `<svg viewBox="0 0 120 120" aria-hidden="true">${pieShapes(n, pieColors(n.length), [], n.map((v, i) => win && win.length && !gold.has(i) ? 'off' : ''))}</svg>`;
+  return `<svg viewBox="0 0 120 120" aria-hidden="true">${pieShapes(n, pieColors(n.length), [], n.map((v, i) => win && win.length && !gold.has(i) ? 'off' : ''), !win?.length)}</svg>`;
 }
 /** El pastís d'una categoria a la targeta dels finalistes: tothom qui ha rebut vots, de més a menys, sense dir de qui és cada tros
  *  (els noms dels finalistes van per ordre alfabètic). Els vots es desen en publicar-los (nomN). */
 function nomPie(p, cid) {
   const n = (p.nomN?.[cid] || []).filter(v => v > 0);
   if (n.length < 2) return '';
-  return `<svg class="bn-pie" viewBox="0 0 120 120" role="img" aria-label="Com s’han repartit els vots de la categoria, sense dir de qui és cada tros">${pieShapes(n, pieColors(n.length))}</svg>`;
+  return `<svg class="bn-pie" viewBox="0 0 120 120" role="img" aria-label="Com s’han repartit els vots de la categoria, sense dir de qui és cada tros">${pieShapes(n, pieColors(n.length), [], [], true)}</svg>`;
 }
 function bandesMuteBlock(p) {
   const d = tallyFor(p), cats = (p.cats || []).filter(c => d?.cats?.[c.id]?.n?.length);

@@ -318,14 +318,20 @@ async function instaCard(p, c, keys, votes) {
   x.beginPath(); x.arc(cx, py, R + 18, 0, 2 * Math.PI); x.lineWidth = 2; x.strokeStyle = 'rgba(242,213,138,.32)'; x.stroke();
   if (total) {
     let a = -Math.PI / 2;
+    const marks = [];
     votes.forEach((v, i) => {
       if (!v) return;
       const b = a + v / total * 2 * Math.PI;
       x.beginPath(); x.moveTo(cx, py); x.arc(cx, py, R, a, b); x.closePath();
       x.fillStyle = fills[i]; x.fill();
       x.lineWidth = votes.length > 14 ? 3 : 5; x.lineJoin = 'round'; x.strokeStyle = '#110814'; x.stroke();
+      // El percentatge, petit, dins dels trossos on hi cap.
+      if (v / total >= .045) marks.push({ m: (a + b) / 2, t: `${Math.round(v / total * 100)}%`, dk: pieLight(i) });
       a = b;
     });
+    x.font = `600 ${Math.round(R * .12)}px "Hanken Grotesk"`; x.textBaseline = 'middle';
+    for (const k of marks) { x.fillStyle = k.dk ? 'rgba(28,16,36,.72)' : 'rgba(255,255,255,.9)'; x.fillText(k.t, cx + R * .68 * Math.cos(k.m), py + R * .68 * Math.sin(k.m)); }
+    x.textBaseline = 'alphabetic';
   }
   x.font = F.q; x.fillStyle = '#F2D58A'; x.fillText('Qui s’endurà la banda?', cx, foot1);
   x.font = F.s; x.fillStyle = '#A898B8';

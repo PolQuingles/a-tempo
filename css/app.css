@@ -1165,6 +1165,9 @@ button.mday:hover{background:var(--surface-2)}
 /* Cada formatget, amb una vora del color del fons perquè se separin. */
 :is(.bd-pie,.bn-mu,.bn-pie) :is(path,circle){stroke:var(--surface);stroke-width:1.5;stroke-linejoin:round;transition:opacity .15s}
 .bn-mu .off{opacity:.25}
+/* El percentatge dins de cada tros: petit i discret. */
+.pie-pc{font-family:var(--f-ui);font-size:7.5px;font-weight:600;text-anchor:middle;dominant-baseline:middle;fill:rgba(255,255,255,.88);stroke:none;pointer-events:none;font-variant-numeric:tabular-nums}
+.pie-pc.dk{fill:rgba(28,16,36,.72)}
 /* Els finalistes d'una categoria i, al costat, el pastís dels seus vots (sense dir de qui és cada tros). */
 .bn-nom-b{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:14px}
 .bn-pie{display:block;width:calc(96px * var(--ts));height:calc(96px * var(--ts))}
