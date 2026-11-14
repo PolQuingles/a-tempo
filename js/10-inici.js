@@ -512,6 +512,7 @@ function afterRender() {
   }
   const ctx = $('#ctx');
   if (ctx) onScroll();
+  if (ui.tab === 'bandes') bnIgDraw($('#view') || document);
 }
 function onScroll() {
   const ctx = $('#ctx');

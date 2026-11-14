@@ -238,6 +238,7 @@ const actions = {
   'bandes-nominate': el => bandesNominate(el.dataset.id),
   'bandes-gala': el => bandesGala(el.dataset.id),
   'bandes-envelope': el => bandesEnvelope(el),
+  'bandes-ig-save': el => bandesIgSave(el),
   'bandes-ics': el => bandesIcs(el.dataset.id),
   'bandes-insta': el => { const p = S.polls.get(el.dataset.id); if (p) bandesInsta(p); },
   'bandes-props-open': el => bandesPropsOpen(el.dataset.id),
