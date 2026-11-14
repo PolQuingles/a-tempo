@@ -2424,7 +2424,17 @@ def main():
           out.todo = !!todo; todo?.click(); await s(300);
           document.querySelector('#bn-every .pick[data-v="day"]').click(); await s(100);
           out.plan = /Una cada dia/.test(document.querySelector('#bn-plan').textContent);
-          document.querySelector('#bn-ok').click(); await s(400); flushAll(); await s(300);
+          document.querySelector('#bn-ok').click(); await s(400);
+          // Primer, la vista prèvia: la pàgina tal com es veurà cada dia, sense publicar res.
+          const pv = document.querySelector('.sheet #bnp-body');
+          out.preview = !!pv && !S.polls.get('bn1').nominees && document.querySelectorAll('.sheet .bnp-days [data-d]').length === 3
+            && pv.innerText.includes('Pau Riera') && !pv.querySelector('.bn-nom.sealed') && /Encara per revelar \(2\)/.test(pv.innerText);
+          document.querySelectorAll('.sheet .bnp-days [data-d]')[2].click(); await s(200);
+          out.preview = out.preview && !/Encara per revelar/.test(document.querySelector('.sheet #bnp-body').innerText);
+          document.querySelector('#bnp-back').click(); await s(300);
+          out.preview = out.preview && document.querySelector('#bn-every .pick[data-v="day"]')?.getAttribute('aria-pressed') === 'true';
+          document.querySelector('#bn-ok').click(); await s(400);
+          document.querySelector('#bnp-ok').click(); await s(400); flushAll(); await s(300);
           const q = S.polls.get('bn1'), abc = l => [...l].sort((a, b) => keyName(a).localeCompare(keyName(b), 'ca'));
           out.noms = q.closed && JSON.stringify(q.nominees.k1) === JSON.stringify(abc([id('Laia Ferrer'), id('Marc Bosch'), id('Pau Riera')]))
             && JSON.stringify(nomSchedule(q)) === JSON.stringify([TODAY, addDays(TODAY, 1), addDays(TODAY, 2)]);
@@ -2471,7 +2481,7 @@ def main():
           document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); await s(200);
           return out; }""")
         for k, label in [("home", "a Inici surt el compte enrere de la Nit"), ("todo", "quan es tanca la votació, l'equip té a «Per fer» publicar els finalistes"),
-                         ("plan", "en publicar-los, diu com es revelaran"), ("noms", "els finalistes es desen per ordre alfabètic, i es revelen un cada dia fins a la Nit"),
+                         ("plan", "en publicar-los, diu com es revelaran"), ("preview", "abans de publicar-los, es veu com quedarà la pàgina cada dia (i es pot tornar enrere)"), ("noms", "els finalistes es desen per ordre alfabètic, i es revelen un cada dia fins a la Nit"),
                          ("route", "la Nit té la seva pàgina (#/bandes)"), ("sealed", "els finalistes d'avui arriben dins d'un sobre tancat"),
                          ("page", "en obrir el sobre, la pàgina ensenya els finalistes d'avui i diu quants en falten"), ("stays", "i el sobre queda obert"),
                          ("tally", "l'app de l'equip no escriu els resultats muts (ho fa el servei)"),
