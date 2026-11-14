@@ -369,43 +369,47 @@ function tallyFor(p) {
   }
   return BN_TALLY.data;
 }
-/** Els colors dels pastissos de les bandes: el lila de l'agrupació i sis més (vegeu --pie1…--pie7 a app.css), triats perquè dos
- *  trossos del costat es distingeixin també amb daltonisme. Si hi ha més trossos que colors, els últims van junts, en gris. */
+/** Els colors dels pastissos de les bandes, del més votat al menys: un degradat del lila fort al groc (lila fluix, grana, vermell,
+ *  taronges; vegeu --pie1…--pie7 a app.css) i, si hi ha més trossos, verds cada vegada més suaus (--pie-g0 → --pie-g1). Tothom
+ *  qui ha rebut vots hi té el seu tros. */
 const PIE_N = 7;
-/** Els trossos d'un pastís (SVG de 120×120): un per valor, en el sentit de les agulles del rellotge des de dalt. cls: la classe
- *  (el color) de cada tros; titles: el text de cadascun en passar-hi per sobre. */
-function pieShapes(vals, cls, titles = []) {
+function pieColors(n) {
+  const tail = Math.max(0, n - PIE_N);
+  return Array.from({ length: n }, (_, i) => i < PIE_N ? `var(--pie${i + 1})`
+    : `color-mix(in oklab, var(--pie-g0), var(--pie-g1) ${tail > 1 ? Math.round((i - PIE_N) / (tail - 1) * 100) : 0}%)`);
+}
+/** Els trossos d'un pastís (SVG de 120×120): un per valor, en el sentit de les agulles del rellotge des de dalt. fills: el color
+ *  de cada tros (vegeu pieColors); cls: una classe per tros (opcional); titles: el text de cadascun en passar-hi per sobre. */
+function pieShapes(vals, fills, titles = [], cls = []) {
   const total = vals.reduce((a, b) => a + b, 0);
   if (!total) return '';
   const R = 56, t = i => titles[i] ? `<title>${esc(titles[i])}</title>` : '';
+  const at = i => `data-i="${i}"${cls[i] ? ` class="${cls[i]}"` : ''} style="fill:${fills[i]}"`;
   const live = vals.map((v, i) => v > 0 ? i : -1).filter(i => i >= 0);
-  if (live.length === 1) return `<circle data-i="${live[0]}" class="${cls[live[0]]}" cx="60" cy="60" r="${R}">${t(live[0])}</circle>`;
+  if (live.length === 1) return `<circle ${at(live[0])} cx="60" cy="60" r="${R}">${t(live[0])}</circle>`;
   const pt = a => `${(60 + R * Math.cos(a)).toFixed(2)} ${(60 + R * Math.sin(a)).toFixed(2)}`;
   let a = -Math.PI / 2;
   return vals.map((v, i) => {
     const b = a + v / total * 2 * Math.PI, d = `M60 60L${pt(a)}A${R} ${R} 0 ${b - a > Math.PI ? 1 : 0} 1 ${pt(b)}Z`;
     a = b;
-    return v ? `<path data-i="${i}" class="${cls[i]}" d="${d}">${t(i)}</path>` : '';
+    return v ? `<path ${at(i)} d="${d}">${t(i)}</path>` : '';
   }).join('');
 }
-/** El pastís d'una categoria, sense noms: un tros per persona (o parella), de més a menys vots (les set primeres; si n'hi ha
- *  més, les sis primeres i la resta, juntes). Amb el palmarès, els trossos dels guanyadors queden en color i la resta s'apaga. */
+/** El pastís d'una categoria, sense noms: un tros per persona (o parella), de més a menys vots. Amb el palmarès, els trossos dels
+ *  guanyadors queden en color i la resta s'apaga. */
 function tallyDonut(n, win) {
   const total = n.reduce((a, b) => a + b, 0);
   if (!total) return '';
   const gold = new Set(), left = [...(win || [])];
   n.forEach((v, i) => { const j = left.indexOf(v); if (j >= 0) { gold.add(i); left.splice(j, 1); } });
-  const many = n.length > PIE_N, shown = many ? n.slice(0, PIE_N - 1) : n;
-  const vals = [...shown, ...(many ? [n.slice(PIE_N - 1).reduce((a, b) => a + b, 0)] : [])];
-  const cls = vals.map((v, i) => `${many && i === vals.length - 1 ? 'r' : `c${i + 1}`}${win && win.length && !gold.has(i) ? ' off' : ''}`);
-  return `<svg viewBox="0 0 120 120" aria-hidden="true">${pieShapes(vals, cls)}</svg>`;
+  return `<svg viewBox="0 0 120 120" aria-hidden="true">${pieShapes(n, pieColors(n.length), [], n.map((v, i) => win && win.length && !gold.has(i) ? 'off' : ''))}</svg>`;
 }
-/** El pastís dels finalistes d'una categoria: com s'han repartit els vots entre ells (de més a menys), sense dir de qui és cada
- *  tros (els noms van per ordre alfabètic). Els vots es desen en publicar-los (nomN). */
+/** El pastís d'una categoria a la targeta dels finalistes: tothom qui ha rebut vots, de més a menys, sense dir de qui és cada tros
+ *  (els noms dels finalistes van per ordre alfabètic). Els vots es desen en publicar-los (nomN). */
 function nomPie(p, cid) {
-  const n = p.nomN?.[cid];
-  if (!n || n.length < 2 || !n.some(Boolean)) return '';
-  return `<svg class="bn-pie" viewBox="0 0 120 120" role="img" aria-label="Com s’han repartit els vots entre els finalistes, sense dir de qui és cada tros">${pieShapes(n, n.map((v, i) => `c${Math.min(i, 7) + 1}`))}</svg>`;
+  const n = (p.nomN?.[cid] || []).filter(v => v > 0);
+  if (n.length < 2) return '';
+  return `<svg class="bn-pie" viewBox="0 0 120 120" role="img" aria-label="Com s’han repartit els vots de la categoria, sense dir de qui és cada tros">${pieShapes(n, pieColors(n.length))}</svg>`;
 }
 function bandesMuteBlock(p) {
   const d = tallyFor(p), cats = (p.cats || []).filter(c => d?.cats?.[c.id]?.n?.length);

@@ -218,18 +218,22 @@ function bandesNomPreview(pid, st, fin, nomN) {
 }
 
 /* ---------- Les imatges per a Instagram ---------- */
-// Una targeta per categoria, per penjar-la quan se'n revelen els finalistes: el pastís de com s'han repartit els vots entre ells
-// (sense dir de qui és cada tros) i els noms per ordre alfabètic. 1080 × 1350 (el format vertical d'Instagram), amb l'estètica de
+// Una targeta per categoria, per penjar-la quan se'n revelen els finalistes: el pastís de com s'han repartit tots els vots de la
+// categoria (sense dir de qui és cada tros) i els noms dels finalistes per ordre alfabètic. 1080 × 1350 (el format vertical d'Instagram), amb l'estètica de
 // la gala: la nit, el lila i el daurat. Es dibuixa en un canvas, amb les lletres de l'app.
 const INSTA_W = 1080, INSTA_H = 1350;
-// Els colors dels trossos sobre el fons de la nit: els mateixos que --pie1…--pie8 del mode fosc (vegeu app.css).
-const PIE_NIGHT = ['#6A2C9C', '#B38AD9', '#741A3D', '#C42B3A', '#F2801F', '#F9B26A', '#FDE58A', '#E9D8C6'];
-/** Els vots dels finalistes de cada categoria, de més a menys i sense noms: { categoria: [n] }. Els desats en publicar-los o,
- *  per a l'equip (que pot llegir les paperetes), el recompte d'ara. */
+// Els colors dels trossos sobre el fons de la nit: els mateixos que el mode fosc (vegeu pieColors i --pie1…--pie7, --pie-g0/1).
+const PIE_NIGHT = ['#6A2C9C', '#B38AD9', '#741A3D', '#C42B3A', '#F2801F', '#F9B26A', '#FDE58A'], PIE_NIGHT_G = ['#8DC35E', '#E2EED6'];
+/** Barreja dos colors (#rrggbb): t = 0, el primer; t = 1, el segon. */
+const mixHex = (a, b, t) => `#${[1, 3, 5].map(i => Math.round(parseInt(a.slice(i, i + 2), 16) * (1 - t) + parseInt(b.slice(i, i + 2), 16) * t).toString(16).padStart(2, '0')).join('')}`;
+const nightColors = n => Array.from({ length: n }, (_, i) => i < PIE_NIGHT.length ? PIE_NIGHT[i]
+  : mixHex(PIE_NIGHT_G[0], PIE_NIGHT_G[1], n - PIE_NIGHT.length > 1 ? (i - PIE_NIGHT.length) / (n - PIE_NIGHT.length - 1) : 0));
+/** Els vots de cada categoria, de tothom qui n'ha rebut, de més a menys i sense noms: { categoria: [n] }. Els desats en
+ *  publicar els finalistes o, per a l'equip (que pot llegir les paperetes), el recompte d'ara. */
 function nomVotes(p, t = null) {
   if (p.nomN) return p.nomN;
   t = t || bandesTally(p, bandesVotes(p), bandesPeople(p));
-  return Object.fromEntries(t.cats.map(x => [x.cat.id, (p.nominees?.[x.cat.id] || []).map(k => x.rows.find(r => r.key === k)?.n || 0).sort((a, b) => b - a)]));
+  return Object.fromEntries(t.cats.map(x => [x.cat.id, x.rows.map(r => r.n).filter(n => n > 0).sort((a, b) => b - a)]));
 }
 /** Les línies d'un text que caben en max píxels (amb la lletra que ja té el context). */
 function canvasLines(ctx, words, max, sep = ' ') {
@@ -310,7 +314,7 @@ async function instaCard(p, c, keys, votes) {
   });
   // El pastís, a l'espai que queda entre la descripció i els noms.
   const top = y + 56, bottom = namesTop - 44, R = Math.max(130, Math.min(250, (bottom - top) / 2 - 18)), py = (top + bottom) / 2;
-  const total = votes.reduce((a, b) => a + b, 0);
+  const total = votes.reduce((a, b) => a + b, 0), fills = nightColors(votes.length);
   x.beginPath(); x.arc(cx, py, R + 18, 0, 2 * Math.PI); x.lineWidth = 2; x.strokeStyle = 'rgba(242,213,138,.32)'; x.stroke();
   if (total) {
     let a = -Math.PI / 2;
@@ -318,8 +322,8 @@ async function instaCard(p, c, keys, votes) {
       if (!v) return;
       const b = a + v / total * 2 * Math.PI;
       x.beginPath(); x.moveTo(cx, py); x.arc(cx, py, R, a, b); x.closePath();
-      x.fillStyle = PIE_NIGHT[Math.min(i, PIE_NIGHT.length - 1)]; x.fill();
-      x.lineWidth = 5; x.lineJoin = 'round'; x.strokeStyle = '#110814'; x.stroke();
+      x.fillStyle = fills[i]; x.fill();
+      x.lineWidth = votes.length > 14 ? 3 : 5; x.lineJoin = 'round'; x.strokeStyle = '#110814'; x.stroke();
       a = b;
     });
   }
@@ -351,7 +355,7 @@ function bandesInsta(p, back = null) {
   openSheet({
     title: 'Imatges per a Instagram',
     wide: true,
-    body: `<p class="u-mt-0 m">Una per categoria, en el format vertical d’Instagram (1080 × 1350). El pastís diu com s’han repartit els vots entre els finalistes, però no de qui és cada tros: els noms van per ordre alfabètic.</p>
+    body: `<p class="u-mt-0 m">Una per categoria, en el format vertical d’Instagram (1080 × 1350). El pastís diu com s’han repartit tots els vots de la categoria, però no de qui és cada tros: els noms dels finalistes van per ordre alfabètic.</p>
       <div class="ig-grid">${cats.map(c => `<figure class="ig-it" data-c="${esc(c.id)}"><div class="ig-ph"><span class="sk"></span></div>
         <figcaption><span>${esc(c.name)}</span><button type="button" class="btn btn-sm" data-ig="${esc(c.id)}" disabled>${share ? 'Comparteix' : 'Desa'}</button></figcaption></figure>`).join('')}</div>`,
     foot: `${back ? '<button class="btn" id="ig-back">Torna</button>' : ''}<span class="spacer"></span>${cats.length > 1 ? `<button class="btn btn-primary" id="ig-all" disabled>${share ? 'Comparteix-les totes' : 'Desa-les totes'}</button>` : ''}`,

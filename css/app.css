@@ -1157,15 +1157,13 @@ button.mday:hover{background:var(--surface-2)}
 @media (prefers-reduced-motion:reduce){.gala-fin li,.gala-roll i,.gala::after,.bn-seal-i circle,.bn-nom.opening .bn-fin li{animation:none}.gala-w.now .gala-n{animation:none;opacity:1}.bb-prog span{transition:none}}
 /* Com es reparteixen els vots: qui guanya, amb el color de l'agrupació; els altres finalistes, en grisos; un empat, en ambre. */
 /* Els pastissos de les bandes (vegeu pieShapes): un degradat del lila fort al groc, passant pel lila fluix, el grana, el vermell i
-   els taronges (del més votat al menys). Dos trossos del costat es distingeixen també amb daltonisme; la resta, en gris. En fosc,
-   els mateixos colors que les imatges per a Instagram (PIE_NIGHT). */
-:root{--pie1:#5B2486;--pie2:#A47BCB;--pie3:#6E1838;--pie4:#BC2836;--pie5:#E8741A;--pie6:#F2A04F;--pie7:#EDC443;--pie8:#D9C3AE;--bd-r:#E4DEE9;--gold:#8A6216;--gold-soft:#F8F0DE;--gold-line:#DFC68F}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--pie1:#6A2C9C;--pie2:#B38AD9;--pie3:#741A3D;--pie4:#C42B3A;--pie5:#F2801F;--pie6:#F9B26A;--pie7:#FDE58A;--pie8:#E9D8C6;--bd-r:#3D3645;--gold:#E7C77B;--gold-soft:#272017;--gold-line:#5C4A2B}}
-:root[data-theme="dark"]{--pie1:#6A2C9C;--pie2:#B38AD9;--pie3:#741A3D;--pie4:#C42B3A;--pie5:#F2801F;--pie6:#F9B26A;--pie7:#FDE58A;--pie8:#E9D8C6;--bd-r:#3D3645;--gold:#E7C77B;--gold-soft:#272017;--gold-line:#5C4A2B}
+   els taronges (del més votat al menys) i, si n'hi ha més, verds cada vegada més suaus (--pie-g0 → --pie-g1, vegeu pieColors). En
+   fosc, els mateixos colors que les imatges per a Instagram (PIE_NIGHT). */
+:root{--pie-g0:#6FA543;--pie-g1:#DDEBCF;--pie1:#5B2486;--pie2:#A47BCB;--pie3:#6E1838;--pie4:#BC2836;--pie5:#E8741A;--pie6:#F2A04F;--pie7:#EDC443;--pie8:#D9C3AE;--bd-r:#E4DEE9;--gold:#8A6216;--gold-soft:#F8F0DE;--gold-line:#DFC68F}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--pie-g0:#8DC35E;--pie-g1:#E2EED6;--pie1:#6A2C9C;--pie2:#B38AD9;--pie3:#741A3D;--pie4:#C42B3A;--pie5:#F2801F;--pie6:#F9B26A;--pie7:#FDE58A;--pie8:#E9D8C6;--bd-r:#3D3645;--gold:#E7C77B;--gold-soft:#272017;--gold-line:#5C4A2B}}
+:root[data-theme="dark"]{--pie-g0:#8DC35E;--pie-g1:#E2EED6;--pie1:#6A2C9C;--pie2:#B38AD9;--pie3:#741A3D;--pie4:#C42B3A;--pie5:#F2801F;--pie6:#F9B26A;--pie7:#FDE58A;--pie8:#E9D8C6;--bd-r:#3D3645;--gold:#E7C77B;--gold-soft:#272017;--gold-line:#5C4A2B}
 /* Cada formatget, amb una vora del color del fons perquè se separin. */
 :is(.bd-pie,.bn-mu,.bn-pie) :is(path,circle){stroke:var(--surface);stroke-width:1.5;stroke-linejoin:round;transition:opacity .15s}
-:is(.bd-pie,.bn-mu,.bn-pie) .c1{fill:var(--pie1)}:is(.bd-pie,.bn-mu,.bn-pie) .c2{fill:var(--pie2)}:is(.bd-pie,.bn-mu,.bn-pie) .c3{fill:var(--pie3)}:is(.bd-pie,.bn-mu,.bn-pie) .c4{fill:var(--pie4)}
-:is(.bd-pie,.bn-mu,.bn-pie) .c5{fill:var(--pie5)}:is(.bd-pie,.bn-mu,.bn-pie) .c6{fill:var(--pie6)}:is(.bd-pie,.bn-mu,.bn-pie) .c7{fill:var(--pie7)}:is(.bd-pie,.bn-mu,.bn-pie) .c8{fill:var(--pie8)}:is(.bd-pie,.bn-mu,.bn-pie) .r{fill:var(--bd-r)}
 .bn-mu .off{opacity:.25}
 /* Els finalistes d'una categoria i, al costat, el pastís dels seus vots (sense dir de qui és cada tros). */
 .bn-nom-b{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:14px}
@@ -1189,7 +1187,6 @@ button.mday:hover{background:var(--surface-2)}
 .bd-leg li{display:grid;grid-template-columns:10px minmax(0,1fr) auto 38px;align-items:center;gap:8px;font-size:var(--t-15)}
 .bd-leg i{width:10px;height:10px;border-radius:3px}
 .bd-leg .bd-who{grid-area:auto;min-width:0;display:flex;flex-wrap:wrap;align-items:center;gap:2px 0}
-.bd-leg i.c1{background:var(--pie1)}.bd-leg i.c2{background:var(--pie2)}.bd-leg i.c3{background:var(--pie3)}.bd-leg i.c4{background:var(--pie4)}.bd-leg i.c5{background:var(--pie5)}.bd-leg i.c6{background:var(--pie6)}.bd-leg i.c7{background:var(--pie7)}.bd-leg i.c8{background:var(--pie8)}.bd-leg i.r{background:var(--bd-r)}
 .bd-leg .bd-pc{text-align:right;color:var(--muted);font-size:var(--t-12)}
 .bd-pie:has(.bd-leg li:hover) :is(path,circle){opacity:.28}
 .bd-pie:has(.bd-leg li[data-i="0"]:hover) [data-i="0"],.bd-pie:has(.bd-leg li[data-i="1"]:hover) [data-i="1"],.bd-pie:has(.bd-leg li[data-i="2"]:hover) [data-i="2"],
