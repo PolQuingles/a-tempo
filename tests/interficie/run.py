@@ -2498,9 +2498,10 @@ def main():
         switch_user(page, base, "singer")
         r = page.evaluate("""async () => { const s = ms => new Promise(r => setTimeout(r, ms));
           ui.tab = 'bandes'; render(); await s(300);
-          const pg = document.querySelector('.bn-page')?.innerText || '';
+          for (let k = 0; k < 30 && !document.querySelector('.bn-page .bn-ig-ph img'); k++) await s(150);
+          const pg = document.querySelector('.bn-page')?.innerText || '', alt = [...document.querySelectorAll('.bn-page .bn-ig-ph img')].map(i => i.alt).join(' | ');
           const mu = document.querySelector('.bn-mute'), mt = mu?.textContent || '';
-          return { shown: pg.includes('Pau Riera'), hidden: !pg.includes('Clara Vila'), team: !document.querySelector('.bn-team'), voted: /Has votat 3 de 3/.test(pg),
+          return { shown: alt.includes('Pau Riera'), hidden: !pg.includes('Clara Vila') && !alt.includes('Clara Vila'), team: !document.querySelector('.bn-team'), voted: /Has votat 3 de 3/.test(pg),
             mute: !!mu && !mu.open && mu.querySelectorAll('.bn-mu svg').length === 3 && /El més votat en té el 40%/.test(mt)
               && !['Laia', 'Marc', 'Pau', 'Clara'].some(n => mt.includes(n)), nogot: !document.querySelector('.bn-got') }; }""")
         for k, label in [("shown", "el cantaire veu els finalistes ja revelats"), ("hidden", "però no els dels dies que vénen"),
