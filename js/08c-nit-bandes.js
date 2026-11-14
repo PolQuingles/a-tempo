@@ -186,25 +186,65 @@ function bandesEnvelope(el) {
   const card = el.closest('.bn-nom');
   const key = `${el.dataset.id}:${el.dataset.cat}`, open = sobresOberts();
   open.add(key); lsSet(LS_SOBRES, JSON.stringify([...open].slice(-300)));
-  if (card) { card.classList.remove('sealed'); card.classList.add('opening'); }
+  if (card) { card.classList.remove('sealed'); card.classList.add('opening'); bnIgDraw(card.closest('.bn-noms') || card); }
 }
-/** Els finalistes a la pàgina de les bandes: els d'avui (dins d'un sobre), els d'abans i els que falten. day i preview: la vista
- *  prèvia de qui els publica (com es veurà aquell dia, sense sobres). */
+/* Cada categoria revelada és la seva imatge per a Instagram (la mateixa que es comparteix): es dibuixa en acabar de pintar la
+ * pantalla i es guarda, per no tornar-la a dibuixar a cada canvi. */
+const BN_IG = new Map();
+let bnIgPoll = null;
+function bnIgFile(p, c) {
+  let v = {};
+  try { v = nomVotes(p); } catch { }
+  const keys = p.nominees?.[c.id] || [], votes = v[c.id] || [];
+  const sig = JSON.stringify([p.id, c.id, c.name, c.desc || '', keys, votes, p.galaAt || '', p.galaPlace || '', galaName(p)]);
+  if (!BN_IG.has(sig)) BN_IG.set(sig, instaCard(p, c, keys, votes).then(blob => blob && {
+    file: new File([blob], `finalistes-${normText(c.name).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'categoria'}.png`, { type: 'image/png' }),
+    url: URL.createObjectURL(blob),
+  }));
+  return BN_IG.get(sig);
+}
+/** Dibuixa les imatges que encara no hi són (les dels sobres tancats, quan s'obren). */
+function bnIgDraw(root = document) {
+  for (const ph of root.querySelectorAll('.bn-ig-ph:not(.ok)')) {
+    if (ph.closest('.bn-nom.sealed')) continue;
+    const p = ph.dataset.id === bnIgPoll?.id ? bnIgPoll : S.polls.get(ph.dataset.id), c = (p?.cats || []).find(x => x.id === ph.dataset.cat);
+    if (!c) continue;
+    ph.classList.add('ok');
+    bnIgFile(p, c).then(r => {
+      if (!r || !ph.isConnected) return;
+      ph.innerHTML = `<img src="${r.url}" alt="${esc(`${c.name}. Finalistes: ${(p.nominees[c.id] || []).map(keyName).join(', ')}`)}">`;
+      const b = ph.closest('.bn-nom')?.querySelector('[data-act="bandes-ig-save"]');
+      if (b) b.disabled = false;
+    });
+  }
+}
+/** Desa (o comparteix, al mòbil) la imatge d'una categoria. */
+async function bandesIgSave(el) {
+  const p = el.dataset.id === bnIgPoll?.id ? bnIgPoll : S.polls.get(el.dataset.id), c = (p?.cats || []).find(x => x.id === el.dataset.cat);
+  if (!c) return;
+  const r = await bnIgFile(p, c);
+  if (r) shareOrSave([r.file]);
+}
+/** Els finalistes a la pàgina de les bandes: la imatge de cada categoria revelada (la d'avui, dins d'un sobre), les d'abans i les
+ *  que falten. day i preview: la vista prèvia de qui els publica (com es veurà aquell dia, sense sobres). */
 function bandesNomBlock(p, day = TODAY, preview = false) {
   if (!p.nominees) return '';
+  if (preview) bnIgPoll = p;
   const { shown, next } = nomReveal(p, day), today = shown.filter(x => x.date === day), past = shown.filter(x => x.date !== day).reverse();
-  const open = sobresOberts(), me = myId();
+  const open = sobresOberts(), me = myId(), share = canShareFiles();
   const mine = me && !preview ? shown.filter(x => x.keys.some(k => keyIds(k).includes(me))) : [];
   const card = x => {
     const sealed = !preview && x.date === day && x.keys.length && !open.has(`${p.id}:${x.cat.id}`);
-    return `<li class="bn-nom${x.date === day ? ' today' : ''}${sealed ? ' sealed' : ''}"><div class="bn-nom-h"><span class="bn-date">${x.date === day ? 'Avui es revelen' : esc(shortDate(x.date))}</span><h3>${esc(x.cat.name)}</h3>${x.cat.pair ? '<span class="tag">Parella</span>' : x.cat.sec ? `<span class="tag">${esc(SEC[x.cat.sec]?.name || x.cat.sec)}</span>` : ''}</div>
-    ${x.cat.desc ? `<p class="bn-desc">${esc(x.cat.desc)}</p>` : ''}
-    ${sealed ? `<button class="bn-seal" data-act="bandes-envelope" data-id="${esc(p.id)}" data-cat="${esc(x.cat.id)}"><svg class="bn-seal-i" viewBox="0 0 48 36" aria-hidden="true"><rect x="1.5" y="1.5" width="45" height="33" rx="4"/><path d="M2.5 4l21.5 17L45.5 4"/><circle cx="24" cy="21" r="5.5"/></svg><span><b>Obre el sobre</b><small>${x.keys.length} finalistes</small></span></button>` : ''}
-    ${x.keys.length ? `<div class="bn-nom-b"><ul class="bn-fin">${x.keys.map((k, j) => `<li style="--d:${j * 110}ms">${bnWho(k)}</li>`).join('')}</ul>${nomPie(p, x.cat.id)}</div>` : '<p class="m u-m-0">Ningú no hi va rebre vots.</p>'}</li>`;
+    const ids = `data-id="${esc(p.id)}" data-cat="${esc(x.cat.id)}"`;
+    return `<li class="bn-nom${x.date === day ? ' today' : ''}${sealed ? ' sealed' : ''}">
+      ${sealed ? `<button class="bn-seal" data-act="bandes-envelope" ${ids}><svg class="bn-seal-i" viewBox="0 0 48 36" aria-hidden="true"><rect x="1.5" y="1.5" width="45" height="33" rx="4"/><path d="M2.5 4l21.5 17L45.5 4"/><circle cx="24" cy="21" r="5.5"/></svg><span><b>${esc(x.cat.name)}</b><small>Obre el sobre · ${x.keys.length} finalistes</small></span></button>` : ''}
+      <div class="ig-ph bn-ig-ph" ${ids}><span class="sk"></span></div>
+      <div class="bn-ig-f"><span class="bn-date">${x.date === day ? 'Avui' : esc(shortDate(x.date))}</span><button type="button" class="btn btn-sm" data-act="bandes-ig-save" ${ids} disabled>${share ? 'Comparteix' : 'Desa la imatge'}</button></div></li>`;
   };
   return `<div class="section-title"><h2 class="h2">Finalistes</h2><span class="bn-n mono">${shown.length}/${shown.length + next.length}</span></div>
     ${mine.length ? `<p class="bn-me"><b>Ets finalista</b> a ${esc(mine.map(x => catQ(x.cat)).join(', '))}. Ens veiem a la Nit!</p>` : ''}
-    ${shown.length ? `<ol class="bn-noms">${[...today, ...past].map(card).join('')}</ol>` : `<p class="m">Els primers finalistes es revelen ${esc(longDate(next[0]?.date || day).toLowerCase())}.</p>`}
+    ${shown.length ? `<ol class="bn-noms">${[...today, ...past].filter(x => x.keys.length).map(card).join('')}</ol>` : `<p class="m">Els primers finalistes es revelen ${esc(longDate(next[0]?.date || day).toLowerCase())}.</p>`}
+    ${shown.some(x => !x.keys.length) ? `<p class="m u-m-0">Sense finalistes (ningú no hi va rebre vots): ${esc(shown.filter(x => !x.keys.length).map(x => x.cat.name).join(', '))}.</p>` : ''}
     ${next.length ? `<details class="np-group bn-next"><summary><span>Encara per revelar (${next.length})</span>${ICON.chev}</summary>
       <ul class="bn-next-l">${next.map(x => `<li><span>${esc(x.cat.name)}</span><span class="mono">${dayDiff(day, x.date) === 1 ? 'demà' : esc(ddmm(x.date))}</span></li>`).join('')}</ul></details>` : ''}`;
 }
@@ -409,13 +449,6 @@ function tallyDonut(n, win) {
   const gold = new Set(), left = [...(win || [])];
   n.forEach((v, i) => { const j = left.indexOf(v); if (j >= 0) { gold.add(i); left.splice(j, 1); } });
   return `<svg viewBox="0 0 120 120" aria-hidden="true">${pieShapes(n, pieColors(n.length), [], n.map((v, i) => win && win.length && !gold.has(i) ? 'off' : ''), !win?.length)}</svg>`;
-}
-/** El pastís d'una categoria a la targeta dels finalistes: tothom qui ha rebut vots, de més a menys, sense dir de qui és cada tros
- *  (els noms dels finalistes van per ordre alfabètic). Els vots es desen en publicar-los (nomN). */
-function nomPie(p, cid) {
-  const n = (p.nomN?.[cid] || []).filter(v => v > 0);
-  if (n.length < 2) return '';
-  return `<svg class="bn-pie" viewBox="0 0 120 120" role="img" aria-label="Com s’han repartit els vots de la categoria, sense dir de qui és cada tros">${pieShapes(n, pieColors(n.length), [], [], true)}</svg>`;
 }
 function bandesMuteBlock(p) {
   const d = tallyFor(p), cats = (p.cats || []).filter(c => d?.cats?.[c.id]?.n?.length);

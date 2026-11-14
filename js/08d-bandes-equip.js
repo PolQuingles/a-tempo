@@ -198,7 +198,7 @@ function bandesNomPreview(pid, st, fin, nomN) {
       <div class="bnp-page" id="bnp-body"></div>`,
     foot: '<button class="btn" id="bnp-back">Torna</button><span class="spacer"></span><button class="btn btn-primary" id="bnp-ok">Publica’ls</button>',
     onMount: el => {
-      const draw = () => { el.querySelector('#bnp-body').innerHTML = bandesNomBlock(q, day, true); };
+      const draw = () => { const b = el.querySelector('#bnp-body'); b.innerHTML = bandesNomBlock(q, day, true); bnIgDraw(b); };
       el.querySelectorAll('.bnp-days [data-d]').forEach(b => b.onclick = () => {
         day = b.dataset.d;
         el.querySelectorAll('.bnp-days [data-d]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));

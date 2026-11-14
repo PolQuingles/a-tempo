@@ -735,9 +735,6 @@ prova('Bandes: el pastís dels resultats muts (sense noms) i quan es veu', () =>
   igual([(many.match(/<path/g) || []).length, (many.match(/color-mix/g) || []).length], [15, 8], 'tothom hi té el seu tros: després dels set colors, verds cada vegada més suaus');
   igual(pieColors(9).slice(7), ['color-mix(in oklab, var(--pie-g0), var(--pie-g1) 0%)', 'color-mix(in oklab, var(--pie-g0), var(--pie-g1) 100%)'], 'els verds van del més viu al més suau');
   igual((tallyDonut([4]).match(/<circle/g) || []).length, 1, 'tots els vots per a una persona: un cercle sencer');
-  const pie = nomPie({ nomN: { k1: [5, 3, 3, 1, 1, 1, 1, 1, 0] } }, 'k1');
-  igual([(pie.match(/<path/g) || []).length, nomPie({ nomN: { k1: [4] } }, 'k1'), nomPie({}, 'k1')], [8, '', ''],
-    'el pastís de la targeta dels finalistes: tothom qui ha rebut vots (amb una sola persona, o sense vots desats, res)');
   igual(nomVotes({ nomN: { k1: [2, 1] } }), { k1: [2, 1] }, 'els vots desats en publicar els finalistes');
   igual(nightColors(9).slice(6).map(c => c.toUpperCase()), ['#FDE58A', '#8DC35E', '#E2EED6'], 'a la imatge per a Instagram, el mateix degradat');
   igual(tallyOn({ ...p, closesAt: '2000-01-01' }) && !tallyOn({ ...p, closesAt: '2999-01-01' }), true, 'només quan s’ha tancat la votació');

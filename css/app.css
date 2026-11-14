@@ -1154,7 +1154,7 @@ button.mday:hover{background:var(--surface-2)}
 .gala-palm span{font-size:clamp(11px,1.1vw,13px);font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#C9A7E6}
 .gala-palm b{font-family:var(--f-display);font-style:italic;font-weight:600;font-size:clamp(17px,1.8vw,24px);color:#F2D58A;overflow-wrap:anywhere}
 /* Els finalistes, a la gala: entren un rere l'altre. */
-@media (prefers-reduced-motion:reduce){.gala-fin li,.gala-roll i,.gala::after,.bn-seal-i circle,.bn-nom.opening .bn-fin li{animation:none}.gala-w.now .gala-n{animation:none;opacity:1}.bb-prog span{transition:none}}
+@media (prefers-reduced-motion:reduce){.gala-fin li,.gala-roll i,.gala::after,.bn-seal-i circle,.bn-nom.opening .ig-ph{animation:none}.gala-w.now .gala-n{animation:none;opacity:1}.bb-prog span{transition:none}}
 /* Com es reparteixen els vots: qui guanya, amb el color de l'agrupació; els altres finalistes, en grisos; un empat, en ambre. */
 /* Els pastissos de les bandes (vegeu pieShapes): un degradat del lila fort al groc, passant pel lila fluix, el grana, el vermell i
    els taronges (del més votat al menys) i, si n'hi ha més, verds cada vegada més suaus (--pie-g0 → --pie-g1, vegeu pieColors). En
@@ -1163,17 +1163,12 @@ button.mday:hover{background:var(--surface-2)}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--pie-g0:#8DC35E;--pie-g1:#E2EED6;--pie1:#6A2C9C;--pie2:#B38AD9;--pie3:#741A3D;--pie4:#C42B3A;--pie5:#F2801F;--pie6:#F9B26A;--pie7:#FDE58A;--pie8:#E9D8C6;--bd-r:#3D3645;--gold:#E7C77B;--gold-soft:#272017;--gold-line:#5C4A2B}}
 :root[data-theme="dark"]{--pie-g0:#8DC35E;--pie-g1:#E2EED6;--pie1:#6A2C9C;--pie2:#B38AD9;--pie3:#741A3D;--pie4:#C42B3A;--pie5:#F2801F;--pie6:#F9B26A;--pie7:#FDE58A;--pie8:#E9D8C6;--bd-r:#3D3645;--gold:#E7C77B;--gold-soft:#272017;--gold-line:#5C4A2B}
 /* Cada formatget, amb una vora del color del fons perquè se separin. */
-:is(.bd-pie,.bn-mu,.bn-pie) :is(path,circle){stroke:var(--surface);stroke-width:1.5;stroke-linejoin:round;transition:opacity .15s}
+:is(.bd-pie,.bn-mu) :is(path,circle){stroke:var(--surface);stroke-width:1.5;stroke-linejoin:round;transition:opacity .15s}
 .bn-mu .off{opacity:.25}
 /* El percentatge dins de cada tros: petit i discret. */
 .pie-pc{font-family:var(--f-ui);font-size:7.5px;font-weight:600;text-anchor:middle;dominant-baseline:middle;fill:rgba(255,255,255,.88);stroke:none;pointer-events:none;font-variant-numeric:tabular-nums}
 .pie-pc.dk{fill:rgba(28,16,36,.72)}
 /* Els finalistes d'una categoria i, al costat, el pastís dels seus vots (sense dir de qui és cada tros). */
-.bn-nom-b{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:14px}
-.bn-pie{display:block;width:calc(96px * var(--ts));height:calc(96px * var(--ts))}
-.bn-nom.sealed .bn-pie{display:none}
-.bn-nom.opening .bn-pie{animation:gala-in .55s cubic-bezier(.2,.8,.2,1) both;animation-delay:.3s}
-@media (max-width:340px){.bn-nom-b{grid-template-columns:1fr}.bn-pie{justify-self:center}}
 /* Les imatges per a Instagram: una graella de miniatures, cadascuna amb el seu botó. */
 .ig-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:12px}
 .ig-it{margin:0;display:grid;gap:8px}
@@ -1263,34 +1258,32 @@ button.mday:hover{background:var(--surface-2)}
 .bn-vote p{margin:0;font-size:var(--t-15);color:var(--ink-2)}
 @media (max-width:420px){.bn-vote{grid-template-columns:1fr}.bn-vote .btn{justify-self:start}}
 .bn-n{font-size:var(--t-13);color:var(--muted)}
-.bn-noms{list-style:none;margin:0;padding:0;display:grid;gap:10px}
-/* Cada categoria, una targeta amb la banda creuant-ne la cantonada. */
-.bn-nom{position:relative;overflow:hidden;display:grid;gap:8px;padding:16px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface)}
-.bn-nom::after,.bn-palm li::after{content:"";position:absolute;top:0;right:0;width:78px;height:78px;background:linear-gradient(225deg,transparent 0 36%,var(--gold-line) 36% 46%,transparent 46%);pointer-events:none}
-.bn-nom.today{border-color:var(--gold-line);box-shadow:0 0 0 1px var(--gold-line);background:linear-gradient(180deg,var(--gold-soft),var(--surface) 70%)}
-.bn-nom-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;padding-right:34px}
-.bn-nom-h h3{margin:0;font-family:var(--f-display);font-weight:600;font-size:var(--t-24);line-height:1.15;overflow-wrap:anywhere}
-.bn-nom-h .tag{padding:1px 6px;border-radius:var(--r-sm)}
-.bn-date{flex-basis:100%;font-size:var(--t-12);font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
-.bn-desc{margin:0;font-size:var(--t-15);color:var(--ink-2)}
-.bn-fin{list-style:none;margin:0;padding:0;display:grid;gap:7px}
-.bn-fin li{display:flex;align-items:center;gap:10px;font-size:var(--t-15);font-weight:600}
-.bn-av{display:inline-flex;flex:none}
-.bn-av .pav+.pav{margin-left:-8px;box-shadow:0 0 0 2px var(--surface)}
-.bn-nm{min-width:0;overflow-wrap:anywhere}
-/* El sobre: els finalistes del dia, tancats fins que s'obre. */
-.bn-nom.sealed .bn-fin{display:none}
-.bn-seal{display:flex;align-items:center;gap:14px;width:100%;padding:14px 16px;border-radius:var(--r-md);border:1px solid rgba(242,213,138,.5);color:#F6EEFB;text-align:left;cursor:pointer;
+.bn-noms{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,calc(150px * var(--ts))),1fr));gap:14px}
+/* Cada categoria, la seva imatge per a Instagram; la d'avui, a tota l'amplada i dins d'un sobre fins que s'obre. */
+.bn-nom{display:grid;gap:8px;align-content:start;min-width:0}
+.bn-nom.today{grid-column:1/-1}
+.bn-nom.today .ig-ph{max-width:480px;width:100%;justify-self:center;box-shadow:0 0 0 1px var(--gold-line),0 10px 30px rgba(17,8,20,.25)}
+.bn-ig-ph img{display:block;width:100%;height:100%;object-fit:cover}
+.bn-ig-f{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 10px}
+.bn-nom.today .bn-ig-f{max-width:480px;width:100%;justify-self:center}
+.bn-date{font-size:var(--t-12);font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+/* El sobre: la imatge del dia, tancada fins que s'obre. */
+.bn-nom.sealed .bn-ig-ph,.bn-nom.sealed .bn-ig-f{display:none}
+.bn-seal{display:flex;align-items:center;gap:14px;width:100%;max-width:480px;justify-self:center;padding:18px 16px;border-radius:var(--r-md);border:1px solid rgba(242,213,138,.5);color:#F6EEFB;text-align:left;cursor:pointer;
   background:linear-gradient(118deg,transparent 0 70%,rgba(242,213,138,.14) 70% 78%,transparent 78%),#1B1022}
 .bn-seal-i{width:46px;height:34px;flex:none;fill:none;stroke:#F2D58A;stroke-width:1.6;stroke-linejoin:round}
 .bn-seal-i circle{fill:#E2B75E;stroke:#F6DFA0;animation:bn-wax 2.4s ease-in-out infinite}
 @keyframes bn-wax{50%{fill:#F6DFA0}}
-.bn-seal span{display:grid;gap:1px}
-.bn-seal b{font-family:var(--f-display);font-style:italic;font-weight:600;font-size:var(--t-20);color:#F2D58A}
+.bn-seal span{display:grid;gap:1px;min-width:0}
+.bn-seal b{font-family:var(--f-display);font-style:italic;font-weight:600;font-size:var(--t-20);color:#F2D58A;overflow-wrap:anywhere}
 .bn-seal small{font-size:var(--t-12);color:#C9A7E6}
 .bn-seal:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .bn-nom.opening .bn-seal{display:none}
-.bn-nom.opening .bn-fin li{animation:gala-in .55s cubic-bezier(.2,.8,.2,1) both;animation-delay:var(--d,0ms)}
+.bn-nom.opening .ig-ph{animation:gala-in .6s cubic-bezier(.2,.8,.2,1) both}
+.bn-palm li::after{content:"";position:absolute;top:0;right:0;width:78px;height:78px;background:linear-gradient(225deg,transparent 0 36%,var(--gold-line) 36% 46%,transparent 46%);pointer-events:none}
+.bn-av{display:inline-flex;flex:none}
+.bn-av .pav+.pav{margin-left:-8px;box-shadow:0 0 0 2px var(--surface)}
+.bn-nm{min-width:0;overflow-wrap:anywhere}
 .bn-me{margin:0;padding:12px 14px;border-radius:var(--r-md);border:1px solid var(--gold-line);background:var(--gold-soft);font-size:var(--t-15)}
 .bn-me b{font-family:var(--f-display);font-style:italic;font-weight:600;font-size:var(--t-17);color:var(--gold)}
 .bn-got{margin:0;padding:12px 14px;border-radius:var(--r-md);border:1px solid var(--line);background:var(--surface);font-size:var(--t-15)}

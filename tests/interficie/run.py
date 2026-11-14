@@ -2426,9 +2426,10 @@ def main():
           out.plan = /Una cada dia/.test(document.querySelector('#bn-plan').textContent);
           document.querySelector('#bn-ok').click(); await s(400);
           // Primer, la vista prèvia: la pàgina tal com es veurà cada dia, sense publicar res.
-          const pv = document.querySelector('.sheet #bnp-body');
+          const pv = document.querySelector('.sheet #bnp-body'), alts = r => [...r.querySelectorAll('.bn-ig-ph img')].map(i => i.alt).join(' | ');
+          for (let k = 0; k < 30 && !pv?.querySelector('.bn-ig-ph img'); k++) await s(150);
           out.preview = !!pv && !S.polls.get('bn1').nominees && document.querySelectorAll('.sheet .bnp-days [data-d]').length === 3
-            && pv.innerText.includes('Pau Riera') && !pv.querySelector('.bn-nom.sealed') && /Encara per revelar \(2\)/.test(pv.innerText);
+            && alts(pv).includes('Pau Riera') && !pv.querySelector('.bn-nom.sealed') && /Encara per revelar \(2\)/.test(pv.innerText);
           document.querySelectorAll('.sheet .bnp-days [data-d]')[2].click(); await s(200);
           out.preview = out.preview && !/Encara per revelar/.test(document.querySelector('.sheet #bnp-body').innerText);
           document.querySelector('#bnp-back').click(); await s(300);
@@ -2441,12 +2442,14 @@ def main():
           document.querySelector('[data-act="bandes-open"]').click(); await s(400);
           out.route = location.hash === '#/bandes' && ui.tab === 'bandes';
           const pg0 = document.querySelector('.bn-page')?.innerText || '';
-          out.sealed = !!document.querySelector('.bn-nom.sealed .bn-seal') && !pg0.includes('Pau Riera');
-          document.querySelector('.bn-seal').click(); await s(700);
-          const pg = document.querySelector('.bn-page')?.innerText || '';
-          out.page = /finalistes/i.test(pg) && /avui/i.test(pg) && pg.includes('Pau Riera') && pg.includes('Encara per revelar (2)') && !!document.querySelector('.bn-team');
-          render(); await s(200);
-          out.stays = !document.querySelector('.bn-nom.sealed') && (document.querySelector('.bn-page')?.innerText || '').includes('Pau Riera');
+          out.sealed = !!document.querySelector('.bn-nom.sealed .bn-seal') && !pg0.includes('Pau Riera') && !document.querySelector('.bn-page .bn-ig-ph img');
+          document.querySelector('.bn-seal').click();
+          for (let k = 0; k < 30 && !document.querySelector('.bn-page .bn-ig-ph img'); k++) await s(150);
+          const pg = document.querySelector('.bn-page')?.innerText || '', save = document.querySelector('.bn-page [data-act="bandes-ig-save"]');
+          out.page = /finalistes/i.test(pg) && /avui/i.test(pg) && alts(document.querySelector('.bn-page')).includes('Pau Riera') && pg.includes('Encara per revelar (2)') && !!document.querySelector('.bn-team')
+            && !!save && !save.disabled && /^blob:/.test(document.querySelector('.bn-page .bn-ig-ph img').src);
+          render(); await s(300);
+          out.stays = !document.querySelector('.bn-nom.sealed') && alts(document.querySelector('.bn-page')).includes('Pau Riera');
           // Els resultats muts: els escriu el servei (avisos.py); aquí es posen a mà, com ho faria. L'app no en calcula res.
           out.tally = !(await F.doc(`cors/${GID}/tally/bn1`).get()).exists;
           await F.doc(`cors/${GID}/tally/bn1`).set({ cats: { k1: { n: [2, 2, 1], b: 3 }, k2: { n: [1, 1], b: 2 }, k3: { n: [2], b: 2 } }, win: {}, sig: 'x', res: '', day: TODAY, at: now });
