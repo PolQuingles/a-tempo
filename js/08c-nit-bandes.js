@@ -200,7 +200,7 @@ function bandesNomBlock(p, day = TODAY, preview = false) {
     return `<li class="bn-nom${x.date === day ? ' today' : ''}${sealed ? ' sealed' : ''}"><div class="bn-nom-h"><span class="bn-date">${x.date === day ? 'Avui es revelen' : esc(shortDate(x.date))}</span><h3>${esc(x.cat.name)}</h3>${x.cat.pair ? '<span class="tag">Parella</span>' : x.cat.sec ? `<span class="tag">${esc(SEC[x.cat.sec]?.name || x.cat.sec)}</span>` : ''}</div>
     ${x.cat.desc ? `<p class="bn-desc">${esc(x.cat.desc)}</p>` : ''}
     ${sealed ? `<button class="bn-seal" data-act="bandes-envelope" data-id="${esc(p.id)}" data-cat="${esc(x.cat.id)}"><svg class="bn-seal-i" viewBox="0 0 48 36" aria-hidden="true"><rect x="1.5" y="1.5" width="45" height="33" rx="4"/><path d="M2.5 4l21.5 17L45.5 4"/><circle cx="24" cy="21" r="5.5"/></svg><span><b>Obre el sobre</b><small>${x.keys.length} finalistes</small></span></button>` : ''}
-    ${x.keys.length ? `<ul class="bn-fin">${x.keys.map((k, j) => `<li style="--d:${j * 110}ms">${bnWho(k)}</li>`).join('')}</ul>` : '<p class="m u-m-0">Ningú no hi va rebre vots.</p>'}</li>`;
+    ${x.keys.length ? `<div class="bn-nom-b"><ul class="bn-fin">${x.keys.map((k, j) => `<li style="--d:${j * 110}ms">${bnWho(k)}</li>`).join('')}</ul>${nomPie(p, x.cat.id)}</div>` : '<p class="m u-m-0">Ningú no hi va rebre vots.</p>'}</li>`;
   };
   return `<div class="section-title"><h2 class="h2">Finalistes</h2><span class="bn-n mono">${shown.length}/${shown.length + next.length}</span></div>
     ${mine.length ? `<p class="bn-me"><b>Ets finalista</b> a ${esc(mine.map(x => catQ(x.cat)).join(', '))}. Ens veiem a la Nit!</p>` : ''}
@@ -250,6 +250,7 @@ function bandesTeamBlock(p) {
     ph === 'prop' && b('bandes-props-close', 'Tanca les propostes'),
     ['draft', 'prop'].includes(ph) && b('bandes-publish', 'Obre la votació', true),
     ph === 'closed' && b('bandes-nominate', 'Publica els finalistes', true),
+    p.nominees && b('bandes-insta', 'Imatges per a Instagram'),
     !['draft', 'prop'].includes(ph) && b('bandes-results', 'Resultats'),
     !['draft', 'prop'].includes(ph) && b('bandes-gala', 'Gala'),
     ph === 'vote' && b('poll-results', 'Qui ha votat'),
@@ -368,36 +369,53 @@ function tallyFor(p) {
   }
   return BN_TALLY.data;
 }
-/** Els colors dels pastissos de les bandes: el lila de l'agrupació i sis més (vegeu --pie1…--pie7 a app.css), triats perquè dos
- *  trossos del costat es distingeixin també amb daltonisme. Si hi ha més trossos que colors, els últims van junts, en gris. */
+/** Els colors dels pastissos de les bandes, del més votat al menys: un degradat del lila fort al groc (lila fluix, grana, vermell,
+ *  taronges; vegeu --pie1…--pie7 a app.css) i, si hi ha més trossos, verds cada vegada més suaus (--pie-g0 → --pie-g1). Tothom
+ *  qui ha rebut vots hi té el seu tros. */
 const PIE_N = 7;
-/** Els trossos d'un pastís (SVG de 120×120): un per valor, en el sentit de les agulles del rellotge des de dalt. cls: la classe
- *  (el color) de cada tros; titles: el text de cadascun en passar-hi per sobre. */
-function pieShapes(vals, cls, titles = []) {
+function pieColors(n) {
+  const tail = Math.max(0, n - PIE_N);
+  return Array.from({ length: n }, (_, i) => i < PIE_N ? `var(--pie${i + 1})`
+    : `color-mix(in oklab, var(--pie-g0), var(--pie-g1) ${tail > 1 ? Math.round((i - PIE_N) / (tail - 1) * 100) : 0}%)`);
+}
+/** Els colors clars (el lila fluix, els taronges fluixos, el groc i els verds), que porten el percentatge en fosc. */
+const pieLight = i => i === 1 || i >= 5;
+/** Els trossos d'un pastís (SVG de 120×120): un per valor, en el sentit de les agulles del rellotge des de dalt. fills: el color
+ *  de cada tros (vegeu pieColors); cls: una classe per tros (opcional); titles: el text de cadascun en passar-hi per sobre;
+ *  labels: el percentatge, petit, dins de cada tros que hi cap. */
+function pieShapes(vals, fills, titles = [], cls = [], labels = false) {
   const total = vals.reduce((a, b) => a + b, 0);
   if (!total) return '';
   const R = 56, t = i => titles[i] ? `<title>${esc(titles[i])}</title>` : '';
+  const at = i => `data-i="${i}"${cls[i] ? ` class="${cls[i]}"` : ''} style="fill:${fills[i]}"`;
   const live = vals.map((v, i) => v > 0 ? i : -1).filter(i => i >= 0);
-  if (live.length === 1) return `<circle data-i="${live[0]}" class="${cls[live[0]]}" cx="60" cy="60" r="${R}">${t(live[0])}</circle>`;
+  if (live.length === 1) return `<circle ${at(live[0])} cx="60" cy="60" r="${R}">${t(live[0])}</circle>${labels ? `<text class="pie-pc${pieLight(live[0]) ? ' dk' : ''}" x="60" y="60">100%</text>` : ''}`;
   const pt = a => `${(60 + R * Math.cos(a)).toFixed(2)} ${(60 + R * Math.sin(a)).toFixed(2)}`;
   let a = -Math.PI / 2;
-  return vals.map((v, i) => {
+  const txt = [];
+  const shapes = vals.map((v, i) => {
     const b = a + v / total * 2 * Math.PI, d = `M60 60L${pt(a)}A${R} ${R} 0 ${b - a > Math.PI ? 1 : 0} 1 ${pt(b)}Z`;
+    if (labels && v / total >= .07) { const m = (a + b) / 2; txt.push(`<text class="pie-pc${pieLight(i) ? ' dk' : ''}" x="${(60 + R * .64 * Math.cos(m)).toFixed(1)}" y="${(60 + R * .64 * Math.sin(m)).toFixed(1)}">${Math.round(v / total * 100)}%</text>`); }
     a = b;
-    return v ? `<path data-i="${i}" class="${cls[i]}" d="${d}">${t(i)}</path>` : '';
+    return v ? `<path ${at(i)} d="${d}">${t(i)}</path>` : '';
   }).join('');
+  return shapes + txt.join('');
 }
-/** El pastís d'una categoria, sense noms: un tros per persona (o parella), de més a menys vots (les set primeres; si n'hi ha
- *  més, les sis primeres i la resta, juntes). Amb el palmarès, els trossos dels guanyadors queden en color i la resta s'apaga. */
+/** El pastís d'una categoria, sense noms: un tros per persona (o parella), de més a menys vots. Amb el palmarès, els trossos dels
+ *  guanyadors queden en color i la resta s'apaga. */
 function tallyDonut(n, win) {
   const total = n.reduce((a, b) => a + b, 0);
   if (!total) return '';
   const gold = new Set(), left = [...(win || [])];
   n.forEach((v, i) => { const j = left.indexOf(v); if (j >= 0) { gold.add(i); left.splice(j, 1); } });
-  const many = n.length > PIE_N, shown = many ? n.slice(0, PIE_N - 1) : n;
-  const vals = [...shown, ...(many ? [n.slice(PIE_N - 1).reduce((a, b) => a + b, 0)] : [])];
-  const cls = vals.map((v, i) => `${many && i === vals.length - 1 ? 'r' : `c${i + 1}`}${win && win.length && !gold.has(i) ? ' off' : ''}`);
-  return `<svg viewBox="0 0 120 120" aria-hidden="true">${pieShapes(vals, cls)}</svg>`;
+  return `<svg viewBox="0 0 120 120" aria-hidden="true">${pieShapes(n, pieColors(n.length), [], n.map((v, i) => win && win.length && !gold.has(i) ? 'off' : ''), !win?.length)}</svg>`;
+}
+/** El pastís d'una categoria a la targeta dels finalistes: tothom qui ha rebut vots, de més a menys, sense dir de qui és cada tros
+ *  (els noms dels finalistes van per ordre alfabètic). Els vots es desen en publicar-los (nomN). */
+function nomPie(p, cid) {
+  const n = (p.nomN?.[cid] || []).filter(v => v > 0);
+  if (n.length < 2) return '';
+  return `<svg class="bn-pie" viewBox="0 0 120 120" role="img" aria-label="Com s’han repartit els vots de la categoria, sense dir de qui és cada tros">${pieShapes(n, pieColors(n.length), [], [], true)}</svg>`;
 }
 function bandesMuteBlock(p) {
   const d = tallyFor(p), cats = (p.cats || []).filter(c => d?.cats?.[c.id]?.n?.length);

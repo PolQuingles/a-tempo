@@ -730,10 +730,16 @@ prova('Bandes: l’app compta igual que el servidor (el mateix cas que tests/log
 prova('Bandes: el pastís dels resultats muts (sense noms) i quan es veu', () => {
   const p = { id: 'q', cats: [{ id: 'k1', name: 'Riure' }], sections: [] };
   const svg = tallyDonut([3, 1, 1], [3]);
-  igual([(svg.match(/<path/g) || []).length, (svg.match(/ off"/g) || []).length, /class="c1"/.test(svg)], [3, 2, true], 'un formatget per persona, de colors (el primer, lila), i amb el palmarès els altres s’apaguen');
+  igual([(svg.match(/<path/g) || []).length, (svg.match(/class="off"/g) || []).length, /fill:var\(--pie1\)/.test(svg), /%</.test(svg), /60%</.test(tallyDonut([3, 1, 1]))], [3, 2, true, false, true], 'un formatget per persona amb el percentatge, el primer lila fort, i amb el palmarès els altres s’apaguen');
   const many = tallyDonut(Array(15).fill(1));
-  igual([(many.match(/<path/g) || []).length, (many.match(/class="r"/g) || []).length], [7, 1], 'set trossos com a molt: els sis primers i la resta, junts en gris');
+  igual([(many.match(/<path/g) || []).length, (many.match(/color-mix/g) || []).length], [15, 8], 'tothom hi té el seu tros: després dels set colors, verds cada vegada més suaus');
+  igual(pieColors(9).slice(7), ['color-mix(in oklab, var(--pie-g0), var(--pie-g1) 0%)', 'color-mix(in oklab, var(--pie-g0), var(--pie-g1) 100%)'], 'els verds van del més viu al més suau');
   igual((tallyDonut([4]).match(/<circle/g) || []).length, 1, 'tots els vots per a una persona: un cercle sencer');
+  const pie = nomPie({ nomN: { k1: [5, 3, 3, 1, 1, 1, 1, 1, 0] } }, 'k1');
+  igual([(pie.match(/<path/g) || []).length, nomPie({ nomN: { k1: [4] } }, 'k1'), nomPie({}, 'k1')], [8, '', ''],
+    'el pastís de la targeta dels finalistes: tothom qui ha rebut vots (amb una sola persona, o sense vots desats, res)');
+  igual(nomVotes({ nomN: { k1: [2, 1] } }), { k1: [2, 1] }, 'els vots desats en publicar els finalistes');
+  igual(nightColors(9).slice(6).map(c => c.toUpperCase()), ['#FDE58A', '#8DC35E', '#E2EED6'], 'a la imatge per a Instagram, el mateix degradat');
   igual(tallyOn({ ...p, closesAt: '2000-01-01' }) && !tallyOn({ ...p, closesAt: '2999-01-01' }), true, 'només quan s’ha tancat la votació');
   igual(bandesVotes({ id: 'q', ballotsGone: '2027-01-27' }), [], 'amb les paperetes esborrades, no en compta cap (encara que el mòbil en tingui)');
 });

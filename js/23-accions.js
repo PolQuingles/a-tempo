@@ -9,7 +9,7 @@ const ADMIN_ONLY = new Set(['retention', 'join-link', 'join-reqs', 'join-approve
 const PRO_ONLY = new Set(['brand-color', 'logo-remove', 'kind-set', 'group-delete', 'sections-save', 'sections-undo']);
 // El calendari de les classes: només el professorat de cant i l'administració.
 const CLASS_ONLY = new Set(['cl-new', 'cl-edit', 'cl-review', 'cl-paste', 'cl-plan', 'cl-note', 'cl-rec-new', 'cl-mark', 'cl-stats', 'cl-cancel-day', 'cl-move', 'cl-clashes', 'cl-clash-ok', 'cl-link']);
-const EDIT_ONLY = new Set(['prod-roll', 'mark', 'min', 'early', 'early-open', 'mark-rest', 'session-new', 'sub-set', 'ann-new', 'ann-edit', 'poll-new', 'poll-edit', 'poll-results', 'poll-remind', 'bandes-new', 'bandes-edit', 'bandes-publish', 'bandes-results', 'bandes-nominate', 'bandes-gala', 'bandes-props-open', 'bandes-props-close', 'bandes-prop-take', 'bandes-prop-drop', 'rsvp-remind', 'doc-new', 'doc-edit', 'share-app', 'staff-bulk', 'preview-on', 'who-in', 'mail-check', 'concert-list', 'concert-toggle', 'session-edit', 'member-edit', 'member-new', 'member-bulk', 'prod-new', 'prod-edit',
+const EDIT_ONLY = new Set(['prod-roll', 'mark', 'min', 'early', 'early-open', 'mark-rest', 'session-new', 'sub-set', 'ann-new', 'ann-edit', 'poll-new', 'poll-edit', 'poll-results', 'poll-remind', 'bandes-new', 'bandes-edit', 'bandes-publish', 'bandes-results', 'bandes-nominate', 'bandes-insta', 'bandes-gala', 'bandes-props-open', 'bandes-props-close', 'bandes-prop-take', 'bandes-prop-drop', 'rsvp-remind', 'doc-new', 'doc-edit', 'share-app', 'staff-bulk', 'preview-on', 'who-in', 'mail-check', 'concert-list', 'concert-toggle', 'session-edit', 'member-edit', 'member-new', 'member-bulk', 'prod-new', 'prod-edit',
   'wipe-demo', 'wipe-all', 'load-demo', 'export-json', 'abs-accept', 'abs-reject', 'abs-delete', 'manage',
   'roster-export', 'docs-copy-noimg',
   'choices-overview', 'plan-edit', 'seating-edit', 'participants', 'certificate', 'season-report', 'trip-new', 'trip-edit', 'trip-admin', 'trip-remind']);
@@ -239,6 +239,7 @@ const actions = {
   'bandes-gala': el => bandesGala(el.dataset.id),
   'bandes-envelope': el => bandesEnvelope(el),
   'bandes-ics': el => bandesIcs(el.dataset.id),
+  'bandes-insta': el => { const p = S.polls.get(el.dataset.id); if (p) bandesInsta(p); },
   'bandes-props-open': el => bandesPropsOpen(el.dataset.id),
   'bandes-props-close': el => bandesPropsClose(el.dataset.id),
   'bandes-propose': el => bandesPropose(el.dataset.id),
