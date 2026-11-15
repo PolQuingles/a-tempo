@@ -1191,6 +1191,7 @@ button.mday:hover{background:var(--surface-2)}
 .bd-pie:has(.bd-leg li[data-i="3"]:hover) [data-i="3"],.bd-pie:has(.bd-leg li[data-i="4"]:hover) [data-i="4"],.bd-pie:has(.bd-leg li[data-i="5"]:hover) [data-i="5"],.bd-pie:has(.bd-leg li[data-i="6"]:hover) [data-i="6"]{opacity:1}
 .bd-band.tie{background:var(--fj-soft);color:var(--fj-text)}
 .bd-fin{margin:0;font-size:var(--t-13);color:var(--ink-2)}
+.bd-out{margin:0;font-size:var(--t-13)}
 @media (max-width:360px){.bd-pie{grid-template-columns:96px minmax(0,1fr);gap:10px}.bd-pie svg{width:96px;height:96px}}
 .bd-top{display:grid;gap:6px}
 .bd-top .bar-row{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) 32px}

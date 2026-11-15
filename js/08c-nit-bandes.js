@@ -8,6 +8,9 @@
  * la Nit (galaAt), o totes alhora (nomEvery 'all'). El document el pot llegir tothom de l'agrupació; l'app només n'ensenya el
  * que ja s'ha revelat. Qui guanya no es desa enlloc fins que l'equip publica el palmarès. */
 const BANDES_FINAL = 5;
+/** Per comptar (sortir al pastís, als percentatges i poder ser finalista) cal tenir com a mínim 2 vots: qui només en té 1 queda fora. */
+const BANDES_MIN = 2;
+const bandesElig = n => (n || []).filter(v => v >= BANDES_MIN);
 const dayDiff = (a, b) => Math.round((parseISO(b).getTime() - parseISO(a).getTime()) / 864e5);
 const galaName = p => p.galaName || 'La Nit de les Bandes';
 /** El nom de la Nit com als cartells: els mots petits del mig en cursiva («La Nit <i>de les</i> Bandes»). */
@@ -30,6 +33,7 @@ const catQ = c => `«${String(c?.name || '').replace(/^["“”«»']+|["“”�
 /** Els finalistes d'una categoria (d'un recompte ordenat): els k més votats i, si n'hi ha d'empatats a l'últim lloc, també
  *  (fins a tres més); si l'empat és més gran, només els que tenen més vots que l'últim lloc. */
 function bandesFinalists(rows, k = BANDES_FINAL) {
+  rows = rows.filter(r => r.n >= BANDES_MIN);
   if (rows.length <= k) return rows.map(r => r.key);
   const cut = rows[k - 1].n, withTies = rows.filter(r => r.n >= cut);
   return (withTies.length <= k + 3 ? withTies : rows.filter(r => r.n > cut)).map(r => r.key);
@@ -244,7 +248,7 @@ function bandesNomBlock(p, day = TODAY, preview = false) {
   return `<div class="section-title"><h2 class="h2">Finalistes</h2><span class="bn-n mono">${shown.length}/${shown.length + next.length}</span></div>
     ${mine.length ? `<p class="bn-me"><b>Ets finalista</b> a ${esc(mine.map(x => catQ(x.cat)).join(', '))}. Ens veiem a la Nit!</p>` : ''}
     ${shown.length ? `<ol class="bn-noms">${[...today, ...past].filter(x => x.keys.length).map(card).join('')}</ol>` : `<p class="m">Els primers finalistes es revelen ${esc(longDate(next[0]?.date || day).toLowerCase())}.</p>`}
-    ${shown.some(x => !x.keys.length) ? `<p class="m u-m-0">Sense finalistes (ningú no hi va rebre vots): ${esc(shown.filter(x => !x.keys.length).map(x => x.cat.name).join(', '))}.</p>` : ''}
+    ${shown.some(x => !x.keys.length) ? `<p class="m u-m-0">Sense finalistes (ningú no hi té prou vots): ${esc(shown.filter(x => !x.keys.length).map(x => x.cat.name).join(', '))}.</p>` : ''}
     ${next.length ? `<details class="np-group bn-next"><summary><span>Encara per revelar (${next.length})</span>${ICON.chev}</summary>
       <ul class="bn-next-l">${next.map(x => `<li><span>${esc(x.cat.name)}</span><span class="mono">${dayDiff(day, x.date) === 1 ? 'demà' : esc(ddmm(x.date))}</span></li>`).join('')}</ul></details>` : ''}`;
 }
@@ -444,6 +448,7 @@ function pieShapes(vals, fills, titles = [], cls = [], labels = false) {
 /** El pastís d'una categoria, sense noms: un tros per persona (o parella), de més a menys vots. Amb el palmarès, els trossos dels
  *  guanyadors queden en color i la resta s'apaga. */
 function tallyDonut(n, win) {
+  n = bandesElig(n);
   const total = n.reduce((a, b) => a + b, 0);
   if (!total) return '';
   const gold = new Set(), left = [...(win || [])];
@@ -451,11 +456,11 @@ function tallyDonut(n, win) {
   return `<svg viewBox="0 0 120 120" aria-hidden="true">${pieShapes(n, pieColors(n.length), [], n.map((v, i) => win && win.length && !gold.has(i) ? 'off' : ''), !win?.length)}</svg>`;
 }
 function bandesMuteBlock(p) {
-  const d = tallyFor(p), cats = (p.cats || []).filter(c => d?.cats?.[c.id]?.n?.length);
+  const d = tallyFor(p), cats = (p.cats || []).filter(c => bandesElig(d?.cats?.[c.id]?.n).length);
   if (!cats.length) return '';
   const res = p.results || {};
   const item = c => {
-    const x = d.cats[c.id], total = x.n.reduce((a, b) => a + b, 0), who = c.pair ? ['parella', 'parelles'] : ['persona', 'persones'];
+    const x = { ...d.cats[c.id], n: bandesElig(d.cats[c.id].n) }, total = x.n.reduce((a, b) => a + b, 0), who = c.pair ? ['parella', 'parelles'] : ['persona', 'persones'];
     const win = res[c.id]?.length && d.win?.[c.id]?.length === res[c.id].length ? res[c.id].map((k, i) => ({ k, v: d.win[c.id][i] })) : null;
     const line = win ? win.map(w => `<b>${esc(keyName(w.k))}</b>, amb el ${pct(w.v / total)}`).join(' · ') : x.n.length === 1 ? `Tots els vots, per a la mateixa ${who[0]}` : `El més votat en té el ${pct(x.n[0] / total)}`;
     const label = `${c.name}: ${total} ${total === 1 ? 'vot' : 'vots'} entre ${x.n.length} ${who[x.n.length === 1 ? 0 : 1]}. ${win ? win.map(w => `${keyName(w.k)}, ${pct(w.v / total)}`).join('; ') : `El més votat, ${pct(x.n[0] / total)}`}.`;
@@ -463,7 +468,7 @@ function bandesMuteBlock(p) {
       <p>${x.b} ${x.b === 1 ? 'papereta' : 'paperetes'} · ${nPl(total, 'vot', 'vots')} · ${x.n.length} ${who[x.n.length === 1 ? 0 : 1]}</p><p class="bn-mu-w">${line}</p></li>`;
   };
   return `<details class="np-group bn-mute"><summary><span>Com s’ha votat (${cats.length} ${cats.length === 1 ? 'categoria' : 'categories'})</span>${ICON.chev}</summary>
-    <p class="m bn-mute-i">Sense noms: cada tros és una persona${cats.some(c => c.pair) ? ' (o una parella)' : ''}, i com més gran, més vots.${p.results ? ' Els guanyadors van en daurat.' : ' Qui ha guanyat es descobreix a la Nit.'}</p>
+    <p class="m bn-mute-i">Sense noms: cada tros és una persona${cats.some(c => c.pair) ? ' (o una parella)' : ''}, i com més gran, més vots. Només hi surt qui té ${BANDES_MIN} vots o més.${p.results ? ' Els guanyadors van en daurat.' : ' Qui ha guanyat es descobreix a la Nit.'}</p>
     <ul class="bn-mute-l">${cats.map(item).join('')}</ul></details>`;
 }
 /** A qui ha rebut algun vot, i només a ella: en quantes categories. */

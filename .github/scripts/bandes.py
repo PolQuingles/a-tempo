@@ -11,6 +11,7 @@ recompte de participació i els resultats muts. Les regles només ho deixen fer 
 import datetime, hashlib, json
 
 KEEP_DAYS = 30
+MIN = 2  # com BANDES_MIN: qui té menys vots no surt al pastís (ni als percentatges)
 
 
 def phase_closed(p, today):
@@ -75,8 +76,9 @@ def tally(pid, p, votes, sec_of):
             ballots += 1
             for k in ["+".join(sorted(names))] if c.get("pair") else names:
                 counts[k] = counts.get(k, 0) + 1
-        if counts:
-            cats[c["id"]] = {"n": sorted(counts.values(), reverse=True), "b": ballots}
+        elig = sorted((n for n in counts.values() if n >= MIN), reverse=True)
+        if elig:
+            cats[c["id"]] = {"n": elig, "b": ballots}
         for k in counts:
             for mid in k.split("+"):
                 got.setdefault(mid, set()).add(c["id"])
