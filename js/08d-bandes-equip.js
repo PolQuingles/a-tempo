@@ -228,12 +228,12 @@ const PIE_NIGHT = ['#6A2C9C', '#B38AD9', '#741A3D', '#C42B3A', '#F2801F', '#F9B2
 const mixHex = (a, b, t) => `#${[1, 3, 5].map(i => Math.round(parseInt(a.slice(i, i + 2), 16) * (1 - t) + parseInt(b.slice(i, i + 2), 16) * t).toString(16).padStart(2, '0')).join('')}`;
 const nightColors = n => Array.from({ length: n }, (_, i) => i < PIE_NIGHT.length ? PIE_NIGHT[i]
   : mixHex(PIE_NIGHT_G[0], PIE_NIGHT_G[1], n - PIE_NIGHT.length > 1 ? (i - PIE_NIGHT.length) / (n - PIE_NIGHT.length - 1) : 0));
-/** Els vots de cada categoria, de tothom qui n'ha rebut, de més a menys i sense noms: { categoria: [n] }. Els desats en
+/** Els vots de cada categoria, de tothom qui en té prou (BANDES_MIN), de més a menys i sense noms: { categoria: [n] }. Els desats en
  *  publicar els finalistes o, per a l'equip (que pot llegir les paperetes), el recompte d'ara. */
 function nomVotes(p, t = null) {
-  if (p.nomN) return p.nomN;
+  if (p.nomN) return Object.fromEntries(Object.entries(p.nomN).map(([k, n]) => [k, bandesElig(n)]));
   t = t || bandesTally(p, bandesVotes(p), bandesPeople(p));
-  return Object.fromEntries(t.cats.map(x => [x.cat.id, x.rows.map(r => r.n).filter(n => n > 0).sort((a, b) => b - a)]));
+  return Object.fromEntries(t.cats.map(x => [x.cat.id, bandesElig(x.rows.map(r => r.n)).sort((a, b) => b - a)]));
 }
 /** Les línies d'un text que caben en max píxels (amb la lletra que ja té el context). */
 function canvasLines(ctx, words, max, sep = ' ') {

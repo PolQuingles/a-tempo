@@ -2417,6 +2417,9 @@ def main():
           await put('Anna Puig', { k1: [id('Laia Ferrer'), id('Marc Bosch')], k2: [id('Laia Ferrer')], k3: [id('Laia Ferrer'), id('Marc Bosch')] });
           await put('Júlia Mas', { k1: [id('Laia Ferrer')], k2: [id('Clara Vila')] });
           await put('Pere Font', { k1: [id('Marc Bosch'), id('Pau Riera')], k3: [id('Marc Bosch'), id('Laia Ferrer')] });
+          // Qui només té un vot queda fora: aquests dos fan que la Laia, el Marc i el Pau (k1) i la Laia (k2) en tinguin prou.
+          await put('Marta Soler', { k1: [id('Laia Ferrer'), id('Pau Riera')], k2: [id('Laia Ferrer')] });
+          await put('Clara Vila', { k1: [id('Marc Bosch')] });
           flushAll(); await s(900);
           ui.tab = 'avisos'; render(); await s(300);
           out.home = /Falten 2 dies/.test(document.querySelector('.bn-home')?.innerText || '');
@@ -2437,7 +2440,7 @@ def main():
           document.querySelector('#bn-ok').click(); await s(400);
           document.querySelector('#bnp-ok').click(); await s(400); flushAll(); await s(300);
           const q = S.polls.get('bn1'), abc = l => [...l].sort((a, b) => keyName(a).localeCompare(keyName(b), 'ca'));
-          out.noms = q.closed && JSON.stringify(q.nominees.k1) === JSON.stringify(abc([id('Laia Ferrer'), id('Marc Bosch'), id('Pau Riera')])) && JSON.stringify(q.nomN.k1) === '[2,2,1]'
+          out.noms = q.closed && JSON.stringify(q.nominees.k1) === JSON.stringify(abc([id('Laia Ferrer'), id('Marc Bosch'), id('Pau Riera')])) && JSON.stringify(q.nomN.k1) === '[3,3,2]' && JSON.stringify(q.nominees.k2) === JSON.stringify([id('Laia Ferrer')])
             && JSON.stringify(nomSchedule(q)) === JSON.stringify([TODAY, addDays(TODAY, 1), addDays(TODAY, 2)]);
           document.querySelector('[data-act="bandes-open"]').click(); await s(400);
           out.route = location.hash === '#/bandes' && ui.tab === 'bandes';
@@ -2452,7 +2455,7 @@ def main():
           out.stays = !document.querySelector('.bn-nom.sealed') && alts(document.querySelector('.bn-page')).includes('Pau Riera');
           // Els resultats muts: els escriu el servei (avisos.py); aquí es posen a mà, com ho faria. L'app no en calcula res.
           out.tally = !(await F.doc(`cors/${GID}/tally/bn1`).get()).exists;
-          await F.doc(`cors/${GID}/tally/bn1`).set({ cats: { k1: { n: [2, 2, 1], b: 3 }, k2: { n: [1, 1], b: 2 }, k3: { n: [2], b: 2 } }, win: {}, sig: 'x', res: '', day: TODAY, at: now });
+          await F.doc(`cors/${GID}/tally/bn1`).set({ cats: { k1: { n: [3, 3, 2, 1], b: 5 }, k2: { n: [2], b: 3 }, k3: { n: [2], b: 2 } }, win: {}, sig: 'x', res: '', day: TODAY, at: now });
           await F.doc(`cors/${GID}/tallyMe/bn1_${id('Marc Bosch')}`).set({ pollId: 'bn1', memberId: id('Marc Bosch'), cats: 2 });
           for (let k = 0; k < 20 && !document.querySelector('.bn-got'); k++) await s(150);
           out.mine = /Has rebut vots en 2 de les 3 categories/.test(document.querySelector('.bn-got')?.innerText || '');
@@ -2502,7 +2505,7 @@ def main():
           const pg = document.querySelector('.bn-page')?.innerText || '', alt = [...document.querySelectorAll('.bn-page .bn-ig-ph img')].map(i => i.alt).join(' | ');
           const mu = document.querySelector('.bn-mute'), mt = mu?.textContent || '';
           return { shown: alt.includes('Pau Riera'), hidden: !pg.includes('Clara Vila') && !alt.includes('Clara Vila'), team: !document.querySelector('.bn-team'), voted: /Has votat 3 de 3/.test(pg),
-            mute: !!mu && !mu.open && mu.querySelectorAll('.bn-mu svg').length === 3 && /El més votat en té el 40%/.test(mt)
+            mute: !!mu && !mu.open && mu.querySelectorAll('.bn-mu svg').length === 3 && /El més votat en té el 38%/.test(mt)
               && !['Laia', 'Marc', 'Pau', 'Clara'].some(n => mt.includes(n)), nogot: !document.querySelector('.bn-got') }; }""")
         for k, label in [("shown", "el cantaire veu els finalistes ja revelats"), ("hidden", "però no els dels dies que vénen"),
                          ("team", "i no hi té les eines de l'equip"), ("voted", "i hi veu el seu vot"),
@@ -2652,7 +2655,7 @@ def main():
           out.who = !!document.querySelector('.sheet') && !/no pots fer/.test(document.querySelector('.toast')?.innerText || '');
           closeSheet(); await s(200);
           document.querySelector('[data-act="bandes-results"][data-id="fb1"]').click(); await s(400);
-          out.bandes = /Cor/.test(document.querySelector('.sheet')?.innerText || '') && !!document.querySelector('.sheet .bd-pie, .sheet svg');
+          out.bandes = /Cor/.test(document.querySelector('.sheet')?.innerText || '') && !!document.querySelector('.sheet .bd-out');
           closeSheet(); await s(200);
           document.querySelector('[data-act="bandes-edit"][data-id="fb1"]').click(); await s(300);
           out.bandesEdit = !!document.querySelector('.sheet #bd-gname');

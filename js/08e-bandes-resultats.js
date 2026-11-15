@@ -41,15 +41,18 @@ function bandesDays(days) {
  *  llegenda en diu els cinc primers. La llegenda en diu els vots, el percentatge i qui
  *  s'emporta la banda. Els vots són els noms que hi ha posat cada papereta (fins a dos per categoria). */
 function bandesDonut(x) {
-  const total = x.rows.reduce((n, r) => n + r.n, 0);
-  if (!total) return '';
+  const all = x.rows;
+  x = { ...x, rows: all.filter(r => r.n >= BANDES_MIN) };
+  const total = x.rows.reduce((n, r) => n + r.n, 0), out = all.length - x.rows.length;
+  const outP = out ? `<p class="m bd-out">${out === 1 ? '1 persona' : `${out} persones`} amb un sol vot, fora del pastís.</p>` : '';
+  if (!total) return outP;
   const wins = new Set(x.winners), tied = new Set(x.open ? x.tied : []);
   // La llegenda, els cinc primers (la resta del pastís ja s'entén).
   const fills = pieColors(x.rows.length), top = 5;
   const titles = x.rows.map(r => `${keyName(r.key)}: ${nPl(r.n, 'vot', 'vots')} (${pct(r.n / total)})`);
   const segs = x.rows.slice(0, top).map((r, i) => ({ i, label: keyName(r.key), n: r.n, sw: `background:${fills[i]}`, mark: wins.has(r.key) ? 'w' : tied.has(r.key) ? 't' : '' }));
   return `<div class="bd-pie"><svg viewBox="0 0 120 120" role="img" aria-label="Repartiment dels ${nPl(total, 'vot', 'vots')}: ${esc(segs.map(s => `${s.label}, ${pct(s.n / total)}`).join('; '))}">${pieShapes(x.rows.map(r => r.n), fills, titles, [], true)}</svg>
-    <div class="bd-leg-w"><p class="bd-leg-h">${nPl(total, 'vot', 'vots')}</p><ul class="bd-leg">${segs.map(s => `<li data-i="${s.i}"><i style="${s.sw}" aria-hidden="true"></i><span class="bd-who">${esc(s.label)}${s.mark === 'w' ? '<span class="bd-band">Banda</span>' : s.mark === 't' ? '<span class="bd-band tie">Empat</span>' : ''}</span><span class="mono">${s.n}</span><span class="mono bd-pc">${pct(s.n / total)}</span></li>`).join('')}</ul></div></div>`;
+    <div class="bd-leg-w"><p class="bd-leg-h">${nPl(total, 'vot', 'vots')}</p><ul class="bd-leg">${segs.map(s => `<li data-i="${s.i}"><i style="${s.sw}" aria-hidden="true"></i><span class="bd-who">${esc(s.label)}${s.mark === 'w' ? '<span class="bd-band">Banda</span>' : s.mark === 't' ? '<span class="bd-band tie">Empat</span>' : ''}</span><span class="mono">${s.n}</span><span class="mono bd-pc">${pct(s.n / total)}</span></li>`).join('')}</ul></div></div>${outP}`;
 }
 function bandesCatHtml(x, p) {
   const c = x.cat, w = c.win || 1, rows = x.rows, max = rows[0]?.n || 1;

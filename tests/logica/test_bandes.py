@@ -29,8 +29,8 @@ votes = {
     "z_a": {"pollId": "z", "memberId": "a", "picks": {"k1": ["b"]}},
 }
 x = bandes.tally("q", p, votes, sec_of)
-igual(x["cats"], {"k1": {"n": [2, 2, 1], "b": 3}, "k2": {"n": [1], "b": 1}, "k4": {"n": [1], "b": 1}},
-      "com bandesClean: sense repetits, ni un mateix, ni qui no hi és, ni d'una altra corda, i les parelles senceres")
+igual(x["cats"], {"k1": {"n": [2, 2], "b": 3}},
+      "com bandesClean: sense repetits, ni un mateix, ni qui no hi és, ni d'una altra corda, i les parelles senceres; qui té un sol vot, fora")
 igual(json.dumps(x["cats"]).count('"a"') + json.dumps(x["cats"]).count('"b+c"'), 0, "cap nom al que veu tothom")
 igual(x["me"], {"b": 3, "c": 2, "a": 1}, "en quantes categories ha rebut vots cadascú (la parella compta per a totes dues)")
 igual(x["win"], {}, "sense palmarès, cap vot de ningú")

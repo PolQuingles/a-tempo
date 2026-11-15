@@ -687,6 +687,7 @@ prova('La Nit de les Bandes: els finalistes, el dia que es revelen i en quin mom
   igual(bandesFinalists(rows([9, 7, 5, 4, 3, 3, 3, 1])), ['p0', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6'], 'amb els empatats al cinquè lloc');
   igual(bandesFinalists(rows([5, 4, 1, 1, 1, 1, 1, 1, 1, 1])), ['p0', 'p1'], 'un empat massa gran: només els de davant');
   igual(bandesFinalists(rows([3, 2])), ['p0', 'p1'], 'menys gent votada que finalistes');
+  igual(bandesFinalists(rows([4, 3, 2, 1, 1, 1])), ['p0', 'p1', 'p2'], 'qui té un sol vot no pot ser finalista');
   const cats = Array.from({ length: 26 }, (_, i) => ({ id: `c${i}`, name: `C${i}` }));
   const w = nomSchedule({ cats, closesAt: '2026-11-30', galaAt: '2026-12-26' });
   igual([w[0], w[1], w[25], new Set(w).size], ['2026-12-01', '2026-12-02', '2026-12-26', 26], '26 categories de l’1 al 26 de desembre: una cada dia');
@@ -729,13 +730,14 @@ prova('Bandes: l’app compta igual que el servidor (el mateix cas que tests/log
 
 prova('Bandes: el pastís dels resultats muts (sense noms) i quan es veu', () => {
   const p = { id: 'q', cats: [{ id: 'k1', name: 'Riure' }], sections: [] };
-  const svg = tallyDonut([3, 1, 1], [3]);
-  igual([(svg.match(/<path/g) || []).length, (svg.match(/class="off"/g) || []).length, /fill:var\(--pie1\)/.test(svg), /%</.test(svg), /60%</.test(tallyDonut([3, 1, 1]))], [3, 2, true, false, true], 'un formatget per persona amb el percentatge, el primer lila fort, i amb el palmarès els altres s’apaguen');
-  const many = tallyDonut(Array(15).fill(1));
+  const svg = tallyDonut([3, 2, 2, 1], [3]);
+  igual([(svg.match(/<path/g) || []).length, (svg.match(/class="off"/g) || []).length, /fill:var\(--pie1\)/.test(svg), /%</.test(svg), /43%</.test(tallyDonut([3, 2, 2, 1]))], [3, 2, true, false, true], 'un formatget per persona amb el percentatge (sense qui té un sol vot), el primer lila fort, i amb el palmarès els altres s’apaguen');
+  const many = tallyDonut(Array(15).fill(2));
   igual([(many.match(/<path/g) || []).length, (many.match(/color-mix/g) || []).length], [15, 8], 'tothom hi té el seu tros: després dels set colors, verds cada vegada més suaus');
   igual(pieColors(9).slice(7), ['color-mix(in oklab, var(--pie-g0), var(--pie-g1) 0%)', 'color-mix(in oklab, var(--pie-g0), var(--pie-g1) 100%)'], 'els verds van del més viu al més suau');
-  igual((tallyDonut([4]).match(/<circle/g) || []).length, 1, 'tots els vots per a una persona: un cercle sencer');
-  igual(nomVotes({ nomN: { k1: [2, 1] } }), { k1: [2, 1] }, 'els vots desats en publicar els finalistes');
+  igual((tallyDonut([4, 1, 1]).match(/<circle/g) || []).length, 1, 'tots els vots que compten, per a una persona: un cercle sencer');
+  igual(tallyDonut([1, 1, 1]), '', 'si ningú no té prou vots, no hi ha pastís');
+  igual(nomVotes({ nomN: { k1: [3, 2, 1, 1] } }), { k1: [3, 2] }, 'els vots desats en publicar els finalistes, sense els d’un sol vot');
   igual(nightColors(9).slice(6).map(c => c.toUpperCase()), ['#FDE58A', '#8DC35E', '#E2EED6'], 'a la imatge per a Instagram, el mateix degradat');
   igual(tallyOn({ ...p, closesAt: '2000-01-01' }) && !tallyOn({ ...p, closesAt: '2999-01-01' }), true, 'només quan s’ha tancat la votació');
   igual(bandesVotes({ id: 'q', ballotsGone: '2027-01-27' }), [], 'amb les paperetes esborrades, no en compta cap (encara que el mòbil en tingui)');

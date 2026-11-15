@@ -120,7 +120,7 @@ ok = sorted(SENT) == sorted([("https://push.example/e2", "Lluc: Tenors: assaig p
 ok = ok and "b2" not in st["polls_new"] and "b3" in st["polls_new"]
 # Les bandes de l'any passat: els resultats muts, sense noms; la fitxa de qui ha rebut vots; i les paperetes, esborrades.
 t7 = DB.get(f"cors/{G}/tally/b7") or {}
-bandes_ok = (t7.get("cats") == {"k1": {"n": [2, 1], "b": 2}, "k2": {"n": [1], "b": 1}} and t7.get("win") == {"k1": [2]} and "m1" not in json.dumps(t7)
+bandes_ok = (t7.get("cats") == {"k1": {"n": [2], "b": 2}} and t7.get("win") == {"k1": [2]} and "m1" not in json.dumps(t7)
              and DB.get(f"cors/{G}/tallyMe/b7_m1", {}).get("cats") == 2 and DB.get(f"cors/{G}/tallyMe/b7_m3", {}).get("cats") == 2
              and f"cors/{G}/tallyMe/b7_m2" not in DB
              and not any(k.startswith(f"cors/{G}/pollVotes/b7_") or k.startswith(f"cors/{G}/turnout/b7/by/") for k in DB)
