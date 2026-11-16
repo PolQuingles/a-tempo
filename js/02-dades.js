@@ -310,14 +310,9 @@ function subscribe() {
   // Amb les llistes privades, qui no passa llista només en llegeix la seva còpia (vegeu 22b-tries).
   const attDone = BIG.get('attendance').done;
   BIG.get('attendance').done = () => { attDone(); mirrorPending(); };
-  // Un cap de corda (sense cap altre rol de l'equip) només pot llegir les llistes de la seva corda: les llegeix totes d'una
-  // consulta (no s'esborren en arxivar-les), sense l'arxiu ni la lectura per canvis.
+  // Un cap de corda (sense cap altre rol de l'equip) respon les absències de la seva corda. Les llistes, si són obertes, les
+  // llegeix totes com tothom (per a les estadístiques de tot el cor); si són privades, només les de la seva corda (vegeu a sota).
   const onlySec = attScopeSec();
-  if (onlySec) {
-    BIG.delete('attendance');
-    db.collection('attendance').where('section', '==', onlySec).onSnapshot(snap => { takeSnap('attendance', snap); markLoaded('attendance'); mirrorPending(); if (S.ready) scheduleRender(); },
-      e => { markLoaded('attendance'); onDbError(e); });
-  }
   for (const col of ['announcements', 'polls', 'trips']) big(col, () => db.collection(col));
   // Les respostes a les convocatòries de tothom, l'equip; els vots de tothom, només qui porta el tauler (vegeu les regles).
   for (const [col, all] of [['rsvp', staff], ['pollVotes', readsBoard()]]) {
@@ -379,15 +374,23 @@ function subscribe() {
     // Si les llistes passen a ser privades (o deixen de ser-ho), qui no les passa torna a començar: llegeix unes altres dades.
     // Amb les llistes privades, qui no les llegeix de tot el cor ni de la seva corda només en llegeix la seva còpia.
     const priv = !readsAllAtt() && !attScopeSec() && attPrivate();
-    if (SYNC.started && priv !== SYNC.priv) { location.reload(); return; }
-    if (!priv && !attScopeSec()) watchArchive();
+    // El cap de corda, amb les llistes privades, només pot llegir les de la seva corda (attSec a les regles).
+    const lead = !!attScopeSec() && attPrivate();
+    if (SYNC.started && (priv !== SYNC.priv || lead !== SYNC.lead)) { location.reload(); return; }
+    if (!priv && !lead) watchArchive();
     watchChoices();
     watchWardrobe();
     if (!readsPeople()) watchMyPriv();
     // Les col·leccions grans comencen quan ja se sap si algú n'ha esborrat res (syncEpoch).
     if (!SYNC.started) {
-      SYNC.started = true; SYNC.priv = priv; syncLoad();
+      SYNC.started = true; SYNC.priv = priv; SYNC.lead = lead; syncLoad();
       if (priv) { BIG.delete('attendance'); watchMyMarks(() => { markLoaded('attendance'); if (S.ready) scheduleRender(); }); }
+      // Les de la seva corda, d'una consulta (no s'esborren en arxivar-les), sense l'arxiu ni la lectura per canvis.
+      if (lead) {
+        BIG.delete('attendance');
+        db.collection('attendance').where('section', '==', onlySec).onSnapshot(snap => { takeSnap('attendance', snap); markLoaded('attendance'); mirrorPending(); if (S.ready) scheduleRender(); },
+          e => { markLoaded('attendance'); onDbError(e); });
+      }
       for (const col of BIG.keys()) syncCol(col);
     }
     else checkEpochs();
@@ -580,6 +583,16 @@ function myProductionId(me) {
   const next = ps.find(p => (p.start || '') > TODAY);
   if (next) return next.id;
   return ps.at(-1)?.id || null;   // no en fa cap: no hi ha res a ensenyar
+}
+/** Les produccions que una persona fa ara mateix (començades i amb sessions per endavant), de la que té l'assaig més aviat a la
+ *  que el té més tard; si no en fa cap ara, la de myProductionId. */
+function myRunningProductionIds(me) {
+  const next = p => allSessions(p.id).find(s => s.date >= TODAY)?.date || '';
+  const live = productionsSorted().filter(p => !isExcluded(p.id, me.id) && p.start <= TODAY && (p.end || '9999') >= TODAY && next(p))
+    .sort((a, b) => next(a).localeCompare(next(b)));
+  if (live.length) return live.map(p => p.id);
+  const one = myProductionId(me);
+  return one ? [one] : [];
 }
 // mAll = minuts de les sessions on se l'esperava; mDone = minuts que hi ha estat (un retard hi resta els minuts que ha fet tard,
 // i marxar abans d'hora, els que s'ha perdut del final). left = quantes vegades ha marxat abans, i leftMin, quants minuts.

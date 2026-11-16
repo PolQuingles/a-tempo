@@ -21,7 +21,7 @@ const PROD_ONLY = new Set(['session-new', 'session-edit', 'plan-edit', 'seating-
 // Les fitxes de la plantilla: qui porta les persones (canPeople, com peopleEdit a les regles).
 const PEOPLE_ONLY = new Set(['member-edit', 'member-new', 'member-bulk', 'roster-export']);
 const actions = {
-  'tab': el => { if (el.dataset.tab === 'gestio' && ui.tab !== 'gestio') ui.gestioFrom = ui.tab; ui.tab = el.dataset.tab; if (ui.tab === 'tauler') ui.board = boardStart(); if (ui.tab === 'classes') ui.clTab = 'classes'; ui.rollSec = null; ui._calScrolled = false; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
+  'tab': el => { if (el.dataset.tab === 'gestio' && ui.tab !== 'gestio') ui.gestioFrom = ui.tab; ui.tab = el.dataset.tab; if (ui.tab === 'tauler') ui.board = boardStart(); if (ui.tab === 'classes') ui.clTab = 'classes'; if (ui.tab === 'calendari') ui.calView = 'month'; ui.rollSec = null; ui._calScrolled = false; closeSheet(); saveUI(); render(); window.scrollTo({ top: 0 }); },
   'reload': () => location.reload(),
   'my-cal': () => sheetMyCalendar(),
   'google-in': () => signInGoogle(),
