@@ -446,6 +446,39 @@ prova('una sessió compartida es reparteix: un assaig de 2 h de dues produccions
   prop(n.best, (45 + 60) / (60 + 60), 'i el que queda, també repartit');
 });
 
+prova('un assaig compartit amb ordre: qui arriba tard ho perd de la primera producció, i qui marxa abans, de l’última', () => {
+  const parts = [{ p: 'p', to: '21:15' }, { p: 'q' }];
+  escenari({
+    members: [{ id: 'a', name: 'A', section: 'B' }, { id: 'b', name: 'B', section: 'B' }],
+    productions: [
+      { id: 'p', name: 'Oratori', sessions: [{ id: 's1', date: D(-4), type: 'Assaig', time: '20:00', end: '22:30', alsoIn: ['q'], parts },
+        { id: 's3', date: D(3), type: 'Assaig', time: '20:00', end: '22:30', alsoIn: ['q'], parts: [{ p: 'p', to: '22:00' }, { p: 'q' }] }] },
+      { id: 'q', name: 'Sant Esteve', sessions: [] }],
+    attendance: { s1_B: { sessionId: 's1', section: 'B', marks: { a: { s: 'R', min: 30 }, b: { s: 'P', early: 20 } } } },
+  });
+  const s1 = sessionById('s1');
+  igual(partsLine(s1), '20:00–21:15 Oratori · 21:15–22:30 Sant Esteve');
+  const row = (pid, mid) => { const r = computeStats({ kind: 'prod', id: pid }).rows.find(x => x.m.id === mid); return [r.mAll, r.mDone]; };
+  igual([row('p', 'a'), row('q', 'a')], [[75, 45], [75, 75]], 'el retard de 30′, tot de l’Oratori');
+  igual([row('p', 'b'), row('q', 'b')], [[75, 75], [75, 55]], 'marxar 20′ abans, tot de Sant Esteve');
+  const rs = computeStats({ kind: 'range', from: D(-30), to: D(30) }).rows.find(r => r.m.id === 'a');
+  igual([rs.mAll, rs.mDone], [150, 120], 'a tota la temporada, sencer');
+  igual([partMins(sessionById('s3'), 'p'), partMins(sessionById('s3'), 'q')], [120, 30], 'el que queda, pel tros de cadascuna');
+  prop(ruleStatus('p', S.members.get('a')).best, (45 + 120) / (75 + 120), 'i la norma, també');
+  // L'ordre al revés: Sant Esteve primer.
+  S.productions.get('p').sessions[0].parts = [{ p: 'q', to: '21:15' }, { p: 'p' }];
+  igual([row('p', 'a'), row('q', 'a')], [[75, 75], [75, 45]], 'al revés, el retard és de Sant Esteve');
+  igual(partsLine(sessionById('s1')), '20:00–21:15 Sant Esteve · 21:15–22:30 Oratori');
+  // Sense hora de canvi, o amb una que no hi cap: a parts iguals (però amb ordre).
+  S.productions.get('p').sessions[0].parts = [{ p: 'p' }, { p: 'q' }];
+  igual(row('p', 'a'), [75, 45], 'sense hora, la meitat');
+  S.productions.get('p').sessions[0].parts = [{ p: 'p', to: '23:00' }, { p: 'q' }];
+  igual(partsLine(sessionById('s1')), '20:00–21:15 Oratori · 21:15–22:30 Sant Esteve', 'una hora fora de l’assaig no val');
+  // Unes parts que no lliguen amb les produccions de la sessió: com sempre, a parts iguals i sense ordre.
+  S.productions.get('p').sessions[0].parts = [{ p: 'p' }];
+  igual([sessionSlots(sessionById('s1')), row('p', 'a')], [null, [75, 60]], 'el retard, repartit');
+});
+
 prova('el resum d’un dia de classes diu quantes classes i quantes hores lliures, no «4 hores» d’un dia de dues', () => {
   S.classReq = new Map();
   const c = { id: 'c1', date: D(2), teacher: 'p', slots: [{ id: 'a', time: '17:00', mins: 30, memberId: 'x' }, { id: 'b', time: '17:30', mins: 30, name: 'Una alumna de fora' },

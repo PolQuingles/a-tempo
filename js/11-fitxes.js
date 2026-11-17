@@ -246,11 +246,12 @@ function sheetSessionInfo(sid) {
   const absenceAct = canWarn
     ? mineAb ? `<span class="st-pill st-${mineAb.status}">${mineAb.kind === 'late' ? 'Has avisat que arribaràs tard' : 'Has avisat que no hi vas'}</span>`
       : `<button class="btn btn-primary" data-act="absence-new" data-sid="${esc(s.id)}">Avisa d’una absència o retard</button>` : '';
-  const text = [`${s.type || 'Assaig'} · ${prodNames(s)}`, `${longDate(s.date)}${s.time ? ` · ${timeRange(s)}` : ''}`, s.place ? `Lloc: ${s.place}` : '',
+  const text = [`${s.type || 'Assaig'} · ${prodNames(s)}`, `${longDate(s.date)}${s.time ? ` · ${timeRange(s)}` : ''}`, partsLine(s), s.place ? `Lloc: ${s.place}` : '',
     ...INFO_FIELDS.filter(([k]) => s.info?.[k]).map(([k, l]) => `${l}: ${s.info[k]}`), infoSteps(s).length ? `Horari:\n${stepsText(s)}` : '', s.note || ''].filter(Boolean).join('\n');
   openSheet({
     title: s.type || 'Sessió',
     body: `${prod && prod.poster && isShow(s) ? `<button class="poster-banner" data-act="poster" data-pid="${esc(prod.id)}" aria-label="Cartell de ${esc(prod.name)}"><img src="${esc(prod.poster)}" alt=""></button>` : ''}<div class="prod-band prod-tone" style="--ph:${prodHue(prod)}"><h2 class="h2"><i class="pdot"></i>${esc(prodNames(s))}</h2><span class="eyebrow">${esc(s.type || 'Assaig')}</span></div>
+      ${partsLine(s) ? `<p class="fitxa-parts"><span class="mono">${esc(partsLine(s))}</span></p>` : ''}
       ${fitxaHtml(s)}
       ${s.note ? `<p class="fitxa-note">${esc(s.note)}</p>` : ''}
       ${planOf(s) || canProd() ? `<div class="section-title u-mt-16"><h2 class="h2">${isShow(s) ? 'Programa' : s.date < TODAY ? 'Què s’hi va treballar' : 'Pla d’assaig'}</h2>${canProd() ? `<button class="btn btn-sm" data-act="plan-edit" data-sid="${s.id}">${planOf(s) ? 'Edita’l' : 'Fes-lo'}</button>` : ''}</div>
@@ -279,10 +280,16 @@ function sheetSession(sid, presetProd, presetDate) {
   // Per copiar la fitxa d'una altra sessió (les més recents, primer).
   const infoFrom = allSessions().filter(x => x.id !== cur.id && hasInfo(x)).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 40);
   const secs = new Set(cur.sections && cur.sections.length ? cur.sections : SECTIONS.map(x => x.id));
+  // Les produccions de la sessió, en l'ordre de l'assaig (un assaig compartit: la primera estona d'una i l'última d'una altra,
+  // amb l'hora del canvi). La primera és on es desa la sessió; les altres, alsoIn; i l'ordre, parts (vegeu sessionSlots).
+  const parts = sessionSlots(cur) ? clone(cur.parts).filter(x => S.productions.has(x.p)) : sessionProds(cur).filter(id => S.productions.has(id)).map(p => ({ p }));
+  if (!parts.length) parts.push({ p: prods[0].id });
   openSheet({
     title: existing ? 'Edita la sessió' : 'Nova sessió',
     body: `<div class="kv">
-      <label class="field"><span>Producció</span><select class="inp" id="se-prod">${prods.map(p => `<option value="${p.id}" ${p.id === cur.prodId ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select></label>
+      <div class="field"><span>Producció</span><div class="se-parts" id="se-parts"></div>
+        <button type="button" class="btn btn-sm u-w-max-content" id="se-part-add">+ Una altra producció en aquest assaig</button>
+        <small id="se-parts-h"></small></div>
       <div class="row2"><label class="field"><span>Data</span><input class="inp" id="se-date" type="date" value="${cur.date}"></label>
       <label class="field"><span>Tipus</span><select class="inp" id="se-type">${[...new Set([...TYPES, cur.type].filter(Boolean))].map(t => `<option ${t === cur.type ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label></div>
       <div class="row2"><label class="field"><span>Hora d’inici</span><input class="inp" id="se-time" type="time" value="${esc(cur.time || '')}"></label>
@@ -298,8 +305,6 @@ function sheetSession(sid, presetProd, presetDate) {
         <div class="field"><span>Feines per a voluntaris (opcional)</span><div id="se-tasks" class="u-d-grid u-gap-6"></div><button type="button" class="btn btn-sm u-w-max-content u-mt-6" id="se-task-add">+ Feina</button>
           <small>P. ex. «Carregar i descarregar el material» · 4 persones. Qui confirma s’hi pot apuntar.</small></div>
       </div>
-      <div class="field"><span>També compta per a</span><div class="pickers" id="se-also">${prods.map(p => `<button type="button" class="pick" data-also="${p.id}" aria-pressed="${(cur.alsoIn || []).includes(p.id)}">${esc(p.name)}</button>`).join('')}</div>
-        <small>Per a assajos compartits entre produccions: comptaran a les estadístiques i a la norma de totes les marcades, amb els minuts repartits a parts iguals (un assaig de 2 h de dues produccions, 1 h a cada una; a tota la temporada, les 2 h).</small></div>
       <label class="field"><span>Nota</span><input class="inp" id="se-note" type="text" maxlength="80" value="${esc(cur.note || '')}" placeholder="p. ex. Portar partitures del Gloria"></label>
       <details class="fitxa-edit" id="se-fitxa" ${isShow(cur) || hasInfo(cur) ? 'open' : ''}>
         <summary><span><b>Fitxa ${V.sh.del}</b><br><span class="muted u-fs-t-13">Convocatòria, vestuari, punt de trobada… La veuen tots els convocats.</span></span>${ICON.chev}</summary>
@@ -322,7 +327,60 @@ function sheetSession(sid, presetProd, presetDate) {
         if (!on && el.querySelectorAll('#se-secs .pick[aria-pressed="true"]').length === 1) return;
         b.setAttribute('aria-pressed', on);
       });
-      el.querySelectorAll('#se-also .pick').forEach(b => b.onclick = () => b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') !== 'true'));
+      // Les produccions de l'assaig, en ordre: cadascuna amb l'hora en què es passa a la següent.
+      const readParts = () => {
+        el.querySelectorAll('#se-parts [data-part]').forEach(x => { if (parts[+x.dataset.part]) parts[+x.dataset.part].p = x.value; });
+        el.querySelectorAll('#se-parts [data-cut]').forEach(x => { const p = parts[+x.dataset.cut]; if (p) p.to = x.value; });
+        parts.forEach((x, i) => { if (!x.to || i === parts.length - 1) delete x.to; });
+      };
+      // L'esborrany, per veure com queda repartit: «20:00–21:15 Oratori · 21:15–22:30 Sant Esteve».
+      const draft = () => ({ time: el.querySelector('#se-time').value, end: el.querySelector('#se-end').value, mins: parseMins(el.querySelector('#se-mins').value.trim()) || 0,
+        prodId: parts[0].p, alsoIn: parts.slice(1).map(x => x.p), parts });
+      const hintParts = () => {
+        readParts();
+        const h = el.querySelector('#se-parts-h');
+        h.hidden = parts.length < 2;
+        if (parts.length < 2) return;
+        const line = partsLine(draft());
+        h.innerHTML = `${line ? `<b>${esc(line)}</b><br>` : ''}Qui arriba tard ho perd de la primera; qui marxa abans, de l’última. A les estadístiques i a la norma, cada producció hi compta pel seu tros; a tota la temporada, l’assaig sencer.${parts.slice(0, -1).some(x => !x.to) ? ' Sense hora de canvi, a parts iguals.' : ''}`;
+      };
+      const hhmm = t => `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+      const half = i => {
+        // L'hora del canvi que es proposa: la meitat del tros que queda (arrodonida a 5 minuts).
+        const a = clockMins(i ? parts[i - 1].to : '') ?? clockMins(el.querySelector('#se-time').value), z = clockMins(el.querySelector('#se-end').value);
+        return a == null || z == null || z - a < 10 ? '' : hhmm(Math.round((a + (z - a) / 2) / 5) * 5);
+      };
+      const nm = id => esc(S.productions.get(id)?.name || '');
+      const paintParts = () => {
+        const n = parts.length, used = new Set(parts.map(x => x.p));
+        el.querySelector('#se-parts').innerHTML = parts.map((x, i) => `<div class="se-part">
+          <div class="se-part-r"><select class="inp" id="${i ? `se-prod-${i}` : 'se-prod'}" data-part="${i}" aria-label="${n > 1 ? `Producció de ${!i ? 'la primera estona' : i === n - 1 ? 'l’última estona' : 'l’estona següent'}` : 'Producció'}">${prods.map(p => `<option value="${p.id}" ${p.id === x.p ? 'selected' : used.has(p.id) ? 'disabled' : ''}>${esc(p.name)}</option>`).join('')}</select>
+          ${n > 1 ? `<button type="button" class="icon-btn" data-rm-part="${i}" aria-label="Treu ${nm(x.p)} de l’assaig">${ICON.close}</button>` : ''}</div>
+          ${i < n - 1 ? `<div class="se-cut"><label><span>Canvi a les</span><input class="inp" type="time" data-cut="${i}" value="${esc(x.to || '')}"></label><button type="button" class="btn btn-sm" data-swap="${i}" aria-label="Canvia l’ordre: ${nm(parts[i + 1].p)} primer i ${nm(x.p)} després">⇅ Canvia l’ordre</button></div>` : ''}
+        </div>`).join('');
+        el.querySelector('#se-part-add').hidden = n >= prods.length;
+        el.querySelectorAll('#se-parts [data-part]').forEach(x => x.onchange = () => {
+          // En una sessió nova, si es canvia la primera producció, també el lloc habitual.
+          if (!existing && x.dataset.part === '0') { const place = el.querySelector('#se-place'), was = S.productions.get(parts[0].p)?.place || ''; if (!place.value.trim() || place.value.trim() === was) place.value = S.productions.get(x.value)?.place || ''; }
+          readParts(); paintParts();
+        });
+        el.querySelectorAll('[data-rm-part]').forEach(b => b.onclick = () => { readParts(); parts.splice(+b.dataset.rmPart, 1); delete parts[parts.length - 1].to; paintParts(); });
+        el.querySelectorAll('[data-swap]').forEach(b => b.onclick = () => { readParts(); const i = +b.dataset.swap, p = parts[i].p; parts[i].p = parts[i + 1].p; parts[i + 1].p = p; paintParts(); });
+        hintParts();
+      };
+      el.querySelector('#se-part-add').onclick = () => {
+        readParts();
+        const free = prods.find(p => !parts.some(x => x.p === p.id));
+        if (!free) return;
+        const to = half(parts.length - 1);
+        if (to) parts[parts.length - 1].to = to;
+        parts.push({ p: free.id });
+        paintParts();
+        el.querySelector(`#se-prod-${parts.length - 1}`)?.focus();
+      };
+      el.querySelector('#se-parts').addEventListener('input', hintParts);
+      for (const k of ['#se-time', '#se-end', '#se-mins']) el.querySelector(k).addEventListener('input', hintParts);
+      paintParts();
       el.querySelector('#se-rsvp').onchange = e => { el.querySelector('#se-rsvp-more').hidden = !e.target.checked; };
       const steps = clone(cur.info?.steps || []), tasks = clone(cur.tasks || []);
       const readRows = () => {
@@ -350,8 +408,6 @@ function sheetSession(sid, presetProd, presetDate) {
       el.querySelector('#se-step-add').onclick = () => { readRows(); steps.push({ time: '', what: '', where: '' }); paintRows(); };
       el.querySelector('#se-task-add').onclick = () => { readRows(); tasks.push({ id: uid('tk'), label: '', need: 2 }); paintRows(); };
       el.querySelector('#se-type').onchange = e => { if (SHOWS.has(e.target.value)) el.querySelector('#se-fitxa').open = true; };
-      // En una sessió nova, si es canvia de producció, també el lloc habitual.
-      if (!existing) el.querySelector('#se-prod').addEventListener('change', e => { const place = el.querySelector('#se-place'), was = S.productions.get(cur.prodId)?.place || ''; if (!place.value.trim() || place.value.trim() === was) place.value = S.productions.get(e.target.value)?.place || ''; cur.prodId = e.target.value; });
       el.querySelector('#se-save').onclick = () => {
         const date = el.querySelector('#se-date').value;
         if (!date) { toast('Indica la data de la sessió'); return; }
@@ -364,9 +420,22 @@ function sheetSession(sid, presetProd, presetDate) {
         const mn = el.querySelector('#se-mins').value.trim();
         if (mn) { const v = parseMins(mn); if (!v) { toast('Escriu el temps d’assaig com a 5:35 (hores i minuts)'); return; } next.mins = v; }
         for (const k of ['plan', 'seating']) if (existing && existing[k]) next[k] = existing[k];
-        const prodId = el.querySelector('#se-prod').value;
-        const also = $$('#se-also .pick[aria-pressed="true"]', el).map(b => b.dataset.also).filter(id => id !== prodId);
-        if (also.length) next.alsoIn = also;
+        readParts();
+        const prodId = parts[0].p;
+        if (parts.length > 1) {
+          // Les hores de canvi: entre l'inici i el final, i cadascuna després de l'anterior.
+          const a = clockMins(next.time), z = clockMins(next.end);
+          let prev = a;
+          for (const x of parts.slice(0, -1)) {
+            if (!x.to) continue;
+            const c = clockMins(x.to);
+            if (a == null || z == null || z <= a) { toast('Per posar l’hora del canvi, cal l’hora d’inici i la de final'); return; }
+            if (c <= prev || c >= z) { toast(`El canvi de les ${x.to} ha de ser entre ${prev === a ? 'l’inici' : 'l’anterior canvi'} i el final`); return; }
+            prev = c;
+          }
+          next.alsoIn = parts.slice(1).map(x => x.p);
+          next.parts = parts.map(x => x.to ? { p: x.p, to: x.to } : { p: x.p });
+        }
         readRows();
         if (el.querySelector('#se-rsvp').checked) {
           next.rsvp = true; const by = el.querySelector('#se-rsvpby').value; if (by) next.rsvpBy = by;
