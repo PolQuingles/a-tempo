@@ -96,7 +96,7 @@ function sheetHelp() {
     <h3>Convocatòries</h3>
     <p>Quan hi hagi ${w.sh.show === 'concert' ? 'un concert' : 'una actuació'} o un viatge, respon <b>Hi seré</b> o <b>No hi podré anar</b> abans de la data límit.</p>
     <h3>La meva assistència</h3>
-    <p>A Inici veus el teu percentatge d’assistència i quantes faltes et pots permetre abans ${w.sh.del}, per complir la norma del ${minAttendance()}%.</p>
+    <p>A Inici veus el teu percentatge d’assistència i quantes faltes et pots permetre abans ${w.sh.del}, per complir la norma del ${minAttendance()}%. A Assistència, cada producció té la <b>Vista detallada</b>: sessió a sessió, el dia, els minuts de retard o si vas marxar abans, els minuts que hi compten i el motiu de cada falta.</p>
     <h3>Tauler</h3>
     <p>Anuncis, el <b>repertori</b> (cada obra amb les partitures i els àudios de la teva ${w.part}, i els solos i petits grups on surts), documents de la temporada, enquestes i <b>sortides</b>, on t’hi pots apuntar.</p>
     <p>Els àudios d’estudi es poden escoltar <b>més lents</b> i <b>repetir un fragment</b>. I amb «Desa’ls al mòbil» tens les partitures i els àudios sense cobertura.</p>
