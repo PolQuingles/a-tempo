@@ -606,14 +606,39 @@ function sheetMember(mid, sec) {
   });
 }
 /* ---------- Sheet: member stats ---------- */
-function sheetMemberStats(mid) {
+// La vista detallada de l'assistència d'una persona: l'única de l'app. S'hi arriba des de les estadístiques i el risc (amb el
+// període que s'hi mira), des de la cerca i la secretaria, i des d'Assistència › Jo (cada producció i tota la temporada, amb
+// «Vista detallada»). pid: una producció, «season» (tota la temporada) o res (el de les estadístiques).
+/** Sessió a sessió, de la més recent a la més antiga: el dia, què era, com hi va anar (el retard, si va marxar abans), els
+ *  minuts que hi compten (d'un assaig compartit, només el tros de la producció pid) i el motiu (el de la llista o, si no n'hi
+ *  ha, el de l'avís d'absència, si es pot llegir). Cada fila obre la sessió. */
+function sessionDetail(m, hist, pid) {
+  if (!hist.length) return '';
+  const why = mk => mk.why === 'leave' ? 'De baixa' : mk.why === 'prod' ? 'No fa la producció' : '';
+  const rows = [...hist].reverse().map(({ s, mk }) => {
+    const mm = markMins(s, mk, pid);
+    const what = mk ? [mk.s === 'R' && +mk.min ? `Retard de ${minsText(+mk.min)}` : STATUS[mk.s].label, +mk.early ? `ha marxat ${minsText(+mk.early)} abans` : '', mk.auto ? why(mk) : ''].filter(Boolean).join(' · ') : 'Sense llista';
+    const note = mk?.note || (mk && mk.s !== 'P' ? absencesFor(s.id, m.id).find(a => a.reason)?.reason : '') || '';
+    const shared = sessionProds(s).filter(id => S.productions.has(id)).length > 1;
+    const sub = [s.type || 'Assaig', s.time ? timeRange(s) : '', shared ? (partsLine(s) || prodNames(s)) : ''].filter(Boolean).join(' · ');
+    return `<li><button class="sd-row" data-act="open-session" data-sid="${esc(s.id)}">
+      <i class="sd-k${mk ? ` s-${mk.s}` : ''}" aria-hidden="true"></i>
+      <span class="sd-d"><b>${esc(capz(wdShort(s.date)))} ${esc(ddmm(s.date))}</b><small>${esc(sub)}</small></span>
+      <span class="sd-m"><b>${esc(what)}</b>${note ? `<small>${esc(note)}</small>` : ''}</span>
+      ${mm && mm.all ? `<span class="sd-t mono">${esc(minsText(mm.done))}<small>de ${esc(minsText(mm.all))}</small></span>` : ''}
+    </button></li>`;
+  });
+  return `<ul class="sd-list">${rows.join('')}</ul>`;
+}
+function sheetMemberStats(mid, pid) {
   const m = S.members.get(mid);
   if (!m) return;
-  const scope = currentScope();
+  const { season } = seasonCfg(), prod = S.productions.get(pid);
+  const scope = prod ? { kind: 'prod', id: prod.id, name: prod.name } : pid === 'season' ? { kind: 'range', from: season.from, to: season.to, name: season.name } : currentScope();
   const st = computeStats(scope, m.section);
   const rs = scope.kind === 'prod' ? ruleStatus(scope.id, m) : null;
   const r = st.rows.find(x => x.m.id === mid) || { ...emptyCounts(), hist: [], notes: [] };
-  const hist = r.hist.map(({ s, mk }) => `<button class="hcell" data-act="open-session" data-sid="${s.id}" title="${longDate(s.date)} · ${mk ? STATUS[mk.s].label + (mk.min ? ` ${mk.min}′` : '') : 'Sense llista'}"><i class="${mk ? 's-' + mk.s : ''}"></i>${ddmm(s.date)}</button>`).join('');
+  const hist = sessionDetail(m, r.hist, scope.kind === 'prod' ? scope.id : null);
   openSheet({
     title: m.name,
     body: `<div class="eyebrow u-mb-10">${SEC[m.section].name} · ${esc(scope.name)}</div>
@@ -623,15 +648,12 @@ function sheetMemberStats(mid) {
       ${leaveText(m) ? `<p class="muted u-m-0-0-10 u-fs-t-13">${leaveText(m)}</p>` : ''}
       <div class="kpis u-gtc-repeat-2-1fr">
         <div class="kpi"><div class="kpi-v">${pct(rate(r))}</div><div class="kpi-l">Assistència</div></div>
-        <div class="kpi"><div class="kpi-v">${r.min}<small>min</small></div><div class="kpi-l">${r.R} retards</div></div>
+        <div class="kpi"><div class="kpi-v">${r.min}<small>min</small></div><div class="kpi-l">${r.R === 1 ? '1 retard' : `${r.R} retards`}</div></div>
         <div class="kpi ${r.FNJ ? 'alert' : ''}"><div class="kpi-v">${r.FNJ}</div><div class="kpi-l">Faltes no justificades</div></div>
         <div class="kpi"><div class="kpi-v">${r.FJ}</div><div class="kpi-l">Faltes justificades</div></div>
       </div>
       <div class="section-title u-mt-20"><h3 class="eyebrow">Sessió a sessió</h3></div>
-      ${hist ? `<div class="hist">${hist}</div>` : '<p class="muted">Encara no hi ha sessions passades.</p>'}
-      <div class="legend">${ORDER.map(k => `<span><i class="i-${k}"></i>${STATUS[k].short}</span>`).join('')}<span><i class="i-none"></i>Sense llista</span></div>
-      ${r.notes.length ? `<div class="section-title u-mt-20"><h3 class="eyebrow">Motius registrats</h3></div>
-      <ul class="notes-list">${r.notes.map(({ s, mk }) => `<li><span class="mono muted">${ddmm(s.date)}</span><span><span class="pill ${mk.s === 'FNJ' ? 'fnj' : mk.s === 'FJ' ? 'fj' : ''}">${mk.s}</span> ${esc(mk.note)}</span></li>`).join('')}</ul>` : ''}
+      ${hist || '<p class="muted">Encara no hi ha sessions passades.</p>'}
       ${m.phone ? `<p class="u-mt-18"><a class="btn btn-sm" href="tel:${esc(m.phone.replace(/\s/g, ''))}">Truca ${esc(m.phone)}</a></p>` : ''}
       ${canTrack(m) ? '<div id="ms-track"></div>' : ''}`,
     foot: canEdit() || canWriteTo() ? `<span class="spacer"></span>${canWriteTo() && writableMembers().some(x => x.id === m.id) ? `<button class="btn" data-act="thread-to" data-mid="${m.id}">Escriu-li</button>` : ''}${canEdit() ? `<button class="btn" data-act="certificate" data-mid="${m.id}">Certificat d’assistència</button>` : ''}` : '',

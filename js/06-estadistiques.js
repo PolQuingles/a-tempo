@@ -445,7 +445,7 @@ function myAttendanceCard(me, inTab, pid = myProductionId(me), many = false) {
         <div class="dots" aria-label="Sessió a sessió">${dots}</div>
         ${normHint(me, prod.id) || `<div>${ruleSentence(rs)}</div>`}`
       : `<span class="muted u-fs-t-13">Encara no hi ha cap llista passada en aquesta producció.</span>`}
-      ${inTab ? '' : '<div class="att-acts"><button class="btn btn-sm btn-ghost" data-act="my-att">Totes les produccions</button><button class="btn btn-sm btn-ghost" data-act="absence-new">Avisa d’una absència</button></div>'}
+      <div class="att-acts">${counted ? `<button class="btn btn-sm" data-act="member-stats" data-mid="${esc(me.id)}" data-pid="${esc(prod.id)}">Vista detallada</button>` : ''}${inTab ? '' : '<button class="btn btn-sm btn-ghost" data-act="my-att">Totes les produccions</button><button class="btn btn-sm btn-ghost" data-act="absence-new">Avisa d’una absència</button>'}</div>
     </div>`;
 }
 function sheetMyAttendance() {
@@ -465,7 +465,8 @@ function myAttSeason(me, skip = [], head = '') {
   const now = rows.filter(x => !done(x) && !skip.includes(x.prod.id)), past = rows.filter(done).reverse();
   const list = xs => `<ul class="mini-list u-maxh-none">${xs.map(({ prod, r, rs }) => `<li class="u-d-grid u-gap-4 u-p-10-12">
         <span class="u-d-flex u-jc-space-between u-gap-8"><b>${esc(prod.name)}</b><span class="mono">${pct(rate(r))}</span></span>
-        <span class="m">${[`${minsText(r.mDone)} de ${minsText(r.mAll)} d’assaig`, r.FJ ? `${r.FJ} just.` : '', r.FNJ ? `${r.FNJ} no just.` : ''].filter(Boolean).join(' · ')}</span><span>${ruleSentence(rs)}</span></li>`).join('')}</ul>`;
+        <span class="m">${[`${minsText(r.mDone)} de ${minsText(r.mAll)} d’assaig`, r.FJ ? `${r.FJ} just.` : '', r.FNJ ? `${r.FNJ} no just.` : ''].filter(Boolean).join(' · ')}</span><span>${ruleSentence(rs)}</span>
+        <button class="btn btn-sm btn-ghost u-w-max-content" data-act="member-stats" data-mid="${esc(me.id)}" data-pid="${esc(prod.id)}">Vista detallada</button></li>`).join('')}</ul>`;
   return `${now.length || past.length ? head : ''}${now.length ? list(now) : ''}
       ${past.length ? `<details class="np-group my-past"><summary><span>Produccions acabades (${past.length})</span>${ICON.chev}</summary>${list(past)}</details>` : ''}
       ${rows.length ? '' : '<p class="muted">Encara no hi ha llistes passades.</p>'}
@@ -473,7 +474,7 @@ function myAttSeason(me, skip = [], head = '') {
         <div class="kpis u-gtc-repeat-2-1fr">
           <div class="kpi"><div class="kpi-v">${sc ? kpiPct(rate(sr)) : '—'}</div><div class="kpi-l">${esc(season.name)}${sc ? ` · ${esc(minsText(sr.mDone))} de ${esc(minsText(sr.mAll))}` : ''}</div></div>
           <div class="kpi"><div class="kpi-v">${minsKpi(sr ? sr.min : 0)}</div><div class="kpi-l">Retard acumulat</div></div>
-        </div></details>
+        </div>${sc ? `<button class="btn btn-sm btn-ghost u-w-max-content u-mt-6" data-act="member-stats" data-mid="${esc(me.id)}" data-pid="season">Vista detallada</button>` : ''}</details>
       <p class="muted u-fs-t-13">${attPrivate() ? `Només tu i l’equip ${V.del} veieu aquestes dades.` : `Tothom ${V.del} pot veure l’assistència de tothom; els teus avisos d’absència, només l’equip.`} Si hi ha algun error, parla amb el teu ${V.leader}.</p>`;
 }
 /** Assistència, amb el rol de cantaire: només la teva. Avisar d'una absència o d'un retard, els avisos que has fet, com vas a

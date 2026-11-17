@@ -420,10 +420,18 @@ td.n.is-fnj{color:var(--fnj-text);font-weight:700}
 .mrow .mcounts i{width:7px;height:7px;border-radius:2px}
 .mrow .mcounts b{font-family:var(--f-mono);font-weight:500;color:var(--ink-2)}
 
-.hist{display:grid;grid-template-columns:repeat(auto-fill,minmax(34px,1fr));gap:8px}
-.hcell{display:flex;flex-direction:column;align-items:center;gap:3px;font-family:var(--f-mono);font-size:var(--t-11);color:var(--muted)}
-.hcell i{width:100%;height:22px;border-radius:var(--r-sm);background:var(--surface-2);border:1px dashed var(--line-strong)}
-.hcell i.s-P{background:var(--p);border:0} .hcell i.s-R{background:var(--r);border:0} .hcell i.s-FJ{background:var(--fj);border:0} .hcell i.s-FNJ{background:var(--fnj);border:0} .hcell i.s-NP{background:var(--np);border:0}
+/* La vista detallada (sheetMemberStats): sessió a sessió, amb el color de la marca, el dia, com hi va anar i els minuts. */
+.sd-list{list-style:none;margin:0;padding:0}
+.sd-list li+li{border-top:1px solid var(--line)}
+.sd-row{display:grid;grid-template-columns:10px minmax(0,1fr) minmax(0,1.3fr) auto;gap:12px;align-items:start;width:100%;min-height:44px;padding:10px 2px;text-align:left}
+.sd-row:hover{background:var(--surface-2)}
+.sd-k{width:10px;height:10px;margin-top:5px;border-radius:50%;background:var(--surface-2);border:1px dashed var(--line-strong)}
+.sd-k.s-P{background:var(--p);border:0} .sd-k.s-R{background:var(--r);border:0} .sd-k.s-FJ{background:var(--fj);border:0} .sd-k.s-FNJ{background:var(--fnj);border:0} .sd-k.s-NP{background:var(--np);border:0}
+.sd-d,.sd-m,.sd-t{display:grid;gap:2px;min-width:0}
+.sd-d b,.sd-m b{font-size:var(--t-15);font-weight:600}
+.sd-d small,.sd-m small,.sd-t small{font-size:var(--t-13);color:var(--muted);overflow-wrap:anywhere}
+.sd-t{text-align:right;font-size:var(--t-13);white-space:nowrap}
+@media (max-width:560px){.sd-row{grid-template-columns:10px minmax(0,1fr) auto}.sd-m{grid-column:2 / 4}}
 .notes-list{list-style:none;margin:0;padding:0;font-size:var(--t-13)}
 .notes-list li{padding:8px 0;border-top:1px solid var(--line);display:flex;gap:12px}
 .notes-list li:first-child{border-top:0}

@@ -394,7 +394,7 @@ const actions = {
   'arx-kit': el => { closeSheet(); sheetKit(el.dataset.sec || ''); },
   'arx-codes': el => { closeSheet(); sheetCodes(el.dataset.sec || '', el.dataset.pid || ''); },
   'score-work': el => { closeSheet(); sheetScoreWork(el.dataset.pid, el.dataset.id, el.dataset.sec || ''); },
-  'member-stats': el => { if (attHidden() && el.dataset.mid !== myMemberId()) { toast('Les llistes d’assistència són privades'); return; } sheetMemberStats(el.dataset.mid); },
+  'member-stats': el => { if (attHidden() && el.dataset.mid !== myMemberId()) { toast('Les llistes d’assistència són privades'); return; } sheetMemberStats(el.dataset.mid, el.dataset.pid); },
   // Tria de produccions (22b-tries).
   'choice-open': el => sheetProdChoice(el.dataset.mid || myMemberId()),
   'choices-overview': () => sheetChoicesOverview(),
