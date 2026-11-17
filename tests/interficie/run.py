@@ -501,7 +501,7 @@ def main():
           document.querySelector('#toast-act').click(); await s(300);
           out.undone = S.announcements.has('n1');
           out.poster = !!document.querySelector('#view .poster-th img');
-          ui.tab = 'calendari'; ui.calProd = currentProductionId(); render(); await s(200); out.posterCal = !!document.querySelector('.cal-prod-h .poster-th'); ui.calProd = 'all';
+          ui.tab = 'calendari'; ui.calView = 'list'; ui.calProd = currentProductionId(); render(); await s(200); out.posterCal = !!document.querySelector('.cal-prod-h .poster-th'); ui.calProd = 'all';
           sheetSessionInfo('s6'); await s(300); out.posterConcert = !!document.querySelector('.sheet .poster-banner img'); closeSheet(); await s(200);
           setTextSize('molt'); await s(100);
           out.text = getComputedStyle(document.documentElement).getPropertyValue('--ts').trim() === '1.3' && localStorage.getItem('atempo:text') === 'molt';
@@ -1274,7 +1274,7 @@ def main():
           out.late = !!document.querySelector('.sheet #cn-min');
           closeSheet(); await s(200);
           out.short = getComputedStyle(document.querySelector('#choir-name .bn-short') || document.body).display !== 'none' && document.querySelector('#choir-name').innerText.trim() === S.config.shortName;
-          applyRoute('calendari'); render(); await s(300);
+          applyRoute('calendari'); ui.calView = 'list'; render(); await s(300);
           const head = document.querySelector('.page-head');
           out.calHead = !head.querySelector('[data-act="cal-subscribe"], [data-act="cal-past"]') && !!document.querySelector('.cal-past-link');
           out.noMarks = !document.querySelector('.cal-row .vmarks');
@@ -1290,7 +1290,7 @@ def main():
           return out; }""")
         switch_user(page, base, "pol")
         r.update(page.evaluate("""async () => { const s = ms => new Promise(res => setTimeout(res, ms)), out = {};
-          applyRoute('calendari'); render(); await s(300);
+          applyRoute('calendari'); ui.calView = 'list'; render(); await s(300);
           const head = document.querySelector('.page-head');
           out.oneRow = head.getBoundingClientRect().height < 70 && !!head.querySelector('[data-act="session-new"]');
           // Les marques de les cordes: a les sessions que ja han començat; a les que vénen, només si no hi va tothom.
@@ -1947,7 +1947,7 @@ def main():
           out.author = !('T' in doc.data());
           const d = n => { const x = new Date(); x.setDate(x.getDate() + n); return isoDate(x); };
           saveProduction({ id: 'p9', name: 'Un sol concert', sessions: [{ id: 's9', date: d(40), time: '19:00', end: '', type: 'Concert', place: '', note: '' }], excluded: [] });
-          applyRoute('calendari'); ui.calProd = 'p9'; render(); await s(400);
+          applyRoute('calendari'); ui.calView = 'list'; ui.calProd = 'p9'; render(); await s(400);
           out.one = [...document.querySelectorAll('.cph-m .mono')].some(x => x.textContent.trim() === '1 sessió') && ![...document.querySelectorAll('.cph-m .mono')].some(x => /^1 sessions/.test(x.textContent.trim()));
           ui.calProd = 'all';
           // «Ha marxat abans», a la llista d'avui dels tenors (la corda que porta).

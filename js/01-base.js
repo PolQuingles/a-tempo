@@ -231,7 +231,7 @@ const S = {
 };
 const ui = {
   tab: 'avisos', section: '', sessionId: null, rollSec: null,
-  calProd: 'all', calPast: false,
+  calProd: 'all', calPast: false, calView: 'month',
   statsScope: 'prod', statsProd: null, statsSec: '', statsSort: 'pct',
   manage: 'personal', people: 'singer', pmFilter: 'all', absFilter: 'pending',
   clWho: null, clMonth: null, clDay: null, clProfOpen: false, qlTab: 'diari', qlFilter: 'tot', rollDay: null,

@@ -423,8 +423,10 @@ function normHint(me, pid) {
   if (spare < 1) return `<p class="norm-hint zero">No pots perdre <b>ni un minut més</b> d’assaig si vols fer ${esc(when)} (${left}).</p>`;
   return `<p class="norm-hint">Encara pots perdre <b>${minsText(spare)}</b> d’assaig ${show ? `abans ${V.sh.del} del ${esc(shortDate(show.date))}` : 'fins al final de la producció'} (${left}).</p>`;
 }
-function myAttendanceCard(me, inTab) {
-  const x = myProdSummary(me, myProductionId(me));
+/** La targeta grossa d'una producció (pid; si no, la de myProductionId). many: n'hi ha més d'una a la vista, i el títol de la
+ *  secció ja hi és: la targeta només porta el nom de la producció. */
+function myAttendanceCard(me, inTab, pid = myProductionId(me), many = false) {
+  const x = myProdSummary(me, pid);
   if (!x) return '';
   const { prod, r, rs, counted } = x;
   const seen = new Set((r?.hist || []).map(h => h.s.id));
@@ -435,8 +437,9 @@ function myAttendanceCard(me, inTab) {
   // El percentatge, les hores i, a sota, com va sessió a sessió; després, si arriba a la norma. Avisar d'una absència també és aquí.
   const facts = [`${minsText(r?.mDone)} de ${minsText(r?.mAll)} d’assaig`, r?.R ? (r.R === 1 ? '1 retard' : `${r.R} retards`) : '', r?.left ? (r.left === 1 ? 'ha marxat abans 1 cop' : `ha marxat abans ${r.left} cops`) : '',
     r?.FJ ? `${r.FJ} just.` : '', r?.FNJ ? `${r.FNJ} no just.` : ''].filter(Boolean);
-  return `<div class="section-title prod-tone" style="--ph:${prodHue(prod)}"><h2 class="h2">La meva assistència</h2><span class="eyebrow"><i class="pdot"></i>${esc(prod.name)}</span></div>
+  return `${many ? '' : `<div class="section-title prod-tone" style="--ph:${prodHue(prod)}"><h2 class="h2">La meva assistència</h2><span class="eyebrow"><i class="pdot"></i>${esc(prod.name)}</span></div>`}
     <div class="panel my-att prod-tone" style="--ph:${prodHue(prod)}">
+      ${many ? `<h3 class="my-att-h"><i class="pdot"></i>${esc(prod.name)}</h3>` : ''}
       ${counted ? `<div class="att-top"><span class="big">${Math.round(rate(r) * 100)}<small>%</small></span>
         <span class="att-facts"><b>${esc(facts[0])}</b>${facts.length > 1 ? `<small>${esc(facts.slice(1).join(' · '))}</small>` : ''}</span></div>
         <div class="dots" aria-label="Sessió a sessió">${dots}</div>
@@ -453,13 +456,13 @@ function sheetMyAttendance() {
 /** Les produccions d'una persona i, plegada a sota, la temporada sencera (el percentatge i el retard). Les que encara s'assagen,
  *  a la vista (menys `skip`, la que ja surt a dalt, a la targeta grossa); les acabades, plegades, perquè no ocupin la pantalla.
  *  Cada una diu les hores d'assaig fetes de les que s'han comptat (la norma va per temps, no per assajos). */
-function myAttSeason(me, skip, head = '') {
+function myAttSeason(me, skip = [], head = '') {
   const { season } = seasonCfg();
   const sr = computeStats({ kind: 'range', from: season.from, to: season.to, name: season.name }, me.section).rows.find(x => x.m.id === me.id);
   const sc = sr ? sr.P + sr.R + sr.FJ + sr.FNJ : 0;
   const rows = productionsSorted().map(p => myProdSummary(me, p.id)).filter(x => x && x.counted);
   const done = x => !allSessions(x.prod.id).some(s => s.date >= TODAY);
-  const now = rows.filter(x => !done(x) && x.prod.id !== skip), past = rows.filter(done).reverse();
+  const now = rows.filter(x => !done(x) && !skip.includes(x.prod.id)), past = rows.filter(done).reverse();
   const list = xs => `<ul class="mini-list u-maxh-none">${xs.map(({ prod, r, rs }) => `<li class="u-d-grid u-gap-4 u-p-10-12">
         <span class="u-d-flex u-jc-space-between u-gap-8"><b>${esc(prod.name)}</b><span class="mono">${pct(rate(r))}</span></span>
         <span class="m">${[`${minsText(r.mDone)} de ${minsText(r.mAll)} d’assaig`, r.FJ ? `${r.FJ} just.` : '', r.FNJ ? `${r.FNJ} no just.` : ''].filter(Boolean).join(' · ')}</span><span>${ruleSentence(rs)}</span></li>`).join('')}</ul>`;
@@ -484,9 +487,11 @@ function viewMyAtt() {
   const subCard = subs.length ? `<div class="panel my-subs">${subs.map(({ x, s }) => `<div class="setting"><div><div class="t">${x.auto ? `Ets ${esc(V.leader)} en funcions de ${esc(SEC[x.section].name.toLowerCase())}` : `Avui passes llista de ${esc(SEC[x.section].name.toLowerCase())}`}</div>
       <div class="s">${esc(s.type || 'Assaig')} · ${esc(shortDate(s.date))}${s.time ? ` · ${esc(timeRange(s))}` : ''}</div></div>
       <button class="btn btn-sm btn-primary" data-act="home-roll" data-sid="${esc(s.id)}" data-sec="${esc(x.section)}">Passa llista</button></div>`).join('')}</div>` : '';
-  const att = myAttendanceCard(me, true);
+  // Les produccions que es fan ara (n'hi pot haver més d'una alhora), cadascuna a la seva targeta grossa.
+  const ids = myRunningProductionIds(me), many = ids.length > 1;
+  const att = (many ? '<div class="section-title"><h2 class="h2">La meva assistència</h2></div><div class="my-att-l">' : '') + ids.map(pid => myAttendanceCard(me, true, pid, many)).join('') + (many ? '</div>' : '');
   return `${head}${subCard}
     ${myNoticesBlock(me, false)}
     ${att}
-    ${myAttSeason(me, myProductionId(me), '<div class="section-title"><h2 class="h2">Les altres produccions</h2></div>')}`;
+    ${myAttSeason(me, ids, '<div class="section-title"><h2 class="h2">Les altres produccions</h2></div>')}`;
 }
