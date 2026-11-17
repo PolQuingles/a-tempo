@@ -605,21 +605,64 @@ function sessionMins(s) {
   const a = clockMins(s.time), b = clockMins(s.end);
   return a != null && b != null && b > a ? b - a : 120;
 }
-/** Entre quantes produccions es reparteix una sessió, mirant-la des d'una (pid): una sessió compartida (alsoIn) compta a
- *  parts iguals per a cadascuna (un assaig de 2 h de l'Oratori i de Sant Esteve, 1 h a cada una). Sense producció (tota la
- *  temporada, una llista), la sessió sencera. */
+/** Entre quantes produccions es reparteix una sessió, mirant-la des d'una (pid): una sessió compartida (alsoIn) sense ordre
+ *  compta a parts iguals per a cadascuna (un assaig de 2 h de l'Oratori i de Sant Esteve, 1 h a cada una). Sense producció
+ *  (tota la temporada, una llista), la sessió sencera. Amb l'ordre triat, vegeu sessionSlots. */
 function sessionShare(s, pid) {
   if (!pid) return 1;
   const ps = new Set(sessionProds(s).filter(id => S.productions.has(id)));
   return ps.has(pid) ? ps.size : 1;
 }
+/** Un assaig compartit amb l'ordre triat (parts: [{p, to}], vegeu sheetSession): la primera estona d'una producció fins a
+ *  l'hora del canvi (to), i després la següent. Torna el tros de cadascuna, en ordre: {p, a, b} en minuts que compten (del
+ *  minut a al b) i fa/fb en fracció de la sessió. Una hora de canvi que falta, o que no cap entre l'inici, els altres canvis
+ *  i el final, es reparteix a parts iguals amb les del costat; sense hores, tot a parts iguals. null si la sessió no té
+ *  ordre (o les parts no lliguen amb les seves produccions): llavors compta a parts iguals i sense ordre (sessionShare).
+ *  Els avisos al mòbil en fan el mateix (.github/scripts/norma.py › slots). */
+function sessionSlots(s) {
+  if (!s || !Array.isArray(s.parts)) return null;
+  const ps = new Set(sessionProds(s).filter(id => S.productions.has(id)));
+  const live = s.parts.filter(x => x && S.productions.has(x.p));
+  if (ps.size < 2 || live.length !== ps.size || new Set(live.map(x => x.p)).size !== ps.size || !live.every(x => ps.has(x.p))) return null;
+  const T = sessionMins(s), n = live.length, a0 = clockMins(s.time), z = clockMins(s.end);
+  const f = [0];
+  if (a0 != null && z != null && z > a0) {
+    const cut = live.slice(0, -1).map(x => clockMins(x.to));
+    let prev = a0;
+    const ok = cut.map(c => { const v = c != null && c > prev && c < z; if (v) prev = c; return v; });
+    for (let i = 0; i < n - 1; i++) {
+      if (ok[i]) { f.push((cut[i] - a0) / (z - a0)); continue; }
+      let j = i;
+      while (j < n - 1 && !ok[j]) j++;
+      const lo = f[f.length - 1], hi = j < n - 1 ? (cut[j] - a0) / (z - a0) : 1;
+      for (let k = i; k < j; k++) f.push(lo + (hi - lo) * (k - i + 1) / (j - i + 1));
+      i = j - 1;
+    }
+  } else for (let i = 1; i < n; i++) f.push(i / n);
+  f.push(1);
+  return live.map((x, i) => ({ p: x.p, a: T * f[i], b: T * f[i + 1], fa: f[i], fb: f[i + 1] }));
+}
+const slotOf = (s, pid) => pid ? sessionSlots(s)?.find(x => x.p === pid) || null : null;
+/** Minuts d'una sessió que compten per a la producció pid: el seu tros (sessionSlots) o la seva part igual (sessionShare). */
+const partMins = (s, pid) => { const sl = slotOf(s, pid); return sl ? sl.b - sl.a : sessionMins(s) / sessionShare(s, pid); };
+/** «20:00–21:15 Oratori · 21:15–22:30 Sant Esteve»: com es reparteix un assaig compartit amb ordre (o res). */
+function partsLine(s) {
+  const sl = sessionSlots(s);
+  if (!sl) return '';
+  const a0 = clockMins(s.time), z = clockMins(s.end), clock = !(+s.mins > 0) && a0 != null && z != null && z > a0;
+  const hm = v => { const t = Math.round(v); return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`; };
+  return sl.map(x => `${clock ? `${hm(a0 + (z - a0) * x.fa)}–${hm(a0 + (z - a0) * x.fb)}` : minsText(x.b - x.a)} ${prodShort(S.productions.get(x.p))}`).join(' · ');
+}
 /** Minuts que compten d'una marca: els que dura la sessió i els que hi ha estat (sense el retard ni el que ha marxat abans),
- *  per a la producció pid (vegeu sessionShare). «No fa» no hi compta. */
+ *  per a la producció pid (vegeu sessionShare). Amb l'ordre triat (sessionSlots), el retard es resta de la primera estona i
+ *  marxar abans, de l'última: qui arriba tard a un assaig d'Oratori i Sant Esteve, ho perd de l'Oratori. «No fa» no hi compta. */
 function markMins(s, mk, pid) {
   if (!mk || mk.s === 'NP') return null;
-  const all = sessionMins(s), n = sessionShare(s, pid);
-  if (mk.s !== 'P' && mk.s !== 'R') return { all: all / n, done: 0 };
-  return { all: all / n, done: (all - Math.min(all, (mk.s === 'R' ? +mk.min || 0 : 0) + (+mk.early || 0))) / n };
+  const all = sessionMins(s), on = mk.s === 'P' || mk.s === 'R', late = mk.s === 'R' ? +mk.min || 0 : 0, early = +mk.early || 0;
+  const sl = slotOf(s, pid);
+  if (sl) return { all: sl.b - sl.a, done: on ? Math.max(0, Math.min(sl.b, all - early) - Math.max(sl.a, late)) : 0 };
+  const n = sessionShare(s, pid);
+  return { all: all / n, done: on ? (all - Math.min(all, late + early)) / n : 0 };
 }
 /** Suma una marca als comptadors (amb els minuts per a la producció pid, si n'hi ha). */
 function countMark(c, s, mk, pid) {
@@ -685,7 +728,7 @@ function computeStats(scope, secFilter) {
 const minAttendance = () => Math.min(100, Math.max(1, +S.config.minAttendance || 80));
 /** status: ok | risk (below now, can still reach it) | out (cannot reach it any more) | null (no data / not in it).
  *  Es compta en minuts, com les estadístiques: att/abs/remaining són assajos, i attM/absM/remM, els minuts (d'una sessió
- *  compartida, només la part d'aquesta producció: vegeu sessionShare). */
+ *  compartida, només la part d'aquesta producció: vegeu partMins). */
 function ruleStatus(prodId, member) {
   if (!prodId || isExcluded(prodId, member.id)) return null;
   const min = minAttendance() / 100;
@@ -693,7 +736,7 @@ function ruleStatus(prodId, member) {
   for (const s of allSessions(prodId)) {
     if (RULE_SKIP.has(s.type) || !convoked(s, member.section)) continue;
     const marked = s.date <= TODAY && hasData(s, member.section) ? effMark(s, member, prodId) : null;
-    if (!marked) { if (s.date >= TODAY && !onLeave(member, s.date)) { remaining++; remM += sessionMins(s) / sessionShare(s, prodId); } continue; }
+    if (!marked) { if (s.date >= TODAY && !onLeave(member, s.date)) { remaining++; remM += partMins(s, prodId); } continue; }
     const mm = markMins(s, marked, prodId);
     if (!mm) continue;
     if (marked.s === 'P' || marked.s === 'R') att++; else abs++;

@@ -1,6 +1,6 @@
 """La norma d'assistència és escrita dues vegades: a l'app (js/02-dades.js › ruleStatus) i als avisos al mòbil
 (.github/scripts/norma.py). Aquesta prova genera molts casos a l'atzar (baixes, produccions que algú no fa, sessions
-compartides, concerts, cordes no convocades, llistes buides, diferents mínims, durades i minuts de retard…) i comprova que totes dues diuen
+compartides (amb ordre o sense), concerts, cordes no convocades, llistes buides, diferents mínims, durades i minuts de retard…) i comprova que totes dues diuen
 exactament el mateix per a cada persona i producció.
 
     python3 tests/logica/test_norma.py            # amb Node (com a les proves automàtiques)
@@ -47,6 +47,13 @@ def cases(n, seed):
                     s["sections"] = rnd.sample(SECS, rnd.randint(1, 3))
                 if rnd.random() < .2:
                     s["alsoIn"] = [f"p{rnd.randrange(4)}"]   # de vegades, una producció que no existeix
+                    if rnd.random() < .6:   # l'ordre triat, amb l'hora del canvi (bona, fora de lloc o sense), i de vegades unes parts que no lliguen
+                        ps = [f"p{j}"] + s["alsoIn"] + ([f"p{rnd.randrange(4)}"] if rnd.random() < .3 else [])
+                        rnd.shuffle(ps)
+                        s["parts"] = [{"p": p} for p in ps]
+                        for x in s["parts"][:-1]:
+                            if rnd.random() < .7:
+                                x["to"] = f"{rnd.randint(8, 23):02d}:{rnd.choice([0, 15, 30, 45]):02d}"
                 sessions.append(s)
             prods.append({"id": f"p{j}", "name": f"P{j}", "sessions": sessions,
                           "excluded": [m["id"] for m in members if rnd.random() < .15]})

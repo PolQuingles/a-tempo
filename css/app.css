@@ -1977,6 +1977,14 @@ svg{stroke-linecap:round;stroke-linejoin:round}
 .steps .mono{color:var(--accent);font-weight:600}
 .steps span{min-width:0}
 .steps small{display:block;color:var(--muted);font-size:var(--t-13)}
+/* L'assaig compartit: les produccions en ordre, amb l'hora del canvi entre l'una i l'altra. */
+.se-parts{display:grid;gap:8px}
+.se-part-r{display:flex;gap:6px;align-items:center}
+.se-part-r select{flex:1;min-width:0}
+.se-cut{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:2px 0 2px 14px;margin-left:10px;border-left:2px dashed var(--line-strong)}
+.se-cut label{display:flex;gap:8px;align-items:center;white-space:nowrap;font-size:var(--t-13);color:var(--muted)}
+.se-cut input{width:118px}
+.fitxa-parts{margin:8px 0 0;font-size:var(--t-13);color:var(--muted)}
 .step-row{display:grid;grid-template-columns:104px minmax(0,1fr) auto;gap:8px;align-items:center}
 .step-row [data-f="where"]{grid-column:2 / 4}
 .tasks{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:8px}

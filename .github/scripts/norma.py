@@ -10,7 +10,8 @@ Les dades tenen la forma de Firestore:
   · el membre, amb section i leaves (baixes temporals {from, to}).
 
 Es compta en minuts, com a l'app: cada sessió hi pesa pel que dura, i un retard o marxar abans d'hora (early), pels minuts
-que s'hi ha estat. Una sessió compartida per diverses produccions es reparteix a parts iguals entre elles (share).
+que s'hi ha estat. Una sessió compartida per diverses produccions es reparteix a parts iguals entre elles (share) o, si
+té l'ordre triat (parts), pel tros de cadascuna: el retard es resta de la primera estona i marxar abans, de l'última (slots).
 """
 import re
 
@@ -126,6 +127,45 @@ def share(productions, s, pid):
     return len(ps) if pid in ps else 1
 
 
+def slots(productions, s):
+    """El tros de cada producció d'un assaig compartit amb l'ordre triat (com sessionSlots): [{p, a, b}] en minuts que
+    compten, o None si no en té (o les parts no lliguen amb les produccions de la sessió)."""
+    parts = s.get("parts")
+    if not isinstance(parts, list):
+        return None
+    ps = {p for p in (s.get("prods") or []) if p in productions}
+    live = [x for x in parts if isinstance(x, dict) and x.get("p") in productions]
+    if len(ps) < 2 or len(live) != len(ps) or len({x["p"] for x in live}) != len(ps) or not all(x["p"] in ps for x in live):
+        return None
+    full, n, a0, z = session_mins(s), len(live), clock_mins(s.get("time")), clock_mins(s.get("end"))
+    f = [0]
+    if a0 is not None and z is not None and z > a0:
+        cut = [clock_mins(x.get("to")) for x in live[:-1]]
+        ok, prev = [], a0
+        for c in cut:
+            v = c is not None and prev < c < z
+            if v:
+                prev = c
+            ok.append(v)
+        i = 0
+        while i < n - 1:
+            if ok[i]:
+                f.append((cut[i] - a0) / (z - a0))
+                i += 1
+                continue
+            j = i
+            while j < n - 1 and not ok[j]:
+                j += 1
+            lo, hi = f[-1], (cut[j] - a0) / (z - a0) if j < n - 1 else 1
+            for k in range(i, j):
+                f.append(lo + (hi - lo) * (k - i + 1) / (j - i + 1))
+            i = j
+    else:
+        f += [i / n for i in range(1, n)]
+    f.append(1)
+    return [{"p": x["p"], "a": full * f[i], "b": full * f[i + 1]} for i, x in enumerate(live)]
+
+
 def rule_status(productions, sessions, attendance, pid, mid, m, today, min_frac, rule_skip):
     """ok | risk (ara és a sota però encara hi pot arribar) | out (ja no hi pot arribar) | None (sense dades o no la fa)."""
     if mid in (productions[pid].get("excluded") or []):
@@ -136,17 +176,24 @@ def rule_status(productions, sessions, attendance, pid, mid, m, today, min_frac,
         if pid not in (s.get("prods") or []) or s.get("type") in rule_skip or not convoked(s, m.get("section")):
             continue
         doc = attendance.get(f"{s['id']}_{m.get('section')}") or {}
+        sl = next((x for x in (slots(productions, s) or []) if x["p"] == pid), None)
         marked = eff_mark(productions, s, m, mid, attendance, pid) if s["date"] <= today and doc.get("marks") else None
         if not marked:
             if s["date"] >= today and not on_leave(m, s["date"]):
                 remaining += 1
-                rem_m += session_mins(s) / share(productions, s, pid)
+                rem_m += (sl["b"] - sl["a"]) if sl else session_mins(s) / share(productions, s, pid)
             continue
         if marked["s"] == "NP":
             continue
-        full, n = session_mins(s), share(productions, s, pid)
-        d = full / n
-        done_m = (full - min(full, (late_mins(marked) if marked["s"] == "R" else 0) + early_mins(marked))) / n if marked["s"] in ("P", "R") else 0
+        full, on = session_mins(s), marked["s"] in ("P", "R")
+        late, early = late_mins(marked) if marked["s"] == "R" else 0, early_mins(marked)
+        if sl:
+            d = sl["b"] - sl["a"]
+            done_m = max(0, min(sl["b"], full - early) - max(sl["a"], late)) if on else 0
+        else:
+            n = share(productions, s, pid)
+            d = full / n
+            done_m = (full - min(full, late + early)) / n if on else 0
         if marked["s"] in ("P", "R"):
             att += 1
         else:
