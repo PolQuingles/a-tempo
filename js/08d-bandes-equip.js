@@ -38,7 +38,7 @@ function sheetBandes(id) {
       <div class="field"><span>Finalistes per categoria</span>${choose('bd-fin', +p.finalists || BANDES_FINAL, [3, 5])}</div>
       <div class="field"><span>Com es revelen els finalistes</span><div class="pickers" id="bd-every"><button type="button" class="pick" data-v="day" aria-pressed="${p.nomEvery !== 'all'}">Una categoria cada dia fins a la Nit</button><button type="button" class="pick" data-v="all" aria-pressed="${p.nomEvery === 'all'}">Totes alhora</button></div></div>
       <label class="field"><span>Es revelen a partir del (opcional)</span><input class="inp" id="bd-nom" type="date" value="${esc(p.nomFrom || '')}"><small id="bd-nom-s"></small></label>
-      ${ex && !ex.draft ? `<div class="toggle-row"><span><b>Tancada</b><br><span class="muted u-fs-t-13">Ja no s’hi pot votar</span></span><label class="switch"><input type="checkbox" id="bd-closed" ${p.closed ? 'checked' : ''}><span></span></label></div>` : ''}
+      ${ex && !ex.draft ? `<div class="toggle-row"><span><b>Tancada</b><br><span class="muted u-fs-t-13">Ja no s’hi pot votar. Va amb el dia de tancar: si el passes a un dia d’avui endavant, es torna a obrir; si el tornes a un dia passat, es torna a tancar.</span></span><label class="switch"><input type="checkbox" id="bd-closed" ${p.closed ? 'checked' : ''}><span></span></label></div>` : ''}
     </div>`,
     foot: `${ex ? '<button class="btn btn-danger-ghost" id="bd-del">Esborra</button>' : ''}<span class="spacer"></span>${p.draft ? '<button class="btn" id="bd-save">Desa l’esborrany</button><button class="btn btn-primary" id="bd-pub">Publica…</button>' : '<button class="btn" data-act="sheet-close">Cancel·la</button><button class="btn btn-primary" id="bd-save">Desa</button>'}`,
     onMount: el => {
@@ -54,7 +54,8 @@ function sheetBandes(id) {
           galaName: el.querySelector('#bd-gname').value.trim() || 'La Nit de les Bandes', galaAt: el.querySelector('#bd-gala').value, galaPlace: el.querySelector('#bd-gplace').value.trim(), finalists: val('#bd-fin'),
           nomFrom: el.querySelector('#bd-nom').value, nomEvery: el.querySelector('#bd-every .pick[aria-pressed="true"]')?.dataset.v === 'all' ? 'all' : 'day',
           galaTime: el.querySelector('#bd-gtime').value, galaDress: el.querySelector('#bd-gdress').value.trim(), program: parseProgram(el.querySelector('#bd-gprog').value),
-          closed: el.querySelector('#bd-closed')?.checked ?? !!p.closed, author: ex?.author || authorName(), createdAt: ex?.createdAt || new Date().toISOString() };
+          // Passat el darrer dia, sempre tancada (les regles només deixen votar si no ho és).
+          closed: (el.querySelector('#bd-closed')?.checked ?? !!p.closed) || !!(el.querySelector('#bd-close').value && el.querySelector('#bd-close').value < TODAY), author: ex?.author || authorName(), createdAt: ex?.createdAt || new Date().toISOString() };
       };
       const preview = () => {
         const r = read(), cs = r.cats, nPair = cs.filter(c => c.pair).length;
@@ -67,6 +68,9 @@ function sheetBandes(id) {
         const range = cs.length ? nomRange(r) : '';
         el.querySelector('#bd-nom-s').textContent = `${r.nomFrom ? '' : 'Si no hi poses res, l’endemà de tancar la votació. '}${range ? `Es revelaran ${range}${r.nomEvery === 'all' || !r.galaAt ? ', totes alhora' : ', una categoria cada dia'}.` : ''}${r.nominees ? ' Ja s’han publicat: si ho canvies, canvia quan es veu cada categoria.' : ''}`;
       };
+      // El dia de tancar mana: un dia d'avui endavant la torna a obrir (per a qui s'ha despistat) i un de passat la tanca.
+      const closedSw = el.querySelector('#bd-closed');
+      if (closedSw) el.querySelector('#bd-close').addEventListener('change', e => { if (e.target.value) closedSw.checked = e.target.value < TODAY; });
       let t = null;
       el.addEventListener('input', () => { clearTimeout(t); t = setTimeout(preview, 200); });
       el.addEventListener('click', e => { if (e.target.closest('.pick')) setTimeout(preview, 0); });
@@ -81,11 +85,20 @@ function sheetBandes(id) {
         if (r.nomFrom && r.galaAt && r.nomFrom > r.galaAt) { toast('Els finalistes s’han de revelar abans de la Nit (o el mateix dia)'); return false; }
         return true;
       };
-      el.querySelector('#bd-save').onclick = () => {
+      el.querySelector('#bd-save').onclick = async () => {
         const r = read();
+        const reopen = ex && !ex.draft && pollClosed(ex) && !pollClosed(r);
+        if (reopen && r.results) { toast('Ja hi ha el palmarès: la votació no es pot tornar a obrir'); return; }
+        // Tornar a obrir la votació amb els finalistes publicats: es retiren, i en tornar-la a tancar es tornen a publicar amb
+        // tots els vots (també els nous).
+        if (reopen && r.nominees) {
+          if (!await confirmSheet('Tornar a obrir la votació?', `Es podrà votar fins al ${longDate(r.closesAt).toLowerCase()}. Els finalistes que ja s’han publicat es retiren: quan la tornis a tancar, publica’ls de nou i comptaran també els vots nous.`, 'Torna-la a obrir', false)) return;
+          for (const k of ['nominees', 'nomN', 'nomAt']) delete r[k];
+          if (r.nomFrom && r.closesAt && r.nomFrom <= r.closesAt) delete r.nomFrom;
+        }
         if (!check(r)) return;
         S.polls.set(r.id, r); persist('polls', r.id, r, 10);
-        closeSheet(); toast(r.draft ? 'Esborrany desat: només el veu l’equip' : 'Votació desada'); render();
+        closeSheet(); toast(r.draft ? 'Esborrany desat: només el veu l’equip' : reopen ? `Votació oberta fins al ${shortDate(r.closesAt)}` : 'Votació desada'); render();
       };
       el.querySelector('#bd-pub')?.addEventListener('click', () => {
         const r = read();
