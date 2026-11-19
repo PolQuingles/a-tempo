@@ -100,14 +100,14 @@ function calMonthView() {
     const iso = `${ui.calMonth}-${pad(d)}`;
     const ss = byDay.get(iso) || [];
     const cl = clByDay.get(iso) || [];
-    const marks = ss.slice(0, 3).map(x => `<i class="mk prod-tone${isShow(x) ? ' concert' : ''}" style="--ph:${prodHue(S.productions.get(x.prodId))}"></i>`).join('') + (ss.length > 3 ? '<i class="mk more">+</i>' : '')
+    const marks = ss.slice(0, 3).map(x => `<i class="mk prod-tone${isShow(x) ? ' concert' : ''}" style="${sessionHues(x)}"></i>`).join('') + (ss.length > 3 ? '<i class="mk more">+</i>' : '')
       + (cl.length ? '<i class="mk cl mine"></i>' : '');
     const label = `${longDate(iso)}${ss.length ? `: ${ss.map(x => x.type || 'Assaig').join(', ')}` : ', cap sessió'}${cl.length ? `, ${V.classes.toLowerCase()}` : ''}`;
     cells.push(`<button class="mday${iso === TODAY ? ' today' : ''}${iso === ui.calDay ? ' sel' : ''}${iso < TODAY ? ' past' : ''}" data-act="cal-day" data-date="${iso}" aria-pressed="${iso === ui.calDay}" aria-label="${esc(label)}"><span class="mnum">${d}</span><span class="mmarks">${marks}</span></button>`);
   }
   while (cells.length % 7) cells.push('<span class="mday out" aria-hidden="true"></span>');
   const title = capz(fmtD(`${ui.calMonth}-01`, { month: 'long', year: 'numeric' }));
-  const legendProds = [...new Set(inMonth.map(x => x.prodId))].map(id => S.productions.get(id)).filter(Boolean);
+  const legendProds = [...new Set(inMonth.flatMap(sessionProds))].map(id => S.productions.get(id)).filter(Boolean);
   const hasConcert = inMonth.some(isShow);
   const daySessions = byDay.get(ui.calDay) || [];
   return `<div class="panel month">
@@ -148,7 +148,7 @@ function calRow(s, underProd, tone, named) {
   const right = `<span class="cal-right">${marks ? `<span class="vmarks" aria-label="Llista per ${V.sections}">${marks}</span>` : ''}${r != null ? `<span class="cal-pct">${pct(r)}</span>` : rv ? `<span class="cal-badge" title="Confirmacions: ${rv.yes} sí, ${rv.no} no, ${rv.none} sense resposta">${rv.yes} sí · ${rv.no} no</span>` : ''}</span>`;
   const other = named ? [] : sessionProds(s).filter(id => id !== underProd).map(id => S.productions.get(id)?.name).filter(Boolean);
   const cls = [s.date === TODAY ? 'is-today' : '', s.date < TODAY ? 'is-past' : '', isShow(s) ? 'type-concert' : ''].join(' ');
-  return `<li class="cal-row ${cls}${tone ? ' prod-tone' : ''}" data-date="${s.date}"${tone ? ` style="--ph:${prodHue(S.productions.get(s.prodId))}"` : ''}>
+  return `<li class="cal-row ${cls}${tone ? ' prod-tone' : ''}" data-date="${s.date}"${tone ? ` style="${sessionHues(s)}"` : ''}>
     <button class="cal-main" data-act="open-session" data-sid="${s.id}">
       <span class="cal-date"><b>${+s.date.slice(8, 10)}</b><small>${wdShort(s.date)}</small></span>
       <span class="cal-info"><span class="cal-type">${esc(named ? prodNames(s) : s.type || 'Assaig')}</span><span class="cal-place">${[named ? esc(s.type || 'Assaig') : '', s.info?.call ? `Convocatòria <span class="mono">${esc(s.info.call)}</span>` : '', s.time ? `<span class="mono">${esc(timeRange(s))}</span>` : '', esc(s.place || ''), esc(s.note || ''), partsLine(s) ? esc(partsLine(s)) : other.length ? `També: ${esc(other.join(', '))}` : ''].filter(Boolean).join(' · ')}</span>${planOf(s) && planWorks(s.plan.items).length ? `<span class="cal-plan">${esc(planLine(s.plan.items, false))}</span>` : ''}</span>

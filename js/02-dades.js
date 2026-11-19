@@ -470,6 +470,12 @@ function sessionById(id) {
 const sessionProds = s => [s.prodId, ...(s.alsoIn || [])];
 /** El nom curt, si en té: per a les llistes, on el nom sencer ompliria la fila. */
 const prodShort = p => p?.short || p?.name || '';
+/** Els colors d'una sessió, per a style: el de la producció i, si és compartida, també el de la segona en l'ordre de l'assaig
+ *  (--ph2); les marques i els punts surten partits per la meitat amb tots dos (vegeu --pfill a l'app.css). */
+function sessionHues(s) {
+  const hs = sessionProds(s).map(id => S.productions.get(id)).filter(Boolean).map(prodHue);
+  return `--ph:${hs.length ? hs[0] : prodHue(null)}${hs.length > 1 && hs[1] !== hs[0] ? `;--ph2:${hs[1]}` : ''}`;
+}
 const prodNames = s => sessionProds(s).map(id => prodShort(S.productions.get(id))).filter(Boolean).join(' + ');
 const attKey = (sid, sec) => `${sid}_${sec}`;
 /** La llista d'una sessió i secció: la viva o, si és d'un trimestre arxivat, la de l'arxiu. */

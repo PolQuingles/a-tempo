@@ -742,12 +742,14 @@ input[type=date].inp,input[type=time].inp{min-width:0;width:100%}
 
 /* ---------- Production tones (pastel per production) ---------- */
 /* La producció s'identifica amb un punt del seu color o amb el cartell: les targetes són sempre neutres. */
-.prod-tone{--pbg:var(--surface);--pbg2:var(--surface-2);--pline:var(--line);--pdot:hsl(var(--ph) 52% 58%);--pink:var(--ink-2)}
+.prod-tone{--pbg:var(--surface);--pbg2:var(--surface-2);--pline:var(--line);--ph2:var(--ph);--pdot:hsl(var(--ph) 52% 58%);--pdot2:hsl(var(--ph2) 52% 58%);--pink:var(--ink-2)}
 @media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]) .prod-tone{--pdot:hsl(var(--ph) 42% 60%)}
+  :root:not([data-theme="light"]) .prod-tone{--pdot:hsl(var(--ph) 42% 60%);--pdot2:hsl(var(--ph2) 42% 60%)}
 }
-:root[data-theme="dark"] .prod-tone{--pdot:hsl(var(--ph) 42% 60%)}
-.pdot{display:inline-block;flex:none;width:9px;height:9px;border-radius:50%;background:var(--pdot);vertical-align:.06em}
+:root[data-theme="dark"] .prod-tone{--pdot:hsl(var(--ph) 42% 60%);--pdot2:hsl(var(--ph2) 42% 60%)}
+/* Una sessió compartida porta els dos colors, partits per la meitat (--ph2, de sessionHues); si no, les dues meitats són iguals. */
+.prod-tone{--pfill:linear-gradient(90deg,var(--pdot) 50%,var(--pdot2) 50%)}
+.pdot{display:inline-block;flex:none;width:9px;height:9px;border-radius:50%;background:var(--pfill);vertical-align:.06em}
 .cal-prod.prod-tone .cal-list{background:var(--pbg);border-color:var(--pline)}
 .cal-prod.prod-tone .cal-row{border-top-color:var(--pline)}
 .cal-prod.prod-tone .cal-row.is-today{background:var(--pbg2)}
@@ -970,14 +972,14 @@ button.mday:hover{background:var(--surface-2)}
 .mday.today .mnum{color:var(--sig-ink);font-weight:700;box-shadow:inset 0 0 0 1.5px var(--sig)}
 .mday.sel{background:var(--surface-2)}
 .mmarks{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:2px;max-width:100%}
-.mk{display:block;width:13px;height:5px;border-radius:3px;background:var(--pdot)}
+.mk{display:block;width:13px;height:5px;border-radius:3px;background:var(--pfill)}
 .mk.concert{height:7px;width:13px;box-shadow:0 0 0 1.5px var(--ink)}
 .mk.concert.key{background:var(--surface-2);display:inline-block}
 .mk.more{width:auto;height:auto;background:none;font-style:normal;font-size:var(--t-11);font-weight:700;line-height:5px;color:var(--muted)}
 .mlegend{display:flex;flex-wrap:wrap;gap:8px 16px;margin:10px 4px 0;padding-top:12px;border-top:1px solid var(--line);font-size:var(--t-13);color:var(--ink-2)}
 .mlegend span{display:inline-flex;align-items:center;gap:8px}
 .mlegend .pdot{width:9px;height:9px}
-.soon-row.prod-tone .soon-t::before,.cal-day-list .cal-row.prod-tone .cal-type::before,.cal-agenda .cal-row.prod-tone .cal-type::before{content:"";display:inline-block;width:8px;height:8px;margin-right:7px;border-radius:50%;background:var(--pdot);vertical-align:.08em}
+.soon-row.prod-tone .soon-t::before,.cal-day-list .cal-row.prod-tone .cal-type::before,.cal-agenda .cal-row.prod-tone .cal-type::before{content:"";display:inline-block;width:8px;height:8px;margin-right:7px;border-radius:50%;background:var(--pfill);vertical-align:.08em}
 .balance{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 @media (max-width:360px){.balance{grid-template-columns:repeat(2,1fr)}}
 .bal{display:grid;gap:7px;align-content:start;padding:12px 12px 9px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);min-width:0}
