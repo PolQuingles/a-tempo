@@ -6,7 +6,7 @@
 function sessionNav(cur, list, compact) {
   const idx = list.indexOf(cur);
   const prod = S.productions.get(cur.prodId);
-  return `<div class="session prod-tone ${compact ? 'compact' : ''}" style="--ph:${prodHue(prod)}">
+  return `<div class="session prod-tone ${compact ? 'compact' : ''}" style="${sessionHues(cur)}">
       <button class="nav-arrow" data-act="sess-step" data-dir="-1" ${idx <= 0 ? 'disabled' : ''} aria-label="Sessió anterior">${ICON.left}</button>
       <button class="session-main" data-act="sess-pick" aria-label="Canvia de sessió">
         <span class="session-prod"><i class="pdot"></i>${esc(prodNames(cur))}${cur.date === TODAY ? '<em>Avui</em>' : ''}</span>

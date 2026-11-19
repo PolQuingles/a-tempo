@@ -291,14 +291,14 @@ function nextCard(s, me) {
 const dayLabel = d => d === TODAY ? 'Avui' : d === addDays(TODAY, 1) ? 'Demà' : '';
 const daysTo = d => Math.round((parseISO(d).getTime() - parseISO(TODAY).getTime()) / 864e5);
 const monthShort = d => fmtD(d, { month: 'short' }).replace(/^d[e’']\s*/, '');
-function soonRow({ date, time, kind, title, meta, extra = '', acts = '', tone = null, now = false, count = false, sid = '' }) {
+function soonRow({ date, time, kind, title, meta, extra = '', acts = '', tone = null, hues = '', now = false, count = false, sid = '' }) {
   const lbl = dayLabel(date);
   // El proper concert porta el compte enrere: «d'aquí a 16 dies».
   const n = count && !lbl ? daysTo(date) : 0;
   const head = `<span class="soon-k">${lbl ? `<em>${lbl}</em>` : ''}${esc(kind)}${time ? ` · <span class="num">${esc(time)}</span>` : ''}${n > 1 ? `<span class="soon-count">d’aquí a ${n} dies</span>` : ''}</span>
       <b class="soon-t">${title}</b>
       ${meta ? `<span class="soon-m">${meta}</span>` : ''}`;
-  return `<li class="soon-row${now ? ' is-now' : ''}${tone ? ' prod-tone' : ''}${sid ? ' can-open' : ''}"${tone ? ` style="--ph:${prodHue(tone)}"` : ''}>
+  return `<li class="soon-row${now ? ' is-now' : ''}${tone ? ' prod-tone' : ''}${sid ? ' can-open' : ''}"${tone ? ` style="${hues || `--ph:${prodHue(tone)}`}"` : ''}>
     <span class="soon-d"><b>${+date.slice(8, 10)}</b><small>${esc(wdShort(date))}</small></span>
     <div class="soon-b">
       ${sid ? `<button class="soon-open" data-act="session-info" data-sid="${esc(sid)}" aria-label="${esc(`${kind}: ${title.replace(/<[^>]+>/g, '')}, ${longDate(date)}`)}">${head}${ICON.right}</button>` : head}
@@ -316,7 +316,7 @@ function sessionSoon(s, me, kind) {
   const meta = [esc(s.place || ''), s.info?.call ? `Convocatòria a les <span class="num">${esc(s.info.call)}</span>` : '',
     out ? esc(onLeave(me, s.date) ? 'Estàs de baixa' : 'No fas aquesta producció') : ''].filter(Boolean).join(' · ');
   const extra = `${s.note ? `<span class="soon-note">${esc(s.note)}</span>` : ''}${conv}`;
-  return soonRow({ date: s.date, time: timeRange(s), kind, title: esc(prodNames(s)), meta, extra, acts, tone: prod, now, count: isShow(s), sid: s.id });
+  return soonRow({ date: s.date, time: timeRange(s), kind, title: esc(prodNames(s)), meta, extra, acts, tone: prod, hues: sessionHues(s), now, count: isShow(s), sid: s.id });
 }
 /** El dia del concert: la targeta de dalt porta el cartell gran, la convocatòria, el vestuari i el lloc (amb el mapa). */
 function concertDayRow(s, prod, acts, conv) {

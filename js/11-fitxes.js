@@ -250,7 +250,7 @@ function sheetSessionInfo(sid) {
     ...INFO_FIELDS.filter(([k]) => s.info?.[k]).map(([k, l]) => `${l}: ${s.info[k]}`), infoSteps(s).length ? `Horari:\n${stepsText(s)}` : '', s.note || ''].filter(Boolean).join('\n');
   openSheet({
     title: s.type || 'Sessió',
-    body: `${prod && prod.poster && isShow(s) ? `<button class="poster-banner" data-act="poster" data-pid="${esc(prod.id)}" aria-label="Cartell de ${esc(prod.name)}"><img src="${esc(prod.poster)}" alt=""></button>` : ''}<div class="prod-band prod-tone" style="--ph:${prodHue(prod)}"><h2 class="h2"><i class="pdot"></i>${esc(prodNames(s))}</h2><span class="eyebrow">${esc(s.type || 'Assaig')}</span></div>
+    body: `${prod && prod.poster && isShow(s) ? `<button class="poster-banner" data-act="poster" data-pid="${esc(prod.id)}" aria-label="Cartell de ${esc(prod.name)}"><img src="${esc(prod.poster)}" alt=""></button>` : ''}<div class="prod-band prod-tone" style="${sessionHues(s)}"><h2 class="h2"><i class="pdot"></i>${esc(prodNames(s))}</h2><span class="eyebrow">${esc(s.type || 'Assaig')}</span></div>
       ${partsLine(s) ? `<p class="fitxa-parts"><span class="mono">${esc(partsLine(s))}</span></p>` : ''}
       ${fitxaHtml(s)}
       ${s.note ? `<p class="fitxa-note">${esc(s.note)}</p>` : ''}
